@@ -18,7 +18,7 @@
 | :--- | :--- |
 | **Organización de Aplicación** | Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.) - UTN FRC |
 | **Nombre del Sistema** | SGD-AVEIT (Sistema de Gestión del Tribunal de Disciplina y Premiaciones de AVEIT) |
-| **Objetivo del Software** | Sistematizar, auditar y transparentar la gestión integral de expedientes disciplinarios, sustanciación de descargos (Formularios T01, T02, T03), cómputo algorítmico de puntajes (premios/sanciones), control de plazos preclusivos y generación automática de balances cuatrimestrales de auditoría mediante una plataforma 100% web y responsive mobile alineada a la normativa procesal vigente. |
+| **Objetivo del Software** | Sistematizar, auditar y transparentar la gestión integral de expedientes disciplinarios, sustanciación de descargos (Formularios T01, T02, T03), cómputo algorítmico de puntajes (premios/sanciones), control de plazos preclusivos y generación automática de balances cuatrimestrales de auditoría mediante una plataforma 100% web y responsive mobile alineada al Estatuto Social y normativas procesales vigentes. |
 | **Metodología Adoptada** | Metodología Ágil (Scrum) |
 | **Integrantes del Equipo** | • **Sanchez, Diego Gabriel** (Legajo: 87414) - diegogabriel.stm@gmail.com<br>• **Guillén, Lucas Martín** (Legajo: 85194)<br>• **Rosales, Nicolás** (Legajo: 408917)<br>• **Gastiaburu, Lucas** (Legajo: 74907)<br>• **Villegas, Axel Rene** (Legajo: 403655)<br>• **Urviola, Luis** (Legajo: 409953)<br>• **Quiroz, Tomas Augusto** (Legajo: 415327) |
 | **Cátedra / Docentes** | Seminario Integrador - UTN FRC |
@@ -31,7 +31,8 @@
 | :---: | :---: | :--- | :--- |
 | **1.0.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Elaboración inicial completa del documento de Estudio Inicial según Guía de Documentación UTN FRC. |
 | **1.1.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Ajuste de subcomisiones según Reglamento 2026 (7 subcomisiones), estructura de Comisión Directiva (7 miembros), especificación de base de datos MySQL, incorporación de la sanción por omisión de tareas asignadas (hasta -2 pts), modalidad de reuniones virtuales de TD y requerimiento de arquitectura 100% Web y Responsive Mobile. |
-| **1.2.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación del análisis comparativo entre el Reglamento Procesal Disciplinario 2018 (última versión aprobada por Asamblea) y el Reglamento Procesal 2026 (flujo real y vigente de trabajo). Estandarización de los 6 estados del expediente, tipificación de formularios T01 (con Anexo), T02 (justificaciones) y T03 (descargos), delimitación de competencias de inicio (Arts. 21 a 26) y formalización de la estructura de resoluciones con firma colegiada intergeneracional. |
+| **1.2.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación del análisis comparativo entre el Reglamento Procesal Disciplinario 2018 (aprobado por Asamblea) y 2026 (flujo real). Estandarización de 6 estados del expediente, formularios T01, T02 y T03, delimitación de competencias de inicio y firma colegiada. |
+| **1.3.0** | 16/08/2026 | Equipo de Proyecto SGD-AVEIT | Adecuación y armonización integral con el Estatuto Social 2026 respecto a la segmentación estatutaria de socios: categorización de Socios Juniors (1º y 2º año social) y Socios Seniors (3º a 6º año social), y su impacto en las responsabilidades asociativas y régimen disciplinario. |
 
 ---
 
@@ -44,7 +45,7 @@
    - 3.1. [Presentación de la Organización](#31-presentación-de-la-organización)
    - 3.2. [Objetivo de la Organización](#32-objetivo-de-la-organización)
    - 3.3. [Reseña Histórica](#33-reseña-histórica)
-   - 3.4. [Dimensionamiento](#34-dimensionamiento)
+   - 3.4. [Dimensionamiento y Categorías de Socios](#34-dimensionamiento-y-categorías-de-socios)
    - 3.5. [Marco Normativo, Políticas Institucionales y Evolución Procesal (2018 vs 2026)](#35-marco-normativo-políticas-institucionales-y-evolución-procesal-2018-vs-2026)
    - 3.6. [Mapa Global de Procesos de la Organización](#36-mapa-global-de-procesos-de-la-organización)
    - 3.7. [Descripción de Procesos de Negocio Afectados por la Propuesta](#37-descripción-de-procesos-de-negocio-afectados-por-la-propuesta)
@@ -60,17 +61,18 @@
 
 * **A.V.E.I.T.:** Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos de la Universidad Tecnológica Nacional – Facultad Regional Córdoba.
 * **CD (Comisión Directiva):** Órgano ejecutivo de gobierno de AVEIT compuesto por 7 miembros (Presidente, Vicepresidente, Tesorero, Protesorero, Secretario General, Prosecretario y Secretario de Actas), responsable de la administración cotidiana, coordinación de subcomisiones y conducción institucional.
-* **TD (Tribunal de Disciplina):** Órgano estatutario independiente encargado de juzgar las transgresiones reglamentarias, evaluar conductas, otorgar premios y aplicar sanciones a los socios (conformado por 3 miembros titulares y 3 suplentes de 4º, 5º y 6º año social).
+* **TD (Tribunal de Disciplina):** Órgano estatutario independiente encargado de juzgar las transgresiones reglamentarias, evaluar conductas, otorgar premios y aplicar sanciones a los socios (conformado por 3 miembros titulares y 3 suplentes electos por Asamblea entre los Socios Seniors).
 * **Subcomisiones:** Órganos operativos de trabajo creados por estatuto y reglamento para áreas específicas (Cómputos, Relaciones Institucionales, Organización y Eventos, Prensa y Difusión, Mantenimiento, Recursos Humanos, y Gestión Social y Ambiental).
 * **Socio Activo (u Ordinario):** Estudiante o graduado de la UTN FRC que participa de la vida asociativa, cumple con obligaciones sociales (cuotas, rifas, mantenimiento, reuniones) y acumula antigüedad social.
-* **Socio Senior:** Socio perteneciente a los grupos de 4º, 5º o 6º año social con mayores atribuciones de conducción, elegibilidad para el Tribunal de Disciplina y responsabilidades operativas.
+* **Socio Junior:** Socio ordinario perteneciente al **primer (1º) o segundo (2º) año social**, en etapa formativa y de integración a la vida institucional de la Asociación.
+* **Socio Senior:** Socio ordinario perteneciente al **tercer (3º), cuarto (4º), quinto (5º) o sexto (6º) año social**, habiendo cumplimentado las obligaciones iniciales y requisitos académicos. Posee mayores atribuciones de gestión, asignación de tareas en subcomisiones y elegibilidad para órganos estatutarios de control y gobierno.
 * **Socio Pasivo:** Socio que no tiene obligaciones de asistencia ni de tareas periódicas, pero mantiene su vínculo con la institución.
 * **Año Social:** Período anual de permanencia y actividad formativa dentro de la estructura de grupos de AVEIT (del 1º al 6º año social).
 * **Expediente Disciplinario:** Conjunto ordenado y sistemático de actuaciones, documentos, pruebas, descargos y dictámenes administrativos tramitados ante el TD para respaldar resoluciones institucionales.
 * **Formulario T01 / Anexo T01:** Instrumento administrativo estandarizado mediante el cual una Autoridad, Presidente de Subcomisión o Jefe de Equipo solicita formalmente ante el TD la apertura de un expediente de premiación o sanción, detallando las causas circunstanciadas en su hoja de Anexo.
 * **Formulario T02 (Justificación):** Formulario estandarizado utilizado por el socio imputado para justificar una inasistencia o incumplimiento en base a causales expresamente tipificadas en el reglamento (enfermedad con certificado, exámenes, viajes laborales/personales de fuerza mayor con pasajes).
 * **Formulario T03 (Descargo):** Formulario de descargo especial utilizado para exponer circunstancias extraordinarias no tipificadas explícitamente en el reglamento, evaluadas por el TD conforme a antecedentes y sana crítica.
-* **Resolución Disciplinaria:** Acto administrativo formal que da cierre al expediente, caracterizado por su estructura jurídica de VISTOS, CONSIDERANDOS y RESOLUCIÓN, y validado mediante firma colegiada por representantes de 4º, 5º y 6º año social.
+* **Resolución Disciplinaria:** Acto administrativo formal que da cierre al expediente, caracterizado por su estructura jurídica de VISTOS, CONSIDERANDOS y RESOLUCIÓN, y validado mediante firma colegiada por representantes de los grupos sociales seniors correspondientes.
 * **Circular Normativa:** Documento emitido por el TD (ej. Circular 001/2026) que fija los criterios reglamentarios y escalas de solicitud de premios y sanciones.
 * **Puntos Negativos (Sanciones):** Unidad de medida acumulativa (en fracciones mínimas de 0.5 puntos) aplicada a un socio por faltas, inasistencias u omisión de tareas asignadas. Al acumular diez (10) puntos negativos netos, el socio pierde automáticamente su condición institucional.
 * **Puntos Positivos (Premios):** Unidad de medida acumulativa otorgada a socios o grupos en reconocimiento a desempeños sobresalientes, proactividad y aportes extraordinarios a la Asociación.
@@ -84,7 +86,7 @@
 
 La formación académica de los futuros ingenieros en la Universidad Tecnológica Nacional (UTN FRC) se complementa de forma decisiva con el desarrollo de competencias interpersonales, habilidades blandas, liderazgo y visión internacional. En este marco, la **Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)** desempeña un rol fundamental desde hace más de cinco décadas mediante una propuesta formativa vivencial que culmina con un Viaje Técnico-Cultural por Europa de tres meses de duración.
 
-Para sustentar esta estructura asociativa, basada en el compromiso voluntario y el trabajo mancomunado de más de 500 socios, AVEIT cuenta con un estricto **Estatuto Social**, un **Reglamento Interno de Disciplina** y un **Reglamento Procesal Disciplinario** orientados a garantizar la equidad, el cumplimiento de los deberes sociales y la transparencia en la convivencia institucional. Dentro de este esquema, el **Tribunal de Disciplina (TD)** es el órgano clave responsable de dictaminar sobre faltas, administrar descargos y otorgar incentivos y penalizaciones a través de un sistema de puntaje acumulativo.
+Para sustentar esta estructura asociativa, basada en el compromiso voluntario y el trabajo mancomunado de más de 500 socios (divididos orgánicamente entre Socios Juniors de 1º a 2º año y Socios Seniors de 3º a 6º año social), AVEIT cuenta con un estricto **Estatuto Social**, un **Reglamento Interno de Disciplina** y un **Reglamento Procesal Disciplinario** orientados a garantizar la equidad, el cumplimiento de los deberes sociales y la transparencia en la convivencia institucional. Dentro de este esquema, el **Tribunal de Disciplina (TD)** es el órgano clave responsable de dictaminar sobre faltas, administrar descargos y otorgar incentivos y penalizaciones a través de un sistema de puntaje acumulativo.
 
 En la actualidad, la organización experimenta una dualidad procedimental: si bien el marco reglamentario formal aprobado por Asamblea responde a la versión 2018 (con procedimientos concebidos bajo una lógica física y en papel), la práctica cotidiana y la dinámica de trabajo real han evolucionado hacia las pautas del **Reglamento Procesal Disciplinario 2026**. Bajo esta modalidad operativa real, el TD sesiona y delibera de forma predominantemente virtual, requiriendo flujos ágiles para la tramitación de expedientes, recepción de formularios digitales (T01, T02, T03) y notificación por correo electrónico.
 
@@ -99,8 +101,8 @@ El presente proyecto propone el diseño, desarrollo e implementación del **Sist
 El propósito de este documento de **Estudio Inicial** es establecer las bases funcionales, organizacionales, normativas y contextuales del proyecto de software, respondiendo formalmente a las directrices de la cátedra de Seminario Integrador de la UTN – Facultad Regional Córdoba.
 
 Específicamente, este documento persigue los siguientes objetivos:
-1. Describir formalmente la organización beneficiaria (**A.V.E.I.T.**), su estructura orgánica (Asamblea General, Comisión Directiva de 7 miembros, Tribunal de Disciplina de 6 miembros y 7 Subcomisiones reglamentarias), historia, dimensionamiento operativo, layout físico y políticas de gobierno.
-2. Analizar el marco reglamentario procesal, contrastando la versión histórica 2018 con el flujo de trabajo vigente 2026, estandarizando los estados del expediente, formularios (T01, T02, T03) y competencias institucionales.
+1. Describir formalmente la organización beneficiaria (**A.V.E.I.T.**), su estructura orgánica (Asamblea General, Comisión Directiva de 7 miembros, Tribunal de Disciplina de 6 miembros y 7 Subcomisiones reglamentarias), historia, dimensionamiento operativo, segmentación de socios Juniors (1º y 2º año) y Seniors (3º a 6º año), layout físico y políticas de gobierno.
+2. Analizar el marco reglamentario procesal, contrastando la versión histórica 2018 con el flujo de trabajo vigente 2026, estandarizando los 6 estados del expediente, formularios (T01, T02, T03) y competencias institucionales.
 3. Caracterizar el mapa global de procesos y detallar minuciosamente los procesos de negocio directamente afectados por la implementación del software.
 4. Relevar el estado de los recursos informáticos, la infraestructura preexistente (servidor central, backend Python, MySQL, Google Sheets) y la modalidad operativa virtual del TD.
 5. Identificar las problemáticas críticas que afectan la gestión disciplinaria actual y fundamentar las oportunidades de mejora tecnológica y organizacional que brindará el sistema **SGD-AVEIT**.
@@ -127,8 +129,8 @@ Específicamente, este documento persigue los siguientes objetivos:
         |        COMISIÓN DIRECTIVA        |    |    TRIBUNAL DE DISCIPLINA   |
         |           (7 Miembros:           |    |   (6 Miembros: 3 Titulares  |
         |  Presidente, Vicepresidente,     |    |   y 3 Suplentes electos     |
-        |  Tesorero, Protesorero,          |    |   por Asamblea de 4°, 5° y  |
-        |  Secretario General,             |    |   6° año social)            |
+        |  Tesorero, Protesorero,          |    |   por Asamblea de Socios    |
+        |  Secretario General,             |    |   Seniors)                  |
         |  Prosecretario y Sec. de Actas)  |    +-----------------------------+
         +-----------------+----------------+
                           |
@@ -155,13 +157,15 @@ Fundada en el año **1965** por un grupo visionario de estudiantes de la Univers
 
 A lo largo de más de seis décadas ininterrumpidas de trayectoria, la Asociación ha perfeccionado su marco normativo a través de sucesivas reformas estatutarias (con su última gran reforma integral consolidada en el Estatuto 2026 y el Reglamento Interno de Disciplina 2026). Decenas de promociones de graduados han recorrido centros tecnológicos globales, convirtiendo a AVEIT en una institución de referencia de la UTN FRC que fomenta la cultura del mérito, el trabajo en equipo y la responsabilidad cívica.
 
-### 3.4. Dimensionamiento
+### 3.4. Dimensionamiento y Categorías de Socios
 La escala operativa de AVEIT presenta una estructura asociativa de marcada envergadura:
-* **Padrón de Socios Activos:** Aproximadamente **515 socios activos**, distribuidos jerárquica y temporalmente en grupos correspondientes al 1º, 2º, 3º, 4º, 5º y 6º año social.
+* **Padrón de Socios Activos:** Aproximadamente **515 socios activos**, categorizados estatutariamente según su antigüedad social y avance curricular:
+  * **Socios Juniors (1º y 2º año social):** Socios en etapa formativa y de inserción en la dinámica asociativa.
+  * **Socios Seniors (3º, 4º, 5º y 6º año social):** Socios con mayor antigüedad que han cumplimentado las obligaciones formativas previas y requisitos académicos curriculares. Asumen responsabilidades de conducción operativa, integración de subcomisiones, elegibilidad en el Tribunal de Disciplina y preparación directa hacia el Viaje Final de Estudios (Grupo Viajero en 6º año).
 * **Socios Pasivos y Honorarios:** Varias decenas de socios pasivos (quienes han completado su ciclo obligatorio o no poseen tareas semanales activas pero colaboran en actividades especiales).
 * **Estructura Directiva, de Control y Subcomisiones:**
   * **Comisión Directiva:** 7 miembros (Presidente, Vicepresidente, Tesorero, Protesorero, Secretario General, Prosecretario y Secretario de Actas).
-  * **Tribunal de Disciplina:** 6 miembros (3 titulares y 3 suplentes electos por Asamblea, representando al 4º, 5º y 6º año social).
+  * **Tribunal de Disciplina:** 6 miembros (3 titulares y 3 suplentes electos por Asamblea entre los Socios Seniors).
   * **Comisión Revisora de Cuentas:** 3 miembros.
   * **Subcomisiones Reglamentarias (7):** Cómputos, Relaciones Institucionales, Organización y Eventos, Prensa y Difusión, Mantenimiento, Recursos Humanos, y Gestión Social y Ambiental.
 * **Volumen Operativo del Tribunal de Disciplina:**
@@ -185,7 +189,7 @@ El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento
 2. **En período de subida de justificaciones (5 días hábiles):** Tras el cierre del evento o recepción del T01, el sistema envía automáticamente el *Acuse de Sanción* por correo electrónico. El socio dispone de un plazo improrrogable de **cinco (5) días hábiles** para ingresar al módulo "Mis Expedientes" y generar su justificación (Formulario T02) o descargo (Formulario T03) con los comprobantes digitales correspondientes.
 3. **Las justificaciones están siendo revisadas:** Cumplido el plazo de 5 días, el Tribunal de Disciplina analiza las solicitudes en el módulo "Justificaciones", aprobando o rechazando formalmente cada justificación y evaluando las solicitudes T01 junto a sus descargos.
 4. **En espera de resolución:** Concluida la revisión probatoria, el expediente queda habilitado para la redacción de la Resolución definitiva, indicando la fundamentación fáctica, los reglamentos respaldantes y la puntuación asignada.
-5. **Pendiente de firma y envío:** La resolución redactada debe ser suscripta y avalada obligatoriamente por **al menos un miembro de cada grupo social (4º, 5º y 6º año social)**, garantizando la representación colegiada intergeneracional.
+5. **Pendiente de firma y envío:** La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales seniors.
 6. **Expedientes ya emitidos:** Una vez firmada la resolución, el sistema remite automáticamente las notificaciones electrónicas con copia a los socios imputados, a la Comisión Directiva y al solicitante, impactando los puntos y publicando el dictamen.
 
 #### 3.5.3. Catálogo de Formularios Administrativos Oficiales
@@ -195,7 +199,7 @@ El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento
 * **Circular 001/2026 (Arts. 20 y 20 BIS):** Instrumento normativo del TD que estipula los criterios de graduación y pedidos de puntos.
 
 #### 3.5.4. Competencia de Autoridades para el Inicio de Acciones (Arts. 21 a 26)
-* **Comisión Directiva:** Puede iniciar acciones sobre cualquier socio activo, subcomisión o equipo, excepto sobre miembros de su propio cuerpo.
+* **Comisión Directiva:** Puede iniciar acciones sobre cualquier socio activo (Junior o Senior), subcomisión o equipo, excepto sobre miembros de su propio cuerpo.
 * **Comisión Fiscalizadora:** Puede iniciar acciones sobre socios activos, Comisión Directiva, Comisión Revisora y Tribunal de Disciplina.
 * **Comisión Revisora de Cuentas:** Competente para iniciar acciones por faltas en el área de Tesorería.
 * **Tribunal de Disciplina:** Puede actuar de oficio cuando ninguna otra autoridad haya accionado, o solicitar expedientes en concepto de "rectificación". El miembro del TD que solicite una medida no puede participar del juzgamiento de la misma.
@@ -226,9 +230,9 @@ flowchart TD
     end
 
     subgraph OPERATIVOS["Macroprocesos Operativos / Misionales"]
-        O1["Campaña y Admisión Anual de Nuevos Socios"]
+        O1["Campaña y Admisión Anual de Nuevos Socios (Juniors)"]
         O2["Formación y Talleres de Habilidades Blandas"]
-        O3["Gestión Operativa de las 7 Subcomisiones"]
+        O3["Gestión Operativa de las 7 Subcomisiones (Seniors)"]
         O4["Logística, Itinerarios y Ejecución del Viaje a Europa"]
         O5["Venta de Gran Rifa y Eventos de Recaudación"]
     end
@@ -258,7 +262,7 @@ El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo di
 [2. Notificación Automática y Carga de Descargos (T02/T03 - 5 Días Hábiles)]
                                  │
                                  ▼
-[3. Sustanciación, Votación y Resolución del TD (Firma Colegiada 4°, 5° y 6° año)]
+[3. Sustanciación, Votación y Resolución del TD (Firma Colegiada de Seniors)]
                                  │
                                  ▼
 [4. Cómputo Transaccional, Publicación Transparente y Alertas de Límite (7 y 10 pts)]
@@ -292,14 +296,14 @@ El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo di
   1. En sesión virtual o presencial, el TD verifica conflictos de interés (activando miembros suplentes si corresponde según Art. 95 del Estatuto).
   2. En el módulo "Justificaciones", los miembros del TD aprueban o desaprueban los descargos y analizan antecedentes históricos análogos.
   3. Cada integrante emite su voto nominal fundado. Alcanzada la mayoría absoluta, se redacta la Resolución con sus VISTOS, CONSIDERANDOS y RESOLUCIÓN.
-  4. La resolución es firmada digitalmente por **al menos un miembro de cada grupo social (4º, 5º y 6º año)**.
+  4. La resolución es formalizada mediante la firma colegiada digital de los miembros del tribunal.
 * **Salidas:** Expediente en estado **"En espera de resolución"** y posterior paso a **"Pendiente de firma y envío"**.
 
 #### Proceso 4: Cómputo de Saldo de Puntos, Publicación y Alertas de Límite Crítico
 * **Disparador:** Firma colegiada completa de la Resolución.
 * **Entradas:** Resolución formal con puntos asignados (+/-).
 * **Actividades:**
-  1. El motor de reglas impacta la transacción matemática en el saldo histórico del socio de forma auditada e irreversible (prohibición de `UPDATE` manual en DB).
+  1. El motor de reglas impacta la transacción matemática en el saldo histórico del socio de forma auditada e irreversible (prohibición de `UPDATE` manual en DB MySQL).
   2. Se despachan las notificaciones por correo electrónico a los interesados, CD y solicitante, pasando a **"Expedientes ya emitidos"**.
   3. Se publica el dictamen en el panel de transparencia pública institucional.
   4. Evaluación de umbrales:
@@ -312,7 +316,7 @@ El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo di
 * **Entradas:** Registros consolidados de sanciones, premios, asistencias y expedientes del período.
 * **Actividades:**
   1. Las autoridades del TD seleccionan el período cuatrimestral en la plataforma web.
-  2. El sistema compila y genera instantáneamente el **Informe y Balance Cuatrimestral de Premiaciones y Sanciones**, categorizado por Subcomisión, Grupo Social (1º a 6º año) y Socio individual.
+  2. El sistema compila y genera instantáneamente el **Informe y Balance Cuatrimestral de Premiaciones y Sanciones**, categorizado por Subcomisión, Grupo Social (1º a 6º año, distinguiendo Juniors y Seniors) y Socio individual.
   3. Se consolidan las estadísticas y se exporta el informe oficial firmado digitalmente para su presentación formal ante Comisión Directiva y la Asamblea General Ordinaria.
 * **Salidas:** Balance Cuatrimestral de Disciplina oficial listo para su tratamiento institucional.
 
@@ -402,7 +406,7 @@ A partir del relevamiento exhaustivo realizado en la organización, el análisis
 8. **Omisión en la Confección y Presentación de Balances de Auditoría Cuatrimestral (Art. 137):**  
    Debido a la enorme complejidad de consolidar a mano decenas de planillas y actas, actualmente el TD no logra emitir ni presentar formalmente los dos (2) balances cuatrimestrales de auditoría exigidos por el Reglamento Interno, limitando la rendición de cuentas ante la Comisión Directiva y las Asambleas de Socios.
 9. **Falta de Soporte para la Modalidad de Trabajo Remoto / Mobile del TD y la Firma Colegiada:**  
-   Dado que las deliberaciones del Tribunal de Disciplina se desarrollan mayoritariamente en formato virtual, la falta de una herramienta web responsive obliga a compartir archivos estáticos durante videollamadas, dificultando la recolección ágil de firmas colegiadas de miembros de 4º, 5º y 6º año social y la emisión formal de resoluciones.
+   Dado que las deliberaciones del Tribunal de Disciplina se desarrollan mayoritariamente en formato virtual, la falta de una herramienta web responsive obliga a compartir archivos estáticos durante videollamadas, dificultando la recolección ágil de firmas colegiadas y la emisión formal de resoluciones.
 
 ---
 
@@ -427,7 +431,7 @@ La implementación del sistema **SGD-AVEIT** permitirá transformar integralment
 8. **Generación Instantánea de Balances Cuatrimestrales y Reportes de Auditoría (Art. 137):**  
    Capacidad de emitir con un solo clic los Informes y Balances Cuatrimestrales de Auditoría Interna en formatos ejecutivos para Asambleas Ordinarias y Comisión Directiva, permitiendo al TD cumplir de manera natural y sin esfuerzo con el marco reglamentario.
 9. **Soporte Pleno para Deliberación, Firma Colegiada Intergeneracional y Dictamen Remoto:**  
-   Herramientas integradas en la plataforma web que permiten a las miembros del TD conectarse desde sus dispositivos móviles durante las reuniones virtuales, emitir votos nominales fundados, registrar firmas digitales de 4º, 5º y 6º año social y promulgar resoluciones con validez formal inmediata.
+   Herramientas integradas en la plataforma web que permiten a las miembros del TD conectarse desde sus dispositivos móviles durante las reuniones virtuales, emitir votos nominales fundados, registrar firmas colegiadas de Socios Seniors y promulgar resoluciones con validez formal inmediata.
 
 ---
 *Documento elaborado para la Cátedra de Seminario Integrador - UTN FRC - Año 2026.*
