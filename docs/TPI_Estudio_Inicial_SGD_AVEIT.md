@@ -33,6 +33,7 @@
 | **1.1.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Ajuste de subcomisiones según Reglamento 2026 (7 subcomisiones), estructura de Comisión Directiva (7 miembros), especificación de base de datos MySQL, incorporación de la sanción por omisión de tareas asignadas (hasta -2 pts), modalidad de reuniones virtuales de TD y requerimiento de arquitectura 100% Web y Responsive Mobile. |
 | **1.2.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación del análisis comparativo entre el Reglamento Procesal Disciplinario 2018 (aprobado por Asamblea) y 2026 (flujo real). Estandarización de 6 estados del expediente, formularios T01, T02 y T03, delimitación de competencias de inicio y firma colegiada. |
 | **1.3.0** | 16/08/2026 | Equipo de Proyecto SGD-AVEIT | Adecuación y armonización integral con el Estatuto Social 2026 respecto a la segmentación estatutaria de socios: categorización de Socios Juniors (1º y 2º año social) y Socios Seniors (3º a 6º año social), y su impacto en las responsabilidades asociativas y régimen disciplinario. |
+| **1.4.0** | 18/08/2026 | Equipo de Proyecto SGD-AVEIT | Explicitación y estandarización de las fuentes documentales en la totalidad de las citas de artículos del documento (Estatuto Social de AVEIT, Reglamento Interno de Disciplina de AVEIT y Reglamento Procesal Disciplinario 2026). |
 
 ---
 
@@ -76,7 +77,7 @@
 * **Circular Normativa:** Documento emitido por el TD (ej. Circular 001/2026) que fija los criterios reglamentarios y escalas de solicitud de premios y sanciones.
 * **Puntos Negativos (Sanciones):** Unidad de medida acumulativa (en fracciones mínimas de 0.5 puntos) aplicada a un socio por faltas, inasistencias u omisión de tareas asignadas. Al acumular diez (10) puntos negativos netos, el socio pierde automáticamente su condición institucional.
 * **Puntos Positivos (Premios):** Unidad de medida acumulativa otorgada a socios o grupos en reconocimiento a desempeños sobresalientes, proactividad y aportes extraordinarios a la Asociación.
-* **Balance Cuatrimestral de Disciplina:** Informe oficial y consolidado emitido dos veces al año que resume las actuaciones, auditorías y saldos de premios/sanciones de los socios y subcomisiones (Art. 137 Reglamento Interno).
+* **Balance Cuatrimestral de Disciplina:** Informe oficial y consolidado emitido dos veces al año que resume las actuaciones, auditorías y saldos de premios/sanciones de los socios y subcomisiones (Art. 137 del Reglamento Interno de Disciplina de AVEIT).
 * **Viaje Técnico-Cultural:** Proyecto formativo cumbre de AVEIT que consiste en una estancia de estudios de aproximadamente tres meses por países de Europa, visitando centros de desarrollo científico-tecnológico, plantas industriales y universidades de primer nivel.
 * **Responsive Mobile / Mobile-First:** Enfoque de diseño y arquitectura de software web que garantiza una usabilidad fluida y completa en dispositivos móviles (smartphones y tablets) así como en equipos de escritorio.
 
@@ -171,7 +172,7 @@ La escala operativa de AVEIT presenta una estructura asociativa de marcada enver
 * **Volumen Operativo del Tribunal de Disciplina:**
   * Tratamiento de **decenas de expedientes anuales** por faltas a reuniones obligatorias, omisión de tareas asignadas en subcomisiones, incumplimientos en turnos de mantenimiento/limpieza y propuestas de reconocimiento al mérito.
   * Gestión de más de un centenar de solicitudes de justificación y descargos (T02 y T03) con certificados médicos o pasajes de viaje por período.
-  * **Situación de los Balances Cuatrimestrales de Auditoría Interna:** Si bien el Reglamento Interno (Art. 137) estipula la emisión de dos (2) Informes y Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones por año social, actualmente este proceso no se está llevando a cabo de manera regular debido a la excesiva carga operativa manual en hojas de cálculo. La plataforma SGD-AVEIT automatizará su generación para facilitar su presentación regular ante Comisión Directiva y Asambleas.
+  * **Situación de los Balances Cuatrimestrales de Auditoría Interna:** Si bien el Art. 137 del Reglamento Interno de Disciplina de AVEIT estipula la emisión de dos (2) Informes y Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones por año social, actualmente este proceso no se está llevando a cabo de manera regular debido a la excesiva carga operativa manual en hojas de cálculo. La plataforma SGD-AVEIT automatizará su generación para facilitar su presentación regular ante Comisión Directiva y Asambleas.
 
 ---
 
@@ -184,7 +185,7 @@ La gestión disciplinaria en AVEIT presenta un contexto normativo particular:
 
 El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento 2026, asegurando al mismo tiempo la plena compatibilidad estatutaria y jurídica.
 
-#### 3.5.2. Los Seis (6) Estados Oficiales del Expediente (Reglamento 2026, Art. 12)
+#### 3.5.2. Los Seis (6) Estados Oficiales del Expediente (Art. 12 del Reglamento Procesal Disciplinario 2026)
 1. **Expediente Creado:** Se origina a partir del cierre de un evento obligatorio/sancionable en el sistema por la autoridad a cargo, o mediante la solicitud formal de un Formulario T01 con Anexo elevado por una autoridad competente.
 2. **En período de subida de justificaciones (5 días hábiles):** Tras el cierre del evento o recepción del T01, el sistema envía automáticamente el *Acuse de Sanción* por correo electrónico. El socio dispone de un plazo improrrogable de **cinco (5) días hábiles** para ingresar al módulo "Mis Expedientes" y generar su justificación (Formulario T02) o descargo (Formulario T03) con los comprobantes digitales correspondientes.
 3. **Las justificaciones están siendo revisadas:** Cumplido el plazo de 5 días, el Tribunal de Disciplina analiza las solicitudes en el módulo "Justificaciones", aprobando o rechazando formalmente cada justificación y evaluando las solicitudes T01 junto a sus descargos.
@@ -193,12 +194,12 @@ El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento
 6. **Expedientes ya emitidos:** Una vez firmada la resolución, el sistema remite automáticamente las notificaciones electrónicas con copia a los socios imputados, a la Comisión Directiva y al solicitante, impactando los puntos y publicando el dictamen.
 
 #### 3.5.3. Catálogo de Formularios Administrativos Oficiales
-* **Formulario T01 (Solicitud de Premiación o Sanción) y Hoja Anexo T01 (Arts. 16 y 16 BIS):** Exclusivo para autoridades habilitadas. Permite describir formalmente las causas, hechos, pruebas y socios implicados, proponiendo la cuantía de puntos.
-* **Formulario T02 (Justificación Tipificada - Art. 17):** Estructurado en 4 bloques: *Datos Personales, Descripción de la Sanción, Justificación* (causales del Reglamento Interno: enfermedad con certificado médico, viajes de fuerza mayor con pasajes, obligaciones académicas) y *Observaciones*.
-* **Formulario T03 (Descargo Extraordinario - Art. 18):** Utilizado para circunstancias extraordinarias no tipificadas en el reglamento, evaluadas bajo sana crítica del TD y antecedentes jurisprudenciales.
-* **Circular 001/2026 (Arts. 20 y 20 BIS):** Instrumento normativo del TD que estipula los criterios de graduación y pedidos de puntos.
+* **Formulario T01 (Solicitud de Premiación o Sanción) y Hoja Anexo T01 (Arts. 16 y 16 BIS del Reglamento Procesal Disciplinario 2026):** Exclusivo para autoridades habilitadas. Permite describir formalmente las causas, hechos, pruebas y socios implicados, proponiendo la cuantía de puntos.
+* **Formulario T02 (Justificación Tipificada - Art. 17 del Reglamento Procesal Disciplinario 2026):** Estructurado en 4 bloques: *Datos Personales, Descripción de la Sanción, Justificación* (causales tipificadas en el Reglamento Interno de Disciplina de AVEIT: enfermedad con certificado médico, viajes de fuerza mayor con pasajes, obligaciones académicas) y *Observaciones*.
+* **Formulario T03 (Descargo Extraordinario - Art. 18 del Reglamento Procesal Disciplinario 2026):** Utilizado para circunstancias extraordinarias no tipificadas explícitamente en el reglamento, evaluadas bajo sana crítica del TD y antecedentes jurisprudenciales.
+* **Circular 001/2026 del Tribunal de Disciplina (Arts. 20 y 20 BIS del Reglamento Procesal Disciplinario 2026):** Instrumento normativo del TD que estipula los criterios de graduación y pedidos de puntos.
 
-#### 3.5.4. Competencia de Autoridades para el Inicio de Acciones (Arts. 21 a 26)
+#### 3.5.4. Competencia de Autoridades para el Inicio de Acciones (Arts. 21 a 26 del Reglamento Procesal Disciplinario 2026)
 * **Comisión Directiva:** Puede iniciar acciones sobre cualquier socio activo (Junior o Senior), subcomisión o equipo, excepto sobre miembros de su propio cuerpo.
 * **Comisión Fiscalizadora:** Puede iniciar acciones sobre socios activos, Comisión Directiva, Comisión Revisora y Tribunal de Disciplina.
 * **Comisión Revisora de Cuentas:** Competente para iniciar acciones por faltas en el área de Tesorería.
@@ -214,8 +215,8 @@ El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento
    * *Omisión de tareas de Mantenimiento / Limpieza General:* 2 puntos negativos.
    * *Omisión / Incumplimiento de Tareas Asignadas por CD o Autoridades Delegadas:* Graduada desde un **llamado de atención hasta dos (2) puntos negativos (-2)**.
    * *Llegadas tarde / retiros anticipados:* Llamado de atención o 0.5 puntos negativos.
-3. **Cláusula de Pérdida Automática de Condición de Socio (Límite Crítico - Art. 93 Reglamento Interno):** Todo socio que acumule **diez (10) o más puntos negativos netos** pierde automáticamente su calidad de socio de AVEIT.
-4. **Irrecurribilidad:** Las decisiones del TD se adoptan por mayoría absoluta y son irrecurribles (Art. 96 Estatuto).
+3. **Cláusula de Pérdida Automática de Condición de Socio (Límite Crítico - Art. 93 del Reglamento Interno de Disciplina de AVEIT):** Todo socio que acumule **diez (10) o más puntos negativos netos** pierde automáticamente su calidad de socio de AVEIT.
+4. **Irrecurribilidad:** Las decisiones del TD se adoptan por mayoría absoluta y son irrecurribles (Art. 96 del Estatuto Social de AVEIT).
 
 ---
 
@@ -268,15 +269,15 @@ El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo di
 [4. Cómputo Transaccional, Publicación Transparente y Alertas de Límite (7 y 10 pts)]
                                  │
                                  ▼
-[5. Auditoría Interna Cuatrimestral y Emisión Automática de Balances (Art. 137)]
+[5. Auditoría Interna Cuatrimestral y Emisión Automática de Balances (Art. 137 del Reglamento Interno de Disciplina de AVEIT)]
 ```
 
 #### Proceso 1: Detección, Reporte y Registro de Infracción / Mérito (Formulario T01)
-* **Disparador:** Cierre de evento con inasistencias en sistema, reporte de omisión de tareas asignadas (sancionable con llamado de atención a -2 pts), falta de limpieza o elevación de propuesta de premio por autoridad competente (según Arts. 21 a 26).
+* **Disparador:** Cierre de evento con inasistencias en sistema, reporte de omisión de tareas asignadas (sancionable con llamado de atención a -2 pts), falta de limpieza o elevación de propuesta de premio por autoridad competente (según Arts. 21 a 26 del Reglamento Procesal Disciplinario 2026).
 * **Entradas:** Acta de evento, reporte de tareas de subcomisión o Formulario T01 con hoja de Anexo formal.
 * **Actividades:**
   1. La autoridad habilitada accede a la plataforma e ingresa la solicitud T01 detallando los hechos en el Anexo.
-  2. El sistema valida las competencias del solicitante (Art. 21 a 26), tipifica la falta según el catálogo reglamentario y genera el número unívoco de expediente disciplinario con sellado de tiempo.
+  2. El sistema valida las competencias del solicitante (Arts. 21 a 26 del Reglamento Procesal Disciplinario 2026), tipifica la falta según el catálogo reglamentario y genera el número unívoco de expediente disciplinario con sellado de tiempo.
 * **Salidas:** Expediente disciplinario o de premiación registrado en estado **"Expediente Creado"**.
 
 #### Proceso 2: Notificación y Presentación de Descargos (Formularios T02 y T03)
@@ -293,7 +294,7 @@ El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo di
 * **Disparador:** Vencimiento del plazo de 5 días o recepción de justificaciones completas.
 * **Entradas:** Expediente, pruebas, descargos T02/T03, antecedentes jurisprudenciales en sistema y Circular 001/2026.
 * **Actividades:**
-  1. En sesión virtual o presencial, el TD verifica conflictos de interés (activando miembros suplentes si corresponde según Art. 95 del Estatuto).
+  1. En sesión virtual o presencial, el TD verifica conflictos de interés (activando miembros suplentes si corresponde según Art. 95 del Estatuto Social de AVEIT).
   2. En el módulo "Justificaciones", los miembros del TD aprueban o desaprueban los descargos y analizan antecedentes históricos análogos.
   3. Cada integrante emite su voto nominal fundado. Alcanzada la mayoría absoluta, se redacta la Resolución con sus VISTOS, CONSIDERANDOS y RESOLUCIÓN.
   4. La resolución es formalizada mediante la firma colegiada digital de los miembros del tribunal.
@@ -311,7 +312,7 @@ El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo di
      * *Saldo >= 10 puntos negativos:* Emisión de **Alerta Crítica Roja de Pérdida Automática de Condición de Socio** notificando fehacientemente al socio, a Comisión Directiva y a la Comisión Fiscalizadora.
 * **Salidas:** Saldo actualizado, publicación oficial visible y alertas automáticas disparadas.
 
-#### Proceso 5: Auditorías Internas Cuatrimestrales y Emisión de Balances Oficiales (Art. 137)
+#### Proceso 5: Auditorías Internas Cuatrimestrales y Emisión de Balances Oficiales (Art. 137 del Reglamento Interno de Disciplina de AVEIT)
 * **Disparador:** Fecha de corte cuatrimestral estipulada por Estatuto (dos veces al año).
 * **Entradas:** Registros consolidados de sanciones, premios, asistencias y expedientes del período.
 * **Actividades:**
@@ -403,8 +404,8 @@ A partir del relevamiento exhaustivo realizado en la organización, el análisis
    El cómputo del plazo de 5 días hábiles para presentar formularios T02/T03 tras el acuse de sanción se realiza de forma manual, sin una marca de tiempo fehaciente ni constancia digital inalterable.
 7. **Riesgo Humano en el Cómputo de Saldos y Falta de Alertas Tempranas del Límite Sancionatorio:**  
    El saldo neto de puntos se calcula manualmente a través de fórmulas en planillas, lo que expone a la institución a errores humanos críticos en la detección oportuna de aquellos socios que alcanzan o superan los diez (10) puntos negativos (causal de pérdida automática de la calidad de socio).
-8. **Omisión en la Confección y Presentación de Balances de Auditoría Cuatrimestral (Art. 137):**  
-   Debido a la enorme complejidad de consolidar a mano decenas de planillas y actas, actualmente el TD no logra emitir ni presentar formalmente los dos (2) balances cuatrimestrales de auditoría exigidos por el Reglamento Interno, limitando la rendición de cuentas ante la Comisión Directiva y las Asambleas de Socios.
+8. **Omisión en la Confección y Presentación de Balances de Auditoría Cuatrimestral (Art. 137 del Reglamento Interno de Disciplina de AVEIT):**  
+   Debido a la enorme complejidad de consolidar a mano decenas de planillas y actas, actualmente el TD no logra emitir ni presentar formalmente los dos (2) balances cuatrimestrales de auditoría exigidos por el Reglamento Interno de Disciplina, limitando la rendición de cuentas ante la Comisión Directiva y las Asambleas de Socios.
 9. **Falta de Soporte para la Modalidad de Trabajo Remoto / Mobile del TD y la Firma Colegiada:**  
    Dado que las deliberaciones del Tribunal de Disciplina se desarrollan mayoritariamente en formato virtual, la falta de una herramienta web responsive obliga a compartir archivos estáticos durante videollamadas, dificultando la recolección ágil de firmas colegiadas y la emisión formal de resoluciones.
 
@@ -421,14 +422,14 @@ La implementación del sistema **SGD-AVEIT** permitirá transformar integralment
 3. **Trazabilidad Absoluta y Pistas de Auditoría en Modificaciones de Expedientes:**  
    Erradicación definitiva de modificaciones directas sobre la base de datos MySQL. Toda rectificación, reconsideración o ajuste de puntaje se realizará mediante flujos auditados en la aplicación que registrarán el usuario responsable, fecha/hora, justificativo y versión anterior.
 4. **Repositorio de Antecedentes y Catálogo de Graduación Homogénea:**  
-   Disponibilidad de un motor de búsqueda de expedientes históricos y una matriz de tipificación alineada a la Circular 001/2026 y al Reglamento Interno 2026, garantizando fallos equitativos, predecibles y homogéneos.
+   Disponibilidad de un motor de búsqueda de expedientes históricos y una matriz de tipificación alineada a la Circular 001/2026 del Tribunal de Disciplina y al Reglamento Interno de Disciplina de AVEIT, garantizando fallos equitativos, predecibles y homogéneos.
 5. **Digitalización Integral de Formularios Oficiales (T01, T02 y T03):**  
    Habilitación de módulos específicos para la carga digital de solicitudes T01 (con Anexo) por autoridades, justificaciones T02 tipificadas con adjuntos y descargos extraordinarios T03, eliminando el uso de papel y la entrega presencial en sede.
 6. **Motor Automatizado de Control de Plazos y Notificaciones Digitales:**  
    Temporizadores automáticos que calculan con precisión milimétrica los plazos preclusivos de 5 días hábiles para justificaciones, vencimientos y prescripciones, emitiendo acuses de sanción y resoluciones digitales con sellado de tiempo.
 7. **Cómputo Transaccional Automatizado y Sistema de Alarmas Escalonadas:**  
    Actualización en tiempo real del saldo de puntos de cada socio y disparo automático de alertas escalonadas (advertencia preventiva a los 7 puntos negativos y alerta roja automática a los 10 puntos negativos hacia el socio, CD y Comisión Fiscalizadora).
-8. **Generación Instantánea de Balances Cuatrimestrales y Reportes de Auditoría (Art. 137):**  
+8. **Generación Instantánea de Balances Cuatrimestrales y Reportes de Auditoría (Art. 137 del Reglamento Interno de Disciplina de AVEIT):**  
    Capacidad de emitir con un solo clic los Informes y Balances Cuatrimestrales de Auditoría Interna en formatos ejecutivos para Asambleas Ordinarias y Comisión Directiva, permitiendo al TD cumplir de manera natural y sin esfuerzo con el marco reglamentario.
 9. **Soporte Pleno para Deliberación, Firma Colegiada Intergeneracional y Dictamen Remoto:**  
    Herramientas integradas en la plataforma web que permiten a las miembros del TD conectarse desde sus dispositivos móviles durante las reuniones virtuales, emitir votos nominales fundados, registrar firmas colegiadas de Socios Seniors y promulgar resoluciones con validez formal inmediata.
