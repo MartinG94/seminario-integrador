@@ -19,7 +19,7 @@
 | **Organización de Aplicación** | Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.) - UTN FRC |
 | **Nombre del Sistema** | SGD-AVEIT (Sistema de Gestión del Tribunal de Disciplina y Premiaciones de AVEIT) |
 | **Objetivo del Software** | Sistematizar, auditar y transparentar la gestión integral de expedientes disciplinarios, sustanciación de descargos (Formularios T01, T02, T03), cómputo algorítmico de puntajes (premios/sanciones), control de plazos preclusivos y generación automática de balances cuatrimestrales de auditoría mediante una plataforma 100% web y responsive mobile alineada al Estatuto Social y normativas procesales vigentes. |
-| **Metodología Adoptada** | Metodología Ágil (Scrum) |
+| **Metodología Adoptada** | Metodología Ágil Adaptativa (Scrumban - PMI Agile Practice Guide) |
 | **Integrantes del Equipo** | • **Sanchez, Diego Gabriel** (Legajo: 87414) - diegogabriel.stm@gmail.com<br>• **Guillén, Lucas Martín** (Legajo: 85194)<br>• **Rosales, Nicolás** (Legajo: 408917)<br>• **Gastiaburu, Lucas** (Legajo: 74907)<br>• **Villegas, Axel Rene** (Legajo: 403655)<br>• **Urviola, Luis** (Legajo: 409953)<br>• **Quiroz, Tomas Augusto** (Legajo: 415327) |
 | **Cátedra / Docentes** | Seminario Integrador - UTN FRC |
 
@@ -34,6 +34,7 @@
 | **1.2.0** | 15/08/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación del análisis comparativo entre el Reglamento Procesal Disciplinario 2018 (aprobado por Asamblea) y 2026 (flujo real). Estandarización de 6 estados del expediente, formularios T01, T02 y T03, delimitación de competencias de inicio y firma colegiada. |
 | **1.3.0** | 16/08/2026 | Equipo de Proyecto SGD-AVEIT | Adecuación y armonización integral con el Estatuto Social 2026 respecto a la segmentación estatutaria de socios: categorización de Socios Juniors (1º y 2º año social) y Socios Seniors (3º a 6º año social), y su impacto en las responsabilidades asociativas y régimen disciplinario. |
 | **1.4.0** | 18/08/2026 | Equipo de Proyecto SGD-AVEIT | Explicitación y estandarización de las fuentes documentales en la totalidad de las citas de artículos del documento (Estatuto Social de AVEIT, Reglamento Interno de Disciplina de AVEIT y Reglamento Procesal Disciplinario 2026). |
+| **1.5.0** | 18/08/2026 | Equipo de Proyecto SGD-AVEIT | Adopción y formalización del marco metodológico **Scrumban** (integración adaptativa de flujo continuo pull, límites WIP de Kanban y gobernanza por hitos de Scrum) optimizado para el equipo de 7 integrantes y coordinación asíncrona. |
 
 ---
 
