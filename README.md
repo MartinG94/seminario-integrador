@@ -28,7 +28,7 @@
 - [Formularios y Competencias Administrativas](#-formularios-y-competencias-administrativas)
 - [Régimen Disciplinario y Sistema de Puntos](#-régimen-disciplinario-y-sistema-de-puntos)
 - [Arquitectura y Stack Tecnológico](#-arquitectura-y-stack-tecnológico)
-- [Estructura del Repositorio](#-estructura-del-repositorio)
+- [Estructura del Repositorio e Índice de Carpetas](#-estructura-del-repositorio-e-índice-de-carpetas)
 - [Equipo de Desarrollo](#-equipo-de-desarrollo)
 - [Metodología de Trabajo](#-metodología-de-trabajo)
 - [Licencia](#-licencia)
@@ -182,23 +182,46 @@ La solución se concibe como una extensión modular e integrada al ecosistema in
 
 ---
 
-## 📂 Estructura del Repositorio
+## 📂 Estructura del Repositorio e Índice de Carpetas
 
 ```text
 seminario-integrador/
-├── docs/
+├── .github/                                     # Configuraciones de gobernanza y plantillas de GitHub
+│   └── ISSUE_TEMPLATE/                         # Plantillas para reporte estandarizado de issues y tareas
+├── demo-t01-ux/                                # Prototipos de interfaz, wireframes y maquetas UX/UI
+├── docs/                                       # Documentación funcional, técnica y académica del proyecto
+│   ├── reglamentos-aveit/                      # Marco normativo y estatutario oficial de A.V.E.I.T.
+│   │   ├── NOR_Estatuto_AVEIT_Reforma_2026.pdf
+│   │   ├── NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf
+│   │   ├── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf
+│   │   └── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf
+│   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.md        # Catálogo consolidado de los 7 actores clave y matrices RBAC
+│   ├── PLANTILLA_CASO_DE_USO.md                # Plantilla estándar institucional para especificación de Casos de Uso (CU-XX)
 │   ├── TPI_Estudio_Inicial_SGD_AVEIT.docx      # Estudio Inicial en formato DOCX institucional
-│   ├── TPI_Estudio_Inicial_SGD_AVEIT.md        # Documento completo de Estudio Inicial (Markdown)
-│   └── reglamentos-aveit/                      # Marco normativo y estatutario de referencia
-│       ├── NOR_Estatuto_AVEIT_Reforma_2026.pdf
-│       ├── NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf
-│       ├── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf
-│       └── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf
-├── LICENSE                                     # Licencia del proyecto (MIT)
-└── README.md                                   # Presentación y guía principal del proyecto
+│   └── TPI_Estudio_Inicial_SGD_AVEIT.md        # Documento completo de Estudio Inicial (Markdown)
+├── LICENSE                                     # Licencia de código abierto del proyecto (MIT)
+└── README.md                                   # Presentación y guía principal del repositorio
 ```
 
-> 📄 Para acceder a la especificación detallada de procesos, problemas relevados, entrevistas y marco normativo, consulte el documento [Estudio Inicial](docs/TPI_Estudio_Inicial_SGD_AVEIT.md).
+### 🗂️ Índice Detallado por Carpeta
+
+| Carpeta / Ruta | Descripción y Contenido |
+| :--- | :--- |
+| **`docs/`** | **Documentación de Ingeniería de Software y Análisis.** Centraliza todos los documentos de análisis funcional, relevamiento de requerimientos, especificación de actores y plantillas metodológicas del proyecto. |
+| **`docs/reglamentos-aveit/`** | **Marco Normativo Institucional de A.V.E.I.T.** Contiene los documentos reglamentarios oficiales en formato PDF que rigen el funcionamiento estatutario y disciplinario de la asociación, sirviendo como fundamento de las reglas de negocio del sistema. |
+| **`demo-t01-ux/`** | **Prototipado y Experiencia de Usuario (UX/UI).** Espacio dedicado a prototipos navegables, maquetas interactivas y wireframes de interfaces de usuario (enfocado inicialmente en la digitalización del Formulario T01 y portales responsive). |
+| **`.github/`** | **Gobernanza y Automatización en GitHub.** Contiene las configuraciones para la gestión del repositorio, incluyendo plantillas para la creación de issues (`ISSUE_TEMPLATE`) y flujos de trabajo colaborativos. |
+
+### 📑 Guía de Documentos Clave
+
+* 📘 **[Estudio Inicial SGD-AVEIT](docs/TPI_Estudio_Inicial_SGD_AVEIT.md)** (`docs/TPI_Estudio_Inicial_SGD_AVEIT.md` / `.docx`): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
+* 👥 **[Catálogo de Actores y Roles](docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md)** (`docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md`): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
+* 📝 **[Plantilla Estándar de Casos de Uso](docs/PLANTILLA_CASO_DE_USO.md)** (`docs/PLANTILLA_CASO_DE_USO.md`): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
+* ⚖️ **[Reglamentos Oficiales de AVEIT](docs/reglamentos-aveit/)** (`docs/reglamentos-aveit/`):
+  * `NOR_Estatuto_AVEIT_Reforma_2026.pdf`: Estatuto Social general y categorías estatutarias (Juniors y Seniors).
+  * `NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf`: Régimen disciplinario, tipificación de faltas y límite de 10 puntos negativos (Art. 93).
+  * `NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf`: Procedimiento procesal del Tribunal de Disciplina, plazos de 5 días hábiles, descargos T02/T03 y resoluciones colegiadas.
+  * `NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf`: Versión previa del reglamento procesal disciplinario.
 
 ---
 
