@@ -196,9 +196,12 @@ seminario-integrador/
 │   │   ├── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf
 │   │   └── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf
 │   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.md        # Catálogo consolidado de los 7 actores clave y matrices RBAC
+│   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.pdf       # Catálogo de actores y roles en formato PDF
 │   ├── PLANTILLA_CASO_DE_USO.md                # Plantilla estándar institucional para especificación de Casos de Uso (CU-XX)
+│   ├── PLANTILLA_CASO_DE_USO.pdf               # Plantilla estándar de Casos de Uso en formato PDF
 │   ├── TPI_Estudio_Inicial_SGD_AVEIT.docx      # Estudio Inicial en formato DOCX institucional
-│   └── TPI_Estudio_Inicial_SGD_AVEIT.md        # Documento completo de Estudio Inicial (Markdown)
+│   ├── TPI_Estudio_Inicial_SGD_AVEIT.md        # Documento completo de Estudio Inicial (Markdown)
+│   └── TPI_Estudio_Inicial_SGD_AVEIT.pdf       # Documento completo de Estudio Inicial en formato PDF
 ├── LICENSE                                     # Licencia de código abierto del proyecto (MIT)
 └── README.md                                   # Presentación y guía principal del repositorio
 ```
@@ -207,16 +210,16 @@ seminario-integrador/
 
 | Carpeta / Ruta | Descripción y Contenido |
 | :--- | :--- |
-| **`docs/`** | **Documentación de Ingeniería de Software y Análisis.** Centraliza todos los documentos de análisis funcional, relevamiento de requerimientos, especificación de actores y plantillas metodológicas del proyecto. |
+| **`docs/`** | **Documentación de Ingeniería de Software y Análisis.** Centraliza todos los documentos de análisis funcional, relevamiento de requerimientos, especificación de actores y plantillas metodológicas del proyecto, disponibles en formatos Markdown (`.md`), PDF (`.pdf`) y Word (`.docx`). |
 | **`docs/reglamentos-aveit/`** | **Marco Normativo Institucional de A.V.E.I.T.** Contiene los documentos reglamentarios oficiales en formato PDF que rigen el funcionamiento estatutario y disciplinario de la asociación, sirviendo como fundamento de las reglas de negocio del sistema. |
 | **`demo-t01-ux/`** | **Prototipado y Experiencia de Usuario (UX/UI).** Espacio dedicado a prototipos navegables, maquetas interactivas y wireframes de interfaces de usuario (enfocado inicialmente en la digitalización del Formulario T01 y portales responsive). |
 | **`.github/`** | **Gobernanza y Automatización en GitHub.** Contiene las configuraciones para la gestión del repositorio, incluyendo plantillas para la creación de issues (`ISSUE_TEMPLATE`) y flujos de trabajo colaborativos. |
 
 ### 📑 Guía de Documentos Clave
 
-* 📘 **[Estudio Inicial SGD-AVEIT](docs/TPI_Estudio_Inicial_SGD_AVEIT.md)** (`docs/TPI_Estudio_Inicial_SGD_AVEIT.md` / `.docx`): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
-* 👥 **[Catálogo de Actores y Roles](docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md)** (`docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md`): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
-* 📝 **[Plantilla Estándar de Casos de Uso](docs/PLANTILLA_CASO_DE_USO.md)** (`docs/PLANTILLA_CASO_DE_USO.md`): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
+* 📘 **Estudio Inicial SGD-AVEIT** ([Markdown](docs/TPI_Estudio_Inicial_SGD_AVEIT.md) \| [PDF](docs/TPI_Estudio_Inicial_SGD_AVEIT.pdf) \| [DOCX](docs/TPI_Estudio_Inicial_SGD_AVEIT.docx)): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
+* 👥 **Catálogo de Actores y Roles** ([Markdown](docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md) \| [PDF](docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.pdf)): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
+* 📝 **Plantilla Estándar de Casos de Uso** ([Markdown](docs/PLANTILLA_CASO_DE_USO.md) \| [PDF](docs/PLANTILLA_CASO_DE_USO.pdf)): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
 * ⚖️ **[Reglamentos Oficiales de AVEIT](docs/reglamentos-aveit/)** (`docs/reglamentos-aveit/`):
   * `NOR_Estatuto_AVEIT_Reforma_2026.pdf`: Estatuto Social general y categorías estatutarias (Juniors y Seniors).
   * `NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf`: Régimen disciplinario, tipificación de faltas y límite de 10 puntos negativos (Art. 93).
