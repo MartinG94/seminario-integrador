@@ -179,10 +179,12 @@ La escala operativa de AVEIT presenta una estructura asociativa de marcada enver
 
 ### 3.5. Marco Normativo, Políticas Institucionales y Evolución Procesal (2018 vs 2026)
 
-#### 3.5.1. Dualidad Normativa y Realidad Operativa (2018 vs. 2026)
+#### 3.5.1. Dualidad Normativa, Realidad Operativa (2018 vs. 2026) y Validación Institucional
 La gestión disciplinaria en AVEIT presenta un contexto normativo particular:
 * **Reglamento Procesal Disciplinario (Versión 2018):** Es el último cuerpo procesal aprobado formalmente mediante Asamblea General. Establecía una dinámica fuertemente anclada en soporte físico de papel: entrega presencial de formularios T-02 y T-03 en la secretaría de la sede social en horarios acotados de atención, sellado y firmado manual, publicación de resoluciones en la *esterilla de corcho* del hall de entrada y apelaciones mediante figuras de "Disposiciones".
 * **Reglamento Procesal Disciplinario (Versión 2026):** Representa la normativa procesal que plasma la **realidad y el flujo de trabajo efectivo de la Asociación**. Suprime la burocracia física, adopta la tramitación electrónica de expedientes, reconoce la modalidad de sesiones virtuales del TD (al menos 2 veces al mes) y estandariza los formularios digitales y los plazos perentorios de 5 días hábiles.
+* **Validación Institucional del Procedimiento 2026 (Competencia del Órgano de Aplicación):**  
+  Conforme al Estatuto Social de AVEIT (Arts. 94, 95 y 96), el **Tribunal de Disciplina es un órgano estatutario colegiado e independiente** de la Comisión Directiva, investido de facultades disciplinarias y jurisdiccionales privativas. En ejercicio de sus atribuciones normativas y para dotar de operatividad efectiva a las garantías del debido proceso consagradas en el Estatuto, el propio Tribunal de Disciplina dicta, aprueba y convalida su procedimiento operativo interno mediante la emisión formal de la **Circular Normativa 001/2026**. Por consiguiente, la adopción del procedimiento 2026 cuenta con plena legitimidad y competencia institucional emanada de la propia autoridad natural del fuero disciplinario de AVEIT, rigiendo válidamente como norma procesal especial y aplicable al ejercicio social en curso.
 
 El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento 2026, asegurando al mismo tiempo la plena compatibilidad estatutaria y jurídica.
 
@@ -219,6 +221,28 @@ El sistema **SGD-AVEIT** toma como base estructural el flujo real del Reglamento
 3. **Cláusula de Pérdida Automática de Condición de Socio (Límite Crítico - Art. 93 del Reglamento Interno de Disciplina de AVEIT):** Todo socio que acumule **diez (10) o más puntos negativos netos** pierde automáticamente su calidad de socio de AVEIT.
 4. **Irrecurribilidad:** Las decisiones del TD se adoptan por mayoría absoluta y son irrecurribles (Art. 96 del Estatuto Social de AVEIT).
 
+#### 3.5.6. Técnicas y Fuentes del Relevamiento Institucional y Técnico
+Para la elicitación rigurosa del contexto de la organización, sus problemáticas operativas y el marco regulatorio aplicable, el equipo de desarrollo llevó a cabo un proceso integral de relevamiento estructurado en las siguientes técnicas y fuentes:
+
+1. **Técnicas de Relevamiento Aplicadas:**
+   * **Entrevistas No Estructuradas y Reuniones Abiertas:** Sesiones de diálogo mantenidas con los miembros del Tribunal de Disciplina y con la Subcomisión de Cómputos para relevar los puntos de dolor cotidianos, flujos de trabajo e interacciones con el sistema preexistente.
+   * **Talleres de Trabajo y Co-Diseño (Workshops):** Jornadas interactivas de revisión de casos reales de sanciones, justificaciones y expedientes, contrastando el articulado reglamentario con la práctica procesal efectiva.
+   * **Observación Participante e Inmersión Institucional Directa:** El relevamiento contó con una ventaja cualitativa sustancial derivada de la participación activa de integrantes del equipo dentro de la vida institucional de AVEIT:
+     - **Diego Gabriel Sánchez (Líder de Proyecto / Product Owner):** Se desempeñó formalmente como **Secretario General de la Comisión Directiva de AVEIT**, aportando conocimiento directo y profundo sobre la gobernanza institucional, el circuito de actas, la tramitación interorgánica y las dinámicas de sanciones y reconocimientos; actualmente ejerce como **Autoridad de la Subcomisión de Gestión Social y Ambiental (GSA)** (órgano competente para la emisión de solicitudes T01 por cumplimiento de tareas).
+     - **Nexo Directo y Permanente con los Integrantes del Tribunal de Disciplina:** La vinculación estrecha y cotidiana con los miembros del TD permitió observar en tiempo real la dinámica de las sesiones virtuales, la recepción de descargos, el debate colegiado y los cuellos de botella en la confección de resoluciones.
+
+2. **Fuentes Documentales Analizadas:**
+   * *Estatuto Social de A.V.E.I.T. (Reforma Integral 2026):* Estructura de gobierno, derechos y obligaciones de los socios, segmentación de Socios Juniors (1º y 2º año) y Seniors (3º a 6º año), composición y atribuciones de los órganos de gobierno (CD, TD, Comisión Revisora y Subcomisiones).
+   * *Reglamento Interno de Disciplina de A.V.E.I.T.:* Tipificación de faltas y premios, régimen sancionatorio, cláusula de exclusión por acumulación de 10 puntos negativos (Art. 93) y obligación de balances cuatrimestrales de auditoría (Art. 137).
+   * *Reglamento Procesal Disciplinario (Versión Histórica 2018):* Procedimiento formal analógico de secretaría, plazos y recursos de reconsideración.
+   * *Reglamento Procesal Disciplinario (Versión 2026):* Flujo operativo digital, tramitación de los 6 estados de expedientes, formularios estandarizados y plazos preclusivos de 5 días hábiles.
+   * *Circular Normativa 001/2026 del Tribunal de Disciplina:* Criterios de graduación de sanciones y solicitudes de mérito.
+   * *Libros de Actas y Resoluciones Previas:* Análisis de resoluciones disciplinarias históricas y su estructura formal (Vistos, Considerandos y Resolución).
+
+3. **Sistemas y Herramientas Analizadas:**
+   * *Sistema Web Institucional Preexistente de AVEIT:* Inspección técnica del código fuente backend desarrollado en Python y del modelo relacional en la base de datos MySQL (revisión de tablas de padrón de socios, usuarios, subcomisiones, eventos institucionales y control de asistencias).
+   * *Ecosistema Informático Actual del Tribunal de Disciplina:* Relevamiento y auditoría de las múltiples hojas de cálculo en Google Sheets utilizadas por el TD para asentar el puntaje de los socios, registrar justificaciones manuales y realizar seguimientos informales de plazos.
+
 ---
 
 ### 3.6. Mapa Global de Procesos de la Organización
@@ -253,74 +277,82 @@ flowchart TD
 
 ---
 
-### 3.7. Descripción de Procesos de Negocio Afectados por la Propuesta
+### 3.7. Descripción de Procesos de Negocio Afectados (Situación Actual - Flujo AS-IS)
 
-El sistema **SGD-AVEIT** estructurará los cinco (5) procesos clave del ciclo disciplinario conforme a la normativa procesal 2026:
+En la actualidad, la gestión disciplinaria se rige operativamente bajo la lógica procesal del **Reglamento 2026**, pero al carecer de un módulo disciplinario integrado en el sistema institucional, el proceso se ejecuta mediante **mecanismos manuales, canales informales y planillas de cálculo desconectadas**, generando severas ineficiencias, opacidad y riesgos para la integridad de los datos.
 
-```
-[1. Detección / Reporte de Infracción o Mérito (Formulario T01 + Anexo)]
-                                 │
-                                 ▼
-[2. Notificación Automática y Carga de Descargos (T02/T03 - 5 Días Hábiles)]
-                                 │
-                                 ▼
-[3. Sustanciación, Votación y Resolución del TD (Firma Colegiada de Seniors)]
-                                 │
-                                 ▼
-[4. Cómputo Transaccional, Publicación Transparente y Alertas de Límite (7 y 10 pts)]
-                                 │
-                                 ▼
-[5. Auditoría Interna Cuatrimestral y Emisión Automática de Balances (Art. 137 del Reglamento Interno de Disciplina de AVEIT)]
-```
+A continuación se describe minuciosamente el funcionamiento del proceso actual (**AS-IS, sin SGD-AVEIT**) a lo largo de sus cinco etapas operativas:
 
-#### Proceso 1: Detección, Reporte y Registro de Infracción / Mérito (Formulario T01)
-* **Disparador:** Cierre de evento con inasistencias en sistema, reporte de omisión de tareas asignadas (sancionable con llamado de atención a -2 pts), falta de limpieza o elevación de propuesta de premio por autoridad competente (según Arts. 21 a 26 del Reglamento Procesal Disciplinario 2026).
-* **Entradas:** Acta de evento, reporte de tareas de subcomisión o Formulario T01 con hoja de Anexo formal.
-* **Actividades:**
-  1. La autoridad habilitada accede a la plataforma e ingresa la solicitud T01 detallando los hechos en el Anexo.
-  2. El sistema valida las competencias del solicitante (Arts. 21 a 26 del Reglamento Procesal Disciplinario 2026), tipifica la falta según el catálogo reglamentario y genera el número unívoco de expediente disciplinario con sellado de tiempo.
-* **Salidas:** Expediente disciplinario o de premiación registrado en estado **"Expediente Creado"**.
+#### Proceso 1 (AS-IS): Detección, Reporte y Registro de Infracción o Mérito (Formulario T01)
+* **Disparador:** Ocurrencia de una falta reglamentaria (inasistencia a asamblea o reunión, omisión de tareas asignadas en subcomisiones, falta a turnos de mantenimiento) o propuesta formal de reconocimiento al mérito.
+* **Mecanismo Operativo Actual (AS-IS):**
+  1. Los formularios T01 son creados en el sistema institucional preexistente por la Comisión Directiva, el Tribunal de Disciplina actuando de oficio, o bien por las Autoridades de Subcomisión (o bien se derivan del cierre administrativo de eventos con inasistencias).
+  2. Sin embargo, debido a que el sistema institucional actual **no posee un módulo disciplinario integrado** que prosiga con la gestión del expediente, estas solicitudes T01 quedan estancadas como registros aislados en la base de datos, sin un flujo procesal continuo ni articulación con las etapas posteriores.
+  3. En consecuencia, las integrantes del Tribunal de Disciplina deben consultar periódicamente el sistema o depender de avisos informales para tomar conocimiento de las nuevas solicitudes, debiendo **transcribir o exportar manualmente cada solicitud T01 hacia una planilla de cálculo central en Google Sheets** para poder iniciar la tramitación.
+* **Entradas:** Registro de Formulario T01 creado en el sistema institucional actual o cierre de eventos obligatorios.
+* **Salidas:** Fila transcripta manualmente en la planilla de Google Sheets del Tribunal de Disciplina.
+* **Problemas y Riesgos Detectados:** Desconexión tecnológica entre el registro inicial del T01 y su tratamiento procesal; demoras de días en la toma de conocimiento por el TD; y sobrecarga operativa con riesgo de omisión accidental de causas.
 
-#### Proceso 2: Notificación y Presentación de Descargos (Formularios T02 y T03)
-* **Disparador:** Alta del expediente en el sistema.
-* **Entradas:** Acuse de sanción emitido automáticamente por el sistema vía correo electrónico.
-* **Actividades:**
-  1. El sistema remite el correo de notificación al socio e inicia automáticamente la cuenta regresiva de **cinco (5) días hábiles**.
-  2. El socio ingresa desde su smartphone o PC al módulo responsive "Mis Expedientes".
-  3. Si la causal está tipificada, completa el **Formulario T02** y adjunta los comprobantes digitales (certificados médicos, pasajes). Si es un caso especial, completa el **Formulario T03 (Descargo)**.
-  4. El sistema valida el plazo de presentación, sella digitalmente la entrega e incorpora los adjuntos al expediente.
-* **Salidas:** Expediente en estado **"Las justificaciones están siendo revisadas"** (o vencido el plazo sin descargo).
+#### Proceso 2 (AS-IS): Notificación y Carga de Justificaciones/Descargos (Formularios T02 y T03)
+* **Disparador:** Incorporación manual de la infracción en la planilla de Google Sheets del Tribunal de Disciplina.
+* **Mecanismo Operativo Actual (AS-IS):**
+  1. Una integrante del TD redacta y envía de forma manual un correo electrónico individual (o mensaje vía WhatsApp) al socio imputado notificándole la apertura de la causa disciplinaria.
+  2. El cómputo del plazo preclusivo de **cinco (5) días hábiles** establecido por el reglamento se efectúa de manera manual y visual por los miembros del TD sobre un calendario civil tradicional.
+  3. El socio imputado debe descargar plantillas estáticas de texto (en Word o PDF) del **Formulario T02** (para justificaciones tipificadas: certificados médicos, obligaciones laborales, constancias de examen) o **Formulario T03** (para descargos extraordinarios).
+  4. El socio completa la plantilla en su computadora y la envía como archivo adjunto por correo electrónico a la casilla del TD o la carga en carpetas compartidas de Google Drive, adjuntando fotografías o escaneos de sus comprobantes probatorios.
+* **Entradas:** Correo electrónico de acuse remitido manualmente; comprobantes escaneados y plantillas T02/T03 enviadas por el socio imputado.
+* **Salidas:** Archivos dispersos en casillas de correo electrónico y carpetas de Google Drive; actualización manual de una columna en la planilla Sheets indicando 'Descargo Presentado'.
+* **Problemas y Riesgos Detectados:** Inexistencia de sellado de tiempo fehaciente; imposibilidad de auditar objetivamente si el descargo ingresó dentro del término perentorio de los 5 días hábiles; extravío de adjuntos en casillas de correo; y alta tasa de socios que alegan no haberse enterado de las notificaciones al no haber constancia de entrega ni lectura.
 
-#### Proceso 3: Sustanciación, Análisis, Votación y Dictamen del Tribunal de Disciplina
-* **Disparador:** Vencimiento del plazo de 5 días o recepción de justificaciones completas.
-* **Entradas:** Expediente, pruebas, descargos T02/T03, antecedentes jurisprudenciales en sistema y Circular 001/2026.
-* **Actividades:**
-  1. En sesión virtual o presencial, el TD verifica conflictos de interés (activando miembros suplentes si corresponde según Art. 95 del Estatuto Social de AVEIT).
-  2. En el módulo "Justificaciones", los miembros del TD aprueban o desaprueban los descargos y analizan antecedentes históricos análogos.
-  3. Cada integrante emite su voto nominal fundado. Alcanzada la mayoría absoluta, se redacta la Resolución con sus VISTOS, CONSIDERANDOS y RESOLUCIÓN.
-  4. La resolución es formalizada mediante la firma colegiada digital de los miembros del tribunal.
-* **Salidas:** Expediente en estado **"En espera de resolución"** y posterior paso a **"Pendiente de firma y envío"**.
+#### Proceso 3 (AS-IS): Sustanciación, Análisis, Votación y Dictamen del Tribunal de Disciplina
+* **Disparador:** Vencimiento del plazo de 5 días hábiles o recepción de los descargos remitidos por correo electrónico.
+* **Mecanismo Operativo Actual (AS-IS):**
+  1. El Tribunal de Disciplina celebra sus sesiones periódicas quincenales bajo modalidad predominantemente virtual (mediante Google Meet o Discord).
+  2. Durante la videollamada, las integrantes comparten pantalla para revisar los correos electrónicos recibidos, las plantillas T02/T03 y los certificados médicos o pasajes alojados en las carpetas de Drive.
+  3. Para evaluar antecedentes similares o jurisprudencia previa, las miembros deben buscar manualmente en archivos de actas anteriores o basarse en la memoria institucional de los Socios Seniors, exponiendo los fallos a disparidad de criterios.
+  4. El debate y la votación de cada expediente se efectúan de forma verbal. Una vez alcanzada la mayoría reglamentaria, se redacta el texto de la Resolución Disciplinaria en un documento colaborativo de Google Docs estructurado en sus secciones formales (Vistos, Considerandos y Resolución).
+  5. La suscripción de la resolución carece de un mecanismo formal digital y se plasma únicamente mediante la consignación de los nombres de los miembros firmantes en el pie del documento.
+* **Entradas:** Expediente en borrador, archivos de Drive, actas previas y deliberación verbal remota.
+* **Salidas:** Archivo de Google Docs con la resolución redactada y exportada manualmente a formato PDF.
+* **Problemas y Riesgos Detectados:** Falta de un registro formal e inalterable de los votos individuales de los miembros; dependencia de documentos colaborativos susceptibles de modificaciones posteriores no deseadas; y lentitud en la búsqueda de antecedentes jurisprudenciales históricos.
 
-#### Proceso 4: Cómputo de Saldo de Puntos, Publicación y Alertas de Límite Crítico
-* **Disparador:** Firma colegiada completa de la Resolución.
-* **Entradas:** Resolución formal con puntos asignados (+/-).
-* **Actividades:**
-  1. El motor de reglas impacta la transacción matemática en el saldo histórico del socio de forma auditada e irreversible (prohibición de `UPDATE` manual en DB MySQL).
-  2. Se despachan las notificaciones por correo electrónico a los interesados, CD y solicitante, pasando a **"Expedientes ya emitidos"**.
-  3. Se publica el dictamen en el panel de transparencia pública institucional.
-  4. Evaluación de umbrales:
-     * *Saldo >= 7 puntos negativos:* Emisión de **Alerta Preventiva Amarilla**.
-     * *Saldo >= 10 puntos negativos:* Emisión de **Alerta Crítica Roja de Pérdida Automática de Condición de Socio** notificando fehacientemente al socio, a Comisión Directiva y a la Comisión Fiscalizadora.
-* **Salidas:** Saldo actualizado, publicación oficial visible y alertas automáticas disparadas.
+#### Proceso 4 (AS-IS): Cómputo de Saldo de Puntos, Publicación y Control de Límites Críticos
+* **Disparador:** Conclusión y exportación a PDF de la Resolución Disciplinaria.
+* **Mecanismo Operativo Actual (AS-IS):**
+  1. Las integrantes del TD ingresan a la planilla central de Google Sheets y modifican manualmente las celdas correspondientes al socio imputado, sumando o restando los puntos dictaminados mediante fórmulas de hoja de cálculo.
+  2. Si con posterioridad se detecta un error material de tipeo o se resuelve una rectificación, se sobreescribe directamente la celda de la planilla sin que quede constancia del cambio, del responsable ni del motivo.
+  3. Asimismo, cuando se requiere impactar el estado del socio en el sistema institucional preexistente, al no haber módulo integrado, se debe recurrir a solicitudes informales dirigidas a la Subcomisión de Cómputos para que ejecuten manualmente sentencias SQL `UPDATE` directas sobre la base de datos MySQL, con grave vulneración de la integridad, inmutabilidad y trazabilidad de los datos.
+  4. El monitoreo de los umbrales reglamentarios críticos (-7 puntos para advertencia preventiva y -10 puntos para la pérdida automática de condición de socio según Art. 93 del Reglamento Interno) se efectúa mediante revisión visual periódica de las planillas. No existen alertas automáticas, existiendo el riesgo de que un socio continúe activo habiendo superado el límite estatutario de exclusión.
+  5. La publicación y notificación de la resolución se realiza enviando el PDF por correo electrónico de forma individual al socio y a Comisión Directiva.
+* **Entradas:** PDF de resolución final.
+* **Salidas:** Celdas editadas a mano en Google Sheets; solicitudes de sentencias `UPDATE` en MySQL; correos electrónicos individuales despachados.
+* **Problemas y Riesgos Detectados:** Falta total de pistas de auditoría en la modificación de puntos; riesgo crítico de manipulación o corrupción accidental de fórmulas en Google Sheets; sentencias `UPDATE` manuales directas en base de datos; y ausencia de un canal transparente donde la totalidad de los socios puedan consultar sus saldos y fallos públicos.
 
-#### Proceso 5: Auditorías Internas Cuatrimestrales y Emisión de Balances Oficiales (Art. 137 del Reglamento Interno de Disciplina de AVEIT)
-* **Disparador:** Fecha de corte cuatrimestral estipulada por Estatuto (dos veces al año).
-* **Entradas:** Registros consolidados de sanciones, premios, asistencias y expedientes del período.
-* **Actividades:**
-  1. Las autoridades del TD seleccionan el período cuatrimestral en la plataforma web.
-  2. El sistema compila y genera instantáneamente el **Informe y Balance Cuatrimestral de Premiaciones y Sanciones**, categorizado por Subcomisión, Grupo Social (1º a 6º año, distinguiendo Juniors y Seniors) y Socio individual.
-  3. Se consolidan las estadísticas y se exporta el informe oficial firmado digitalmente para su presentación formal ante Comisión Directiva y la Asamblea General Ordinaria.
-* **Salidas:** Balance Cuatrimestral de Disciplina oficial listo para su tratamiento institucional.
+#### Proceso 5 (AS-IS): Confección y Emisión de Balances Cuatrimestrales de Auditoría (Art. 137)
+* **Disparador:** Cumplimiento del período cuatrimestral estipulado en el Art. 137 del Reglamento Interno de Disciplina de AVEIT (dos veces por año social).
+* **Mecanismo Operativo Actual (AS-IS):**
+  1. Las autoridades del Tribunal de Disciplina deben revisar manualmente la totalidad de las filas de las hojas de Google Sheets del período, cruzando los expedientes iniciados, justificaciones admitidas, sanciones firmes y puntos de premios otorgados.
+  2. Deben agrupar a mano los saldos por cada una de las 7 subcomisiones de trabajo y por categoría de socios (Juniors de 1º y 2º año, Seniors de 3º a 6º año).
+  3. La magnitud del trabajo de consolidación manual en planillas fragmentadas resulta tan excesiva que, en la práctica actual de la Asociación, **este balance no se está logrando emitir de forma regular y periódica**, o se presenta de forma tardía y con datos incompletos.
+* **Entradas:** Múltiples hojas de cálculo de Google Sheets, actas y carpetas de correos del cuatrimestre.
+* **Salidas:** Informe confeccionado manualmente en documento de texto (cuando se logra concretar) o bien omisión del balance.
+* **Problemas y Riesgos Detectados:** Incumplimiento sistemático de una obligación reglamentaria estatutaria (Art. 137); falta de información consolidada para la Comisión Directiva y las Asambleas de Socios; y opacidad en la rendición de cuentas institucional.
+
+---
+
+#### 3.7.1. Matriz Comparativa de Transformación: Situación Actual (AS-IS) vs. Solución Propuesta (TO-BE con SGD-AVEIT)
+
+| Dimensión de Proceso | Situación Actual (AS-IS - Sin SGD-AVEIT) | Solución Propuesta (TO-BE - Con SGD-AVEIT) |
+| :--- | :--- | :--- |
+| **Inicio de Acciones (T01)** | T01 creados en sistema institucional pero desconectados; transcripción manual a Google Sheets. | Integración nativa directa: la solicitud T01 o cierre de evento genera automáticamente el expediente formal en estado 'Expediente Creado'. |
+| **Control de Plazos (5 días)** | Conteo manual de días hábiles sobre calendario; alta probabilidad de error humano. | Cron/daemon automatizado con sellado de tiempo y temporizador preclusivo fehaciente e inalterable. |
+| **Carga de Descargos (T02/T03)** | Descarga de Word/PDF y envío por mail o Drive; dispersión y extravío de adjuntos. | Formulario web responsive con carga digital directa de comprobantes asociada unívocamente al expediente. |
+| **Deliberación y Votación** | Videollamadas informales y redacción en Google Docs; votación verbal no auditable. | Tablero centralizado de expedientes, registro nominal de votos y redacción guiada de resoluciones. |
+| **Validación Colegiada** | Mención de nombres en documento colaborativo editable; sin valor de auditoría. | Firma electrónica interna con sesión autenticada, timestamp, ID de miembro y hash inalterable. |
+| **Cómputo e Integridad del Saldo** | Edición manual de celdas en Sheets; pedidos de sentencias `UPDATE` directas en DB MySQL sin auditoría. | Lógica de cálculo en backend con auditoría inmutable mediante triggers y tabla histórica en MySQL; prohibición de mutación directa. |
+| **Alertas de Límite (-7 y -10)** | Control visual a ojo; riesgo de que socios suspendidos o expulsados continúen operando. | Disparo automatizado de alertas preventivas (-7 pts) y notificación crítica de exclusión estatutaria (-10 pts). |
+| **Transparencia Societaria** | Información opaca; los socios dependen de consultar personalmente al TD. | Portal responsive público de resoluciones dictadas y módulo 'Mis Expedientes' para consulta de saldos en tiempo real. |
+| **Balance Cuatrimestral (Art. 137)** | Omitido o confeccionado con meses de demora debido a la sobrecarga de recopilación manual. | Generación y exportación instantánea con un clic de balances por subcomisión y categoría Junior/Senior. |
 
 ---
 
@@ -341,47 +373,21 @@ A continuación se detalla la infraestructura tecnológica y la modalidad operat
 
 ---
 
-### 3.9. Lay-Out Físico y Dinámica Operativa de la Organización
+### 3.9. Lay-Out Físico, Infraestructura Tecnológica y Articulación con la Modalidad Operativa
 
-La Sede Social de A.V.E.I.T. se encuentra emplazada en un edificio exclusivo dentro del campus de la UTN Facultad Regional Córdoba. Los espacios físicos se distribuyen de acuerdo al siguiente esquema:
+La Sede Social de A.V.E.I.T. se encuentra emplazada en un edificio exclusivo dentro del campus de la UTN Facultad Regional Córdoba (Ciudad Universitaria). En el marco del proyecto de software SGD-AVEIT, los aspectos físicos, tecnológicos y operativos relevantes para el sistema se sintetizan en los siguientes componentes:
 
-```
-+─────────────────────────────────────────────────────────────────────────────+
-|                          SEDE SOCIAL A.V.E.I.T. - UTN FRC                   |
-|                        PLANO ESQUEMÁTICO DE DISTRIBUCIÓN                    |
-+─────────────────────────────────────────────┬───────────────────────────────+
-|                                             |                               |
-|          [AULA DE ESTUDIO Y COWORKING]      |      [SALA DE REUNIONES]      |
-|                                             |        (CD y TRIBUNAL)        |
-|  [V] Ventanal Este                   [V]   |  [V] Ventana            [V]   |
-|  +---------------------------------------+  |  +-------------------------+  |
-|  |     Mesas de Estudio Grupal (x4)      |  |  |    Mesa Directiva Oval  |  |
-|  |        Capacidad: 35 alumnos          |  |  |   Capacidad: 12 puestos |  |
-|  +---------------------------------------+  |  +-------------------------+  |
-|                                             |  | [P] Proyector y Pantalla|  |
-|  [Puestos de Trabajo Individuales]          |  +-------------------------+  |
-|                                             |             [P1] Puerta       |
-+─────────────────────[P2] Puerta─────────────┴───────────────────────────────+
-|                                             |                               |
-|        [OFICINA ADMINISTRATIVA]             |     [DEPÓSITO Y ARCHIVO]      |
-|                                             |                               |
-|  +--------+ +--------+     +-------------+  |  +-------------------------+  |
-|  | PC Adm1| | PC Adm2|     |  Impresora  |  |  | Armarios Metálicos      |  |
-|  +--------+ +--------+     |  Láser / Red|  |  | Archivo de Expedientes  |  |
-|  +-------------------+     +-------------+  |  | y Actas en Papel        |  |
-|  | Escritorios en L  |                      |  +-------------------------+  |
-|  +-------------------+     [Rack Servidor|  |  | Depósito de Materiales  |  |
-|                            (Python+MySQL)]  |  | y Premios de Gran Rifa  |  |
-|  [V] Ventana Sur                            |  +-------------------------+  |
-+──────────────────────────[P3] Puerta Principal Acceso───────────────────────+
-```
-
-#### Detalle de Ambientes y Articulación con la Modalidad Virtual:
-1. **Aula de Estudio y Coworking:** Espacio polivalente habilitado para socios como lugar de estudio y trabajo en equipo. Cuenta con 4 mesas extensibles, 35 sillas ergonómicas, tomas de corriente y cobertura de red Wi-Fi UTN.
-2. **Sala de Reuniones de CD y Tribunal de Disciplina:** Recinto reservado para las sesiones deliberativas presenciales de Comisión Directiva, asambleas de subcomisiones y eventuales audiencias. Dispone de una mesa oval de conferencias para 12 personas, proyector multimedia montado en techo con pantalla retráctil y terminal para conexión de dispositivos.
-3. **Oficina Administrativa:** Puesto central de gestión física de la Asociación. Aloja dos escritorios modulares con computadoras de escritorio (PC Adm1 y PC Adm2), una impresora/escáner multifunción conectada en red, y el gabinete rack que alberga el Servidor Central (con servicios backend Python y base de datos MySQL) y switches de telecomunicaciones.
-4. **Sala de Depósito y Archivo Físico:** Área segura con armarios metálicos bajo llave para el archivo de expedientes disciplinarios históricos en papel, libros de actas y depósito de premios de la Gran Rifa.
-5. **Modalidad Operativa Híbrida / Virtual del TD:** Aunque la sede física provee las instalaciones de resguardo institucional, **la dinámica de trabajo cotidiana del Tribunal de Disciplina se desarrolla de forma virtual y remota**. Las miembros del TD coordinan sesiones de juzgamiento a distancia, lo que fundamenta el requerimiento mandatorio de que la solución sea una **aplicación web moderna, accesible vía internet y 100% responsive para dispositivos móviles**, permitiendo votar expedientes, revisar comprobantes y emitir dictámenes desde cualquier ubicación.
+1. **Ubicación del Servidor Central Institucional:**  
+   Emplazado en el gabinete rack de telecomunicaciones dentro de la Oficina Administrativa de la Sede Social. Aloja los servicios centrales de infraestructura, la lógica de servicios backend desarrollada en Python y el motor de base de datos relacional MySQL institucional.
+2. **Terminales de Gestión Física en Sede:**  
+   Computadoras de escritorio (PCs administrativas) ubicadas en la administración de la sede para tareas operativas de secretaría y soporte local, vinculadas a la red de datos interna.
+3. **Conectividad y Red Universitaria:**  
+   La sede social dispone de conectividad de red de alta velocidad y cobertura Wi-Fi institucional provistas por la infraestructura académica y de telecomunicaciones de la UTN FRC.
+4. **Archivo Físico Histórico en Papel:**  
+   Área de custodia documental donde se preserva el archivo pasivo de expedientes históricos en soporte papel y los libros de actas institucionales.
+5. **Desacople Operativo: Dinámica de Trabajo Virtual y Remota del Tribunal de Disciplina:**  
+   Si bien la sede física provee las instalaciones de resguardo institucional, hardware central y archivo histórico, **la dinámica de trabajo cotidiana y deliberativa del Tribunal de Disciplina se desarrolla de manera virtual y remota** (mediante sesiones periódicas a distancia vía Google Meet / Discord). Por lo tanto, los miembros del TD no operan habitualmente desde terminales fijas en la sede, sino desde sus propios dispositivos móviles y computadoras personales.  
+   Esta realidad operativa sustenta de forma concluyente el requerimiento mandatorio de que el sistema **SGD-AVEIT sea una solución 100% Web y Responsive Mobile-First**, garantizando que los integrantes del TD puedan gestionar expedientes, revisar descargos, votar y emitir resoluciones colegiadas desde cualquier ubicación y dispositivo, posibilitando a la vez la consulta pública y transparente para toda la masa societaria.
 
 ---
 
@@ -389,7 +395,7 @@ La Sede Social de A.V.E.I.T. se encuentra emplazada en un edificio exclusivo den
 
 ### 4.1. Problemas Detectados
 
-A partir del relevamiento exhaustivo realizado en la organización, el análisis comparativo de la normativa procesal 2018 vs. 2026 y la entrevista de relevamiento, se han identificado las siguientes problemáticas críticas en el ámbito del Tribunal de Disciplina:
+A partir del relevamiento exhaustivo realizado en la organización, el análisis comparativo de la normativa procesal 2018 vs. 2026 y las sesiones de relevamiento con los actores institucionales, se han identificado las siguientes problemáticas críticas en el ámbito del Tribunal de Disciplina:
 
 1. **Descentralización, Fragmentación y Riesgo de Inconsistencia de Datos:**  
    El uso de múltiples planillas de cálculo en Google Sheets mantenidas por distintas personas provoca duplicidad de información, desactualización de registros de socios y riesgo constante de inconsistencias o pérdidas accidentales de datos.
@@ -412,28 +418,24 @@ A partir del relevamiento exhaustivo realizado en la organización, el análisis
 
 ---
 
-### 4.2. Oportunidades de Mejora y Beneficios
+### 4.2. Oportunidades de Mejora y Beneficios del Negocio
 
-La implementación del sistema **SGD-AVEIT** permitirá transformar integralmente la gestión del Tribunal de Disciplina, brindando las siguientes oportunidades y beneficios tangibles:
+La incorporación del sistema **SGD-AVEIT** representa una transformación sustantiva en la gestión de la convivencia asociativa, el régimen disciplinario y los incentivos de A.V.E.I.T., generando oportunidades de optimización y beneficios clave a nivel organizacional y de negocio:
 
-1. **Integración Completa al Ecosistema AVEIT con Base de Datos MySQL Centralizada:**  
-   Centralización de todas las actuaciones disciplinarias y de premiación en la base de datos relacional MySQL integrada al backend en Python, garantizando integridad referencial, consistencia transaccional y respaldos automáticos.
-2. **Portal de Transparencia y Consulta Pública 100% Web y Responsive Mobile:**  
-   Implementación de una interfaz web moderna y adaptativa para smartphones, tablets y computadoras, donde cada socio podrá consultar en todo momento su historial de puntos, resoluciones publicadas y estado de sus trámites en el módulo "Mis Expedientes", fortaleciendo la legitimidad institucional.
-3. **Trazabilidad Absoluta y Pistas de Auditoría en Modificaciones de Expedientes:**  
-   Erradicación definitiva de modificaciones directas sobre la base de datos MySQL. Toda rectificación, reconsideración o ajuste de puntaje se realizará mediante flujos auditados en la aplicación que registrarán el usuario responsable, fecha/hora, justificativo y versión anterior.
-4. **Repositorio de Antecedentes y Catálogo de Graduación Homogénea:**  
-   Disponibilidad de un motor de búsqueda de expedientes históricos y una matriz de tipificación alineada a la Circular 001/2026 del Tribunal de Disciplina y al Reglamento Interno de Disciplina de AVEIT, garantizando fallos equitativos, predecibles y homogéneos.
-5. **Digitalización Integral de Formularios Oficiales (T01, T02 y T03):**  
-   Habilitación de módulos específicos para la carga digital de solicitudes T01 (con Anexo) por autoridades, justificaciones T02 tipificadas con adjuntos y descargos extraordinarios T03, eliminando el uso de papel y la entrega presencial en sede.
-6. **Motor Automatizado de Control de Plazos y Notificaciones Digitales:**  
-   Temporizadores automáticos que calculan con precisión milimétrica los plazos preclusivos de 5 días hábiles para justificaciones, vencimientos y prescripciones, emitiendo acuses de sanción y resoluciones digitales con sellado de tiempo.
-7. **Cómputo Transaccional Automatizado y Sistema de Alarmas Escalonadas:**  
-   Actualización en tiempo real del saldo de puntos de cada socio y disparo automático de alertas escalonadas (advertencia preventiva a los 7 puntos negativos y alerta roja automática a los 10 puntos negativos hacia el socio, CD y Comisión Fiscalizadora).
-8. **Generación Instantánea de Balances Cuatrimestrales y Reportes de Auditoría (Art. 137 del Reglamento Interno de Disciplina de AVEIT):**  
-   Capacidad de emitir con un solo clic los Informes y Balances Cuatrimestrales de Auditoría Interna en formatos ejecutivos para Asambleas Ordinarias y Comisión Directiva, permitiendo al TD cumplir de manera natural y sin esfuerzo con el marco reglamentario.
-9. **Soporte Pleno para Deliberación, Firma Colegiada Intergeneracional y Dictamen Remoto:**  
-   Herramientas integradas en la plataforma web que permiten a las miembros del TD conectarse desde sus dispositivos móviles durante las reuniones virtuales, emitir votos nominales fundados, registrar firmas colegiadas de Socios Seniors y promulgar resoluciones con validez formal inmediata.
+1. **Centralización, Consistencia y Unicidad de la Información Institucional:**  
+   Unificación integral del padrón disciplinario, legajos y méritos en un repositorio institucional consolidado, erradicando la dispersión de planillas desconectadas y garantizando la coherencia y fidelidad histórica de los antecedentes de cada socio.
+2. **Transparencia Institucional y Apertura Democrática hacia la Masa Societaria:**  
+   Acceso directo, inmediato y público para los más de 500 socios activos (Juniors y Seniors), permitiendo conocer en todo momento su puntaje acumulado, el estado procesal de sus trámites y las resoluciones emitidas por el Tribunal de Disciplina, fortaleciendo la legitimidad y la confianza institucional.
+3. **Garantía del Debido Proceso y Seguridad Jurídica en el Control de Plazos:**  
+   Asegurar fehacientemente que todo socio imputado cuente con la oportunidad real y en tiempo del ejercicio de su derecho de defensa dentro del plazo perentorio de cinco (5) días hábiles, otorgando certeza jurídica y eliminando discrecionalidades o controversias sobre fechas de presentación.
+4. **Objetividad, Previsibilidad y Equidad en los Dictámenes Disciplinarios:**  
+   Disponibilidad de un catálogo normativo unificado de causales tipificadas y consulta inmediata de antecedentes históricos análogos, posibilitando que el Tribunal de Disciplina aplique criterios ecuánimes y homogéneos en la graduación de faltas e incentivos.
+5. **Mitigación de Errores Críticos y Control Oportuno de Límites Estatutarios:**  
+   Supresión del error humano en el seguimiento de penalizaciones acumuladas, asegurando que la Comisión Directiva y el Tribunal de Disciplina identifiquen tempranamente situaciones de riesgo (advertencia preventiva a los 7 puntos) y den cumplimiento riguroso a la cláusula estatutaria de pérdida automática de condición de socio al alcanzar 10 puntos negativos (Art. 93 del Reglamento Interno de Disciplina de AVEIT).
+6. **Agilidad Operativa en la Deliberación y Formalización de Fallos Colegiados:**  
+   Optimización sustancial de los tiempos de resolución del Tribunal en sus sesiones remotas, permitiendo sustanciar descargos, emitir votos nominales y formalizar resoluciones colegiadas de manera coordinada y sin depender del intercambio fragmentado de archivos de texto.
+7. **Regularización y Cumplimiento del Mandato de Auditoría Interna (Art. 137):**  
+   Posibilidad de generar en tiempo y forma los dos (2) Balances Cuatrimestrales de Auditoría Interna exigidos estatutariamente por año social, restableciendo de forma continua la rendición de cuentas ante la Comisión Directiva y la Asamblea General Ordinaria.
 
 ---
 *Documento elaborado para la Cátedra de Seminario Integrador - UTN FRC - Año 2026.*
