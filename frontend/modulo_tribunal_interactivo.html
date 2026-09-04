@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGD-AVEIT | Módulo Tribunal de Disciplina y Premiaciones</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            aveit: {
+              navy: '#0F294A',
+              navyDark: '#091D36',
+              navyLight: '#1A3A63',
+              blue: '#1E40AF',
+              blueSubtle: '#DBEAFE',
+              amber: '#D97706',
+              amberSubtle: '#FEF3C7',
+            },
+            status: {
+              successBg: '#DCFCE7',
+              successText: '#14532D',
+              successBorder: '#22C55E',
+              warnBg: '#FEF3C7',
+              warnText: '#78350F',
+              warnBorder: '#F59E0B',
+              critBg: '#FEE2E2',
+              critText: '#7F1D1D',
+              critBorder: '#EF4444',
+              infoBg: '#E0F2FE',
+              infoText: '#0C4A6E',
+              infoBorder: '#0284C7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script>
+    // Inmediata ejecución para evitar parpadeo blanco (FOUC)
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .kanban-col {
+      min-width: 285px;
+      max-width: 320px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased transition-colors duration-200">
+
+  <!-- TOP APP BAR -->
+  <header class="bg-aveit-navy dark:bg-slate-950 text-white shadow-md sticky top-0 z-40 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Titular -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-aveit-amber flex items-center justify-center font-bold text-slate-950 text-lg shadow-inner">
+            TD
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold tracking-tight text-lg">SGD-AVEIT</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-900/60 dark:bg-blue-950/80 text-blue-200 border border-blue-700">Tribunal & Premiaciones</span>
+            </div>
+            <p class="text-xs text-slate-300 dark:text-slate-400 hidden sm:block">Gestión Procesal, Justificaciones, Ranking y Asistencias</p>
+          </div>
+        </div>
+
+        <!-- Role Switcher, Dark Mode Toggle & User Profile -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          
+          <!-- Botón de Modo Oscuro -->
+          <button id="btnDarkMode" onclick="toggleDarkMode()" class="p-2 rounded-lg bg-aveit-navyDark dark:bg-slate-900 border border-slate-700 hover:border-amber-400/50 text-amber-300 hover:text-amber-200 transition focus:outline-none flex items-center justify-center shadow-sm" title="Alternar Modo Oscuro / Claro" aria-label="Alternar Modo Oscuro">
+            <!-- Icono Sol (se muestra en modo oscuro) -->
+            <svg id="iconSun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <!-- Icono Luna (se muestra en modo claro) -->
+            <svg id="iconMoon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+          </button>
+
+          <!-- Role selector para testeo -->
+          <div class="flex items-center bg-aveit-navyDark/90 dark:bg-slate-900 border border-slate-700 rounded-lg p-1 text-xs">
+            <span class="text-slate-400 px-2 font-medium hidden md:inline">Rol:</span>
+            <button id="btnRoleTD" onclick="setAppRole('td')" class="px-2.5 py-1 rounded font-medium transition bg-aveit-amber text-slate-950 shadow-sm">
+              Tribunal
+            </button>
+            <button id="btnRoleSocio" onclick="setAppRole('socio')" class="px-2.5 py-1 rounded font-medium transition text-slate-300 hover:text-white">
+              Socio
+            </button>
+            <button id="btnRoleAutoridad" onclick="setAppRole('autoridad')" class="px-2.5 py-1 rounded font-medium transition text-slate-300 hover:text-white">
+              Autoridad
+            </button>
+          </div>
+
+          <!-- User Chip -->
+          <div class="flex items-center space-x-2 border-l border-slate-700 pl-3">
+            <div class="w-8 h-8 rounded-full bg-slate-700 dark:bg-slate-800 text-amber-300 flex items-center justify-center font-bold text-xs border border-amber-400/40">
+              DS
+            </div>
+            <div class="hidden lg:block text-left">
+              <p id="topUserName" class="text-xs font-semibold leading-tight text-white">Diego Gabriel Sánchez</p>
+              <p id="topUserRole" class="text-[11px] text-amber-300 font-medium leading-tight">Juez Titular - Tribunal</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="bg-aveit-navyDark dark:bg-slate-900/90 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-7xl mx-auto flex space-x-1 sm:space-x-2 overflow-x-auto py-1">
+        <button onclick="switchTab('misExpedientes')" id="tabNav-misExpedientes" class="nav-tab px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span>Mis Expedientes</span>
+          <span id="badgeMisExpedientes" class="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold">1</span>
+        </button>
+
+        <button onclick="switchTab('gestionarExpedientes')" id="tabNav-gestionarExpedientes" class="nav-tab active-tab px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition bg-aveit-blue text-white shadow flex items-center space-x-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+          <span>Gestionar Expedientes</span>
+          <span class="ml-1 px-1.5 py-0.2 rounded-full bg-white/20 text-white text-xs font-semibold">6</span>
+        </button>
+
+        <button onclick="switchTab('reportes')" id="tabNav-reportes" class="nav-tab px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Reportes & Balances</span>
+        </button>
+
+        <button onclick="switchTab('ranking')" id="tabNav-ranking" class="nav-tab px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          <span>Ranking de Socios</span>
+        </button>
+
+        <button onclick="switchTab('solicitarPuntos')" id="tabNav-solicitarPuntos" class="nav-tab px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Solicitar Puntos</span>
+        </button>
+
+        <button onclick="switchTab('eventos')" id="tabNav-eventos" class="nav-tab px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Eventos & Asistencia</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ============================================================== -->
+    <!-- SUBMÓDULO 1: MIS EXPEDIENTES -->
+    <!-- ============================================================== -->
+    <section id="pane-misExpedientes" class="tab-pane hidden space-y-6">
+      
+      <!-- Banner Informativo Personal -->
+      <div class="bg-gradient-to-r from-blue-900 to-slate-900 text-white p-5 rounded-xl shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">Mis Expedientes y Estado Disciplinario</h1>
+          <p class="text-sm text-blue-200 mt-0.5">Consulta de causas personales, seguimiento de descargos y cómputo de plazos.</p>
+        </div>
+        <div class="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-lg border border-white/15">
+          <span class="text-xs uppercase tracking-wider text-blue-200 font-semibold">Mi Saldo Actual:</span>
+          <span id="userPointsBadge" class="font-mono text-xl font-bold text-emerald-400">+1.5 pts</span>
+        </div>
+      </div>
+
+      <!-- Lista de Expedientes Personales -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-slate-800 dark:text-slate-200">Causas en las que te encuentras involucrado</h2>
+          <span class="text-xs text-slate-500 dark:text-slate-400">Actualizado automáticamente</span>
+        </div>
+
+        <div id="misExpedientesList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Tarjeta 1: Con plazo para justificar -->
+          <div class="bg-white dark:bg-slate-900 border-2 border-amber-300 dark:border-amber-500/60 rounded-xl p-5 shadow-sm space-y-4 relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[11px] font-bold px-3 py-0.5 rounded-bl-lg flex items-center space-x-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+              <span>Plazo: 3 días hábiles restantes</span>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <span class="font-mono text-xs font-semibold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">EXP-2026-042</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-medium">En período de justificaciones</span>
+            </div>
+
+            <div>
+              <h3 class="font-semibold text-slate-900 dark:text-white text-base">Inasistencia a Reunión Ordinaria de Cómputos</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Causa iniciada automáticamente por cierre de evento el 01/09/2026.</p>
+            </div>
+
+            <div class="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 text-xs space-y-1.5 border border-slate-200 dark:border-slate-700">
+              <div class="flex justify-between">
+                <span class="text-slate-500 dark:text-slate-400">Sanción provisoria:</span>
+                <span class="font-bold text-red-600 dark:text-red-400 font-mono">-1.0 punto negativo</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500 dark:text-slate-400">Fecha de notificación:</span>
+                <span class="text-slate-700 dark:text-slate-300 font-medium">01/09/2026 18:30 hs</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500 dark:text-slate-400">Vencimiento improrrogable:</span>
+                <span class="text-amber-700 dark:text-amber-400 font-semibold">08/09/2026 23:59 hs</span>
+              </div>
+            </div>
+
+            <!-- Botón condicional de Justificación -->
+            <div class="pt-2">
+              <button onclick="openJustificarModal('EXP-2026-042', 'Inasistencia a Reunión Ordinaria de Cómputos', '-1.0')" class="w-full bg-aveit-blue hover:bg-blue-700 text-white py-2.5 px-4 rounded-lg font-semibold text-sm shadow transition flex items-center justify-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span>Justificar Inasistencia / Descargo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tarjeta 2: Expediente ya emitido / resuelto -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="font-mono text-xs font-semibold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">EXP-2026-015</span>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-medium">Expediente ya emitido</span>
+              </div>
+              <span class="text-xs text-slate-400">14/08/2026</span>
+            </div>
+
+            <div>
+              <h3 class="font-semibold text-slate-900 dark:text-white text-base">Reconocimiento: Coordinación Jornada de Ingreso</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Solicitud promovida por Comisión Directiva en concepto de mérito sobresaliente.</p>
+            </div>
+
+            <div class="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 text-xs space-y-1.5 border border-slate-200 dark:border-slate-700">
+              <div class="flex justify-between">
+                <span class="text-slate-500 dark:text-slate-400">Dictamen final del Tribunal:</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">+1.5 puntos otorgados</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500 dark:text-slate-400">Resolución Oficial:</span>
+                <span class="text-slate-700 dark:text-slate-300 font-mono">RES-TD-2026-008 (Firmada por 3 jueces)</span>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="viewResolucionModal('RES-TD-2026-008', 'Reconocimiento: Coordinación Jornada de Ingreso', '+1.5')" class="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 px-4 rounded-lg font-medium text-xs transition flex items-center justify-center space-x-1.5 border border-slate-300 dark:border-slate-700">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Descargar Copia de Resolución Oficial (PDF)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- SUBMÓDULO 2: GESTIONAR EXPEDIENTES (VISTA DUAL: KANBAN + DETALLE) -->
+    <!-- ============================================================== -->
+    <section id="pane-gestionarExpedientes" class="tab-pane space-y-6">
+      
+      <!-- Header de Gestión y Switcher de Vistas -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 dark:text-white">Mesa de Gestión del Tribunal de Disciplina</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Control de flujo procesal, revisión probatoria y emisión de resoluciones.</p>
+        </div>
+
+        <!-- Switcher de Vista -->
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Modo de Vista:</span>
+          <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-semibold">
+            <button id="btnViewKanban" onclick="setGestionView('kanban')" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+              <span>Tablero Kanban</span>
+            </button>
+            <button id="btnViewDetalle" onclick="setGestionView('detalle')" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+              <span>Vista Detalle</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= VISTA 1: TABLERO KANBAN ================= -->
+      <div id="viewContainer-kanban" class="overflow-x-auto pb-4">
+        <div class="flex space-x-4 min-w-max">
+
+          <!-- Columna 1: Creado -->
+          <div class="kanban-col bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col max-h-[750px]">
+            <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-200/50 dark:bg-slate-800/60 rounded-t-xl">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span class="font-semibold text-xs text-slate-700 dark:text-slate-300">Expediente Creado</span>
+              </div>
+              <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold border dark:border-slate-700">1</span>
+            </div>
+            <div class="p-2 space-y-2.5 overflow-y-auto flex-1">
+              <div class="bg-white dark:bg-slate-850 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 hover:border-slate-300 dark:hover:border-slate-600 transition cursor-pointer">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="font-mono text-slate-600 dark:text-slate-400 font-bold">EXP-2026-048</span>
+                  <span class="text-red-600 dark:text-red-400 font-bold font-mono">-2.0 pts</span>
+                </div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Omisión Tarea de Mantenimiento</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Socio: Matías Romero (Senior 4°)</p>
+                <div class="text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-750 flex justify-between">
+                  <span>Subcomisión: Mantenimiento</span>
+                  <span>Hoy 11:20</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 2: En período de justificaciones (5 días hábiles) -->
+          <div class="kanban-col bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl flex flex-col max-h-[750px]">
+            <div class="p-3 border-b border-amber-200 dark:border-amber-900/40 flex items-center justify-between bg-amber-100/60 dark:bg-amber-950/40 rounded-t-xl">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span class="font-semibold text-xs text-amber-900 dark:text-amber-300">En período de justificaciones</span>
+              </div>
+              <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300 font-bold border dark:border-amber-900/50">1</span>
+            </div>
+            <div class="p-2 space-y-2.5 overflow-y-auto flex-1">
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-amber-300 dark:border-amber-800/60 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="font-mono text-slate-600 dark:text-slate-400 font-bold">EXP-2026-042</span>
+                  <span class="text-red-600 dark:text-red-400 font-bold font-mono">-1.0 pt</span>
+                </div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Inasistencia a Reunión Cómputos</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Socio: Diego Gabriel Sánchez</p>
+                <div class="bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-[10px] p-1.5 rounded border border-amber-200 dark:border-amber-900/50 flex items-center justify-between font-medium">
+                  <span>Plazo de justificación:</span>
+                  <span class="font-bold font-mono">3 días restantes</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 3: Las justificaciones están siendo revisadas -->
+          <div class="kanban-col bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl flex flex-col max-h-[750px]">
+            <div class="p-3 border-b border-blue-200 dark:border-blue-900/40 flex items-center justify-between bg-blue-100/60 dark:bg-blue-950/40 rounded-t-xl">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                <span class="font-semibold text-xs text-blue-950 dark:text-blue-300">Justificaciones en revisión</span>
+              </div>
+              <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-blue-800 dark:text-blue-300 font-bold border dark:border-blue-900/50">1</span>
+            </div>
+            <div class="p-2 space-y-2.5 overflow-y-auto flex-1">
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-blue-300 dark:border-blue-800/60 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="font-mono text-slate-600 dark:text-slate-400 font-bold">EXP-2026-039</span>
+                  <span class="text-red-600 dark:text-red-400 font-bold font-mono">-1.0 pt</span>
+                </div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Inasistencia Asamblea Extraordinaria</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Socio: Lucas Martín Guillén</p>
+                <div class="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[11px] px-2 py-1 rounded border border-emerald-200 dark:border-emerald-900/50 flex items-center justify-between">
+                  <span>Descargo adjunto:</span>
+                  <span class="font-semibold">Certificado Médico (PDF)</span>
+                </div>
+                <button onclick="openRevisarModal('EXP-2026-039', 'Lucas Martín Guillén', 'Inasistencia Asamblea', 'Certificado Médico de Guardia (Clínica Universitaria Reina Fabiola) por cuadro gastrointestinal agudo.', '-1.0')" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 rounded font-medium transition shadow-sm">
+                  Examinar Pruebas y Dictaminar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 4: En espera de resolución -->
+          <div class="kanban-col bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 rounded-xl flex flex-col max-h-[750px]">
+            <div class="p-3 border-b border-purple-200 dark:border-purple-900/40 flex items-center justify-between bg-purple-100/60 dark:bg-purple-950/40 rounded-t-xl">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+                <span class="font-semibold text-xs text-purple-950 dark:text-purple-300">En espera de resolución</span>
+              </div>
+              <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-purple-800 dark:text-purple-300 font-bold border dark:border-purple-900/50">1</span>
+            </div>
+            <div class="p-2 space-y-2.5 overflow-y-auto flex-1">
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-purple-200 dark:border-purple-800/60 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="font-mono text-slate-600 dark:text-slate-400 font-bold">EXP-2026-036</span>
+                  <span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">+2.0 pts</span>
+                </div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Mérito: Gestión Rifa Institucional</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Socio: Axel Rene Villegas</p>
+                <div class="text-[11px] text-purple-800 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/50 p-1.5 rounded border border-purple-200 dark:border-purple-900/40">
+                  Votación nominal completada: 3/3 Votos a favor de otorgar premio.
+                </div>
+                <button onclick="openRedactarModal('EXP-2026-036', 'Axel Rene Villegas', '+2.0')" class="w-full bg-purple-700 hover:bg-purple-800 text-white text-xs py-1.5 rounded font-medium transition shadow-sm">
+                  Redactar Vistos y Considerandos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 5: Pendiente de firma y envío -->
+          <div class="kanban-col bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 rounded-xl flex flex-col max-h-[750px]">
+            <div class="p-3 border-b border-indigo-200 dark:border-indigo-900/40 flex items-center justify-between bg-indigo-100/60 dark:bg-indigo-950/40 rounded-t-xl">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <span class="font-semibold text-xs text-indigo-950 dark:text-indigo-300">Pendiente de firma (3 jueces)</span>
+              </div>
+              <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-indigo-800 dark:text-indigo-300 font-bold border dark:border-indigo-900/50">1</span>
+            </div>
+            <div class="p-2 space-y-2.5 overflow-y-auto flex-1">
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-indigo-300 dark:border-indigo-800/60 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="font-mono text-slate-600 dark:text-slate-400 font-bold">EXP-2026-031</span>
+                  <span class="text-red-600 dark:text-red-400 font-bold font-mono">-1.5 pts</span>
+                </div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Incumplimiento de Tareas Asignadas</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Socio: Nicolás Rosales (Junior 2°)</p>
+                <div class="space-y-1 text-[11px] bg-slate-50 dark:bg-slate-900/70 p-2 rounded border border-slate-200 dark:border-slate-700">
+                  <div class="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
+                    <span>Juez 1 (Presidente):</span>
+                    <span class="font-bold">Firmado ✓</span>
+                  </div>
+                  <div class="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
+                    <span>Juez 2 (Vocal):</span>
+                    <span class="font-bold">Firmado ✓</span>
+                  </div>
+                  <div class="flex items-center justify-between text-amber-700 dark:text-amber-400">
+                    <span>Juez 3 (Vocal):</span>
+                    <span class="font-bold">Pendiente...</span>
+                  </div>
+                </div>
+                <button onclick="firmarResolucionDigital('EXP-2026-031')" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white text-xs py-1.5 rounded font-medium transition shadow-sm">
+                  Estampar Firma Digital Colegiada
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 6: Expedientes ya emitidos -->
+          <div class="kanban-col bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl flex flex-col max-h-[750px]">
+            <div class="p-3 border-b border-emerald-200 dark:border-emerald-900/40 flex items-center justify-between bg-emerald-100/60 dark:bg-emerald-950/40 rounded-t-xl">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <span class="font-semibold text-xs text-emerald-950 dark:text-emerald-300">Expedientes ya emitidos</span>
+              </div>
+              <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-emerald-800 dark:text-emerald-300 font-bold border dark:border-emerald-900/50">1</span>
+            </div>
+            <div class="p-2 space-y-2.5 overflow-y-auto flex-1">
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/60 shadow-sm space-y-2 opacity-95">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="font-mono text-slate-600 dark:text-slate-400 font-bold">EXP-2026-015</span>
+                  <span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">+1.5 pts</span>
+                </div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Reconocimiento: Jornada de Ingreso</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Socio: Diego Gabriel Sánchez</p>
+                <div class="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[10px] p-1.5 rounded border border-emerald-200 dark:border-emerald-900/50">
+                  Resolución publicada y saldo impactado en base de datos sin posibilidad de modificación manual.
+                </div>
+                <button onclick="viewResolucionModal('RES-TD-2026-008', 'Reconocimiento Diego Sánchez', '+1.5')" class="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs py-1.5 rounded font-medium transition border border-slate-300 dark:border-slate-600">
+                  Ver Resolución y Pistas de Auditoría
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================= VISTA 2: DETALLE ESTILO EXPLORADOR DE WINDOWS ================= -->
+      <div id="viewContainer-detalle" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden space-y-3 p-4">
+        
+        <!-- Barra de Búsqueda y Filtros de la Tabla Detalle -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div class="relative w-full sm:w-80">
+            <input type="text" id="filterDetalleInput" onkeyup="filterDetalleTable()" placeholder="Buscar por socio, expediente o motivo..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none">
+            <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+
+          <div class="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400 w-full sm:w-auto justify-end">
+            <span>Filtro de Estado:</span>
+            <select id="filterDetalleEstado" onchange="filterDetalleTable()" class="border border-slate-300 dark:border-slate-700 rounded-md py-1 px-2 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none">
+              <option value="todos">Todos los Estados</option>
+              <option value="Creado">Expediente Creado</option>
+              <option value="Justificaciones">En período de justificaciones</option>
+              <option value="Revisión">Justificaciones en revisión</option>
+              <option value="Resolución">En espera de resolución</option>
+              <option value="Firma">Pendiente de firma</option>
+              <option value="Emitido">Expedientes ya emitidos</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tabla Densa con Foco en el Expediente -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-300 dark:border-slate-700">
+              <tr>
+                <th class="py-2.5 px-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700" onclick="sortDetalleTable(0)">N° Expediente ↕</th>
+                <th class="py-2.5 px-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700" onclick="sortDetalleTable(1)">Carátula / Motivo ↕</th>
+                <th class="py-2.5 px-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700" onclick="sortDetalleTable(2)">Socio Involucrado ↕</th>
+                <th class="py-2.5 px-3">Categoría</th>
+                <th class="py-2.5 px-3">Subcomisión</th>
+                <th class="py-2.5 px-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700" onclick="sortDetalleTable(5)">Fecha Apertura ↕</th>
+                <th class="py-2.5 px-3">Plazo Restante</th>
+                <th class="py-2.5 px-3">Estado Procesal</th>
+                <th class="py-2.5 px-3 text-center">Acción Inmediata</th>
+              </tr>
+            </thead>
+            <tbody id="tablaDetalleBody" class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              
+              <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">EXP-2026-042</td>
+                <td class="py-2.5 px-3 font-medium">Inasistencia a Reunión Ordinaria</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">Diego Gabriel Sánchez</td>
+                <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">Senior 5°</span></td>
+                <td class="py-2.5 px-3">Cómputos</td>
+                <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono">01/09/2026</td>
+                <td class="py-2.5 px-3 font-medium text-amber-700 dark:text-amber-400">3 días hábiles</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800">En período de justificaciones</span></td>
+                <td class="py-2.5 px-3 text-center">
+                  <button onclick="openJustificarModal('EXP-2026-042', 'Inasistencia a Reunión', '-1.0')" class="px-2.5 py-1 bg-aveit-blue text-white rounded text-[11px] font-medium hover:bg-blue-700">Justificar</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">EXP-2026-039</td>
+                <td class="py-2.5 px-3 font-medium">Inasistencia Asamblea Extraordinaria</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">Lucas Martín Guillén</td>
+                <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">Senior 6°</span></td>
+                <td class="py-2.5 px-3">Cómputos</td>
+                <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono">28/08/2026</td>
+                <td class="py-2.5 px-3 text-slate-400">Vencido</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 border border-blue-300 dark:border-blue-800">Justificaciones en revisión</span></td>
+                <td class="py-2.5 px-3 text-center">
+                  <button onclick="openRevisarModal('EXP-2026-039', 'Lucas Martín Guillén', 'Inasistencia Asamblea', 'Certificado Médico de Guardia por cuadro gastrointestinal.', '-1.0')" class="px-2.5 py-1 bg-blue-600 text-white rounded text-[11px] font-medium hover:bg-blue-700">Revisar Pruebas</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">EXP-2026-048</td>
+                <td class="py-2.5 px-3 font-medium">Omisión Tarea de Mantenimiento</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">Matías Romero</td>
+                <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Senior 4°</span></td>
+                <td class="py-2.5 px-3">Mantenimiento</td>
+                <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono">03/09/2026</td>
+                <td class="py-2.5 px-3 text-amber-700 dark:text-amber-400">5 días hábiles</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300">Expediente Creado</span></td>
+                <td class="py-2.5 px-3 text-center">
+                  <button class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-[11px] font-medium border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700">Ver Solicitud</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">EXP-2026-036</td>
+                <td class="py-2.5 px-3 font-medium">Mérito: Gestión Rifa Institucional</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">Axel Rene Villegas</td>
+                <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">Senior 3°</span></td>
+                <td class="py-2.5 px-3">Eventos</td>
+                <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono">25/08/2026</td>
+                <td class="py-2.5 px-3 text-slate-400">-</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-300 border border-purple-300 dark:border-purple-800">En espera de resolución</span></td>
+                <td class="py-2.5 px-3 text-center">
+                  <button onclick="openRedactarModal('EXP-2026-036', 'Axel Rene Villegas', '+2.0')" class="px-2.5 py-1 bg-purple-700 text-white rounded text-[11px] font-medium hover:bg-purple-800">Redactar</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">EXP-2026-031</td>
+                <td class="py-2.5 px-3 font-medium">Incumplimiento de Tareas Asignadas</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">Nicolás Rosales</td>
+                <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">Junior 2°</span></td>
+                <td class="py-2.5 px-3">Difusión</td>
+                <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono">20/08/2026</td>
+                <td class="py-2.5 px-3 text-slate-400">-</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800">Pendiente de firma (2/3)</span></td>
+                <td class="py-2.5 px-3 text-center">
+                  <button onclick="firmarResolucionDigital('EXP-2026-031')" class="px-2.5 py-1 bg-indigo-700 text-white rounded text-[11px] font-medium hover:bg-indigo-800">Firmar</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">EXP-2026-015</td>
+                <td class="py-2.5 px-3 font-medium">Reconocimiento: Jornada de Ingreso</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">Diego Gabriel Sánchez</td>
+                <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">Senior 5°</span></td>
+                <td class="py-2.5 px-3">Gestión Social</td>
+                <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono">10/08/2026</td>
+                <td class="py-2.5 px-3 text-slate-400">-</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">Expedientes ya emitidos</span></td>
+                <td class="py-2.5 px-3 text-center">
+                  <button onclick="viewResolucionModal('RES-TD-2026-008', 'Reconocimiento Diego Sánchez', '+1.5')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-[11px] font-medium border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700">Ver Fallo</button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- SUBMÓDULO 3: REPORTES & BALANCES -->
+    <!-- ============================================================== -->
+    <section id="pane-reportes" class="tab-pane hidden space-y-6">
+      
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900 dark:text-white">Módulo de Reportes y Balances de Disciplina</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Auditoría consolidada semestral y cuatrimestral, métricas por subcomisión y exportación oficial.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="exportReporte('pdf')" class="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Exportar Balance Oficial (PDF)</span>
+          </button>
+          <button onclick="exportReporte('xlsx')" class="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Descargar Matriz (Excel)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Métricas Clave del Cuatrimestre -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Expedientes Totales</span>
+          <p class="text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1">48</p>
+          <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">↑ 100% tramitados en sistema</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Justificaciones Aprobadas</span>
+          <p class="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">29</p>
+          <span class="text-[11px] text-slate-400">88% de los descargos presentados</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Alertas Preventivas (7 pts)</span>
+          <p class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">4</p>
+          <span class="text-[11px] text-amber-700 dark:text-amber-400 font-medium">Socios bajo seguimiento</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Límite Crítico Cese (10 pts)</span>
+          <p class="text-2xl font-bold font-mono text-red-600 dark:text-red-400 mt-1">1</p>
+          <span class="text-[11px] text-red-700 dark:text-red-400 font-medium">Notificado a Comisión Directiva</span>
+        </div>
+      </div>
+
+      <!-- Tabla Consolidada por Subcomisión (7 Subcomisiones) -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden p-4 space-y-3">
+        <h3 class="font-bold text-slate-900 dark:text-white text-sm">Resumen por Subcomisión (Período Vigente)</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700 uppercase text-[10px]">
+              <tr>
+                <th class="p-2.5">Subcomisión</th>
+                <th class="p-2.5 text-center">Socios Activos</th>
+                <th class="p-2.5 text-center">Sanciones (-)</th>
+                <th class="p-2.5 text-center">Premios (+)</th>
+                <th class="p-2.5 text-center">Saldo Neto</th>
+                <th class="p-2.5 text-center">Tasa Asistencia</th>
+                <th class="p-2.5 text-center">Semáforo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Cómputos</td>
+                <td class="p-2.5 text-center font-mono">18</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-4.0</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+8.5</td>
+                <td class="p-2.5 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">+4.5</td>
+                <td class="p-2.5 text-center">94%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">Óptimo</span></td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Relaciones Institucionales</td>
+                <td class="p-2.5 text-center font-mono">14</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-2.0</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+6.0</td>
+                <td class="p-2.5 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">+4.0</td>
+                <td class="p-2.5 text-center">92%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">Óptimo</span></td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Organización y Eventos</td>
+                <td class="p-2.5 text-center font-mono">22</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-6.5</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+12.0</td>
+                <td class="p-2.5 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">+5.5</td>
+                <td class="p-2.5 text-center">88%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">Óptimo</span></td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Prensa y Difusión</td>
+                <td class="p-2.5 text-center font-mono">16</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-5.0</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+4.0</td>
+                <td class="p-2.5 text-center font-mono font-bold text-red-600 dark:text-red-400">-1.0</td>
+                <td class="p-2.5 text-center">82%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] font-bold">Atención</span></td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Mantenimiento</td>
+                <td class="p-2.5 text-center font-mono">24</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-11.0</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+5.0</td>
+                <td class="p-2.5 text-center font-mono font-bold text-red-600 dark:text-red-400">-6.0</td>
+                <td class="p-2.5 text-center">76%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 text-[10px] font-bold">Crítico</span></td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Recursos Humanos</td>
+                <td class="p-2.5 text-center font-mono">15</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-1.5</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+7.0</td>
+                <td class="p-2.5 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">+5.5</td>
+                <td class="p-2.5 text-center">95%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">Óptimo</span></td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-semibold text-slate-900 dark:text-white">Gestión Social y Ambiental</td>
+                <td class="p-2.5 text-center font-mono">19</td>
+                <td class="p-2.5 text-center text-red-600 dark:text-red-400 font-mono font-bold">-3.0</td>
+                <td class="p-2.5 text-center text-emerald-600 dark:text-emerald-400 font-mono font-bold">+9.0</td>
+                <td class="p-2.5 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">+6.0</td>
+                <td class="p-2.5 text-center">91%</td>
+                <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">Óptimo</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- SUBMÓDULO 4: RANKING DE SOCIOS -->
+    <!-- ============================================================== -->
+    <section id="pane-ranking" class="tab-pane hidden space-y-6">
+      
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900 dark:text-white">Ranking Oficial de Puntos de AVEIT</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Padrón de socios activos ordenado según puntaje acumulado (+/-) con alertas tempranas.</p>
+        </div>
+
+        <!-- Controles de Ordenamiento y Búsqueda -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Botones Ascendente / Descendente -->
+          <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-semibold">
+            <button id="btnSortDesc" onclick="sortRanking('desc')" class="px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm flex items-center space-x-1">
+              <span>Mayor a Menor (Premios)</span>
+              <span>↓</span>
+            </button>
+            <button id="btnSortAsc" onclick="sortRanking('asc')" class="px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1">
+              <span>Menor a Mayor (Sanciones)</span>
+              <span>↑</span>
+            </button>
+          </div>
+
+          <!-- Filtro de Categoría -->
+          <select id="filterRankingCat" onchange="filterRanking()" class="border border-slate-300 dark:border-slate-700 rounded-lg py-1.5 px-3 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none">
+            <option value="todos">Todos los Grupos</option>
+            <option value="Junior">Socios Juniors (1°-2° año)</option>
+            <option value="Senior">Socios Seniors (3°-6° año)</option>
+          </select>
+
+          <!-- Input de búsqueda -->
+          <input type="text" id="searchRankingInput" onkeyup="filterRanking()" placeholder="Buscar socio..." class="border border-slate-300 dark:border-slate-700 rounded-lg py-1.5 px-3 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none">
+        </div>
+      </div>
+
+      <!-- Leyenda de Semáforos -->
+      <div class="flex flex-wrap items-center gap-4 text-xs bg-slate-100/70 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+        <span class="font-bold text-slate-700 dark:text-slate-300">Referencias de Estado:</span>
+        <div class="flex items-center space-x-1.5">
+          <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+          <span>Saldo Regular o Positivo</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+          <span class="font-medium text-amber-900 dark:text-amber-400">Alerta Preventiva (desde 7 puntos negativos)</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span class="w-3 h-3 rounded-full bg-red-600 animate-ping"></span>
+          <span class="font-bold text-red-900 dark:text-red-400">Límite Crítico: Pérdida Automática de Condición de Socio (10 puntos negativos)</span>
+        </div>
+      </div>
+
+      <!-- Tabla del Ranking -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-aveit-navy dark:bg-slate-950 text-white uppercase text-[11px] tracking-wider font-semibold border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4 text-center w-14">Posición</th>
+                <th class="py-3 px-4">Socio (Nombre y Legajo)</th>
+                <th class="py-3 px-4">Año / Categoría</th>
+                <th class="py-3 px-4">Subcomisión</th>
+                <th class="py-3 px-4 text-center">Premios (+)</th>
+                <th class="py-3 px-4 text-center">Sanciones (-)</th>
+                <th class="py-3 px-4 text-center font-bold">Saldo Neto</th>
+                <th class="py-3 px-4 text-center">Situación</th>
+                <th class="py-3 px-4 text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="rankingTableBody" class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium">
+              <!-- Renderizado dinámicamente con Javascript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- SUBMÓDULO 5: SOLICITAR PUNTOS -->
+    <!-- ============================================================== -->
+    <section id="pane-solicitarPuntos" class="tab-pane hidden space-y-6">
+      
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Solicitud Formal de Puntos (Premios o Sanciones)</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Trámite exclusivo para autoridades habilitadas (Comisión Directiva, Subcomisiones y Jefes de Equipo).</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm max-w-3xl mx-auto space-y-6">
+        
+        <!-- Tipo de Pedido -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">1. Tipo de Solicitud</label>
+          <div class="grid grid-cols-2 gap-4">
+            <label class="border-2 border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 rounded-xl p-4 flex items-center space-x-3 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition">
+              <input type="radio" name="solicitudTipo" value="premio" checked class="text-emerald-600 focus:ring-emerald-500">
+              <div>
+                <span class="font-bold text-sm text-emerald-950 dark:text-emerald-300 block">Reconocimiento al Mérito (+)</span>
+                <span class="text-xs text-emerald-700 dark:text-emerald-400">Otorgamiento de puntos positivos por proactividad o tareas destacadas.</span>
+              </div>
+            </label>
+            <label class="border-2 border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center space-x-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+              <input type="radio" name="solicitudTipo" value="sancion" class="text-red-600 focus:ring-red-500">
+              <div>
+                <span class="font-bold text-sm text-slate-900 dark:text-white block">Medida Disciplinaria / Sanción (-)</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">Aplicación de puntos negativos por inasistencia u omisión de tareas.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Destinatario & Causal -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Socio Destinatario</label>
+            <select id="solicitudSocio" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none">
+              <option value="Nicolás Rosales (Legajo: 408917)">Nicolás Rosales (Legajo: 408917) - Junior 2°</option>
+              <option value="Lucas Martín Guillén (Legajo: 85194)">Lucas Martín Guillén (Legajo: 85194) - Senior 6°</option>
+              <option value="Axel Rene Villegas (Legajo: 403655)">Axel Rene Villegas (Legajo: 403655) - Senior 3°</option>
+              <option value="Matías Romero (Legajo: 412998)">Matías Romero (Legajo: 412998) - Senior 4°</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Causal / Concepto</label>
+            <select id="solicitudConcepto" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none">
+              <option value="Inasistencia a Reunión de Subcomisión">Inasistencia a Reunión de Subcomisión (1.0 pt)</option>
+              <option value="Omisión de Tarea Asignada">Omisión de Tarea Asignada (Llamado de atención a 2.0 pts)</option>
+              <option value="Falta a Turno de Mantenimiento">Falta a Turno de Mantenimiento (2.0 pts)</option>
+              <option value="Colaboración Sobresaliente en Evento">Colaboración Sobresaliente en Evento (+1.5 pts)</option>
+              <option value="Desempeño Extraordinario en Subcomisión">Desempeño Extraordinario en Subcomisión (+2.0 pts)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Puntaje Propuesto</label>
+          <input type="number" id="solicitudPuntos" step="0.5" value="1.0" min="0.5" max="4.0" class="w-full sm:w-48 font-mono border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none">
+        </div>
+
+        <!-- Hoja de Anexo Circunstanciada Obligatoria -->
+        <div class="border border-slate-200 dark:border-slate-750 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/60 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Hoja de Anexo Circunstanciada</h4>
+            <span class="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">Obligatorio</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Debe contener la descripción precisa de las circunstancias de hecho, fecha exacta y testigos presenciales.</p>
+          
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Fecha y Hora del Hecho</label>
+            <input type="datetime-local" id="anexoFecha" class="w-full sm:w-64 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Descripción Detallada de los Hechos</label>
+            <textarea id="anexoTexto" rows="3" placeholder="Detalle minuciosamente lo acontecido, tareas asignadas y consecuencias observadas..." class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Testigos o Miembros Presentes</label>
+            <input type="text" id="anexoTestigos" placeholder="Ej: Lucas Gastiaburu, Tomás Quiroz" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none">
+          </div>
+        </div>
+
+        <button onclick="submitSolicitudPuntos()" class="w-full bg-aveit-navy hover:bg-aveit-navyLight text-white py-3 rounded-lg font-bold text-sm shadow transition">
+          Elevar Solicitud Formal al Tribunal de Disciplina
+        </button>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- SUBMÓDULO 6: EVENTOS & ASISTENCIA DIGITAL ("PASAR EL DEDO") -->
+    <!-- ============================================================== -->
+    <section id="pane-eventos" class="tab-pane hidden space-y-6">
+      
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900 dark:text-white">Eventos Institucionales & Asistencia Digital</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Control biométrico ("pasar el dedo") y generación automática de causas por inasistencia.</p>
+        </div>
+        <button onclick="openNuevoEventoModal()" class="px-3.5 py-2 bg-aveit-blue hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center space-x-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Programar Nuevo Evento</span>
+        </button>
+      </div>
+
+      <!-- Evento Activo en Curso con "Pasar el Dedo" -->
+      <div class="bg-white dark:bg-slate-900 border-2 border-blue-500 dark:border-blue-600 rounded-xl p-6 shadow-md space-y-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Evento Activo en Este Momento</span>
+            </div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white mt-1">Reunión General Ordinaria - Ciclo 2026</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Convocatoria obligatoria para Socios Juniors y Seniors • Sede Social AVEIT</p>
+          </div>
+
+          <div class="flex items-center space-x-4 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Presentes</span>
+              <p id="counterPresentes" class="font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400">42</p>
+            </div>
+            <div class="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Ausentes</span>
+              <p id="counterAusentes" class="font-mono text-xl font-bold text-red-600 dark:text-red-400">8</p>
+            </div>
+            <div class="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Asistencia</span>
+              <p id="counterPorcentaje" class="font-mono text-xl font-bold text-blue-600 dark:text-blue-400">84%</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de Registro: "Pasar el Dedo" -->
+        <div class="bg-gradient-to-br from-slate-900 to-aveit-navy text-white rounded-xl p-6 shadow-inner text-center space-y-4 border border-slate-700/50">
+          <h3 class="text-base font-bold">Terminal de Asistencia Digital ("Pasar el Dedo")</h3>
+          <p class="text-xs text-slate-300 max-w-md mx-auto">Selecciona tu usuario en la terminal y presiona el lector de huella/asistencia digital para registrar tu check-in inmediato.</p>
+
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-lg mx-auto">
+            <select id="selectSocioFingerprint" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-3 text-xs w-full focus:ring-2 focus:ring-aveit-amber focus:outline-none">
+              <option value="Nicolás Rosales">Nicolás Rosales (Legajo: 408917)</option>
+              <option value="Lucas Gastiaburu">Lucas Gastiaburu (Legajo: 74907)</option>
+              <option value="Tomás Augusto Quiroz">Tomás Augusto Quiroz (Legajo: 415327)</option>
+              <option value="Luis Urviola">Luis Urviola (Legajo: 409953)</option>
+              <option value="Axel Rene Villegas">Axel Rene Villegas (Legajo: 403655)</option>
+              <option value="Diego Gabriel Sánchez">Diego Gabriel Sánchez (Legajo: 87414)</option>
+            </select>
+
+            <button onclick="simularPasarDedo()" class="w-full sm:w-auto bg-aveit-amber hover:bg-amber-600 text-slate-950 font-bold px-6 py-3 rounded-lg text-xs shadow-lg transition flex items-center justify-center space-x-2 whitespace-nowrap">
+              <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 004.07 9.871m15.86 3c.094.757.14 1.527.14 2.308 0 2.473-.345 4.866-.99 7.132"/></svg>
+              <span>Confirmar Asistencia</span>
+            </button>
+          </div>
+
+          <!-- Mensaje de Feedback de Huella -->
+          <div id="fingerprintFeedback" class="hidden text-xs font-semibold text-emerald-300 py-1 bg-emerald-900/40 rounded border border-emerald-500/40 max-w-md mx-auto">
+            ✓ ¡Huella Verificada! Asistencia acreditada exitosamente.
+          </div>
+        </div>
+
+        <!-- Botón de Cierre de Evento y Disparo de Causas -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+          <div class="text-xs text-slate-500 dark:text-slate-400">
+            Al cerrar el evento, los socios ausentes recibirán la notificación de inasistencia y se abrirán los expedientes correspondientes.
+          </div>
+          <button onclick="cerrarEventoYDispararCausas()" class="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs py-2.5 px-5 rounded-lg shadow transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Cerrar Evento y Generar Causas por Inasistencia</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: FORMULARIO UNIFICADO DE JUSTIFICACIÓN (T02 / T03) -->
+  <!-- ============================================================== -->
+  <div id="modalJustificar" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-200 dark:border-slate-800">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-start pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300" id="modalExpId">EXP-2026-042</span>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white mt-1">Formulario de Descargo y Justificación</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400" id="modalExpTitle">Inasistencia a Reunión Ordinaria</p>
+        </div>
+        <button onclick="closeJustificarModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold">✕</button>
+      </div>
+
+      <!-- Selector Unificado de Tipo de Descargo -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tipo de Descargo</label>
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          <button type="button" id="btnTipoTipificada" onclick="setDescargoType('tipificada')" class="py-2 px-3 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm">
+            Justificación con Certificado
+          </button>
+          <button type="button" id="btnTipoExtraordinario" onclick="setDescargoType('extraordinario')" class="py-2 px-3 text-xs font-bold rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            Descargo Extraordinario
+          </button>
+        </div>
+      </div>
+
+      <!-- Bloque 1: Causal Tipificada -->
+      <div id="blockTipificada" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Causal Reglamentaria</label>
+          <select id="selectCausalTipificada" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none">
+            <option value="medica">Enfermedad / Motivo de Salud (Certificado médico)</option>
+            <option value="examen">Examen Universitario / Obligación Académica UTN</option>
+            <option value="laboral">Obligación Laboral Ineludible / Fuerza Mayor</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Comprobante Probatorio Digital (Obligatorio)</label>
+          <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center hover:border-aveit-blue transition bg-slate-50 dark:bg-slate-800/50 cursor-pointer">
+            <input type="file" id="fileCertificado" onchange="handleFileSelected(this)" class="hidden">
+            <label for="fileCertificado" class="cursor-pointer block space-y-1">
+              <svg class="w-6 h-6 mx-auto text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <span class="text-xs text-aveit-blue dark:text-blue-400 font-semibold block">Seleccionar archivo digital (PDF, JPG, PNG)</span>
+              <span id="fileNameLabel" class="text-[11px] text-slate-500 dark:text-slate-400 block">Ningún archivo seleccionado todavía</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloque 2: Descargo Extraordinario -->
+      <div id="blockExtraordinario" class="hidden space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Exposición Fáctica Circunstanciada</label>
+          <textarea id="textDescargoExtra" rows="4" placeholder="Explique con claridad las circunstancias de fuerza mayor o antecedentes extraordinarios que impidieron el cumplimiento..." class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none"></textarea>
+        </div>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500">Este descargo será analizado bajo sana crítica por los miembros del Tribunal de Disciplina.</p>
+      </div>
+
+      <!-- Observaciones & Declaración Jurada -->
+      <div class="bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 text-[11px] p-3 rounded-lg border border-amber-200 dark:border-amber-900/50">
+        Declaración Jurada: La información suministrada reviste carácter legal interno y se timbra con sello de tiempo UTC e identificación del usuario.
+      </div>
+
+      <!-- Acciones del Modal -->
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeJustificarModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+          Cancelar
+        </button>
+        <button onclick="submitJustificacion()" id="btnSubmitJustificacion" class="px-5 py-2 bg-aveit-blue hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
+          Enviar Justificación al Tribunal
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: REVISAR PRUEBAS Y DICTAMINAR (TRIBUNAL) -->
+  <!-- ============================================================== -->
+  <div id="modalRevisar" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-200 dark:border-slate-800">
+      <div class="flex justify-between items-start pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300" id="revExpId">EXP-2026-039</span>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white mt-1">Revisión de Descargo y Votación</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400" id="revSocio">Lucas Martín Guillén</p>
+        </div>
+        <button onclick="closeRevisarModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
+        <p class="font-semibold text-slate-800 dark:text-slate-200">Comprobante y Declaración Presentada:</p>
+        <p class="text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-700" id="revDescargoText">
+          Certificado Médico de Guardia (Clínica Universitaria Reina Fabiola) por cuadro gastrointestinal agudo.
+        </p>
+        <div class="flex items-center space-x-2 text-blue-700 dark:text-blue-400 font-medium cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+          <span class="underline">Ver archivo adjunto: certificado_medico_28082026.pdf (1.2 MB)</span>
+        </div>
+      </div>
+
+      <!-- Voto Nominal de los 3 Jueces -->
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Votación Nominal Colegiada</label>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
+            <span class="font-medium text-slate-800 dark:text-slate-200">Juez 1 (Diego Sánchez):</span>
+            <div class="space-x-2">
+              <label class="inline-flex items-center"><input type="radio" name="votoJ1" value="admitir" checked class="text-emerald-600"> <span class="ml-1 text-emerald-800 dark:text-emerald-400 font-bold">Admitir Justificación</span></label>
+              <label class="inline-flex items-center"><input type="radio" name="votoJ1" value="rechazar" class="text-red-600"> <span class="ml-1 text-red-800 dark:text-red-400">Rechazar</span></label>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
+            <span class="font-medium text-slate-800 dark:text-slate-200">Juez 2 (Lucas Gastiaburu):</span>
+            <div class="space-x-2">
+              <label class="inline-flex items-center"><input type="radio" name="votoJ2" value="admitir" checked class="text-emerald-600"> <span class="ml-1 text-emerald-800 dark:text-emerald-400 font-bold">Admitir Justificación</span></label>
+              <label class="inline-flex items-center"><input type="radio" name="votoJ2" value="rechazar" class="text-red-600"> <span class="ml-1 text-red-800 dark:text-red-400">Rechazar</span></label>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
+            <span class="font-medium text-slate-800 dark:text-slate-200">Juez 3 (Tomás Quiroz):</span>
+            <div class="space-x-2">
+              <label class="inline-flex items-center"><input type="radio" name="votoJ3" value="admitir" checked class="text-emerald-600"> <span class="ml-1 text-emerald-800 dark:text-emerald-400 font-bold">Admitir Justificación</span></label>
+              <label class="inline-flex items-center"><input type="radio" name="votoJ3" value="rechazar" class="text-red-600"> <span class="ml-1 text-red-800 dark:text-red-400">Rechazar</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeRevisarModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cerrar</button>
+        <button onclick="confirmarDictamenTribunal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
+          Aprobar Fallo y Pasar a Redacción
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: REDACTAR RESOLUCIÓN (VISTOS, CONSIDERANDOS, FALLO) -->
+  <!-- ============================================================== -->
+  <div id="modalRedactar" class="fixed inset-0 bg-slate-950/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-start pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-300" id="redExpId">EXP-2026-036</span>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white mt-1">Redacción Guiada de Resolución Oficial</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400" id="redSocio">Axel Rene Villegas</p>
+        </div>
+        <button onclick="closeRedactarModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">1. VISTOS</label>
+          <textarea rows="2" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" readonly>El Expediente EXP-2026-036 iniciado a solicitud formal de la Comisión Directiva de fecha 25/08/2026 en relación con el desempeño asociativo del socio Axel Rene Villegas.</textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">2. CONSIDERANDOS</label>
+          <textarea id="redConsiderandos" rows="4" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:outline-none">Que habiéndose analizado el informe de recaudación y logística de la Gran Rifa Anual de AVEIT, se constata una dedicación extraordinaria con superación del 150% de los objetivos fijados para el área de Organización y Eventos, contando con dictamen favorable unánime del Tribunal.</textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">3. PARTE RESOLUTIVA (FALLO)</label>
+          <textarea id="redFallo" rows="3" class="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:outline-none">EL TRIBUNAL DE DISCIPLINA RESUELVE: Otorgar dos (2.0) puntos positivos en concepto de Reconocimiento al Mérito Sobresaliente al socio Axel Rene Villegas, con pase a firma colegiada y registro en el ledger oficial.</textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeRedactarModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+        <button onclick="enviarAFirmaColegiada()" class="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold shadow transition">
+          Guardar y Habilitar Recolección de Firmas
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- LOGIC & JAVASCRIPT -->
+  <script>
+    // State
+    let currentRole = 'td';
+    let currentTab = 'gestionarExpedientes';
+    let gestionView = 'kanban';
+    let rankingOrder = 'desc';
+
+    // Mock Ranking Data (500+ socios representados)
+    const sociosData = [
+      { id: 1, legajo: '85194', nombre: 'Lucas Martín Guillén', categoria: 'Senior 6°', subcomision: 'Cómputos', premios: 8.5, sanciones: -1.0, saldo: 7.5, alert: 'normal' },
+      { id: 2, legajo: '87414', nombre: 'Diego Gabriel Sánchez', categoria: 'Senior 5°', subcomision: 'Gestión Social', premios: 3.5, sanciones: -2.0, saldo: 1.5, alert: 'normal' },
+      { id: 3, legajo: '403655', nombre: 'Axel Rene Villegas', categoria: 'Senior 3°', subcomision: 'Eventos', premios: 6.0, sanciones: -1.5, saldo: 4.5, alert: 'normal' },
+      { id: 4, legajo: '74907', nombre: 'Lucas Gastiaburu', categoria: 'Senior 4°', subcomision: 'Cómputos', premios: 5.0, sanciones: -0.5, saldo: 4.5, alert: 'normal' },
+      { id: 5, legajo: '409953', nombre: 'Luis Urviola', categoria: 'Senior 3°', subcomision: 'Relaciones Inst.', premios: 4.0, sanciones: -1.0, saldo: 3.0, alert: 'normal' },
+      { id: 6, legajo: '415327', nombre: 'Tomás Augusto Quiroz', categoria: 'Senior 3°', subcomision: 'RRHH', premios: 5.5, sanciones: -1.0, saldo: 4.5, alert: 'normal' },
+      { id: 7, legajo: '408917', nombre: 'Nicolás Rosales', categoria: 'Junior 2°', subcomision: 'Difusión', premios: 1.0, sanciones: -3.5, saldo: -2.5, alert: 'normal' },
+      { id: 8, legajo: '412998', nombre: 'Matías Romero', categoria: 'Senior 4°', subcomision: 'Mantenimiento', premios: 0.0, sanciones: -7.5, saldo: -7.5, alert: 'preventiva' },
+      { id: 9, legajo: '419102', nombre: 'Joaquín Benítez', categoria: 'Junior 1°', subcomision: 'Mantenimiento', premios: 0.5, sanciones: -10.5, saldo: -10.0, alert: 'critica' },
+      { id: 10, legajo: '418833', nombre: 'Camila Rossi', categoria: 'Junior 1°', subcomision: 'Gestión Social', premios: 2.0, sanciones: -0.5, saldo: 1.5, alert: 'normal' },
+      { id: 11, legajo: '399412', nombre: 'Ignacio Morales', categoria: 'Senior 5°', subcomision: 'Eventos', premios: 1.0, sanciones: -8.0, saldo: -7.0, alert: 'preventiva' },
+      { id: 12, legajo: '407651', nombre: 'Facundo Gómez', categoria: 'Junior 2°', subcomision: 'Mantenimiento', premios: 0.0, sanciones: -7.5, saldo: -7.5, alert: 'preventiva' },
+    ];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      initDarkMode();
+      renderRanking();
+    });
+
+    // Dark Mode System
+    function initDarkMode() {
+      const isDark = document.documentElement.classList.contains('dark');
+      updateDarkModeIcons(isDark);
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateDarkModeIcons(isDark);
+      showToast(isDark ? "Modo oscuro activado" : "Modo claro activado");
+      renderRanking();
+    }
+
+    function updateDarkModeIcons(isDark) {
+      const iconSun = document.getElementById('iconSun');
+      const iconMoon = document.getElementById('iconMoon');
+      if (isDark) {
+        iconSun?.classList.remove('hidden');
+        iconMoon?.classList.add('hidden');
+      } else {
+        iconSun?.classList.add('hidden');
+        iconMoon?.classList.remove('hidden');
+      }
+    }
+
+    // Tab switcher
+    function switchTab(tabId) {
+      currentTab = tabId;
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        el.classList.remove('bg-aveit-blue', 'text-white', 'shadow');
+        el.classList.add('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+      });
+
+      const activePane = document.getElementById('pane-' + tabId);
+      const activeBtn = document.getElementById('tabNav-' + tabId);
+      if (activePane) activePane.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.add('bg-aveit-blue', 'text-white', 'shadow');
+        activeBtn.classList.remove('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+      }
+
+      if (tabId === 'ranking') renderRanking();
+    }
+
+    // Role switcher
+    function setAppRole(role) {
+      currentRole = role;
+      const btnTD = document.getElementById('btnRoleTD');
+      const btnSocio = document.getElementById('btnRoleSocio');
+      const btnAut = document.getElementById('btnRoleAutoridad');
+      const topRole = document.getElementById('topUserRole');
+      const topName = document.getElementById('topUserName');
+
+      [btnTD, btnSocio, btnAut].forEach(b => {
+        b.className = "px-2.5 py-1 rounded font-medium transition text-slate-300 hover:text-white";
+      });
+
+      if (role === 'td') {
+        btnTD.className = "px-2.5 py-1 rounded font-medium transition bg-aveit-amber text-slate-950 shadow-sm";
+        topRole.textContent = "Juez Titular - Tribunal";
+        topName.textContent = "Diego Gabriel Sánchez";
+        showToast("Modo activo: Miembro del Tribunal de Disciplina");
+      } else if (role === 'socio') {
+        btnSocio.className = "px-2.5 py-1 rounded font-medium transition bg-aveit-amber text-slate-950 shadow-sm";
+        topRole.textContent = "Socio Ordinario (Senior 5°)";
+        topName.textContent = "Diego Gabriel Sánchez";
+        switchTab('misExpedientes');
+        showToast("Modo activo: Socio Ordinario");
+      } else {
+        btnAut.className = "px-2.5 py-1 rounded font-medium transition bg-aveit-amber text-slate-950 shadow-sm";
+        topRole.textContent = "Presidente de Subcomisión";
+        topName.textContent = "Diego Gabriel Sánchez";
+        switchTab('solicitarPuntos');
+        showToast("Modo activo: Autoridad de Subcomisión");
+      }
+    }
+
+    // Gestionar Expedientes view switch (Kanban vs Detalle Windows)
+    function setGestionView(view) {
+      gestionView = view;
+      const kContainer = document.getElementById('viewContainer-kanban');
+      const dContainer = document.getElementById('viewContainer-detalle');
+      const btnK = document.getElementById('btnViewKanban');
+      const btnD = document.getElementById('btnViewDetalle');
+
+      if (view === 'kanban') {
+        kContainer.classList.remove('hidden');
+        dContainer.classList.add('hidden');
+        btnK.className = "flex items-center space-x-1 px-3 py-1.5 rounded-md transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm";
+        btnD.className = "flex items-center space-x-1 px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+      } else {
+        kContainer.classList.add('hidden');
+        dContainer.classList.remove('hidden');
+        btnD.className = "flex items-center space-x-1 px-3 py-1.5 rounded-md transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm";
+        btnK.className = "flex items-center space-x-1 px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+      }
+    }
+
+    // Modal Justificar (T02/T03 Unificado)
+    function openJustificarModal(expId, expTitle, provisorio) {
+      document.getElementById('modalExpId').textContent = expId;
+      document.getElementById('modalExpTitle').textContent = expTitle;
+      document.getElementById('modalJustificar').classList.remove('hidden');
+      setDescargoType('tipificada');
+    }
+
+    function closeJustificarModal() {
+      document.getElementById('modalJustificar').classList.add('hidden');
+    }
+
+    function setDescargoType(type) {
+      const btnTip = document.getElementById('btnTipoTipificada');
+      const btnExt = document.getElementById('btnTipoExtraordinario');
+      const blkTip = document.getElementById('blockTipificada');
+      const blkExt = document.getElementById('blockExtraordinario');
+
+      if (type === 'tipificada') {
+        btnTip.className = "py-2 px-3 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm";
+        btnExt.className = "py-2 px-3 text-xs font-bold rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+        blkTip.classList.remove('hidden');
+        blkExt.classList.add('hidden');
+      } else {
+        btnExt.className = "py-2 px-3 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm";
+        btnTip.className = "py-2 px-3 text-xs font-bold rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+        blkExt.classList.remove('hidden');
+        blkTip.classList.add('hidden');
+      }
+    }
+
+    function handleFileSelected(input) {
+      const label = document.getElementById('fileNameLabel');
+      if (input.files && input.files[0]) {
+        label.textContent = "Archivo cargado: " + input.files[0].name;
+        label.className = "text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block";
+      }
+    }
+
+    function submitJustificacion() {
+      closeJustificarModal();
+      showToast("Justificación registrada con éxito. Estado actualizado a 'Justificaciones en revisión'.");
+      
+      const badge = document.getElementById('badgeMisExpedientes');
+      if (badge) badge.textContent = "0";
+    }
+
+    // Modal Revisar Pruebas
+    function openRevisarModal(expId, socio, motivo, descargo, pts) {
+      document.getElementById('revExpId').textContent = expId;
+      document.getElementById('revSocio').textContent = socio + " • " + motivo;
+      document.getElementById('revDescargoText').textContent = descargo;
+      document.getElementById('modalRevisar').classList.remove('hidden');
+    }
+
+    function closeRevisarModal() {
+      document.getElementById('modalRevisar').classList.add('hidden');
+    }
+
+    function confirmarDictamenTribunal() {
+      closeRevisarModal();
+      showToast("Votación nominal unánime (3/3). Causa derivada a redacción formal de resolución.");
+    }
+
+    // Modal Redactar
+    function openRedactarModal(expId, socio, pts) {
+      document.getElementById('redExpId').textContent = expId;
+      document.getElementById('redSocio').textContent = socio + " • Dictamen: " + pts;
+      document.getElementById('modalRedactar').classList.remove('hidden');
+    }
+
+    function closeRedactarModal() {
+      document.getElementById('modalRedactar').classList.add('hidden');
+    }
+
+    function enviarAFirmaColegiada() {
+      closeRedactarModal();
+      showToast("Resolución redactada guardada. Pase a estado 'Pendiente de firma' para los 3 jueces.");
+    }
+
+    function firmarResolucionDigital(expId) {
+      showToast("Firma digital colegiada estampada con sello de tiempo UTC para " + expId + ". Resolución emitida.");
+    }
+
+    function viewResolucionModal(resId, title, pts) {
+      showToast("Generando y descargando PDF oficial de " + resId + "...");
+    }
+
+    // Solicitar Puntos
+    function submitSolicitudPuntos() {
+      const socio = document.getElementById('solicitudSocio').value;
+      const concepto = document.getElementById('solicitudConcepto').value;
+      showToast("Solicitud formal enviada al Tribunal para " + socio + " (" + concepto + ").");
+      switchTab('gestionarExpedientes');
+    }
+
+    // Eventos & Pasar el Dedo
+    function simularPasarDedo() {
+      const socio = document.getElementById('selectSocioFingerprint').value;
+      const feedback = document.getElementById('fingerprintFeedback');
+      feedback.textContent = "✓ ¡Huella Verificada! Asistencia acreditada: " + socio + " (" + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " hs)";
+      feedback.classList.remove('hidden');
+
+      const pres = document.getElementById('counterPresentes');
+      const aus = document.getElementById('counterAusentes');
+      const porc = document.getElementById('counterPorcentaje');
+      let pVal = parseInt(pres.textContent) + 1;
+      let aVal = Math.max(0, parseInt(aus.textContent) - 1);
+      pres.textContent = pVal;
+      aus.textContent = aVal;
+      porc.textContent = Math.round((pVal / (pVal + aVal)) * 100) + "%";
+
+      showToast("Asistencia registrada para " + socio);
+    }
+
+    function cerrarEventoYDispararCausas() {
+      if (confirm("¿Confirmar el cierre definitivo del evento? Se generarán automáticamente los expedientes disciplinarios para los 8 socios ausentes.")) {
+        showToast("Evento cerrado. 8 expedientes creados y notificaciones de inasistencia despachadas.");
+        switchTab('gestionarExpedientes');
+      }
+    }
+
+    function openNuevoEventoModal() {
+      showToast("Formulario de nuevo evento institucional.");
+    }
+
+    // Ranking Logic & Rendering
+    function sortRanking(order) {
+      rankingOrder = order;
+      document.getElementById('btnSortDesc').className = order === 'desc' ? "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm flex items-center space-x-1" : "px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1";
+      document.getElementById('btnSortAsc').className = order === 'asc' ? "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm flex items-center space-x-1" : "px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1";
+      renderRanking();
+    }
+
+    function filterRanking() {
+      renderRanking();
+    }
+
+    function renderRanking() {
+      const tbody = document.getElementById('rankingTableBody');
+      if (!tbody) return;
+
+      const catFilter = document.getElementById('filterRankingCat')?.value || 'todos';
+      const search = (document.getElementById('searchRankingInput')?.value || '').toLowerCase();
+
+      let list = [...sociosData].filter(s => {
+        const matchesCat = catFilter === 'todos' || s.categoria.includes(catFilter);
+        const matchesSearch = s.nombre.toLowerCase().includes(search) || s.legajo.includes(search) || s.subcomision.toLowerCase().includes(search);
+        return matchesCat && matchesSearch;
+      });
+
+      list.sort((a, b) => rankingOrder === 'desc' ? b.saldo - a.saldo : a.saldo - b.saldo);
+
+      tbody.innerHTML = '';
+      list.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/60 transition";
+
+        let badgeStatus = '';
+        if (s.alert === 'critica' || s.saldo <= -10) {
+          badgeStatus = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 dark:bg-red-950/60 text-red-900 dark:text-red-300 border border-red-300 dark:border-red-800 animate-pulse">Límite Crítico: Cese de Socio</span>`;
+        } else if (s.alert === 'preventiva' || s.saldo <= -7) {
+          badgeStatus = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800">Alerta Preventiva</span>`;
+        } else {
+          badgeStatus = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">Situación Regular</span>`;
+        }
+
+        let saldoClass = s.saldo < 0 ? (s.saldo <= -10 ? 'text-red-600 dark:text-red-400 font-extrabold' : 'text-amber-700 dark:text-amber-400 font-bold') : 'text-emerald-600 dark:text-emerald-400 font-bold';
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-center font-mono font-bold text-slate-500 dark:text-slate-400">${idx + 1}</td>
+          <td class="py-3 px-4">
+            <span class="font-bold text-slate-900 dark:text-white block">${s.nombre}</span>
+            <span class="text-[11px] text-slate-400 dark:text-slate-500 font-mono">Legajo: ${s.legajo}</span>
+          </td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${s.categoria.includes('Junior') ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300'}">${s.categoria}</span>
+          </td>
+          <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${s.subcomision}</td>
+          <td class="py-3 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">+${s.premios.toFixed(1)}</td>
+          <td class="py-3 px-4 text-center font-mono font-bold text-red-600 dark:text-red-400">${s.sanciones.toFixed(1)}</td>
+          <td class="py-3 px-4 text-center font-mono text-sm ${saldoClass}">${s.saldo > 0 ? '+' : ''}${s.saldo.toFixed(1)}</td>
+          <td class="py-3 px-4 text-center">${badgeStatus}</td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="verLegajoSocio('${s.nombre}', '${s.legajo}', ${s.saldo})" class="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[11px] border border-slate-300 dark:border-slate-700">Ver Legajo</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function verLegajoSocio(nombre, legajo, saldo) {
+      showToast("Consultando legajo histórico de " + nombre + " (Saldo: " + (saldo > 0 ? '+' : '') + saldo + " pts)...");
+    }
+
+    function exportReporte(formato) {
+      showToast("Generando reporte oficial consolidado en formato " + formato.toUpperCase() + "...");
+    }
+
+    // Toast helper
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = "bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium py-2.5 px-4 rounded-xl shadow-2xl border border-slate-700 flex items-center space-x-2 transition-all transform duration-300 opacity-0 translate-y-2 pointer-events-auto";
+      toast.innerHTML = `<span class="text-amber-400 font-bold">ℹ</span><span>${msg}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      }, 50);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Detalle Table filters
+    function filterDetalleTable() {
+      const text = document.getElementById('filterDetalleInput').value.toLowerCase();
+      const estado = document.getElementById('filterDetalleEstado').value;
+      const rows = document.querySelectorAll('#tablaDetalleBody tr');
+
+      rows.forEach(r => {
+        const rowText = r.textContent.toLowerCase();
+        const matchesText = rowText.includes(text);
+        const matchesEstado = estado === 'todos' || rowText.includes(estado.toLowerCase());
+        r.style.display = matchesText && matchesEstado ? '' : 'none';
+      });
+    }
+
+    let sortColDir = {};
+    function sortDetalleTable(colIdx) {
+      const tbody = document.getElementById('tablaDetalleBody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      sortColDir[colIdx] = !sortColDir[colIdx];
+
+      rows.sort((a, b) => {
+        const valA = a.children[colIdx].textContent.trim();
+        const valB = b.children[colIdx].textContent.trim();
+        return sortColDir[colIdx] ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+
+      tbody.innerHTML = '';
+      rows.forEach(r => tbody.appendChild(r));
+    }
+  </script>
+</body>
+</html>
