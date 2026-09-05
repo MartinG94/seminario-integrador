@@ -10,7 +10,7 @@
 | **Organización** | Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.) - UTN FRC |
 | **Sistema** | SGD-AVEIT (Sistema de Gestión del Tribunal de Disciplina y Premiaciones) |
 | **Módulo** | Módulo Unificado de Tribunal (6 Submódulos Integrados) |
-| **Versión** | 1.0.0 (Primera Iteración) |
+| **Versión** | 1.1.0 (Iteración 1 - Consolidación de Estados Procesales) |
 | **Fecha** | 03/09/2026 |
 | **Metodología** | Scrumban / IEEE 830 / ISO/IEC/IEEE 29148 / Tom Gilb Planguage |
 
@@ -22,11 +22,19 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 
 1. **Mis Expedientes:** Portal de consulta personal para el socio con contador de días hábiles y acceso condicional al formulario de descargo.
 2. **Formulario Unificado de Justificaciones (T02/T03):** Formulario inteligente que consolida justificaciones tipificadas (con carga obligatoria de certificados médicos/académicos) y descargos extraordinarios (exposición libre).
-3. **Gestionar Expedientes:** Panel operativo para el Tribunal de Disciplina con selector de vista dual (**Tablero Kanban de 6 estados** y **Vista Detalle estilo Explorador de Windows** con foco en el expediente).
+3. **Gestionar Expedientes:** Panel operativo para el Tribunal de Disciplina con selector de vista dual (**Tablero Kanban de 5 estados procesales consolidados** y **Vista Detalle estilo Explorador de Windows** con foco en el expediente).
 4. **Reportes:** Motor de analítica y auditoría interna que incluye el Balance Cuatrimestral de Disciplina, desgloses por subcomisión y exportación en PDF/Excel.
 5. **Ranking de Socios:** Padrón ordenable de forma ascendente y descendente por puntaje acumulado (+/-), con filtros por categoría (Junior/Senior) y semáforos de advertencia preventiva (7 puntos negativos) y límite de cese (10 puntos negativos).
 6. **Solicitar Puntos:** Trámite formal de premios o sanciones mediante Formulario T01 + Hoja Anexo, validando las competencias de cada autoridad.
 7. **Eventos y Asistencia Digital:** Programación de actividades institucionales obligatorias con registro de asistencia ("pasar el dedo" / check-in digital) y cierre automático de causas por inasistencias.
+
+> [!NOTE]
+> **Consolidación de Estados Procesales:** A efectos de optimizar el flujo operativo y evitar redundancias de transición, se consolidan las fases de análisis probatorio y redacción del dictamen en un único estado procesal: **"En revisión y resolución"**. De esta manera, el ciclo de vida del expediente se estructura en cinco (5) estados:
+> 1. *Expediente Creado*
+> 2. *En período de justificaciones* (5 días hábiles)
+> 3. *En revisión y resolución*
+> 4. *Pendiente de firma y envío*
+> 5. *Expedientes ya emitidos*
 
 > [!NOTE]
 > **Directiva de Diseño de Interfaz (Clean UI):** Las pantallas y componentes de usuario prescinden deliberadamente de citas textuales de artículos y números de leyes ("Art. XX"), comunicando cada regla en términos institucionales claros, directos y amigables.
@@ -52,9 +60,9 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
 | **RF-01** | Consulta de Mis Expedientes | Socio Ordinario | El sistema debe mostrar el listado de causas donde el socio autenticado sea imputado o postulado, indicando número de expediente, fecha de apertura, motivo, puntaje provisorio, estado procesal y cuenta regresiva de días hábiles restantes. | **E:** Sesión de socio.<br>**S:** Grilla de causas personales con estado y días de plazo. | RN-01, RN-05 | **Must** |
 | **RF-02** | Formulario Unificado de Justificaciones (T02/T03) | Socio Ordinario | El sistema debe proveer una interfaz unificada para ingresar descargos, permitiendo alternar entre *Justificación con Certificado* (exige causal médica, académica o laboral y carga de comprobante en PDF/JPG/PNG) y *Descargo Extraordinario* (exposición libre y adjuntos opcionales). | **E:** Tipo de descargo, causal/texto, archivos adjuntos.<br>**S:** Constancia digital de recepción con sello de tiempo. | RN-02, RN-05, RN-06 | **Must** |
-| **RF-03** | Tablero Kanban de Expedientes | Miembro del TD | El sistema debe ofrecer una vista visual en tablero Kanban estructurada en seis columnas oficiales: 1) Creado, 2) En período de justificaciones, 3) Justificaciones en revisión, 4) En espera de resolución, 5) Pendiente de firma y envío, 6) Ya emitidos. | **E:** Filtros de búsqueda.<br>**S:** Tablero con tarjetas informativas y badges de estado. | RN-03, RN-04 | **Must** |
+| **RF-03** | Tablero Kanban de Expedientes | Miembro del TD | El sistema debe ofrecer una vista visual en tablero Kanban estructurada en cinco (5) columnas procesales consolidadas: 1) Creado, 2) En período de justificaciones, 3) En revisión y resolución, 4) Pendiente de firma y envío, 5) Ya emitidos. | **E:** Filtros de búsqueda.<br>**S:** Tablero con tarjetas informativas y badges de estado. | RN-03, RN-04 | **Must** |
 | **RF-04** | Vista Detalle (Estilo Explorador) | Miembro del TD | El sistema debe ofrecer una vista tabular densa con foco en el expediente, permitiendo ordenar por cualquier columna (N° Exp, Socio, Fecha, Plazo, Estado), buscar en tiempo real y acceder a acciones contextuales rápidas. | **E:** Clic en columna para ordenar, texto de búsqueda.<br>**S:** Grilla tabular interactiva ordenada. | RN-03, RN-04 | **Must** |
-| **RF-05** | Sustanciación, Votación y Firma Colegiada | Miembro del TD | El sistema debe permitir a los jueces registrar su voto nominal fundado (aprobación/rechazo/graduación), verificar la mayoría absoluta (>= 2/3 votos), estructurar la resolución (Vistos, Considerandos, Fallo) y recolectar las 3 firmas colegiadas digitales. | **E:** Voto, fundamentación, firma digital.<br>**S:** Resolución formal dictada y firmada. | RN-08, RN-09, RN-10, RN-11 | **Must** |
+| **RF-05** | Sustanciación, Votación y Firma Colegiada | Miembro del TD | En el estado *En revisión y resolución*, el sistema debe permitir a los jueces registrar su voto nominal fundado (aprobación/rechazo/graduación), verificar la mayoría absoluta (>= 2/3 votos), estructurar la resolución (Vistos, Considerandos, Fallo) y pasar a *Pendiente de firma y envío* para recolectar las firmas colegiadas digitales. | **E:** Voto, fundamentación, firma digital.<br>**S:** Resolución formal dictada y firmada. | RN-08, RN-09, RN-10, RN-11 | **Must** |
 | **RF-06** | Ranking de Socios con Ordenamiento Bidireccional | Todos los Actores | El sistema debe listar el padrón completo de socios con su saldo neto acumulado de puntos (+/-), permitiendo ordenamiento ascendente (del más sancionado al más premiado) y descendente, con filtros por categoría (Junior/Senior) y Subcomisión. | **E:** Parámetros de orden (asc/desc) y filtros.<br>**S:** Tabla de ranking con semáforos de advertencia. | RN-13, RN-14 | **Must** |
 | **RF-07** | Consulta de Legajo y Ficha de Socio | Miembro TD, CD | El sistema debe permitir visualizar la ficha histórica consolidada de un socio, detallando sus expedientes vinculados, resoluciones, descargos y el historial transaccional de movimientos de puntos. | **E:** Selección de socio o legajo.<br>**S:** Ficha integral con historial y estado actual. | RN-12 | **Should** |
 | **RF-08** | Solicitud de Puntos (Formulario T01 + Anexo) | Autoridades Habilitadas | El sistema debe permitir tramitar pedidos de puntos positivos (+) en concepto de méritos o negativos (-) por sanciones, exigiendo la carga de la Hoja de Anexo circunstanciada con hechos, fechas y testigos. | **E:** Datos del T01, Anexo fáctico, pruebas.<br>**S:** Expediente disciplinario generado en estado Creado. | RN-01, RN-07 | **Must** |
@@ -69,9 +77,9 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 
 | Código | Nombre de la Regla | Enunciado Lógico Formal |
 | :---: | :--- | :--- |
-| **RN-01** | **Disparo del Plazo de Justificación** | Al pasar un expediente al estado *En período de justificaciones*, se inicia un temporizador improrrogable de exactamente **cinco (5) días hábiles**. |
-| **RN-02** | **Preclusión Automática de Descargos** | Vencidos los 5 días hábiles sin que el socio haya enviado su descargo, el sistema bloquea irreversiblemente el botón de justificación y transiciona la causa a *Justificaciones en revisión*. |
-| **RN-03** | **Coherencia de Estados Procesales** | Todo expediente debe transitar estrictamente por los 6 estados oficiales sin saltos de etapa no autorizados. |
+| **RN-01** | **Disparo del Plazo de Justificación** | Al pasar un expediente al estado *En período de justificaciones*, se inicia un temporizador improrrogable de exactamente **cinco (5) días hábiles** (120 horas hábiles). |
+| **RN-02** | **Preclusión Automática de Descargos** | Vencidos los 5 días hábiles sin que el socio haya enviado su descargo, el sistema bloquea irreversiblemente el botón de justificación y transiciona automáticamente la causa a *En revisión y resolución*. |
+| **RN-03** | **Coherencia de Estados Procesales Consolidados** | Todo expediente debe transitar estrictamente por los 5 estados oficiales consolidados: Creado ➔ En período de justificaciones ➔ En revisión y resolución ➔ Pendiente de firma y envío ➔ Expedientes ya emitidos. |
 | **RN-04** | **Sincronización de Vistas de Gestión** | Cualquier cambio de estado o acción ejecutada en la Vista Tablero Kanban debe reflejarse inmediatamente en la Vista Detalle y viceversa. |
 | **RN-05** | **Obligatoriedad de Comprobante en Causal Tipificada** | En el Formulario Unificado, si el usuario selecciona una causal tipificada (salud, examen, viaje laboral), es condición obligatoria adjuntar al menos un archivo digitalizado válido para habilitar el botón de envío. |
 | **RN-06** | **Declaración Jurada en Descargos** | Toda justificación o descargo enviado reviste carácter de declaración jurada digital, registrándose con sello de tiempo UTC e identificador de usuario. |
@@ -121,7 +129,7 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 ### RNF-04: Fiabilidad y Control de Plazos (Confiabilidad)
 * **Categoría FURPS+:** Reliability / Fiabilidad y Madurez (ISO 25010).
 * **Métrica Planguage:**
-  - **SCALE:** Precisión del temporizador preclusivo de 5 días hábiles en transicionar automáticamente el estado de la causa.
+  - **SCALE:** Precisión del temporizador preclusivo de 5 días hábiles en transicionar automáticamente el estado de la causa hacia *En revisión y resolución*.
   - **METER:** Verificación de ejecución del daemon de tareas programadas frente a calendario oficial de días hábiles.
   - **TARGET_PLAN:** `100%` de precisión en el corte a las 120 horas hábiles exactas con registro de auditoría UTC.
 

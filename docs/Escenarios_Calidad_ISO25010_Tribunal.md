@@ -90,7 +90,7 @@ A continuación se formalizan los **Escenarios de Calidad de 6 Partes** y sus co
 | **2. Estímulo** | Cumplimiento del timestamp de vencimiento calculado según el calendario oficial de días hábiles. |
 | **3. Entorno** | Ejecución en segundo plano del servicio daemon del sistema (Cron Background Worker). |
 | **4. Artefacto Afectado** | Motor de Estados de Expedientes y Servicio de Tareas Programadas. |
-| **5. Respuesta del Sistema** | El daemon detecta el vencimiento, bloquea de forma atómica la posibilidad de subir descargos para ese expediente, cambia el estado a *Justificaciones en revisión* y registra la novedad en el log de auditoría. |
+| **5. Respuesta del Sistema** | El daemon detecta el vencimiento, bloquea de forma atómica la posibilidad de subir descargos para ese expediente, cambia el estado a *En revisión y resolución* y registra la novedad en el log de auditoría. |
 | **6. Medida de Respuesta** | **Precisión de corte de plazo: 100% en la hora programada.** Cero (0) formularios admitidos fuera de término. Notificación de preclusión despachada al TD en menos de 30 segundos. |
 | **Tácticas Arquitectónicas** | • **Detección Periódica:** Tarea programada ejecutada con frecuencia configurable (cada 15 minutos).<br>• **Transacciones Atómicas:** Cambio de estado encapsulado en una transacción ACID para evitar condiciones de carrera (*race conditions*) si el socio intenta enviar en el último segundo. |
 | **Trade-offs / Conflictos** | Requiere sincronización horaria garantizada mediante protocolo NTP en el servidor central. |
