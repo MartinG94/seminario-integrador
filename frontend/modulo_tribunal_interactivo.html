@@ -207,154 +207,172 @@
 
       <!-- Lista de Expedientes Personales -->
       <div class="space-y-4">
-        
-        <!-- Barra de Control de la Lista: Filtros y Búsqueda -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="flex flex-wrap items-center gap-1.5 text-xs">
-            <button onclick="filterMisExpedientesList('todos')" id="filterMisExp-todos" class="filter-misexp-btn px-3 py-1.5 rounded-lg font-semibold bg-aveit-blue text-white shadow-sm transition">
-              Todos los Expedientes (3)
-            </button>
-            <button onclick="filterMisExpedientesList('justificaciones')" id="filterMisExp-justificaciones" class="filter-misexp-btn px-3 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">
-              En Período de Descargo (1)
-            </button>
-            <button onclick="filterMisExpedientesList('revision')" id="filterMisExp-revision" class="filter-misexp-btn px-3 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">
-              En Revisión (1)
-            </button>
-            <button onclick="filterMisExpedientesList('emitidos')" id="filterMisExp-emitidos" class="filter-misexp-btn px-3 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">
-              Emitidos (1)
-            </button>
-          </div>
-
-          <div class="relative w-full sm:w-64">
-            <input type="text" id="searchMisExpInput" onkeyup="searchMisExpedientesList()" placeholder="Buscar por motivo o código..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-aveit-blue focus:outline-none">
-            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          </div>
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-slate-800 dark:text-slate-200">Causas en las que te encuentras involucrado</h2>
+          <span class="text-xs text-slate-500 dark:text-slate-400">Actualizado automáticamente</span>
         </div>
 
-        <!-- Contenedor Principal: Formato de Lista Vertical -->
-        <div id="misExpedientesList" class="space-y-3">
+        <!-- Controles de Lista y Filtro Rápido de Mis Expedientes -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-500 dark:text-slate-400 font-medium">Filtrar por estado:</span>
+            <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5 text-xs">
+              <button onclick="filterMisExpedientes('todos')" id="btnFilterMis-todos" class="px-2.5 py-1 rounded-md font-semibold transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm">Todos (3)</button>
+              <button onclick="filterMisExpedientes('justificar')" id="btnFilterMis-justificar" class="px-2.5 py-1 rounded-md font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Por Justificar (1)</button>
+              <button onclick="filterMisExpedientes('revision')" id="btnFilterMis-revision" class="px-2.5 py-1 rounded-md font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">En Revisión (1)</button>
+              <button onclick="filterMisExpedientes('emitidos')" id="btnFilterMis-emitidos" class="px-2.5 py-1 rounded-md font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Emitidos (1)</button>
+            </div>
+          </div>
+          <span class="text-slate-400 dark:text-slate-500 text-[11px]">Ordenados por fecha más reciente ↓</span>
+        </div>
+
+        <!-- LISTA DE MIS EXPEDIENTES (Formato Lista) -->
+        <div id="misExpedientesList" class="flex flex-col space-y-3">
           
-          <!-- Elemento de Lista 1: Con plazo activo para justificar -->
-          <div id="item-EXP-2026-042" data-estado="justificaciones" class="mis-exp-item bg-white dark:bg-slate-900 border-2 border-amber-300 dark:border-amber-500/60 rounded-xl p-4 sm:p-5 shadow-sm hover:border-amber-400 transition flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            <div class="space-y-2 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-mono text-xs font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">EXP-2026-042</span>
-                <span id="badgeState-EXP-2026-042" class="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-800/60 flex items-center space-x-1">
-                  <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block mr-1"></span>
-                  <span>En período de justificaciones</span>
-                </span>
-                <span class="text-xs text-slate-400 dark:text-slate-500">Notificado: 01/09/2026 18:30 hs</span>
-              </div>
-
-              <div>
-                <h3 class="text-base font-bold text-slate-900 dark:text-white">Inasistencia a Reunión Ordinaria de Cómputos</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Causa iniciada automáticamente por cierre de evento institucional • Subcomisión de Cómputos.</p>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-4 text-xs pt-1">
-                <div class="flex items-center space-x-1.5">
-                  <span class="text-slate-500 dark:text-slate-400">Sanción provisoria:</span>
-                  <span class="font-bold text-red-600 dark:text-red-400 font-mono">-1.0 punto negativo</span>
+          <!-- Elemento de Lista 1: Con plazo para justificar -->
+          <div class="item-mis-expediente bg-white dark:bg-slate-900 border-2 border-amber-300 dark:border-amber-500/70 rounded-xl p-4 sm:p-5 shadow-sm hover:border-amber-400 dark:hover:border-amber-400 transition" data-tipo="justificar">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              
+              <!-- Columna Principal: Datos y Motivo -->
+              <div class="space-y-2 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono text-xs font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded border border-slate-200 dark:border-slate-700">EXP-2026-042</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-800 flex items-center space-x-1">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>En período de justificaciones</span>
+                  </span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400">Origen: Cierre Automático de Evento</span>
                 </div>
-                <div class="w-px h-3 bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
-                <div class="flex items-center space-x-1.5 text-amber-700 dark:text-amber-400 font-medium">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  <span>Plazo de justificación: <strong>3 días hábiles restantes</strong> (Vence: 08/09/2026 23:59 hs)</span>
+
+                <div>
+                  <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">Inasistencia a Reunión Ordinaria de Cómputos</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Notificado automáticamente al cerrar la lista de asistencia del 01/09/2026 en la Subcomisión de Cómputos.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400 pt-1">
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Sanción provisoria:</span>
+                    <span class="font-bold text-red-600 dark:text-red-400 font-mono">-1.0 punto negativo</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Notificado:</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-300">01/09/2026 18:30 hs</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Vencimiento:</span>
+                    <span class="font-medium text-amber-700 dark:text-amber-400">08/09/2026 23:59 hs</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Acción de la Lista -->
-            <div id="actionContainer-EXP-2026-042" class="flex-shrink-0 flex items-center lg:border-l lg:border-slate-200 lg:dark:border-slate-800 lg:pl-5">
-              <button onclick="openJustificarModal('EXP-2026-042', 'Inasistencia a Reunión Ordinaria de Cómputos', '-1.0')" class="w-full sm:w-auto bg-aveit-blue hover:bg-blue-700 text-white py-2.5 px-5 rounded-lg font-bold text-xs shadow transition flex items-center justify-center space-x-2 whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                <span>Justificar Sanción / Descargo</span>
-              </button>
-            </div>
+              <!-- Columna Lateral: Plazo y Botón de Acción -->
+              <div class="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-3 min-w-[220px] pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
+                <div class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 text-xs font-semibold">
+                  <svg class="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+                  <span>3 días hábiles restantes</span>
+                </div>
 
+                <button onclick="openJustificarModal('EXP-2026-042', 'Inasistencia a Reunión Ordinaria de Cómputos', '-1.0')" class="w-full sm:w-auto px-4 py-2.5 bg-aveit-blue hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow transition flex items-center justify-center space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  <span>Justificar Sanción</span>
+                </button>
+              </div>
+
+            </div>
           </div>
 
-          <!-- Elemento de Lista 2: En revisión del Tribunal -->
-          <div id="item-EXP-2026-039" data-estado="revision" class="mis-exp-item bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            <div class="space-y-2 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-mono text-xs font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">EXP-2026-039</span>
-                <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold border border-blue-300 dark:border-blue-800/60 flex items-center space-x-1">
-                  <span class="w-2 h-2 rounded-full bg-blue-600 inline-block mr-1"></span>
-                  <span>Justificaciones en revisión</span>
+          <!-- Elemento de Lista 2: Descargo presentado en revisión -->
+          <div class="item-mis-expediente bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/50 rounded-xl p-4 sm:p-5 shadow-sm hover:border-blue-300 dark:hover:border-blue-700 transition" data-tipo="revision">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              
+              <div class="space-y-2 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono text-xs font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded border border-slate-200 dark:border-slate-700">EXP-2026-039</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 font-bold border border-blue-300 dark:border-blue-800">
+                    Justificaciones en revisión
+                  </span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400">Origen: Inasistencia Asamblea</span>
+                </div>
+
+                <div>
+                  <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">Inasistencia a Asamblea Extraordinaria</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Descargo presentado dentro del término legal. Los jueces del Tribunal de Disciplina se encuentran analizando la prueba médica aportada.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400 pt-1">
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Sanción en debate:</span>
+                    <span class="font-bold text-red-600 dark:text-red-400 font-mono">-1.0 pt</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Comprobante aportado:</span>
+                    <span class="font-semibold text-emerald-700 dark:text-emerald-400">Certificado Médico Clínico (PDF)</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Fecha de entrega:</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-300">29/08/2026 14:10 hs</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-3 min-w-[220px] pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
+                <span class="text-[11px] px-2.5 py-1 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 font-medium border border-blue-200 dark:border-blue-900/40">
+                  Prueba en análisis por el TD
                 </span>
-                <span class="text-xs text-slate-400 dark:text-slate-500">Notificado: 28/08/2026</span>
+                <button onclick="showToast('Comprobante adjunto: certificado_medico_clinica_28082026.pdf')" class="w-full sm:w-auto px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 transition flex items-center justify-center space-x-1.5">
+                  <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <span>Ver Mi Comprobante</span>
+                </button>
               </div>
 
-              <div>
-                <h3 class="text-base font-bold text-slate-900 dark:text-white">Inasistencia a Asamblea Extraordinaria</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Descargo presentado dentro de plazo con certificado médico adjunto • Bajo deliberación del Tribunal.</p>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-4 text-xs pt-1">
-                <div class="flex items-center space-x-1.5">
-                  <span class="text-slate-500 dark:text-slate-400">Sanción en evaluación:</span>
-                  <span class="font-bold text-red-600 dark:text-red-400 font-mono">-1.0 punto provisorio</span>
-                </div>
-                <div class="w-px h-3 bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
-                <div class="flex items-center space-x-1.5 text-blue-700 dark:text-blue-400 font-medium">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                  <span>Certificado médico presentado el 29/08 (En deliberación y votación de jueces)</span>
-                </div>
-              </div>
             </div>
-
-            <!-- Acción de la Lista -->
-            <div class="flex-shrink-0 flex items-center lg:border-l lg:border-slate-200 lg:dark:border-slate-800 lg:pl-5">
-              <span class="px-3.5 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5">
-                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span>En revisión colegiada</span>
-              </span>
-            </div>
-
           </div>
 
-          <!-- Elemento de Lista 3: Expediente emitido y resuelto -->
-          <div id="item-EXP-2026-015" data-estado="emitidos" class="mis-exp-item bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            <div class="space-y-2 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-mono text-xs font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">EXP-2026-015</span>
-                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800/60 flex items-center space-x-1">
-                  <span class="w-2 h-2 rounded-full bg-emerald-600 inline-block mr-1"></span>
-                  <span>Expediente ya emitido</span>
+          <!-- Elemento de Lista 3: Expediente emitido / concluido -->
+          <div class="item-mis-expediente bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition" data-tipo="emitidos">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              
+              <div class="space-y-2 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono text-xs font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded border border-slate-200 dark:border-slate-700">EXP-2026-015</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
+                    Expedientes ya emitidos
+                  </span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400">Origen: Solicitud Comisión Directiva</span>
+                </div>
+
+                <div>
+                  <h3 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">Reconocimiento: Coordinación Jornada de Ingreso</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Propuesta aprobada por unanimidad por el Tribunal de Disciplina con firma colegiada tripartita.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400 pt-1">
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Dictamen final:</span>
+                    <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">+1.5 puntos otorgados</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Resolución Oficial:</span>
+                    <span class="text-slate-700 dark:text-slate-300 font-mono font-semibold">RES-TD-2026-008</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-slate-400 dark:text-slate-500">Fecha de emisión:</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-300">14/08/2026</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-3 min-w-[220px] pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
+                <span class="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-900/40">
+                  Impactado en saldo ✓
                 </span>
-                <span class="text-xs text-slate-400 dark:text-slate-500">Resuelto: 14/08/2026</span>
+                <button onclick="viewResolucionModal('RES-TD-2026-008', 'Reconocimiento: Coordinación Jornada de Ingreso', '+1.5')" class="w-full sm:w-auto px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 transition flex items-center justify-center space-x-1.5">
+                  <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <span>Descargar Resolución (PDF)</span>
+                </button>
               </div>
 
-              <div>
-                <h3 class="text-base font-bold text-slate-900 dark:text-white">Reconocimiento: Coordinación Jornada de Ingreso</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Solicitud promovida por Comisión Directiva • Otorgamiento de puntos de mérito por unanimidad.</p>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-4 text-xs pt-1">
-                <div class="flex items-center space-x-1.5">
-                  <span class="text-slate-500 dark:text-slate-400">Dictamen final del Tribunal:</span>
-                  <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">+1.5 puntos otorgados</span>
-                </div>
-                <div class="w-px h-3 bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
-                <div class="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
-                  <span class="font-mono font-semibold">Resolución Oficial RES-TD-2026-008</span>
-                  <span class="text-emerald-600 dark:text-emerald-400 font-bold">(Firmada por 3 jueces)</span>
-                </div>
-              </div>
             </div>
-
-            <!-- Acción de la Lista -->
-            <div class="flex-shrink-0 flex items-center lg:border-l lg:border-slate-200 lg:dark:border-slate-800 lg:pl-5">
-              <button onclick="viewResolucionModal('RES-TD-2026-008', 'Reconocimiento: Coordinación Jornada de Ingreso', '+1.5')" class="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-lg font-semibold text-xs transition border border-slate-300 dark:border-slate-700 flex items-center justify-center space-x-1.5 whitespace-nowrap shadow-sm">
-                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                <span>Descargar Copia de Resolución (PDF)</span>
-              </button>
-            </div>
-
           </div>
 
         </div>
@@ -1456,54 +1474,6 @@
       
       const badge = document.getElementById('badgeMisExpedientes');
       if (badge) badge.textContent = "0";
-
-      // Actualizar dinámicamente el elemento de la lista EXP-2026-042
-      const item = document.getElementById('item-EXP-2026-042');
-      if (item) {
-        item.setAttribute('data-estado', 'revision');
-        item.className = "mis-exp-item bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition flex flex-col lg:flex-row lg:items-center justify-between gap-4";
-        
-        const stateBadge = document.getElementById('badgeState-EXP-2026-042');
-        if (stateBadge) {
-          stateBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold border border-blue-300 dark:border-blue-800/60 flex items-center space-x-1";
-          stateBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-600 inline-block mr-1"></span><span>Justificaciones en revisión</span>';
-        }
-
-        const actionContainer = document.getElementById('actionContainer-EXP-2026-042');
-        if (actionContainer) {
-          actionContainer.innerHTML = '<span class="px-3.5 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5"><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>En revisión colegiada</span></span>';
-        }
-      }
-    }
-
-    // Filtrado y búsqueda de la lista de Mis Expedientes
-    function filterMisExpedientesList(filter) {
-      const items = document.querySelectorAll('.mis-exp-item');
-      items.forEach(it => {
-        const est = it.getAttribute('data-estado');
-        if (filter === 'todos' || est === filter) {
-          it.style.display = '';
-        } else {
-          it.style.display = 'none';
-        }
-      });
-
-      document.querySelectorAll('.filter-misexp-btn').forEach(btn => {
-        btn.className = "filter-misexp-btn px-3 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition";
-      });
-      const activeBtn = document.getElementById('filterMisExp-' + filter);
-      if (activeBtn) {
-        activeBtn.className = "filter-misexp-btn px-3 py-1.5 rounded-lg font-semibold bg-aveit-blue text-white shadow-sm transition";
-      }
-    }
-
-    function searchMisExpedientesList() {
-      const query = (document.getElementById('searchMisExpInput')?.value || '').toLowerCase();
-      const items = document.querySelectorAll('.mis-exp-item');
-      items.forEach(it => {
-        const text = it.textContent.toLowerCase();
-        it.style.display = text.includes(query) ? '' : 'none';
-      });
     }
 
     // Modal Revisar Pruebas
@@ -1545,6 +1515,32 @@
 
     function viewResolucionModal(resId, title, pts) {
       showToast("Generando y descargando PDF oficial de " + resId + "...");
+    }
+
+    // Filtro interactivo para Mis Expedientes (Formato Lista)
+    function filterMisExpedientes(tipo) {
+      const items = document.querySelectorAll('.item-mis-expediente');
+      const buttons = ['todos', 'justificar', 'revision', 'emitidos'];
+      
+      buttons.forEach(b => {
+        const btn = document.getElementById('btnFilterMis-' + b);
+        if (btn) {
+          if (b === tipo) {
+            btn.className = "px-2.5 py-1 rounded-md font-semibold transition bg-white dark:bg-slate-900 text-aveit-navy dark:text-white shadow-sm";
+          } else {
+            btn.className = "px-2.5 py-1 rounded-md font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+          }
+        }
+      });
+
+      items.forEach(item => {
+        const itemTipo = item.getAttribute('data-tipo');
+        if (tipo === 'todos' || itemTipo === tipo) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
     }
 
     // Solicitar Puntos
