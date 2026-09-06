@@ -186,22 +186,47 @@ La solución se concibe como una extensión modular e integrada al ecosistema in
 
 ```text
 seminario-integrador/
-├── .github/                                     # Configuraciones de gobernanza y plantillas de GitHub
-│   └── ISSUE_TEMPLATE/                         # Plantillas para reporte estandarizado de issues y tareas
-├── demo-t01-ux/                                # Prototipos de interfaz, wireframes y maquetas UX/UI
-├── docs/                                       # Documentación funcional, técnica y académica del proyecto
-│   ├── reglamentos-aveit/                      # Marco normativo y estatutario oficial de A.V.E.I.T.
-│   │   ├── NOR_Estatuto_AVEIT_Reforma_2026.pdf
-│   │   ├── NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf
-│   │   ├── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf
-│   │   └── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf
-│   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.md        # Catálogo consolidado de los 7 actores clave y matrices RBAC
-│   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.pdf       # Catálogo de actores y roles en formato PDF
-│   ├── PLANTILLA_CASO_DE_USO.md                # Plantilla estándar institucional para especificación de Casos de Uso (CU-XX)
-│   ├── PLANTILLA_CASO_DE_USO.pdf               # Plantilla estándar de Casos de Uso en formato PDF
-│   ├── TPI_Estudio_Inicial_SGD_AVEIT.docx      # Estudio Inicial en formato DOCX institucional
-│   ├── TPI_Estudio_Inicial_SGD_AVEIT.md        # Documento completo de Estudio Inicial (Markdown)
-│   └── TPI_Estudio_Inicial_SGD_AVEIT.pdf       # Documento completo de Estudio Inicial en formato PDF
+├── .github/                                     # Gobernanza y plantillas de issues para desarrollo y testing
+│   └── ISSUE_TEMPLATE/                         # Plantillas para tareas de sprint y reportes de incidencias
+├── backend/                                     # Servicios API REST en Python / Django (Spec 001 - En desarrollo)
+├── frontend/                                    # SPA de producción en Angular 14 + Material Dashboard PRO
+├── prototipos/                                 # Prototipos interactivos de alta fidelidad en HTML5/CSS/JS puro
+│   ├── t01-solicitud-puntos/                   # Maqueta del Formulario T01 y Anexo Circunstanciado
+│   ├── index.html                              # Portal del Tribunal de Disciplina y Premiaciones
+│   ├── app.js                                  # Lógica interactiva del prototipo (5 estados y votación)
+│   └── styles.css                              # Tokens visuales y estilos del prototipo
+├── docs/                                       # Documentación funcional, técnica, formal y normativa
+│   ├── analisis-proceso-actual/                # Análisis del sistema/proceso actual (AS-IS) y antecedentes
+│   │   ├── reglamentos-aveit/                  # Marco normativo y estatutario oficial de A.V.E.I.T.
+│   │   │   ├── NOR_Estatuto_AVEIT_Reforma_2026.pdf
+│   │   │   ├── NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf
+│   │   │   ├── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf
+│   │   │   └── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf
+│   │   ├── TPI_Estudio_Inicial_SGD_AVEIT.md    # Estudio Inicial y diagnóstico del sistema previo
+│   │   ├── BPMN_Proceso_Operativo_Tribunal.md  # Modelo BPMN 2.0 del proceso operativo actual
+│   │   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.md    # Catálogo de actores y competencias reglamentarias
+│   │   ├── modulo-tribunal-stack-y-modelos.md  # Referencia técnica del sistema legado a reemplazar
+│   │   └── extracted_requirements.json         # Requerimientos extraídos del relevamiento
+│   ├── especificaciones/                       # Especificaciones de ingeniería de software (TO-BE)
+│   │   ├── ERS-SGD-AVEIT.md                    # Especificación de Requerimientos de Software completa
+│   │   ├── ERS_Especificacion_Requerimientos_Tribunal.md  # Requerimientos del módulo Tribunal
+│   │   ├── Escenarios_Calidad_ISO25010_Tribunal.md        # Escenarios de calidad ISO/IEC 25010
+│   │   ├── MODELO_DOMINIO_SGD_AVEIT.md         # Diagrama de clases de dominio y diccionario de datos
+│   │   └── PLANTILLA_CASO_DE_USO.md            # Plantilla institucional para especificación de CU-XX
+│   ├── gestion-proyecto/                       # Gestión ágil, planificación y acuerdos metodológicos
+│   │   ├── PLAN_DE_PROYECTO_SGD_AVEIT.md       # Plan de proyecto institucional
+│   │   └── Seguimiento de Proyecto.md          # Acuerdos de trabajo ágil, DoD/DoR y Product Backlog
+│   ├── formales/                               # Entregables académicos oficiales para tutor/cátedra
+│   │   ├── Estudio_Inicial.docx / .odt / .pdf
+│   │   ├── Plan_de_Proyecto.docx / .odt / .pdf
+│   │   └── assets/                             # Logotipos institucionales y organigramas de A.V.E.I.T.
+│   └── constitution.md                         # Principios innegociables y constitución del proyecto
+├── specs/                                      # Especificaciones ejecutables bajo Spec-Driven Development (SDD)
+│   └── 001-walking-skeleton/                   # Spec, plan técnico y desglose atómico de tareas del Walking Skeleton
+├── AGENTS.md                                   # Guía operativa para agentes de IA y desarrolladores humanos
+├── DESIGN.md                                   # Sistema de diseño institucional, tokens de color y tipografía
+├── TASK.md                                     # Matriz de trazabilidad y seguimiento granular de tareas
+├── docker-compose.yml                          # Orquestación de contenedores (MySQL 8.0, Django, Angular)
 ├── LICENSE                                     # Licencia de código abierto del proyecto (MIT)
 └── README.md                                   # Presentación y guía principal del repositorio
 ```
@@ -210,17 +235,21 @@ seminario-integrador/
 
 | Carpeta / Ruta | Descripción y Contenido |
 | :--- | :--- |
-| **`docs/`** | **Documentación de Ingeniería de Software y Análisis.** Centraliza todos los documentos de análisis funcional, relevamiento de requerimientos, especificación de actores y plantillas metodológicas del proyecto, disponibles en formatos Markdown (`.md`), PDF (`.pdf`) y Word (`.docx`). |
-| **`docs/reglamentos-aveit/`** | **Marco Normativo Institucional de A.V.E.I.T.** Contiene los documentos reglamentarios oficiales en formato PDF que rigen el funcionamiento estatutario y disciplinario de la asociación, sirviendo como fundamento de las reglas de negocio del sistema. |
-| **`demo-t01-ux/`** | **Prototipado y Experiencia de Usuario (UX/UI).** Espacio dedicado a prototipos navegables, maquetas interactivas y wireframes de interfaces de usuario (enfocado inicialmente en la digitalización del Formulario T01 y portales responsive). |
-| **`.github/`** | **Gobernanza y Automatización en GitHub.** Contiene las configuraciones para la gestión del repositorio, incluyendo plantillas para la creación de issues (`ISSUE_TEMPLATE`) y flujos de trabajo colaborativos. |
+| **`docs/analisis-proceso-actual/`** | **Análisis del Sistema y Proceso Actual (AS-IS).** Relevamiento diagnóstico de las planillas de cálculo, procesos operativos en BPMN 2.0, catálogo de actores, antecedentes del sistema legado a reemplazar y marco normativo oficial (`reglamentos-aveit/`). |
+| **`docs/especificaciones/`** | **Especificaciones de Ingeniería de Software (TO-BE).** Documentos técnicos del nuevo sistema: ERS consolidada y por módulo, atributos de calidad ISO/IEC 25010, modelo conceptual de dominio y plantillas de casos de uso. |
+| **`docs/gestion-proyecto/`** | **Gestión Ágil y Planificación del Proyecto.** Acuerdos de trabajo del equipo (Working Agreements, DoD, DoR), calendario maestro de sprints, estimaciones y Product Backlog priorizado. |
+| **`docs/formales/`** | **Documentos Entregables Institucionales y Académicos.** Versiones formales presentables del Estudio Inicial y Plan de Proyecto en formatos Word (`.docx`), OpenDocument (`.odt`) y PDF (`.pdf`), junto con recursos gráficos (`assets/`). |
+| **`frontend/`** | **SPA Web de Producción.** Aplicación cliente en Angular 14.2+ basada en Material Dashboard PRO, con componentes modulares, tipado TypeScript estricto y configuración Docker. |
+| **`prototipos/`** | **Prototipos de Interfaz y Experiencia de Usuario (UX/UI).** Maquetas interactivas navegables en HTML5, CSS y JavaScript puro para validación temprana de flujos (Formulario T01 y panel colegiado del Tribunal). |
+| **`specs/`** | **Especificaciones y Tareas SDD.** Módulos de desarrollo organizados bajo la metodología Spec-Driven Development (`spec.md`, `plan.md`, `tasks.md`). |
+| **`.github/`** | **Gobernanza y Automatización en GitHub.** Contiene plantillas estandarizadas para la creación de tareas de sprint (`tarea_sprint.md`) y reportes de incidencias (`reporte_incidencia.md`). |
 
 ### 📑 Guía de Documentos Clave
 
-* 📘 **Estudio Inicial SGD-AVEIT** ([Markdown](docs/TPI_Estudio_Inicial_SGD_AVEIT.md) \| [PDF](docs/TPI_Estudio_Inicial_SGD_AVEIT.pdf) \| [DOCX](docs/TPI_Estudio_Inicial_SGD_AVEIT.docx)): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
-* 👥 **Catálogo de Actores y Roles** ([Markdown](docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md) \| [PDF](docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.pdf)): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
-* 📝 **Plantilla Estándar de Casos de Uso** ([Markdown](docs/PLANTILLA_CASO_DE_USO.md) \| [PDF](docs/PLANTILLA_CASO_DE_USO.pdf)): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
-* ⚖️ **[Reglamentos Oficiales de AVEIT](docs/reglamentos-aveit/)** (`docs/reglamentos-aveit/`):
+* 📘 **Estudio Inicial SGD-AVEIT** ([Markdown](docs/analisis-proceso-actual/TPI_Estudio_Inicial_SGD_AVEIT.md) \| [PDF Formal](docs/formales/Estudio_Inicial.pdf) \| [DOCX](docs/formales/Estudio_Inicial.docx)): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
+* 👥 **Catálogo de Actores y Roles** ([Markdown](docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md)): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
+* 📝 **Plantilla Estándar de Casos de Uso** ([Markdown](docs/especificaciones/PLANTILLA_CASO_DE_USO.md)): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
+* ⚖️ **[Reglamentos Oficiales de AVEIT](docs/analisis-proceso-actual/reglamentos-aveit/)** (`docs/analisis-proceso-actual/reglamentos-aveit/`):
   * `NOR_Estatuto_AVEIT_Reforma_2026.pdf`: Estatuto Social general y categorías estatutarias (Juniors y Seniors).
   * `NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf`: Régimen disciplinario, tipificación de faltas y límite de 10 puntos negativos (Art. 93).
   * `NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf`: Procedimiento procesal del Tribunal de Disciplina, plazos de 5 días hábiles, descargos T02/T03 y resoluciones colegiadas.

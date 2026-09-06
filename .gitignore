@@ -1,4 +1,94 @@
+# ==============================================================================
+# .gitignore — SGD-AVEIT (Seminario Integrador)
+# ==============================================================================
+
+# --- Sistema Operativo y Nube (Google Drive / Windows / macOS) ---
+**/desktop.ini
 desktop.ini
+**/Thumbs.db
 Thumbs.db
+**/ehthumbs.db
+ehthumbs.db
+**/.DS_Store
 .DS_Store
 *.tmp
+*~
+~$*
+
+# Copias de conflicto de sincronización en la nube (Google Drive)
+* (*).*
+* (*)/
+
+# --- Backend Python / Django / Pytest / Ruff ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# Pruebas y Cobertura
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Variables de entorno y Base de datos local
+.env
+.env.*
+!.env.example
+*.sqlite3
+*.db
+
+# --- Frontend Angular / Node.js ---
+**/node_modules/
+node_modules/
+**/dist/
+dist/
+**/.angular/
+.angular/
+.angular/cache
+.sass-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+testem.log
+
+# --- IDEs y Editores ---
+.idea/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+

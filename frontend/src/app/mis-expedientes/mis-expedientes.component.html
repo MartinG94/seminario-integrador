@@ -1,0 +1,218 @@
+<div class="main-content">
+  <div class="container-fluid">
+
+    <!-- Tarjetas de Estadísticas Personales -->
+    <div class="row">
+      <div class="col-lg-4 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-primary card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">account_circle</i>
+            </div>
+            <p class="card-category">Socio Autenticado</p>
+            <h3 class="card-title">{{socioActual}}</h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons text-info">verified_user</i> Padrón Activo de la Asociación
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-icon" [ngClass]="saldoNeto >= 0 ? 'card-header-success' : (saldoNeto <= -7.0 ? 'card-header-danger' : 'card-header-warning')">
+            <div class="card-icon">
+              <i class="material-icons">account_balance_wallet</i>
+            </div>
+            <p class="card-category">Saldo Neto de Puntos</p>
+            <h3 class="card-title">{{saldoNeto > 0 ? '+' : ''}}{{saldoNeto}} <small>pts</small></h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons" [ngClass]="saldoNeto >= 0 ? 'text-success' : 'text-danger'">{{saldoNeto >= 0 ? 'check_circle' : 'warning'}}</i>
+              <span>{{saldoNeto >= 0 ? 'Situación Regular Habilitada' : (saldoNeto <= -10.0 ? 'Límite Crítico: Cese Estatutario' : 'Alerta Preventiva en Trámite')}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-info card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">folder_open</i>
+            </div>
+            <p class="card-category">Causas en Trámite</p>
+            <h3 class="card-title">{{misExpedientes.length}}</h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons">schedule</i> Plazos preclusivos en curso
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla Principal de Causas -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-primary">
+            <h4 class="card-title">Mis Expedientes y Descargos Reglamentarios</h4>
+            <p class="card-category">Registro formal de causas disciplinarias y reconocimientos institucionales asignados a tu legajo.</p>
+          </div>
+          <div class="card-body">
+            <div *ngIf="misExpedientes.length === 0" class="text-center py-5">
+              <i class="material-icons text-muted" style="font-size: 56px;">verified</i>
+              <h4 class="text-muted mt-2">No registras causas ni expedientes en trámite</h4>
+              <p class="text-muted small">Tu legajo se encuentra en orden estatutario regular.</p>
+            </div>
+
+            <div *ngIf="misExpedientes.length > 0" class="table-responsive">
+              <table class="table table-hover table-mat">
+                <thead class="text-primary">
+                  <th>N° Expediente</th>
+                  <th>Motivo de la Causa</th>
+                  <th>Fecha de Apertura</th>
+                  <th>Puntos en Trámite</th>
+                  <th>Estado Procesal</th>
+                  <th>Plazo Preclusivo</th>
+                  <th class="text-right">Acciones</th>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let exp of misExpedientes">
+                    <td class="font-weight-bold text-dark">{{exp.numero}}</td>
+                    <td>
+                      <div>{{exp.motivo}}</div>
+                      <small class="text-muted">Subcomisión: {{exp.subcomision}}</small>
+                    </td>
+                    <td>{{exp.fechaCreacion}}</td>
+                    <td>
+                      <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
+                        {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge-mat" [ngClass]="getEstadoBadgeClass(exp.estado)">
+                        {{getEstadoLabel(exp.estado)}}
+                      </span>
+                    </td>
+                    <td>
+                      <div *ngIf="exp.estado === 'justificando'" class="timer-badge">
+                        <i class="material-icons" style="font-size: 14px;">hourglass_top</i>
+                        <span>{{exp.horasRestantes}}h restantes</span>
+                      </div>
+                      <span *ngIf="exp.estado !== 'justificando'" class="text-muted small">
+                        Plazo concluido
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <button *ngIf="exp.estado === 'justificando'" 
+                              mat-raised-button 
+                              color="primary" 
+                              class="btn btn-primary btn-sm"
+                              (click)="abrirModalDescargo(exp)">
+                        <i class="material-icons" style="font-size: 16px;">edit_document</i> Presentar Descargo
+                      </button>
+                      <button *ngIf="exp.estado !== 'justificando'" 
+                              mat-button 
+                              class="btn btn-default btn-sm"
+                              disabled>
+                        <i class="material-icons" style="font-size: 16px;">lock</i> En Deliberación
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Unificado de Justificaciones T02 / T03 -->
+<div *ngIf="modalAbierto" class="modal-backdrop-custom">
+  <div class="modal-dialog-custom">
+    <div class="card">
+      <div class="card-header card-header-primary">
+        <h4 class="card-title">Presentación de Descargo Reglamentario</h4>
+        <p class="card-category">Expediente: {{expedienteSeleccionado?.numero}} &bull; Socio: {{socioActual}}</p>
+      </div>
+      <div class="card-body">
+        
+        <div class="alert alert-info">
+          <i class="material-icons" style="vertical-align: middle;">info</i>
+          <span>El descargo debe respetar las formalidades del reglamento institucional. Dispone de un plazo improrrogable de 5 días hábiles desde la notificación.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="font-weight-bold text-dark mb-2">Modalidad de Justificación:</label>
+          <div class="d-flex gap-3">
+            <div class="form-check form-check-radio mr-4">
+              <label class="form-check-label">
+                <input class="form-check-input" type="radio" name="tipoDescargoRadio" value="T02_CERTIFICADO" [(ngModel)]="tipoDescargo">
+                Opción A: Causal Reglamentaria con Certificado
+                <span class="circle"><span class="check"></span></span>
+              </label>
+            </div>
+            <div class="form-check form-check-radio">
+              <label class="form-check-label">
+                <input class="form-check-input" type="radio" name="tipoDescargoRadio" value="T03_EXTRAORDINARIO" [(ngModel)]="tipoDescargo">
+                Opción B: Descargo Extraordinario
+                <span class="circle"><span class="check"></span></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Opción A: Con Certificado Obligatorio -->
+        <div *ngIf="tipoDescargo === 'T02_CERTIFICADO'" class="mt-3 p-3 bg-light rounded border">
+          <div class="form-group">
+            <label class="text-dark font-weight-bold">Causal Justificatoria Tipificada:</label>
+            <select class="form-control" [(ngModel)]="causalSeleccionada">
+              <option value="Examen Académico Universitario en UTN FRC">Examen Académico Universitario en UTN FRC</option>
+              <option value="Enfermedad o Problema de Salud con Certificado Médico">Enfermedad o Problema de Salud con Certificado Médico</option>
+              <option value="Compromiso Laboral Comprobable">Compromiso Laboral Comprobable</option>
+              <option value="Fuerza Mayor o Incidente Familiar Urgente">Fuerza Mayor o Incidente Familiar Urgente</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="text-dark font-weight-bold">Adjuntar Comprobante o Constancia Digital (* Requerido):</label>
+            <input type="file" class="form-control-file" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
+            <small class="text-muted d-block mt-1">Formatos admitidos: PDF, JPG, PNG (hasta 10MB). Debe contener firma, sello o código de validación digital.</small>
+            <div *ngIf="nombreArchivo" class="mt-2 text-success font-weight-bold">
+              <i class="material-icons" style="font-size: 16px; vertical-align: middle;">check_circle</i> Archivo cargado: {{nombreArchivo}}
+            </div>
+          </div>
+        </div>
+
+        <!-- Opción B: Exposición Libre Extraordinaria -->
+        <div *ngIf="tipoDescargo === 'T03_EXTRAORDINARIO'" class="mt-3 p-3 bg-light rounded border">
+          <div class="form-group">
+            <label class="text-dark font-weight-bold">Exposición Fáctica Circunstanciada:</label>
+            <textarea class="form-control" rows="4" placeholder="Detalla los hechos, causas imprevistas o circunstancias excepcionales no tipificadas..." [(ngModel)]="relatoTexto"></textarea>
+            <small class="text-muted">La deliberación colegiada del Tribunal evaluará la admisibilidad de los motivos expuestos.</small>
+          </div>
+        </div>
+
+        <div *ngIf="errorMensaje" class="alert alert-danger mt-3">
+          <i class="material-icons" style="vertical-align: middle;">error</i> {{errorMensaje}}
+        </div>
+
+      </div>
+      <div class="card-footer d-flex justify-content-end gap-2">
+        <button mat-button class="btn btn-default" (click)="cerrarModal()">Cancelar</button>
+        <button mat-raised-button color="primary" class="btn btn-primary" (click)="enviarDescargo()">
+          <i class="material-icons" style="font-size: 16px;">send</i> Enviar Justificación Formal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

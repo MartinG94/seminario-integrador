@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGD-AVEIT — Módulo de Tribunal de Disciplina y Premiaciones</title>
+
+  <!-- Fuentes Oficiales AVEIT y Material PRO -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Google Material Icons (Material Dashboard PRO) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+  <!-- Iconografía FontAwesome complementaria -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Tailwind CSS Engine -->
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+
+  <!-- Hoja de Estilos de la Plataforma -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="antialiased">
+
+  <div class="wrapper">
+    <!-- =======================================================================
+         SIDEBAR INSTITUCIONAL MATERIAL DASHBOARD PRO (AVEIT)
+         ======================================================================= -->
+    <aside id="app-sidebar" class="sidebar" data-color="primary">
+      <!-- Brand / Logo Header -->
+      <div class="logo">
+        <a href="javascript:void(0)" class="simple-text logo-mini" title="SGD-AVEIT">
+          <i class="material-icons text-cyan-400">gavel</i>
+        </a>
+        <a href="javascript:void(0)" class="simple-text logo-normal">
+          SGD-AVEIT
+        </a>
+      </div>
+
+      <!-- User Box con Avatar y Estado de Sesión -->
+      <div class="user-box">
+        <div class="flex items-center gap-3">
+          <div id="user-profile-avatar" class="w-9 h-9 rounded-full bg-[#6E9DDC] text-[#151846] font-bold flex items-center justify-center text-xs shadow-md shrink-0">
+            NR
+          </div>
+          <div class="user-info truncate">
+            <div id="user-profile-name" class="font-bold text-white truncate text-xs">Nicolás Rosales</div>
+            <div id="user-profile-role" class="text-[11px] text-[#B3D3E4] truncate">Juez del Tribunal (Senior)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegación de los 6 Submódulos Funcionales -->
+      <ul class="nav">
+        <li class="sidebar-nav-item" data-submodule="mis-expedientes">
+          <a href="javascript:void(0);">
+            <i class="material-icons text-cyan-400">folder_open</i>
+            <span class="sidebar-text">Mis Expedientes</span>
+          </a>
+        </li>
+
+        <li class="sidebar-nav-item active" data-submodule="gestionar-expedientes">
+          <a href="javascript:void(0);">
+            <i class="material-icons text-amber-400">gavel</i>
+            <span class="sidebar-text">Gestionar Expedientes</span>
+          </a>
+        </li>
+
+        <li class="sidebar-nav-item" data-submodule="reportes">
+          <a href="javascript:void(0);">
+            <i class="material-icons text-emerald-400">pie_chart</i>
+            <span class="sidebar-text">Reportes y Balances</span>
+          </a>
+        </li>
+
+        <li class="sidebar-nav-item" data-submodule="ranking">
+          <a href="javascript:void(0);">
+            <i class="material-icons text-yellow-400">military_tech</i>
+            <span class="sidebar-text">Ranking de Socios</span>
+          </a>
+        </li>
+
+        <li class="sidebar-nav-item" data-submodule="solicitar-puntos">
+          <a href="javascript:void(0);">
+            <i class="material-icons text-pink-400">stars</i>
+            <span class="sidebar-text">Solicitar Puntos</span>
+          </a>
+        </li>
+
+        <li class="sidebar-nav-item" data-submodule="eventos">
+          <a href="javascript:void(0);">
+            <i class="material-icons text-indigo-400">fingerprint</i>
+            <span class="sidebar-text">Eventos & Asistencia</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- Pie del Sidebar: Institución y Estado -->
+      <div class="p-3.5 border-t border-white/10 text-[11px] text-slate-400 flex items-center justify-between mt-auto bg-black/20">
+        <span class="sidebar-text font-medium">AVEIT · UTN FRC</span>
+        <span class="flex items-center gap-1 text-emerald-400 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span class="sidebar-text">Online</span></span>
+      </div>
+    </aside>
+
+    <!-- =======================================================================
+         PANEL PRINCIPAL Y NAVBAR FLOTANTE MATERIAL PRO
+         ======================================================================= -->
+    <div class="main-panel">
+      
+      <!-- Topbar Material Floating Navbar -->
+      <header class="navbar-material">
+        <div class="flex items-center gap-3">
+          <button id="sidebar-toggle-btn" class="btn-minimize" title="Alternar barra lateral">
+            <i class="material-icons text-lg">menu</i>
+          </button>
+          <div>
+            <nav class="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] font-medium">
+              <span>SGD-AVEIT</span>
+              <span>/</span>
+              <span id="breadcrumb-section" class="text-[var(--text-main)] font-semibold">Tribunal de Disciplina</span>
+            </nav>
+            <h2 id="page-title" class="navbar-brand">
+              Gestión de Expedientes
+            </h2>
+          </div>
+        </div>
+
+        <!-- Controles Superiores: Simulador de Actor, Notificaciones y Modo Oscuro -->
+        <div class="flex items-center gap-3">
+          <!-- Selector interactivo de Actor Simulado -->
+          <div class="hidden sm:flex items-center gap-2 bg-white/80 dark:bg-slate-800/80 py-1.5 px-3 rounded-lg border border-[var(--border-color)] shadow-sm">
+            <span class="text-[11px] font-semibold text-[var(--text-muted)] flex items-center gap-1">
+              <i class="material-icons text-sm text-blue-500">account_circle</i> Simular:
+            </span>
+            <select id="actor-simulado-select" class="bg-transparent text-xs font-bold text-[var(--text-main)] focus:outline-none cursor-pointer">
+              <option value="juez1">Juez TD: Nicolás Rosales (Senior)</option>
+              <option value="socio">Socio: Lucas Guillén (Junior con causa)</option>
+              <option value="cd">Comisión Directiva: Diego Sánchez</option>
+              <option value="autoridad">Autoridad SC: Lucas Gastiaburu (Cómputos)</option>
+            </select>
+          </div>
+
+          <!-- Botón de Modo Oscuro -->
+          <button id="theme-toggle-btn" class="btn-icon-mat" title="Cambiar Tema Claro / Oscuro">
+            <i class="material-icons text-lg">dark_mode</i>
+          </button>
+
+          <!-- Notificaciones -->
+          <div class="relative">
+            <button class="btn-icon-mat" title="Notificaciones del Tribunal">
+              <i class="material-icons text-lg">notifications</i>
+              <span class="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center">2</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Área de Visualización Dinámica de Submódulo -->
+      <main class="p-6">
+        <div id="submodule-content" class="max-w-7xl mx-auto pb-12">
+          <!-- Contenido inyectado dinámicamente por app.js -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODALES MATERIAL DASHBOARD PRO
+       ======================================================================= -->
+
+  <!-- Modal 1: Formulario Unificado de Justificaciones (T02 / T03) -->
+  <div id="modal-justificacion" class="modal-backdrop modal-backdrop-mat">
+    <div class="modal-dialog modal-dialog-mat">
+      <div class="card-header-full header-warning flex items-center justify-between">
+        <div>
+          <h4 class="card-title">Formulario Unificado de Justificación</h4>
+          <p class="card-category">Ejercicio formal del derecho a descargo dentro del plazo preclusivo de 5 días hábiles</p>
+        </div>
+        <button onclick="window.closeModal('modal-justificacion')" class="text-white/80 hover:text-white text-xl p-1 leading-none">
+          <i class="material-icons text-xl">close</i>
+        </button>
+      </div>
+
+      <div id="justificacion-modal-body" class="p-6">
+        <!-- Cuerpo dinámico inyectado por app.js -->
+      </div>
+
+      <div class="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-[var(--border-color)] flex items-center justify-end gap-2.5">
+        <button onclick="window.closeModal('modal-justificacion')" class="btn-mat btn-white">
+          Cancelar
+        </button>
+        <button onclick="window.enviarJustificacion()" class="btn-mat btn-primary">
+          <i class="material-icons text-sm mr-1">send</i> Enviar Justificación Formal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Votación Colegiada de 3 Jueces -->
+  <div id="modal-votacion" class="modal-backdrop modal-backdrop-mat">
+    <div class="modal-dialog modal-dialog-mat">
+      <div class="card-header-full header-info flex items-center justify-between">
+        <div>
+          <h4 class="card-title">Deliberación y Votación Colegiada</h4>
+          <p class="card-category">Registro nominal de votos y verificación de mayoría reglamentaria del Tribunal</p>
+        </div>
+        <button onclick="window.closeModal('modal-votacion')" class="text-white/80 hover:text-white text-xl p-1 leading-none">
+          <i class="material-icons text-xl">close</i>
+        </button>
+      </div>
+
+      <div id="votacion-modal-body" class="p-6">
+        <!-- Cuerpo inyectado por app.js -->
+      </div>
+
+      <div class="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-[var(--border-color)] flex items-center justify-end gap-2.5">
+        <button onclick="window.closeModal('modal-votacion')" class="btn-mat btn-white">
+          Cancelar
+        </button>
+        <button onclick="window.guardarVotacionYDictamen()" class="btn-mat btn-info">
+          <i class="material-icons text-sm mr-1">save</i> Guardar Dictamen y Pasar a Firma
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Firma Digital Colegiada -->
+  <div id="modal-firma" class="modal-backdrop modal-backdrop-mat">
+    <div class="modal-dialog modal-dialog-mat">
+      <div class="card-header-full header-rose flex items-center justify-between">
+        <div>
+          <h4 class="card-title">Suscripción Colegiada Digital</h4>
+          <p class="card-category">Recolección de las 3 firmas digitales para dar validez formal a la resolución</p>
+        </div>
+        <button onclick="window.closeModal('modal-firma')" class="text-white/80 hover:text-white text-xl p-1 leading-none">
+          <i class="material-icons text-xl">close</i>
+        </button>
+      </div>
+
+      <div id="firma-modal-body" class="p-6">
+        <!-- Cuerpo inyectado por app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Detalle Completo de Causa -->
+  <div id="modal-detalle" class="modal-backdrop modal-backdrop-mat">
+    <div class="modal-dialog modal-dialog-mat">
+      <div class="card-header-full header-primary flex items-center justify-between">
+        <div>
+          <h4 class="card-title">Ficha Integral de Expediente</h4>
+          <p class="card-category">Historial procesal completo, causales y firmas registradas</p>
+        </div>
+        <button onclick="window.closeModal('modal-detalle')" class="text-white/80 hover:text-white text-xl p-1 leading-none">
+          <i class="material-icons text-xl">close</i>
+        </button>
+      </div>
+      <div id="detalle-modal-body" class="p-6">
+        <!-- Inyectado por app.js -->
+      </div>
+      <div class="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-[var(--border-color)] text-right">
+        <button onclick="window.closeModal('modal-detalle')" class="btn-mat btn-white">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Alertas Toast -->
+  <div id="toast-container"></div>
+
+  <!-- Script Lógico de la Aplicación -->
+  <script src="app.js"></script>
+
+  <script>
+    // Toggle mini sidebar en desktop y drawer en mobile
+    document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
+      if (window.innerWidth <= 991) {
+        document.body.classList.toggle('sidebar-open');
+      } else {
+        document.body.classList.toggle('sidebar-mini');
+      }
+    });
+
+    // Cerrar sidebar al hacer clic fuera en mobile
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth <= 991 && document.body.classList.contains('sidebar-open')) {
+        const sidebar = document.getElementById('app-sidebar');
+        const toggleBtn = document.getElementById('sidebar-toggle-btn');
+        if (sidebar && !sidebar.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
+          document.body.classList.remove('sidebar-open');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

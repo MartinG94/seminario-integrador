@@ -1,0 +1,100 @@
+<div class="main-content">
+  <div class="container-fluid">
+
+    <!-- Leyenda de Semáforos de Alerta -->
+    <div class="row mb-3">
+      <div class="col-md-12">
+        <div class="card p-3 mb-0">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <span class="font-weight-bold text-dark">Pautas del Régimen Disciplinario:</span>
+            <div class="d-flex flex-wrap gap-4">
+              <span class="d-flex align-items-center gap-2 small">
+                <span class="badge-mat badge-mat-success">&check; Habilitado</span>
+                <span class="text-muted">Situación estatutaria en orden</span>
+              </span>
+              <span class="d-flex align-items-center gap-2 small">
+                <span class="badge-mat badge-mat-warning">&excl; Advertencia</span>
+                <span class="text-muted">Saldo menor o igual a -7.0 puntos (alerta preventiva)</span>
+              </span>
+              <span class="d-flex align-items-center gap-2 small">
+                <span class="badge-mat badge-mat-danger">&times; Cese Estatutario</span>
+                <span class="text-muted">Saldo menor o igual a -10.0 puntos (inhabilitación automática)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla Principal de Ranking -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-info d-flex flex-wrap justify-content-between align-items-center">
+            <div>
+              <h4 class="card-title text-white">Padrón General y Ranking de Puntos</h4>
+              <p class="card-category text-white-50">Cómputo neto de méritos, llamados de atención y estado reglamentario de los miembros.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <div class="btn-group">
+                <button mat-raised-button 
+                        class="btn btn-sm" 
+                        [ngClass]="criterioOrden === 'merito' ? 'btn-white text-primary font-weight-bold' : 'btn-outline-white'"
+                        (click)="setOrden('merito')">
+                  <i class="material-icons" style="font-size: 16px;">trending_up</i> Más Reconocidos
+                </button>
+                <button mat-raised-button 
+                        class="btn btn-sm" 
+                        [ngClass]="criterioOrden === 'sancion' ? 'btn-white text-danger font-weight-bold' : 'btn-outline-white'"
+                        (click)="setOrden('sancion')">
+                  <i class="material-icons" style="font-size: 16px;">trending_down</i> Mayor Sanción
+                </button>
+              </div>
+
+              <div class="input-group no-border ml-2" style="width: 220px; margin: 0;">
+                <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" style="border-bottom-color: rgba(255,255,255,0.4);">
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover table-mat">
+                <thead class="text-primary">
+                  <th>Posición</th>
+                  <th>Socio / Miembro</th>
+                  <th>Subcomisión</th>
+                  <th class="text-center">Reconocimientos</th>
+                  <th class="text-center">Sanciones</th>
+                  <th class="text-center">Saldo Neto</th>
+                  <th>Estado Estatutario</th>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let s of sociosOrdenados; let i = index">
+                    <td class="font-weight-bold text-muted">#{{i + 1}}</td>
+                    <td>
+                      <div class="font-weight-bold text-dark">{{s.nombre}}</div>
+                      <small class="text-muted">{{s.legajo}} &bull; {{s.email}}</small>
+                    </td>
+                    <td>{{s.subcomision}}</td>
+                    <td class="text-center text-success font-weight-bold">{{s.felicitaciones}}</td>
+                    <td class="text-center text-danger font-weight-bold">{{s.sanciones}}</td>
+                    <td class="text-center font-weight-bold" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
+                      {{s.saldo > 0 ? '+' : ''}}{{s.saldo}} pts
+                    </td>
+                    <td>
+                      <span class="badge-mat" [ngClass]="getBadgeClase(s)">
+                        {{getEstadoDescripcion(s)}}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

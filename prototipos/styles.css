@@ -1,0 +1,1064 @@
+/* ==========================================================================
+   AVEIT Design System 2026 - Material Dashboard PRO Angular 2 Edition
+   Exact High-Fidelity Styles matching Creative Tim's Material Dashboard PRO
+   Integrated with AVEIT Corporate Tokens & WCAG 2.2 AA Accessibility
+   ========================================================================== */
+
+:root {
+  /* Paleta Canónica AVEIT */
+  --color-primary: #151846;
+  --color-primary-light: #1f2468;
+  --color-accent: #6E9DDC;
+  --color-tint: #B3D3E4;
+  --color-surface-beige: #F2EEE9;
+
+  /* Material PRO Colors */
+  --mat-purple: #9c27b0;
+  --mat-info: #00bcd4;
+  --mat-success: #4caf50;
+  --mat-warning: #ff9800;
+  --mat-danger: #f44336;
+  --mat-rose: #e91e63;
+
+  /* Superficies en Modo Claro (Light Mode) */
+  --bg-body: #EEEEEE;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-sidebar: #151846;
+  --border-color: #E0E0E0;
+  --border-color-subtle: #F0F0F0;
+
+  /* Tipografía */
+  --text-main: #3C4858;
+  --text-muted: #999999;
+  --text-dark: #2C343F;
+  --text-inverse: #FFFFFF;
+
+  /* Gradientes Material Dashboard PRO */
+  --grad-primary: linear-gradient(60deg, #151846, #242a68);
+  --grad-info: linear-gradient(60deg, #26c6da, #00acc1);
+  --grad-success: linear-gradient(60deg, #66bb6a, #43a047);
+  --grad-warning: linear-gradient(60deg, #ffa726, #fb8c00);
+  --grad-danger: linear-gradient(60deg, #ef5350, #e53935);
+  --grad-rose: linear-gradient(60deg, #ec407a, #d81b60);
+  --grad-dark: linear-gradient(60deg, #2e3440, #1e222b);
+
+  /* Sombras Icónicas de Material Dashboard PRO */
+  --shadow-card: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
+  --shadow-card-hover: 0 10px 30px -12px rgba(0, 0, 0, 0.42), 0 4px 25px 0px rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
+  --shadow-primary: 0 4px 20px 0px rgba(21, 24, 70, 0.25), 0 7px 10px -5px rgba(21, 24, 70, 0.4);
+  --shadow-info: 0 4px 20px 0px rgba(0, 188, 212, 0.25), 0 7px 10px -5px rgba(0, 188, 212, 0.4);
+  --shadow-success: 0 4px 20px 0px rgba(76, 175, 80, 0.25), 0 7px 10px -5px rgba(76, 175, 80, 0.4);
+  --shadow-warning: 0 4px 20px 0px rgba(255, 152, 0, 0.25), 0 7px 10px -5px rgba(255, 152, 0, 0.4);
+  --shadow-danger: 0 4px 20px 0px rgba(244, 67, 54, 0.25), 0 7px 10px -5px rgba(244, 67, 54, 0.4);
+  --shadow-rose: 0 4px 20px 0px rgba(233, 30, 99, 0.25), 0 7px 10px -5px rgba(233, 30, 99, 0.4);
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-mini-width: 80px;
+}
+
+/* Modo Oscuro (Dark Theme) */
+html.dark {
+  --bg-body: #141b2d;
+  --bg-card: #1f2940;
+  --bg-elevated: #283452;
+  --bg-sidebar: #101624;
+  --border-color: #2e3a59;
+  --border-color-subtle: #242f49;
+
+  --text-main: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-dark: #F8FAFC;
+  --text-inverse: #FFFFFF;
+
+  --shadow-card: 0 1px 4px 0 rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 12px 32px -10px rgba(0, 0, 0, 0.6);
+}
+
+/* ==========================================================================
+   Estructura Global y Tipografía
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  font-weight: 300;
+  line-height: 1.5em;
+  margin: 0;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', 'Roboto', 'Helvetica', sans-serif;
+  font-weight: 400;
+  color: var(--text-dark);
+  margin-top: 0;
+}
+
+/* ==========================================================================
+   Sidebar Material Dashboard PRO (con soporte Mini Sidebar)
+   ========================================================================== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.42), 0 4px 25px 0px rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mini Sidebar State */
+body.sidebar-mini .sidebar {
+  width: var(--sidebar-mini-width);
+}
+body.sidebar-mini .sidebar .sidebar-text,
+body.sidebar-mini .sidebar .user-info {
+  display: none !important;
+}
+body.sidebar-mini .sidebar .logo {
+  justify-content: center;
+  padding: 15px 0;
+}
+body.sidebar-mini .sidebar .logo .simple-text {
+  display: none;
+}
+body.sidebar-mini .sidebar .nav li a {
+  margin: 10px 15px;
+  padding: 10px 0;
+  justify-content: center;
+}
+body.sidebar-mini .sidebar .nav li a i {
+  margin-right: 0;
+}
+body.sidebar-mini .main-panel {
+  width: calc(100% - var(--sidebar-mini-width));
+  margin-left: var(--sidebar-mini-width);
+}
+
+/* Sidebar Logo */
+.sidebar .logo {
+  padding: 18px 20px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 4;
+}
+.sidebar .logo::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 15px;
+  height: 1px;
+  width: calc(100% - 30px);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+.sidebar .logo .simple-text {
+  text-transform: uppercase;
+  padding: 4px 0;
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+/* Sidebar User Box */
+.sidebar .user-box {
+  padding: 14px 15px;
+  position: relative;
+  z-index: 4;
+}
+.sidebar .user-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 15px;
+  height: 1px;
+  width: calc(100% - 30px);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Sidebar Nav */
+.sidebar .nav {
+  margin-top: 15px;
+  padding-left: 0;
+  margin-bottom: 0;
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+}
+.sidebar .nav li {
+  position: relative;
+  margin: 5px 15px;
+}
+.sidebar .nav li a {
+  margin: 0;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.82);
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.sidebar .nav li a i {
+  font-size: 24px;
+  margin-right: 15px;
+  line-height: 30px;
+  width: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.2s ease;
+}
+.sidebar .nav li a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+.sidebar .nav li.active a {
+  background: var(--grad-primary);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-primary);
+}
+.sidebar .nav li.active a i {
+  color: #FFFFFF;
+}
+
+/* Variantes de color activo Material PRO */
+.sidebar[data-color="rose"] .nav li.active a {
+  background: var(--grad-rose);
+  box-shadow: var(--shadow-rose);
+}
+.sidebar[data-color="info"] .nav li.active a {
+  background: var(--grad-info);
+  box-shadow: var(--shadow-info);
+}
+
+/* ==========================================================================
+   Main Panel & Topbar (Navbar)
+   ========================================================================== */
+.main-panel {
+  position: relative;
+  float: right;
+  width: calc(100% - var(--sidebar-width));
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--bg-body);
+}
+
+/* Material Floating Navbar */
+.navbar-material {
+  background: transparent;
+  padding: 10px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+html.dark .navbar-material {
+  background: rgba(20, 27, 45, 0.8);
+  border-bottom: 1px solid var(--border-color);
+}
+.navbar-material .navbar-brand {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Botón Minimizar Sidebar */
+.btn-minimize {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+.btn-minimize:hover {
+  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+/* Botón Redondo Material */
+.btn-icon-mat {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+.btn-icon-mat:hover {
+  background-color: rgba(100, 116, 139, 0.12);
+}
+
+/* Input de Búsqueda Material */
+.mat-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.mat-search-input {
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  padding: 6px 30px 6px 6px;
+  font-size: 13px;
+  color: var(--text-main);
+  transition: border-color 0.2s ease;
+  width: 180px;
+}
+.mat-search-input:focus {
+  outline: none;
+  border-bottom: 2px solid var(--color-accent);
+  width: 240px;
+}
+
+/* ==========================================================================
+   Tarjetas Material Dashboard PRO (Cards Architecture)
+   ========================================================================== */
+.card-mat {
+  background: var(--bg-card);
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+  margin-top: 30px;
+  margin-bottom: 30px;
+  position: relative;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  border: 1px solid var(--border-color-subtle);
+}
+.card-mat:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* 1. Stat Cards (Icono Flotante en Esquina Superior Izquierda) */
+.card-stats {
+  padding: 15px;
+  text-align: right;
+  min-height: 120px;
+}
+.card-stats .card-header-icon {
+  float: left;
+  margin-top: -30px;
+  margin-right: 15px;
+  border-radius: 3px;
+  padding: 15px;
+  background: var(--grad-primary);
+  box-shadow: var(--shadow-primary);
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+}
+.card-stats .card-header-icon i {
+  font-size: 36px;
+  line-height: 36px;
+}
+.card-stats .card-header-icon.header-warning {
+  background: var(--grad-warning);
+  box-shadow: var(--shadow-warning);
+}
+.card-stats .card-header-icon.header-success {
+  background: var(--grad-success);
+  box-shadow: var(--shadow-success);
+}
+.card-stats .card-header-icon.header-danger {
+  background: var(--grad-danger);
+  box-shadow: var(--shadow-danger);
+}
+.card-stats .card-header-icon.header-info {
+  background: var(--grad-info);
+  box-shadow: var(--shadow-info);
+}
+.card-stats .card-header-icon.header-rose {
+  background: var(--grad-rose);
+  box-shadow: var(--shadow-rose);
+}
+
+.card-stats .card-category {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.card-stats .card-title {
+  margin: 5px 0 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.card-stats .card-footer {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  line-height: 22px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-stats .card-footer i {
+  font-size: 16px;
+  margin-right: 5px;
+  position: relative;
+  top: 1px;
+}
+
+/* 2. Tarjetas con Cabecera Flotante Completa (Tables, Forms, Controls) */
+.card-header-full {
+  margin: -20px 15px 0 15px;
+  border-radius: 4px;
+  padding: 15px 20px;
+  background: var(--grad-primary);
+  box-shadow: var(--shadow-primary);
+  color: #FFFFFF;
+  position: relative;
+  z-index: 3;
+}
+.card-header-full.header-warning {
+  background: var(--grad-warning);
+  box-shadow: var(--shadow-warning);
+}
+.card-header-full.header-success {
+  background: var(--grad-success);
+  box-shadow: var(--shadow-success);
+}
+.card-header-full.header-danger {
+  background: var(--grad-danger);
+  box-shadow: var(--shadow-danger);
+}
+.card-header-full.header-info {
+  background: var(--grad-info);
+  box-shadow: var(--shadow-info);
+}
+.card-header-full.header-rose {
+  background: var(--grad-rose);
+  box-shadow: var(--shadow-rose);
+}
+.card-header-full .card-title {
+  color: #FFFFFF;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.card-header-full .card-category {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  margin: 4px 0 0 0;
+}
+
+/* 3. Tarjetas con Gráficos Flotantes (Chart Cards) */
+.card-chart .card-header-chart {
+  margin: -20px 15px 0 15px;
+  border-radius: 4px;
+  padding: 15px;
+  background: var(--grad-success);
+  box-shadow: var(--shadow-success);
+  color: #FFFFFF;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 3;
+}
+.card-chart .card-header-chart.header-warning {
+  background: var(--grad-warning);
+  box-shadow: var(--shadow-warning);
+}
+.card-chart .card-header-chart.header-danger {
+  background: var(--grad-danger);
+  box-shadow: var(--shadow-danger);
+}
+.card-chart .card-header-chart.header-info {
+  background: var(--grad-info);
+  box-shadow: var(--shadow-info);
+}
+.card-chart .card-header-chart.header-primary {
+  background: var(--grad-primary);
+  box-shadow: var(--shadow-primary);
+}
+.card-chart .card-body {
+  padding: 15px 20px 10px 20px;
+}
+
+/* ==========================================================================
+   Tablas Material Dashboard PRO
+   ========================================================================== */
+.table-mat {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  background-color: transparent;
+}
+.table-mat thead th {
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  padding: 12px 14px;
+  text-align: left;
+  letter-spacing: 0.5px;
+}
+.table-mat tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  border-top: 1px solid var(--border-color);
+  font-size: 13.5px;
+  color: var(--text-main);
+}
+.table-mat tbody tr {
+  transition: background-color 0.15s ease;
+}
+.table-mat tbody tr:hover {
+  background-color: rgba(110, 157, 220, 0.08);
+}
+html.dark .table-mat tbody tr:hover {
+  background-color: rgba(110, 157, 220, 0.15);
+}
+
+/* ==========================================================================
+   Badges y Píldoras Material PRO
+   ========================================================================== */
+.badge-mat {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 14px;
+}
+.badge-mat-primary {
+  background-color: rgba(21, 24, 70, 0.12);
+  color: var(--color-primary);
+  border: 1px solid rgba(21, 24, 70, 0.25);
+}
+html.dark .badge-mat-primary {
+  background-color: rgba(110, 157, 220, 0.2);
+  color: #B3D3E4;
+  border-color: rgba(110, 157, 220, 0.4);
+}
+.badge-mat-success {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: #388e3c;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+html.dark .badge-mat-success {
+  background-color: rgba(76, 175, 80, 0.25);
+  color: #81c784;
+}
+.badge-mat-warning {
+  background-color: rgba(255, 152, 0, 0.15);
+  color: #f57c00;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+html.dark .badge-mat-warning {
+  background-color: rgba(255, 152, 0, 0.25);
+  color: #ffb74d;
+}
+.badge-mat-danger {
+  background-color: rgba(244, 67, 54, 0.15);
+  color: #d32f2f;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+html.dark .badge-mat-danger {
+  background-color: rgba(244, 67, 54, 0.25);
+  color: #e57373;
+}
+.badge-mat-info {
+  background-color: rgba(0, 188, 212, 0.15);
+  color: #0097a7;
+  border: 1px solid rgba(0, 188, 212, 0.3);
+}
+html.dark .badge-mat-info {
+  background-color: rgba(0, 188, 212, 0.25);
+  color: #4dd0e1;
+}
+
+/* ==========================================================================
+   Botones Material Dashboard PRO
+   ========================================================================== */
+.btn-mat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 1, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s ease;
+  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  text-decoration: none;
+}
+.btn-mat:hover {
+  transform: translateY(-1px);
+}
+.btn-mat:active {
+  transform: translateY(0);
+}
+.btn-mat.btn-primary {
+  background: var(--grad-primary);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-primary);
+}
+.btn-mat.btn-info {
+  background: var(--grad-info);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-info);
+}
+.btn-mat.btn-success {
+  background: var(--grad-success);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-success);
+}
+.btn-mat.btn-warning {
+  background: var(--grad-warning);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-warning);
+}
+.btn-mat.btn-danger {
+  background: var(--grad-danger);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-danger);
+}
+.btn-mat.btn-rose {
+  background: var(--grad-rose);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-rose);
+}
+.btn-mat.btn-white {
+  background: #FFFFFF;
+  color: var(--text-dark);
+  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+}
+.btn-mat.btn-link {
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-accent);
+  padding: 6px 10px;
+}
+.btn-mat.btn-link:hover {
+  background-color: rgba(110, 157, 220, 0.1);
+}
+
+/* ==========================================================================
+   Form Controls (Material Inputs)
+   ========================================================================== */
+.form-group-mat {
+  position: relative;
+  margin-bottom: 20px;
+}
+.form-control-mat {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-main);
+  padding: 8px 0;
+  font-size: 13.5px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+.form-control-mat:focus {
+  outline: none;
+  border-bottom: 2px solid var(--color-accent);
+}
+.form-label-mat {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ==========================================================================
+   Kanban & Explorer Styles
+   ========================================================================== */
+.kanban-board-mat {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(280px, 1fr));
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+@media (max-width: 1440px) {
+  .kanban-board-mat {
+    grid-template-columns: repeat(5, 300px);
+  }
+}
+.kanban-col-mat {
+  background-color: rgba(100, 116, 139, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+}
+html.dark .kanban-col-mat {
+  background-color: rgba(16, 22, 36, 0.6);
+}
+.kanban-card-mat {
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color-subtle);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.kanban-card-mat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  border-color: var(--color-accent);
+}
+
+/* ==========================================================================
+   Modales con Animación Material PRO
+   ========================================================================== */
+.modal-backdrop-mat {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop-mat.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-dialog-mat {
+  background: var(--bg-card);
+  border-radius: 6px;
+  box-shadow: 0 24px 38px 3px rgba(0, 0, 0, 0.14), 0 9px 46px 8px rgba(0, 0, 0, 0.12), 0 11px 15px -7px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.92);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.modal-backdrop-mat.active .modal-dialog-mat {
+  transform: scale(1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 991px) {
+  .sidebar {
+    transform: translate3d(-260px, 0, 0);
+  }
+  body.sidebar-open .sidebar {
+    transform: translate3d(0, 0, 0);
+  }
+  .main-panel {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* ==========================================================================
+   Compatibilidad y Componentes Auxiliares Material PRO
+   ========================================================================== */
+
+/* Kanban Compatibility */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(280px, 1fr));
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+@media (max-width: 1440px) {
+  .kanban-board {
+    grid-template-columns: repeat(5, 300px);
+  }
+}
+.kanban-column {
+  background-color: rgba(100, 116, 139, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+}
+html.dark .kanban-column {
+  background-color: rgba(16, 22, 36, 0.6);
+}
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+.kanban-card {
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color-subtle);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  border-color: var(--color-accent);
+}
+
+/* Explorer Dense Table */
+.explorer-table-container {
+  overflow-x: auto;
+  border-radius: 4px;
+}
+.explorer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.explorer-table thead th {
+  background-color: rgba(100, 116, 139, 0.06);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  user-select: none;
+}
+html.dark .explorer-table thead th {
+  background-color: rgba(20, 27, 45, 0.6);
+}
+.explorer-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+.explorer-table tbody tr:hover {
+  background-color: rgba(110, 157, 220, 0.08);
+}
+html.dark .explorer-table tbody tr:hover {
+  background-color: rgba(110, 157, 220, 0.15);
+}
+
+/* Biometria & Fingerprint Scanner */
+.fingerprint-scanner {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 2px dashed var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(110, 157, 220, 0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fingerprint-scanner:hover {
+  transform: scale(1.08);
+  background: rgba(110, 157, 220, 0.18);
+  border-color: var(--mat-info);
+  box-shadow: 0 0 20px rgba(110, 157, 220, 0.4);
+}
+.fingerprint-scanner.scanning {
+  animation: pulse-ring 1.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(110, 157, 220, 0.7); }
+  70% { transform: scale(1.08); box-shadow: 0 0 0 16px rgba(110, 157, 220, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(110, 157, 220, 0); }
+}
+
+/* Modal Backdrops & Dialogs Compatibility */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-dialog {
+  background: var(--bg-card);
+  border-radius: 6px;
+  box-shadow: 0 24px 38px 3px rgba(0, 0, 0, 0.14), 0 9px 46px 8px rgba(0, 0, 0, 0.12), 0 11px 15px -7px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.92);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.modal-backdrop.active .modal-dialog {
+  transform: scale(1);
+}
+
+/* Toast Notifications */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  min-width: 300px;
+  max-width: 420px;
+  background: var(--bg-card);
+  color: var(--text-dark);
+  padding: 14px 18px;
+  border-radius: 4px;
+  border-left: 4px solid var(--color-primary);
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.42), 0 4px 25px 0px rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  transition: all 0.25s ease;
+  animation: slideInUp 0.25s ease forwards;
+}
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Button & Badge Aliases */
+.mat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  text-decoration: none;
+}
+.mat-btn:hover {
+  transform: translateY(-1px);
+}
+.mat-btn-primary { background: var(--grad-primary); color: #fff; box-shadow: var(--shadow-primary); }
+.mat-btn-info { background: var(--grad-info); color: #fff; box-shadow: var(--shadow-info); }
+.mat-btn-success { background: var(--grad-success); color: #fff; box-shadow: var(--shadow-success); }
+.mat-btn-warning { background: var(--grad-warning); color: #fff; box-shadow: var(--shadow-warning); }
+.mat-btn-danger { background: var(--grad-danger); color: #fff; box-shadow: var(--shadow-danger); }
+.mat-btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); box-shadow: none; }
+.mat-btn-outline:hover { background-color: rgba(100, 116, 139, 0.1); border-color: var(--color-accent); }
+
+.mat-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.badge-primary, .badge-accent { background: rgba(21, 24, 70, 0.12); color: var(--color-primary); border: 1px solid rgba(21, 24, 70, 0.25); }
+.badge-info { background: rgba(0, 188, 212, 0.15); color: #0097a7; border: 1px solid rgba(0, 188, 212, 0.3); }
+.badge-warning { background: rgba(255, 152, 0, 0.15); color: #f57c00; border: 1px solid rgba(255, 152, 0, 0.3); }
+.badge-danger { background: rgba(244, 67, 54, 0.15); color: #d32f2f; border: 1px solid rgba(244, 67, 54, 0.3); }
+.badge-success { background: rgba(76, 175, 80, 0.15); color: #388e3c; border: 1px solid rgba(76, 175, 80, 0.3); }
+.badge-rose { background: rgba(233, 30, 99, 0.15); color: #c2185b; border: 1px solid rgba(233, 30, 99, 0.3); }
+html.dark .badge-primary, html.dark .badge-accent { background: rgba(110, 157, 220, 0.2); color: #B3D3E4; border-color: rgba(110, 157, 220, 0.4); }
+html.dark .badge-info { color: #4dd0e1; }
+html.dark .badge-warning { color: #ffb74d; }
+html.dark .badge-danger { color: #e57373; }
+html.dark .badge-success { color: #81c784; }
+html.dark .badge-rose { color: #f06292; }
+
+/* Legacy Mat Card Aliases */
+.mat-card { background: var(--bg-card); border-radius: 6px; box-shadow: var(--shadow-card); margin-top: 25px; margin-bottom: 25px; position: relative; border: 1px solid var(--border-color-subtle); }
+.mat-card-header-float { margin: -20px 15px 0 15px; border-radius: 4px; padding: 15px 20px; background: var(--grad-primary); box-shadow: var(--shadow-primary); color: #FFFFFF; position: relative; z-index: 3; }
+.mat-stat-card { background: var(--bg-card); border-radius: 6px; box-shadow: var(--shadow-card); padding: 15px; position: relative; border: 1px solid var(--border-color-subtle); margin-top: 25px; }
+.mat-stat-icon { position: absolute; top: -18px; left: 15px; width: 56px; height: 56px; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; box-shadow: var(--shadow-primary); }
+
