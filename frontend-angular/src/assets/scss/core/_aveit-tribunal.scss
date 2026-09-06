@@ -26,6 +26,58 @@ $grad-warning-mat: linear-gradient(60deg, #FFA726, #FB8C00);
 $grad-danger-mat: linear-gradient(60deg, #EF5350, #E53935);
 $grad-rose-mat: linear-gradient(60deg, #EC407A, #D81B60);
 
+// ==========================================================================
+// CSS Custom Properties — DESIGN.md Design Tokens (Light & Dark Theme)
+// ==========================================================================
+:root {
+  --color-primary: #151846;
+  --color-accent: #6E9DDC;
+  --color-tint: #B3D3E4;
+  --color-surface: #F2EEE9;
+  --color-surface-card: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-brand-black: #000000;
+  --color-text-primary: #151846;
+  --color-text-secondary: #334155;
+  --color-text-inverse: #FFFFFF;
+  --color-border-main: #D1D5DB;
+  --color-border-focus: #6E9DDC;
+  --color-success: #15803D;
+  --color-warning: #92400E;
+  --color-danger: #B91C1C;
+  --color-info: #0369A1;
+
+  --grad-primary-start: #151846;
+  --grad-primary-end: #242A68;
+  --grad-info-start: #0284C7;
+  --grad-info-end: #0369A1;
+  --grad-success-start: #16A34A;
+  --grad-success-end: #15803D;
+  --grad-warning-start: #D97706;
+  --grad-warning-end: #B45309;
+  --grad-danger-start: #DC2626;
+  --grad-danger-end: #B91C1C;
+
+  --font-display: 'Archivo Black', sans-serif;
+  --font-h1: 'Garet', 'Montserrat', sans-serif;
+  --font-h2: 'Montserrat', sans-serif;
+  --font-h3: 'Montserrat', sans-serif;
+  --font-subtitle: 'Arimo', 'Roboto', sans-serif;
+  --font-body: 'Roboto', 'Open Sans', sans-serif;
+  --font-code: 'Fira Code', monospace;
+}
+
+[data-theme="dark"],
+body.dark-edition {
+  --color-surface: #0F172A;
+  --color-surface-card: #1E293B;
+  --color-surface-elevated: #334155;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-border-main: #334155;
+  --color-border-focus: #6E9DDC;
+}
+
 // ==========================================
 // 1. Sidebar AVEIT y Navegación
 // ==========================================
