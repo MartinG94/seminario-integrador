@@ -1,0 +1,15 @@
+// Reportes SCSS
+@media print {
+  .sidebar, .navbar, .btn, .card-footer {
+    display: none !important;
+  }
+  .main-panel {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #CCC !important;
+  }
+}

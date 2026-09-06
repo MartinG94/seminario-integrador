@@ -1,0 +1,568 @@
+/* ==========================================================================
+   AVEIT Design System 2026 - Material Dashboard PRO SCSS Extension
+   SGD-AVEIT Módulo de Tribunal de Disciplina y Premiaciones
+   ========================================================================== */
+
+// Variables Canónicas AVEIT
+$aveit-navy: #151846;
+$aveit-navy-light: #252B6B;
+$aveit-cyan: #6E9DDC;
+$aveit-ice: #B3D3E4;
+$aveit-surface: #F2EEE9;
+
+// Sombras de Elevación Coloreadas (Firma Material Dashboard PRO)
+$shadow-primary-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(21, 24, 70, 0.4);
+$shadow-info-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(0, 188, 212, 0.4);
+$shadow-success-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(76, 175, 80, 0.4);
+$shadow-warning-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(255, 152, 0, 0.4);
+$shadow-danger-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(244, 67, 54, 0.4);
+$shadow-rose-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(233, 30, 99, 0.4);
+
+// Gradientes Oficiales a 60 grados
+$grad-primary-aveit: linear-gradient(60deg, #151846, #252B6B);
+$grad-info-mat: linear-gradient(60deg, #26C6DA, #00ACC1);
+$grad-success-mat: linear-gradient(60deg, #66BB6A, #43A047);
+$grad-warning-mat: linear-gradient(60deg, #FFA726, #FB8C00);
+$grad-danger-mat: linear-gradient(60deg, #EF5350, #E53935);
+$grad-rose-mat: linear-gradient(60deg, #EC407A, #D81B60);
+
+// ==========================================
+// 1. Sidebar AVEIT y Navegación
+// ==========================================
+.sidebar[data-color="primary"] {
+  .nav li.active > a {
+    background: $grad-primary-aveit !important;
+    box-shadow: $shadow-primary-mat !important;
+    color: #FFFFFF !important;
+  }
+}
+
+.sidebar {
+  background-color: #151846 !important;
+
+  .logo {
+    padding: 18px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .logo-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, $aveit-cyan, #42a5f5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $aveit-navy;
+      font-size: 20px;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .logo-text {
+      h1 {
+        font-family: 'Roboto', 'Montserrat', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: #FFFFFF;
+        margin: 0;
+        line-height: 1.2;
+      }
+      p {
+        font-size: 11px;
+        color: $aveit-ice;
+        margin: 0;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  .user {
+    padding: 15px;
+    margin: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    .user-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid $aveit-cyan;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .user-info {
+      .user-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #FFFFFF;
+        margin: 0;
+      }
+      .user-role {
+        font-size: 11px;
+        color: $aveit-ice;
+        margin: 0;
+      }
+    }
+  }
+
+  .nav {
+    li a {
+      margin: 6px 15px;
+      border-radius: 4px;
+      padding: 10px 15px;
+      transition: all 0.25s ease;
+
+      i.material-icons {
+        font-size: 22px;
+        margin-right: 12px;
+      }
+
+      p {
+        font-size: 13px;
+        font-weight: 400;
+        margin: 0;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 2. Cabeceras Flotantes y Sombras (Material PRO)
+// ==========================================
+.card {
+  border-radius: 6px;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
+  margin-top: 30px;
+  margin-bottom: 30px;
+  background: #FFFFFF;
+
+  .card-header-primary {
+    background: $grad-primary-aveit !important;
+    box-shadow: $shadow-primary-mat !important;
+  }
+  .card-header-info {
+    background: $grad-info-mat !important;
+    box-shadow: $shadow-info-mat !important;
+  }
+  .card-header-success {
+    background: $grad-success-mat !important;
+    box-shadow: $shadow-success-mat !important;
+  }
+  .card-header-warning {
+    background: $grad-warning-mat !important;
+    box-shadow: $shadow-warning-mat !important;
+  }
+  .card-header-danger {
+    background: $grad-danger-mat !important;
+    box-shadow: $shadow-danger-mat !important;
+  }
+  .card-header-rose {
+    background: $grad-rose-mat !important;
+    box-shadow: $shadow-rose-mat !important;
+  }
+
+  .card-header:not(.card-header-icon) {
+    margin: -20px 15px 0;
+    border-radius: 3px;
+    padding: 15px 20px;
+    position: relative;
+    z-index: 3;
+    color: #FFFFFF;
+
+    .card-title {
+      color: #FFFFFF;
+      font-size: 18px;
+      font-weight: 400;
+      margin: 0;
+    }
+    .card-category {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      margin: 4px 0 0;
+    }
+  }
+}
+
+// ==========================================
+// 3. Stat Cards de Alto Impacto
+// ==========================================
+.card-stats {
+  .card-header.card-header-icon {
+    float: left;
+    margin: -20px 15px 0;
+    border-radius: 3px;
+    padding: 15px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i.material-icons {
+      font-size: 32px;
+      color: #FFFFFF;
+      line-height: 1;
+    }
+  }
+
+  .card-header .card-category {
+    color: #999999;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-align: right;
+    margin-top: 5px;
+  }
+
+  .card-header .card-title {
+    color: #3C4858;
+    font-size: 26px;
+    font-weight: 300;
+    text-align: right;
+    margin: 4px 0 0;
+  }
+
+  .card-footer {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #EEEEEE;
+    font-size: 12px;
+    color: #999999;
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+      i.material-icons {
+        font-size: 16px;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 4. Badges Semánticos y Plazo Preclusivo
+// ==========================================
+.badge-mat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  &.badge-mat-primary {
+    background: rgba(21, 24, 70, 0.1);
+    color: $aveit-navy;
+    border: 1px solid rgba(21, 24, 70, 0.25);
+  }
+  &.badge-mat-info {
+    background: rgba(0, 188, 212, 0.12);
+    color: #0097a7;
+    border: 1px solid rgba(0, 188, 212, 0.3);
+  }
+  &.badge-mat-warning {
+    background: rgba(255, 152, 0, 0.12);
+    color: #f57c00;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+  }
+  &.badge-mat-danger {
+    background: rgba(244, 67, 54, 0.12);
+    color: #d32f2f;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+  }
+  &.badge-mat-success {
+    background: rgba(76, 175, 80, 0.12);
+    color: #388e3c;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+  }
+  &.badge-mat-rose {
+    background: rgba(233, 30, 99, 0.12);
+    color: #c2185b;
+    border: 1px solid rgba(233, 30, 99, 0.3);
+  }
+}
+
+.timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFF3E0;
+  color: #E65100;
+  border: 1px solid #FFE0B2;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+// ==========================================
+// 5. Tablero Kanban para Gestión de Expedientes
+// ==========================================
+.kanban-board-mat {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(260px, 1fr));
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+
+.kanban-col-mat {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+
+  .kanban-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #E2E8F0;
+
+    h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+      color: #334155;
+    }
+    .col-count {
+      background: #E2E8F0;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+  }
+}
+
+.kanban-card-mat {
+  background: #FFFFFF;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid $aveit-navy;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+    border-color: $aveit-cyan;
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: #64748B;
+  }
+  .card-title-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0 0 6px 0;
+  }
+  .card-subcomm {
+    font-size: 11px;
+    color: #64748B;
+    margin-bottom: 8px;
+  }
+  .card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px dashed #E2E8F0;
+    padding-top: 6px;
+    font-size: 11px;
+  }
+}
+
+// ==========================================
+// 6. Tablas Densas Estilo Explorador
+// ==========================================
+.explorer-table-container {
+  overflow-x: auto;
+}
+
+.table-mat {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: #334155;
+  border-collapse: collapse;
+
+  thead th {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #64748B;
+    border-top: none;
+    border-bottom: 1px solid #CBD5E1;
+    padding: 10px 12px;
+    background: #F8FAFC;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: #F1F5F9;
+      color: $aveit-navy;
+    }
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #E2E8F0;
+    font-size: 13px;
+  }
+
+  tbody tr:hover {
+    background-color: rgba(110, 157, 220, 0.06);
+  }
+}
+
+// ==========================================
+// 7. Sensor Biométrico "Pasar el Dedo"
+// ==========================================
+.fingerprint-terminal {
+  background: #0F172A;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  color: #FFFFFF;
+
+  .sensor-pad {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 188, 212, 0.25) 0%, rgba(15, 23, 42, 0.8) 70%);
+    border: 2px dashed #00BCD4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+
+    i.material-icons {
+      font-size: 44px;
+      color: #00BCD4;
+      transition: all 0.2s ease;
+    }
+
+    &:hover {
+      border-color: #4CAF50;
+      box-shadow: 0 0 20px rgba(0, 188, 212, 0.5);
+      i.material-icons {
+        color: #4CAF50;
+        transform: scale(1.1);
+      }
+    }
+
+    &.scanning {
+      border-color: #4CAF50;
+      animation: pulse-ring 1s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+  }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(76, 175, 80, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+// ==========================================
+// 8. Modo Oscuro (Dark Edition)
+// ==========================================
+body.dark-edition, html.dark {
+  background-color: #0B1120 !important;
+  color: #E2E8F0;
+
+  .main-panel {
+    background-color: #0B1120 !important;
+  }
+
+  .card {
+    background: #1E293B !important;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+    .card-title, .card-header .card-title {
+      color: #F8FAFC !important;
+    }
+    .card-category {
+      color: #94A3B8 !important;
+    }
+    .card-footer {
+      border-color: #334155 !important;
+      color: #94A3B8 !important;
+    }
+  }
+
+  .kanban-col-mat {
+    background: #0F172A;
+    border-color: #334155;
+    .kanban-col-header {
+      border-color: #334155;
+      h4 { color: #E2E8F0; }
+    }
+  }
+
+  .kanban-card-mat {
+    background: #1E293B;
+    border-color: #334155;
+    .card-title-text { color: #F1F5F9; }
+    .card-subcomm { color: #94A3B8; }
+  }
+
+  .table-mat {
+    color: #E2E8F0;
+    thead th {
+      background: #0F172A;
+      color: #94A3B8;
+      border-color: #334155;
+    }
+    tbody td {
+      border-color: #334155;
+    }
+    tbody tr:hover {
+      background: rgba(110, 157, 220, 0.12);
+    }
+  }
+}

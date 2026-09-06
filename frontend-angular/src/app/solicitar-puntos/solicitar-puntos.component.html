@@ -1,0 +1,124 @@
+<div class="main-content">
+  <div class="container-fluid">
+
+    <div class="row">
+      <div class="col-md-10 ml-auto mr-auto">
+        <div class="card">
+          <div class="card-header card-header-primary">
+            <h4 class="card-title text-white">Formulario Oficial T01: Solicitud de Apertura de Causa</h4>
+            <p class="card-category text-white-50">Exclusivo para Autoridades Habilitadas (Comisión Directiva, Presidentes de Subcomisión y Tribunal de Disciplina).</p>
+          </div>
+          <div class="card-body">
+
+            <!-- Mensajes de Estado -->
+            <div *ngIf="exitoMensaje" class="alert alert-success alert-with-icon">
+              <i class="material-icons" data-notify="icon">check_circle</i>
+              <span>{{exitoMensaje}} Redirigiendo a Gestión de Expedientes...</span>
+            </div>
+            <div *ngIf="errorMensaje" class="alert alert-danger alert-with-icon">
+              <i class="material-icons" data-notify="icon">error</i>
+              <span>{{errorMensaje}}</span>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="bmd-label-floating font-weight-bold text-dark">Socio o Miembro Postulado / Imputado:</label>
+                  <select class="form-control" [(ngModel)]="socioSeleccionado">
+                    <option *ngFor="let s of socios" [value]="s.nombre">{{s.nombre}} ({{s.legajo}} - {{s.subcomision}})</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="bmd-label-floating font-weight-bold text-dark">Subcomisión Interviniente:</label>
+                  <select class="form-control" [(ngModel)]="subcomisionSeleccionada">
+                    <option *ngFor="let sub of subcomisiones" [value]="sub">{{sub}}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Naturaleza de la Acción -->
+            <div class="form-group mt-3">
+              <label class="font-weight-bold text-dark mb-2">Naturaleza de la Acción Reglamentaria:</label>
+              <div class="d-flex gap-4">
+                <div class="form-check form-check-radio mr-4">
+                  <label class="form-check-label">
+                    <input class="form-check-input" type="radio" name="tipoAccionRadio" value="falta" [checked]="tipoAccion === 'falta'" (change)="onTipoAccionChange('falta')">
+                    Medida Disciplinaria / Sanción Punitiva
+                    <span class="circle"><span class="check"></span></span>
+                  </label>
+                </div>
+                <div class="form-check form-check-radio">
+                  <label class="form-check-label">
+                    <input class="form-check-input" type="radio" name="tipoAccionRadio" value="merito" [checked]="tipoAccion === 'merito'" (change)="onTipoAccionChange('merito')">
+                    Reconocimiento Institucional / Mérito
+                    <span class="circle"><span class="check"></span></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Escala Graduada de Puntos -->
+            <div class="form-group mt-3">
+              <label class="font-weight-bold text-dark mb-2">Escala Graduada de Puntos Reglamentarios:</label>
+              <select class="form-control" [(ngModel)]="puntosSeleccionados">
+                <ng-container *ngIf="tipoAccion === 'falta'">
+                  <option *ngFor="let esc of escalasSancion" [value]="esc.valor">{{esc.desc}}</option>
+                </ng-container>
+                <ng-container *ngIf="tipoAccion === 'merito'">
+                  <option *ngFor="let esc of escalasMerito" [value]="esc.valor">{{esc.desc}}</option>
+                </ng-container>
+              </select>
+            </div>
+
+            <div class="form-group mt-3">
+              <label class="bmd-label-floating font-weight-bold text-dark">Motivo Sucinto de la Solicitud:</label>
+              <input type="text" class="form-control" placeholder="Ej: Inasistencia no informada a asamblea general ordinaria..." [(ngModel)]="motivoTexto">
+            </div>
+
+            <!-- SECCIÓN: HOJA DE ANEXO CIRCUNSTANCIADA OBLIGATORIA -->
+            <div class="mt-4 p-4 rounded" style="background: #F8FAFC; border: 1px solid #CBD5E1;">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <i class="material-icons text-primary" style="font-size: 24px;">assignment_late</i>
+                <h5 class="font-weight-bold text-dark mb-0">Hoja de Anexo Circunstanciada (Obligatoria para el Debido Proceso)</h5>
+              </div>
+              <p class="text-muted small mb-3">
+                Para garantizar las garantías estatutarias del miembro, toda solicitud debe fundamentarse con precisión cronológica, nómina de testigos e informe circunstanciado de los hechos.
+              </p>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="text-dark font-weight-bold">Fecha / Hora del Hecho:</label>
+                    <input type="date" class="form-control" [(ngModel)]="anexoFecha">
+                  </div>
+                </div>
+                <div class="col-md-8">
+                  <div class="form-group">
+                    <label class="text-dark font-weight-bold">Testigos Presenciales o Autoridades Informantes:</label>
+                    <input type="text" class="form-control" placeholder="Ej: Vocal de Turno, Secretario de Actas, Presidente de Subcomisión..." [(ngModel)]="anexoTestigos">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group mt-3">
+                <label class="text-dark font-weight-bold">Relato Pormenorizado de los Hechos y Circunstancias:</label>
+                <textarea class="form-control" rows="4" placeholder="Describe los antecedentes fácticos, lugar, horario, desarrollo de la situación y afectación a las actividades asociativas..." [(ngModel)]="anexoRelato"></textarea>
+              </div>
+            </div>
+
+          </div>
+          <div class="card-footer d-flex justify-content-end gap-2">
+            <button mat-button class="btn btn-default" routerLink="/gestionar-expedientes">Cancelar</button>
+            <button mat-raised-button color="primary" class="btn btn-primary" (click)="enviarSolicitud()">
+              <i class="material-icons" style="font-size: 16px;">send</i> Registrar Solicitud T01
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

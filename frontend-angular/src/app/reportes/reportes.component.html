@@ -1,0 +1,178 @@
+<div class="main-content">
+  <div class="container-fluid">
+
+    <!-- Fila 1: Stat Cards de Alto Impacto -->
+    <div class="row">
+      <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-primary card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">assignment</i>
+            </div>
+            <p class="card-category">Expedientes Totales</p>
+            <h3 class="card-title">{{totalExpedientes}}</h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons text-info">update</i> Período en curso 2026
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-warning card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">hourglass_empty</i>
+            </div>
+            <p class="card-category">Causas en Trámite</p>
+            <h3 class="card-title">{{enTramite}}</h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons text-warning">warning</i> En instrucción y resolución
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-success card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">military_tech</i>
+            </div>
+            <p class="card-category">Reconocimientos</p>
+            <h3 class="card-title">{{reconocimientos}}</h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons text-success">thumb_up</i> Méritos y felicitaciones
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card card-stats">
+          <div class="card-header card-header-danger card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">gavel</i>
+            </div>
+            <p class="card-category">Medidas Sancionatorias</p>
+            <h3 class="card-title">{{sanciones}}</h3>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+              <i class="material-icons text-danger">report</i> Faltas reglamentarias
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila 2: Balance Cuatrimestral por Subcomisión -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-primary d-flex flex-wrap justify-content-between align-items-center">
+            <div>
+              <h4 class="card-title text-white">Balance Cuatrimestral de Disciplina por Subcomisiones</h4>
+              <p class="card-category text-white-50">Auditoría institucional consolidada de las 7 subcomisiones de AVEIT (Período 2026).</p>
+            </div>
+            <div class="d-flex gap-2">
+              <button mat-raised-button class="btn btn-white btn-sm" (click)="descargarExcel()">
+                <i class="material-icons" style="font-size: 16px;">file_download</i> Descargar Excel / CSV
+              </button>
+              <button mat-raised-button class="btn btn-white btn-sm" (click)="imprimirPDF()">
+                <i class="material-icons" style="font-size: 16px;">print</i> Exportar PDF / Imprimir
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover table-mat">
+                <thead class="text-primary">
+                  <th>Subcomisión</th>
+                  <th class="text-center">Total Causas</th>
+                  <th class="text-center">Sanciones</th>
+                  <th class="text-center">Reconocimientos</th>
+                  <th class="text-center">Saldo Neto</th>
+                  <th>Índice de Cumplimiento</th>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let rep of reporteSubcomisiones">
+                    <td class="font-weight-bold text-dark">{{rep.nombre}}</td>
+                    <td class="text-center">{{rep.totalExpedientes}}</td>
+                    <td class="text-center text-danger font-weight-bold">{{rep.sanciones}}</td>
+                    <td class="text-center text-success font-weight-bold">{{rep.reconocimientos}}</td>
+                    <td class="text-center font-weight-bold" [ngClass]="rep.saldoNeto >= 0 ? 'text-success' : 'text-danger'">
+                      {{rep.saldoNeto > 0 ? '+' : ''}}{{rep.saldoNeto}} pts
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height: 6px; background: #E2E8F0;">
+                          <div class="progress-bar" 
+                               [ngClass]="rep.cumplimiento >= 85 ? 'bg-success' : (rep.cumplimiento >= 70 ? 'bg-warning' : 'bg-danger')"
+                               [style.width.%]="rep.cumplimiento"></div>
+                        </div>
+                        <span class="small font-weight-bold">{{rep.cumplimiento}}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila 3: Comparativa Juniors vs Seniors -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header card-header-info">
+            <h4 class="card-title text-white">Socios Juniors (1º y 2º año)</h4>
+            <p class="card-category text-white-50">Comportamiento e inserción asociativa de miembros iniciales.</p>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="font-weight-bold">Tasa de Adherencia y Asistencia</span>
+              <span class="text-info font-weight-bold">{{cumplimientoJuniors}}%</span>
+            </div>
+            <div class="progress mb-3" style="height: 8px;">
+              <div class="progress-bar bg-info" [style.width.%]="cumplimientoJuniors"></div>
+            </div>
+            <p class="text-muted small">
+              Se observa una alta recepción en los programas de mentoría, con un 84% de cumplimiento en asambleas y actividades de extensión comunitaria.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header card-header-success">
+            <h4 class="card-title text-white">Socios Seniors (3º a 6º año)</h4>
+            <p class="card-category text-white-50">Liderazgo, gestión operativa y responsabilidad institucional.</p>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="font-weight-bold">Tasa de Adherencia y Asistencia</span>
+              <span class="text-success font-weight-bold">{{cumplimientoSeniors}}%</span>
+            </div>
+            <div class="progress mb-3" style="height: 8px;">
+              <div class="progress-bar bg-success" [style.width.%]="cumplimientoSeniors"></div>
+            </div>
+            <p class="text-muted small">
+              Desempeño superior al 96% con mayor concentración de reconocimientos por coordinación de proyectos tecnológicos y jornadas técnicas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

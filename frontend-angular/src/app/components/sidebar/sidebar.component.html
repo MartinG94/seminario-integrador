@@ -1,0 +1,42 @@
+<!-- Logo Institucional AVEIT -->
+<div class="logo">
+  <div class="logo-badge">
+    <i class="material-icons">gavel</i>
+  </div>
+  <div class="logo-text">
+    <h1>SGD-AVEIT</h1>
+    <p>Tribunal de Disciplina</p>
+  </div>
+</div>
+
+<!-- Contenedor Principal del Sidebar -->
+<div class="sidebar-wrapper">
+
+  <!-- User Box / Perfil y Selector de Actor -->
+  <div class="user">
+    <div class="user-wrapper">
+      <div class="user-avatar">
+        <span>{{currentRole === 'socio' ? 'IM' : (currentRole === 'presidente_cd' ? 'CD' : 'TD')}}</span>
+      </div>
+      <div class="user-info">
+        <h4 class="user-name">
+          {{currentRole === 'socio' ? 'Ignacio Morales' : (currentRole === 'presidente_cd' ? 'Presidencia CD' : 'Dr. Argañaraz')}}
+        </h4>
+        <p class="user-role">
+          {{currentRole === 'socio' ? 'Socio Ordinario' : (currentRole === 'presidente_cd' ? 'Comisión Directiva' : 'Juez Tribunal Disciplina')}}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navegación de los 6 Submódulos -->
+  <ul class="nav">
+    <li routerLinkActive="active" *ngFor="let menuItem of menuItems" class="nav-item">
+      <a class="nav-link" [routerLink]="[menuItem.path]">
+        <i class="material-icons">{{menuItem.icon}}</i>
+        <p>{{menuItem.title}}</p>
+      </a>
+    </li>
+  </ul>
+
+</div>
