@@ -21,17 +21,17 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 ## 2. Cierre de Sprint 0 (Fase Fundacional) — Checklist
 
 - [x] **T0.1 Relevamiento Normativo e Institucional:** Análisis del Estatuto 2026, Reglamento Interno de Disciplina 2026, Reglamento Procesal 2026 y Circular 001/2026.  
-      *Hecho cuando:* Documento `Estudio-Inicial-SGD-AVEIT.md` y `Anteproyecto-SGD-AVEIT.md` consolidados en `docs/`.
+      *Hecho cuando:* Documentos consolidados en `docs/analisis-proceso-actual/` y `docs/formales/`.
 - [x] **T0.2 Modelado de Procesos de Negocio:** Diagramación BPMN 2.0 del ciclo de vida procesal del expediente en sus 6 estados oficiales.  
-      *Hecho cuando:* `docs/BPMN_Proceso_Operativo_Tribunal.md` y `Procesos-BPMN-SGD-AVEIT.md` generados y aprobados.
+      *Hecho cuando:* `docs/analisis-proceso-actual/BPMN_Proceso_Operativo_Tribunal.md` generado y aprobado.
 - [x] **T0.3 Especificación de Requerimientos de Software (ERS):** Formalización de 19 Requerimientos Funcionales (`RF-01` a `RF-19`), 6 RNF bajo ISO 25010 y 11 Reglas de Negocio (`RN-01` a `RN-11`).  
-      *Hecho cuando:* `docs/ERS-SGD-AVEIT.md` completo con trazabilidad normativa.
+      *Hecho cuando:* `docs/especificaciones/ERS-SGD-AVEIT.md` completo con trazabilidad normativa.
 - [x] **T0.4 Modelo Conceptual de Dominio:** Elaboración del diagrama de clases de dominio en UML/Mermaid con multiplicidades exactas.  
-      *Hecho cuando:* `docs/MODELO_DOMINIO_SGD_AVEIT.md` redactado con diccionario de datos.
+      *Hecho cuando:* `docs/especificaciones/MODELO_DOMINIO_SGD_AVEIT.md` redactado con diccionario de datos.
 - [x] **T0.5 Catálogo de Actores y Matriz RBAC:** Caracterización de los 7 actores clave del sistema (5 humanos y 2 automatizados).  
-      *Hecho cuando:* `docs/ACTORES_DEL_SISTEMA_SGD_AVEIT.md` finalizado.
+      *Hecho cuando:* `docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md` finalizado.
 - [x] **T0.6 Acuerdos de Trabajo y Gobernanza Ágil:** Definición de Sprints de 14 días, Definition of Ready (DoR), Definition of Done (DoD) y Product Backlog estimado en Story Points.  
-      *Hecho cuando:* `docs/Seguimiento de Proyecto.md` y `docs/PLAN_DE_PROYECTO_SGD_AVEIT.md` aprobados por Cátedra.
+      *Hecho cuando:* `docs/gestion-proyecto/Seguimiento de Proyecto.md` y `docs/gestion-proyecto/PLAN_DE_PROYECTO_SGD_AVEIT.md` aprobados por Cátedra.
 - [x] **T0.7 Prototipos y Sistema de Diseño:** Formalización de tokens de diseño AVEIT y maquetación de pantallas preliminares.  
       *Hecho cuando:* `DESIGN.md` creado y prototipos interactivos en `prototipos/` operativos.
 - [x] **T0.8 Gobernanza SDD y Dockerización:** Configuración del estándar Spec-Driven Development de MoureDev, `AGENTS.md`, `constitution.md` y `docker-compose.yml`.  
@@ -66,7 +66,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [ ] **T7. Endpoint de Búsqueda y Detalle de Legajo:** Implementar búsqueda insensible a mayúsculas/tildes en `/api/v1/socios/` y detalle `/api/v1/socios/<id>/legajo/`.  
       *(RF: RF-04-WS)* **Hecho cuando:** Tests de búsqueda por nombre, apellido y legajo con tiempo de respuesta < 500 ms en verde.
 
-- [ ] **T8. Servicio Angular de Autenticación (`AuthService`):** Crear servicio en `frontend-angular` con métodos `login()`, `logout()`, `getToken()` e interceptor HTTP para Bearer token.  
+- [ ] **T8. Servicio Angular de Autenticación (`AuthService`):** Crear servicio en `frontend` con métodos `login()`, `logout()`, `getToken()` e interceptor HTTP para Bearer token.  
       *(RF: RF-01-WS)* **Hecho cuando:** Tests de `AuthService` en Jasmine pasan en verde.
 
 - [ ] **T9. Integración de Componente `RankingSociosComponent`:** Conectar el componente existente en Angular con el endpoint `/api/v1/ranking/`, agregando controles de filtro y paginación con estilos AVEIT.  

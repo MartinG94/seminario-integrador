@@ -74,7 +74,7 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
    - *Alternativa descartada:* Campo estático actualizado por triggers o código (riesgo de inconsistencias y manipulación directa).
 
 3. **Arquitectura de Componentes Angular:**
-   - *Decisión:* Integración en el módulo `RankingSociosModule` preexistente en `frontend-angular/src/app/ranking-socios/` consumiendo tokens de estilo de `_aveit-tribunal.scss`.
+   - *Decisión:* Integración en el módulo `RankingSociosModule` preexistente en `frontend/src/app/ranking-socios/` consumiendo tokens de estilo de `_aveit-tribunal.scss`.
    - *Justificación:* Maximiza la reutilización de las vistas y tarjetas de Material Dashboard PRO ya maquetadas.
 
 ---

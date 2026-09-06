@@ -1,6 +1,13 @@
-# Módulo Tribunal de Disciplina — Stack Tecnológico y Estructura de Datos
+# Módulo Tribunal de Disciplina — Stack Tecnológico y Estructura de Datos (Sistema Legado)
 
-Documento de referencia técnica para el equipo encargado, en el marco del proyecto de Tesina sobre la plataforma web de gestión del Tribunal de Disciplina de A.V.E.I.T.
+> [!IMPORTANT]
+> **DOCUMENTO DE REFERENCIA DEL SISTEMA ACTUAL A REEMPLAZAR (LEGADO)**  
+> **Alcance y propósito de este documento:** Este informe documenta la arquitectura técnica, dependencias (`Python 3.5`, `Django 2.2`, `Angular 9.1`) y modelos de datos preexistentes (`svaveit/tribunal/models.py`) de la plataforma interna histórica de A.V.E.I.T.  
+> 
+> **Pautas metodológicas innegociables:**
+> 1. **Reemplazo integral:** Este es el sistema legado que el proyecto **SGD-AVEIT** viene a sustituir por completo debido a su obsolescencia tecnológica, deuda técnica y limitaciones operativas.
+> 2. **Análisis de requerimientos 100% desde cero:** El análisis de procesos de negocio, flujos operativos, formularios y catálogo de requerimientos se construye desde cero a partir de entrevistas directas, observación y la normativa reglamentaria 2026. Ninguna asunción funcional de este documento se traslada al nuevo sistema sin pasar por la especificación formal de ingeniería (`docs/especificaciones/`).
+> 3. **Valor exclusivo como antecedente técnico:** Su utilidad se limita a servir como consulta arqueológica de la estructura de datos anterior, dependencias y modelos históricos para facilitar la comprensión del dominio previo y eventuales migraciones de datos.
 
 ---
 

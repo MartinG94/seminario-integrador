@@ -23,7 +23,7 @@ Lista de tareas de desarrollo atómicas (<30 minutos), ordenadas por orden de de
 - [ ] **T7. Endpoint de Búsqueda y Detalle de Legajo:** Implementar búsqueda insensible a mayúsculas/tildes en `/api/v1/socios/` y detalle `/api/v1/socios/<id>/legajo/`.
       *(RF: RF-04-WS)* **Hecho cuando:** Tests de búsqueda por nombre, apellido y legajo con tiempo de respuesta < 500 ms en verde.
 
-- [ ] **T8. Servicio Angular de Autenticación (`AuthService`):** Crear servicio en `frontend-angular` con métodos `login()`, `logout()`, `getToken()` e interceptor HTTP para Bearer token.
+- [ ] **T8. Servicio Angular de Autenticación (`AuthService`):** Crear servicio en `frontend` con métodos `login()`, `logout()`, `getToken()` e interceptor HTTP para Bearer token.
       *(RF: RF-01-WS)* **Hecho cuando:** Tests de `AuthService` en Jasmine pasan en verde.
 
 - [ ] **T9. Integración de Componente `RankingSociosComponent`:** Conectar el componente existente en Angular con el endpoint `/api/v1/ranking/`, agregando controles de filtro y paginación con estilos AVEIT.
