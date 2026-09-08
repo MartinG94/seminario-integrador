@@ -7,7 +7,7 @@
 | **Identificador** | CU-XX |
 | **Nombre** | [Nombre del Caso de Uso] |
 | **Módulo / Subsistema** | [Módulo 1: Tramitación / Módulo 2: Deliberación / Módulo 3: Puntos / Módulo 4: Portal / Módulo 5: Balances] |
-| **Actor Principal** | [Actor que inicia la interacción: Socio Junior / Socio Senior / Miembro del TD / Autoridad de Subcomisión / Comisión Directiva / Sistema] |
+| **Actor Principal** | [Actor que inicia la interacción: Socio Pasivo / Socio Activo / Miembro del TD / Autoridad de Subcomisión / Comisión Directiva / Sistema] |
 | **Actores Secundarios** | [Otros actores que intervienen o reciben notificaciones] |
 | **Propósito / Objetivo** | [Descripción breve de una o dos oraciones sobre qué logra el actor con este caso de uso] |
 | **Tipo de Ejecución** | [En línea (Web/Mobile) / Asíncrono / Automático por Cron Job / Por Lote (Batch)] |

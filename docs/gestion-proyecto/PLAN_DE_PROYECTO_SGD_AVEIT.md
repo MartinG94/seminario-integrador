@@ -69,7 +69,7 @@ Este plan responde integralmente a los requerimientos de la cátedra de Seminari
 * **Nombre Oficial:** Sistema de Gestión del Tribunal de Disciplina y Premiaciones de A.V.E.I.T.
 * **Acrónimo Institucional:** **SGD-AVEIT**
 * **Organización Destinataria:** Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.) - UTN Facultad Regional Córdoba.
-* **Misión del Software:** Centralizar, auditar y transparentar la sustanciación de expedientes disciplinarios y propuestas de mérito conforme a la **Circular Normativa 001/2026** y al **Estatuto Social 2026**, proveyendo un portal web responsive mobile-first que erradique las planillas de cálculo desconectadas en Google Sheets, garantice el cómputo inmutable de saldos de puntos y automatice la emisión de los Balances Cuatrimestrales de Auditoría Interna (Art. 137 del Reglamento Interno de Disciplina de AVEIT).
+* **Misión del Software:** Centralizar, auditar y transparentar la sustanciación de expedientes disciplinarios y propuestas de mérito conforme a la **Circular Normativa 001/2026** y al **Estatuto Social 2026**, proveyendo un portal web responsive mobile-first que erradique las planillas de cálculo desconectadas en Google Sheets, garantice la sumatoria inmutable de saldos de puntos y automatice la emisión de los Balances Cuatrimestrales de Auditoría Interna (Art. 137 del Reglamento Interno de Disciplina de AVEIT).
 
 ---
 
@@ -124,10 +124,10 @@ Aplicando el marco analítico de la skill `systemClassifier`, el sistema SGD-AVE
 * **Subsistemas Nucleares:**
   1. *Subsistema de Entrada y Trámite Procesal (TPS):* Captura de solicitudes T01, notificaciones y carga digital de formularios T02/T03 con comprobantes.
   2. *Subsistema de Jurisprudencia y Deliberación Colegiada (KMS/DSS):* Consulta de antecedentes disciplinarios, emisión nominal de votos y suscripción de resoluciones.
-  3. *Subsistema de Integridad Transaccional y Saldos (TPS):* Cómputo de puntos auditado mediante ledger histórico y disparador de alarmas preventivas y críticas.
+  3. *Subsistema de Integridad Transaccional y Saldos (TPS):* Sumatoria de puntos auditada mediante ledger histórico y disparador de alarmas preventivas y críticas.
   4. *Subsistema de Transparencia y Rendición Cuatrimestral (MIS/EIS):* Portal público de consulta societaria y motor de compilación de Balances Cuatrimestrales (Art. 137).
 * **Frontera del Sistema:** Comprende desde la detección de la infracción/mérito y solicitud formal hasta la consolidación del balance cuatrimestral y la publicación transparente del fallo. Excluye el cobro de cuotas societarias (Tesorería) y la gestión de la Gran Rifa.
-* **Entorno:** Masa de más de 500 socios activos (Juniors y Seniors), Comisión Directiva, Comisión Fiscalizadora, Subcomisiones operativas, servidores de correo SMTP y red Wi-Fi de la UTN FRC.
+* **Entorno:** Masa de más de 500 socios con membresía vigente, de categorías Pasivo y Activo, Comisión Directiva, Comisión Fiscalizadora, Subcomisiones operativas, servidores de correo SMTP y red Wi-Fi de la UTN FRC.
 * **Homeostasis:** El sistema mantiene el equilibrio normativo institucional garantizando el debido proceso en 5 días hábiles y aplicando automáticamente la cláusula estatutaria de exclusión societaria al alcanzarse 10 puntos negativos netos.
 * **Negentropía:** Reemplazo de planillas Google Sheets degradables y sentencias manuales `UPDATE` en MySQL por transacciones registradas mediante triggers de auditoría inmutables en base de datos.
 
@@ -136,7 +136,7 @@ Aplicando el marco analítico de la skill `systemClassifier`, el sistema SGD-AVE
 | Módulo Funcional | Clasificación SI | Nivel Organizacional | Grado de Estructuración | Justificación Operativa |
 | :--- | :---: | :---: | :---: | :--- |
 | **Módulo de Expedientes y Formularios (T01, T02, T03)** | **TPS** *(Transaction Processing)* | Operativo | Totalmente Estructurada | Procesa transacciones cotidianas de solicitudes, acuses, plazos preclusivos de 5 días hábiles y recepción de adjuntos. |
-| **Motor de Cómputo de Saldos y Auditoría Histórica** | **TPS / Ledger** | Operativo | Totalmente Estructurada | Suma algebraica auditable de puntos (+/-), cálculo de fracciones de 0.5 y disparo de triggers transaccionales. |
+| **Motor de Sumatoria de Saldos y Auditoría Histórica** | **TPS / Ledger** | Operativo | Totalmente Estructurada | Suma algebraica auditable de puntos (+/-), cálculo de fracciones de 0.5 y disparo de triggers transaccionales. |
 | **Módulo de Balances Cuatrimestrales y Estadísticas** | **MIS** *(Management Info)* | Táctico / Supervisión | Semiestructurada | Consolida periódicamente (cuatrimestral) el rendimiento disciplinario por subcomisión y grupo social (Art. 137). |
 | **Tablero de Estados de Causas y Alertas Escalonadas** | **DSS** *(Decision Support)* | Táctico / Directivo | Semiestructurada | Alerta al Tribunal y a CD ante socios en zona de riesgo (-7 pts) y sugiere antecedentes jurisprudenciales análogos. |
 | **Portal de Transparencia Societaria y Rendición** | **EIS / Portal** | Estratégico / Asamblea | No Estructurada | Presenta el estado de transparencia de la Asociación, visualización global del padrón y rendición ante Asambleas. |
@@ -248,7 +248,7 @@ classDiagram
 | Buscar Legajo Integral e Histórico por Socio | ❌ | ❌ | **R** | **R** | **R** |
 | Sustanciar Descargos y Aprobar/Rechazar T02/T03 | ❌ | ❌ | ❌ | **C/U** | ❌ |
 | Votar nominalmente y redactar Resoluciones | ❌ | ❌ | ❌ | **C/U** | ❌ |
-| Firma Electrónica Colegiada de Resoluciones | ❌ | ❌ | ❌ | **C/U** *(Seniors)* | ❌ |
+| Firma Electrónica Colegiada de Resoluciones | ❌ | ❌ | ❌ | **C/U** *(Activos)* | ❌ |
 | Recibir Alertas Preventivas (-7 pts) y Críticas (-10 pts) | **R** *(Propia)* | ❌ | **R** *(Global)* | **R** *(Global)* | ❌ |
 | Generar y Exportar Balances Cuatrimestrales (Art. 137)| ❌ | ❌ | **R** | **C/R/E** | ❌ |
 | Gestión de Usuarios, Roles y Pistas de Auditoría DB | ❌ | ❌ | ❌ | ❌ | **C/R/U/D** |
@@ -273,10 +273,10 @@ Aplicando el pipeline de `/requirementsExtractor`, se desglosan los alcances fun
 | **RF-08** | **Evaluación y Sustanciación de Descargos** | El sistema permitirá a las miembros del TD visualizar los comprobantes adjuntos, emitir dictamen de aprobación o rechazo fundado sobre los Formularios T02/T03 y registrar el resultado en el expediente. | **Must Have** | Miembro TD |
 | **RF-09** | **Registro Nominal de Votación del Tribunal** | El sistema registrará el voto individual y nominal de cada miembro del Tribunal de Disciplina habilitado, computando la mayoría absoluta estatutaria para habilitar la confección del fallo. | **Must Have** | Miembro TD |
 | **RF-10** | **Redacción Estructurada y Generación de Resoluciones** | El sistema guiará la redacción de la Resolución final respetando la estructura legal obligatoria (*Vistos, Considerandos y Resolución*) y consolidando los puntos definitivos asignados (+/-). | **Must Have** | Miembro TD |
-| **RF-11** | **Aprobación Colegiada Autenticada (Firma Electrónica)** | El sistema permitirá a los miembros del TD suscribir colegiadamente la resolución mediante su sesión autenticada, registrando de forma inalterable ID de usuario, rol senior, fecha/hora y hash de auditoría. | **Must Have** | Miembro TD |
-| **RF-12** | **Cómputo Transaccional e Inmutable del Saldo de Puntos** | El sistema actualizará el saldo de puntos del socio sumando algebraicamente las transacciones dictaminadas con fracciones mínimas de 0.5 puntos, mediante lógica de backend y triggers en base de datos. | **Must Have** | Sistema (Motor de Reglas) |
+| **RF-11** | **Aprobación Colegiada Autenticada (Firma Electrónica)** | El sistema permitirá a los miembros del TD de categoría Activo suscribir colegiadamente la resolución mediante su sesión autenticada, registrando de forma inalterable ID de usuario, rol institucional, categoría, fecha/hora y hash de auditoría. | **Must Have** | Miembro TD |
+| **RF-12** | **Sumatoria Transaccional e Inmutable del Saldo de Puntos** | El sistema actualizará el saldo de puntos del socio sumando algebraicamente las transacciones dictaminadas con fracciones mínimas de 0.5 puntos, mediante lógica de backend y triggers en base de datos. | **Must Have** | Sistema (Motor de Reglas) |
 | **RF-13** | **Disparo Automático de Alertas Escalonadas (-7 y -10 pts)** | El sistema evaluará el saldo tras cada impacto: si el saldo acumulado es <= -7 pts despachará alerta amarilla preventiva; si es <= -10 pts despachará alerta roja de pérdida de condición de socio a CD y al socio. | **Must Have** | Sistema (Daemon / Reglas) |
-| **RF-14** | **Generación de Balances Cuatrimestrales de Auditoría (Art. 137)** | El sistema compilará con un solo clic los Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones desglosados por Subcomisión y categoría (Juniors/Seniors), exportables a PDF formal. | **Must Have** | Miembro TD |
+| **RF-14** | **Generación de Balances Cuatrimestrales de Auditoría (Art. 137)** | El sistema compilará con un solo clic los Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones desglosados por Subcomisión y categoría (Pasivos/Activos), exportables a PDF formal. | **Must Have** | Miembro TD |
 | **RF-15** | **Portal de Transparencia y Consulta Pública de Resoluciones** | El sistema dispondrá de un portal público accesible por toda la masa societaria para consultar el repositorio de resoluciones firmes dictadas y el legajo de antecedentes individuales. | **Should Have** | Socio Ordinario / Público |
 
 ---
@@ -317,9 +317,9 @@ En respuesta a la observación de la cátedra de reemplazar expresiones vagas co
   Un expediente transiciona de forma secuencial y sin retrocesos: E1(Creado) -> E2(En Justificación) -> E3(En Revisión) -> E4(En Espera Resolución) -> E5(Pendiente Firma) -> E6(Emitido).
 * **`RN-06` — Quórum y Mayoría Absoluta del TD (Art. 96 Estatuto 2026):**  
   Las resoluciones requieren la deliberación de al menos tres (3) miembros habilitados y el voto favorable de al menos dos (2) miembros (mayoría absoluta). Si un miembro es recusado por parentesco o conflicto de interés (Art. 95 Estatuto), asume automáticamente un miembro suplente.
-* **`RN-07` — Suscripción Colegiada por Socios Seniors:**  
-  La resolución definitiva solo adquiere estado firme y validez cuando ha sido suscripta de manera colegiada por al menos dos integrantes habilitados del TD pertenecientes a la categoría estatutaria de Socios Seniors (3º a 6º año social).
-* **`RN-08` — Fórmula de Cómputo de Saldo y Cuantificación de Puntos:**  
+* **`RN-07` — Suscripción Colegiada por Socios Activos:**
+  La resolución definitiva solo adquiere estado firme y validez cuando ha sido suscripta de manera colegiada por al menos dos integrantes habilitados del TD pertenecientes a la categoría estatutaria de Socios Activos (4º a 6º año social).
+* **`RN-08` — Fórmula de Sumatoria de Saldo y Cuantificación de Puntos:**
   El saldo neto individual de un socio se calcula estrictamente mediante la suma algebraica:
   $$\text{SaldoNeto} = \sum \text{PuntosPositivos} - \sum \text{PuntosNegativos}$$
   Todas las cantidades se expresan en **múltiplos y fracciones mínimas de 0.5 puntos**. Escala aplicable:
@@ -329,7 +329,7 @@ En respuesta a la observación de la cátedra de reemplazar expresiones vagas co
   - Si SaldoNeto <= -7.0 puntos: El sistema dispara automáticamente la **Alerta Amarilla Preventiva** hacia el socio y Comisión Directiva.
   - Si SaldoNeto <= -10.0 puntos: El sistema dispara de inmediato la **Alerta Roja de Pérdida Automática de la Condición de Socio**, notificando fehacientemente al imputado, a Comisión Directiva y a la Comisión Fiscalizadora para la revocación formal del alta asociativa.
 * **`RN-10` — Balances Cuatrimestrales de Auditoría Interna (Art. 137 Reg. Interno):**  
-  Se deben emitir obligatoriamente dos (2) balances al año social, con fecha de corte al finalizar el 1º y el 2º cuatrimestre institucional, agrupando sanciones y méritos por Subcomisión y categoría (Junior/Senior).
+  Se deben emitir obligatoriamente dos (2) balances al año social, con fecha de corte al finalizar el 1º y el 2º cuatrimestre institucional, agrupando sanciones y méritos por Subcomisión y categoría (Pasivo/Activo).
 
 ---
 
@@ -410,7 +410,7 @@ Para cumplir estrictamente con la indicación del docente de **separar requerimi
 
 ### 11.2. Supuestos del Proyecto (SUP)
 * **`SUP-01`:** La Subcomisión de Cómputos proveerá oportunamente la copia de respaldo del esquema y datos anonimizados de la base de datos MySQL de socios.
-* **`SUP-02`:** Los socios activos de AVEIT cuentan con casillas de correo electrónico operativas registradas en el padrón para la recepción de acuses y notificaciones.
+* **`SUP-02`:** Los socios con membresía vigente de AVEIT cuentan con casillas de correo electrónico operativas registradas en el padrón para la recepción de acuses y notificaciones.
 * **`SUP-03`:** Las reuniones deliberativas del Tribunal de Disciplina continuarán desarrollándose bajo modalidad predominantemente virtual quincenal.
 
 ### 11.3. Dependencias Externas (DEP)

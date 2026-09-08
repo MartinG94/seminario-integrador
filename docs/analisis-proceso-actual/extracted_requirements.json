@@ -5,13 +5,15 @@
     "source_type": "mixed_unstructured",
     "extraction_timestamp": "2026-09-01T16:40:00Z",
     "analyst_skill": "rawInterviewToRequirementsExtractor",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "last_normalized_date": "2026-09-08",
+    "terminology_rule": "Junior = Pasivo (1º-3º); Senior = Activo (4º-6º); la vigencia de membresía se modela por separado"
   },
   "stakeholders": [
     {
       "id": "STK-01",
       "name": "Tribunal de Disciplina (TD)",
-      "role": "Órgano Colegiado de Juzgamiento y Disciplina (3 Titulares y 3 Suplentes Seniors)",
+      "role": "Órgano Colegiado de Juzgamiento y Disciplina (3 Titulares y 3 Suplentes Activos)",
       "organization_unit": "Tribunal de Disciplina - AVEIT",
       "influence_level": "High",
       "primary_interests": [
@@ -37,8 +39,8 @@
     },
     {
       "id": "STK-03",
-      "name": "Masa Societaria de AVEIT (Socios Activos)",
-      "role": "Socios Ordinarios (Padrón de ~515 integrantes: Juniors de 1º-2º año y Seniors de 3º-6º año)",
+      "name": "Masa Societaria de AVEIT (membresía vigente)",
+      "role": "Socios Ordinarios (Padrón de ~515 integrantes: Pasivos de 1º-3º año y Activos de 4º-6º año)",
       "organization_unit": "Cuerpo General de Socios - AVEIT",
       "influence_level": "Medium",
       "primary_interests": [
@@ -140,7 +142,7 @@
       "module_or_epic": "Comunicaciones y Notificaciones",
       "primary_actor": "Sistema",
       "secondary_actors": [
-        "Socio Activo",
+        "Socio con membresía vigente",
         "Autoridad Solicitante",
         "Comisión Directiva"
       ],
@@ -171,7 +173,7 @@
       "module_or_epic": "Gestión Procesal y Plazos",
       "primary_actor": "Sistema",
       "secondary_actors": [
-        "Socio Activo",
+        "Socio con membresía vigente",
         "Tribunal de Disciplina"
       ],
       "inputs": [
@@ -198,7 +200,7 @@
       "title": "Presentación Digital de Justificaciones Tipificadas (Formulario T02 con Adjuntos)",
       "description": "El sistema debe proveer una interfaz web responsive adaptada a smartphones y computadoras para que el socio imputado complete el Formulario digital T02 dentro del plazo preclusivo, estructurado en cuatro bloques: 1) Datos Personales, 2) Descripción de la Sanción, 3) Causal Tipificada (enfermedad con certificado médico, obligaciones académicas, viajes de fuerza mayor con pasajes), y 4) Observaciones, permitiendo la carga de documentos probatorios digitales.",
       "module_or_epic": "Módulo del Socio ('Mis Expedientes')",
-      "primary_actor": "Socio Activo",
+      "primary_actor": "Socio con membresía vigente",
       "secondary_actors": [
         "Sistema",
         "Tribunal de Disciplina"
@@ -230,7 +232,7 @@
       "title": "Presentación Digital de Descargos Extraordinarios (Formulario T03 con Adjuntos)",
       "description": "El sistema debe permitir al socio imputado presentar un descargo extraordinario mediante el Formulario digital T03 dentro del plazo reglamentario de 5 días hábiles para circunstancias especiales no tipificadas explícitamente en el reglamento, fundamentando los hechos y adjuntando medios probatorios para la posterior valoración bajo sana crítica por parte del TD.",
       "module_or_epic": "Módulo del Socio ('Mis Expedientes')",
-      "primary_actor": "Socio Activo",
+      "primary_actor": "Socio con membresía vigente",
       "secondary_actors": [
         "Sistema",
         "Tribunal de Disciplina"
@@ -373,10 +375,10 @@
     },
     {
       "id": "RF-10",
-      "title": "Formalización y Suscripción mediante Firma Colegiada Digital de Socios Seniors",
-      "description": "El sistema debe exigir y registrar la firma colegiada digital reforzada de los miembros del Tribunal de Disciplina (en representación de los grupos sociales seniors) para validar jurídicamente la resolución, bloqueando cualquier modificación posterior del dictamen y habilitando su promulgación y despacho formal.",
+      "title": "Formalización y Suscripción mediante Firma Colegiada Digital de Socios Activos",
+      "description": "El sistema debe exigir y registrar la firma colegiada digital reforzada de los miembros del Tribunal de Disciplina (en representación de los grupos sociales activos) para validar jurídicamente la resolución, bloqueando cualquier modificación posterior del dictamen y habilitando su promulgación y despacho formal.",
       "module_or_epic": "Juzgamiento y Dictamen",
-      "primary_actor": "Tribunal de Disciplina (Socios Seniors)",
+      "primary_actor": "Tribunal de Disciplina (Socios Activos)",
       "secondary_actors": [
         "Sistema"
       ],
@@ -395,7 +397,7 @@
       "priority": "Must Have",
       "source_traceability": {
         "stakeholder_id": "STK-01",
-        "quote": "La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales seniors... pasando a Expedientes ya emitidos.",
+        "quote": "La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales activos... pasando a Expedientes ya emitidos.",
         "paragraph_or_time_ref": "Estudio-Inicial: Sec 3.5.2 (Estado 5) y Sec 3.7 (Proceso 3)"
       }
     },
@@ -432,9 +434,9 @@
     {
       "id": "RF-12",
       "title": "Portal de Transparencia y Consulta 'Mis Expedientes' para Socios",
-      "description": "El sistema debe proporcionar una vista web responsive optimizada para smartphones y terminales de escritorio donde cada socio activo pueda autenticarse y consultar en todo momento su saldo neto de puntos (+/-), el desglose cronológico de sus sanciones y premios, el estado en tiempo real de sus expedientes y el texto completo de las resoluciones publicadas.",
+      "description": "El sistema debe proporcionar una vista web responsive optimizada para smartphones y terminales de escritorio donde cada socio con membresía vigente pueda autenticarse y consultar en todo momento su saldo neto de puntos (+/-), el desglose cronológico de sus sanciones y premios, el estado en tiempo real de sus expedientes y el texto completo de las resoluciones publicadas.",
       "module_or_epic": "Portal del Socio ('Mis Expedientes')",
-      "primary_actor": "Socio Activo (Junior o Senior)",
+      "primary_actor": "Socio con membresía vigente (categoría Pasivo o Activo)",
       "secondary_actors": [
         "Sistema"
       ],
@@ -462,7 +464,7 @@
       "title": "Repositorio Oficial y Publicación Abierta de Resoluciones Disciplinarias",
       "description": "El sistema debe publicar de forma abierta e inmediata en el panel de transparencia institucional todas las resoluciones disciplinarias emitidas, permitiendo a cualquier socio o autoridad consultar el catálogo histórico de fallos clasificados por fecha, número de expediente y tipo de falta, sustituyendo definitivamente el panel de esterilla de corcho físico.",
       "module_or_epic": "Publicación y Transparencia Institucional",
-      "primary_actor": "Socio Activo / Autoridades / Comunidad AVEIT",
+      "primary_actor": "Socio con membresía vigente / Autoridades / Comunidad AVEIT",
       "secondary_actors": [
         "Tribunal de Disciplina"
       ],
@@ -486,14 +488,14 @@
     {
       "id": "RF-14",
       "title": "Módulo de Ranking Oficial de Puntos con Filtros Multidimensionales",
-      "description": "El sistema debe permitir al Tribunal de Disciplina y a la Comisión Directiva consultar, ordenar, filtrar y exportar el ranking oficial y consolidado de saldos de puntos (+/-) de la totalidad de los socios activos del padrón (~515 socios), con capacidades de segmentación por categoría estatutaria (Socios Juniors de 1º a 2º año vs Socios Seniors de 3º a 6º año) y por subcomisión de pertenencia (7 subcomisiones).",
+      "description": "El sistema debe permitir al Tribunal de Disciplina y a la Comisión Directiva consultar, ordenar, filtrar y exportar el ranking oficial y consolidado de saldos de puntos (+/-) de la totalidad de los socios con membresía vigente del padrón (~515 socios), con capacidades de segmentación por categoría estatutaria (Socios Pasivos de 1º a 3º año vs Socios Activos de 4º a 6º año) y por subcomisión de pertenencia (7 subcomisiones).",
       "module_or_epic": "Reportería y Conducción Directiva",
       "primary_actor": "Tribunal de Disciplina / Comisión Directiva",
       "secondary_actors": [
         "Asamblea General"
       ],
       "inputs": [
-        "Filtro por categoría social (Junior / Senior / Todos)",
+        "Filtro por categoría social (Pasivo / Activo / Todos)",
         "Filtro por subcomisión (Cómputos, RR.II., Org. y Eventos, Prensa, Mantenimiento, RR.HH., G. Social y Ambiental)",
         "Criterio de ordenamiento (mayor puntaje positivo, mayor puntaje negativo, alfabético)"
       ],
@@ -507,7 +509,7 @@
       "priority": "Must Have",
       "source_traceability": {
         "stakeholder_id": "STK-02",
-        "quote": "un módulo para consultar, clasificar y reportar el ranking oficial de puntos (+/-) de todos los socios activos (con filtros por categoría Junior/Senior y subcomisión)... dotándolos de visibilidad absoluta.",
+        "quote": "un módulo para consultar, clasificar y reportar el ranking oficial de puntos (+/-) de todos los socios con membresía vigente (con filtros por categoría Pasivo/Activo y subcomisión)... dotándolos de visibilidad absoluta.",
         "paragraph_or_time_ref": "Anteproyecto: Sec Resumen, Sec II-B.1 y Sec VIII.2"
       }
     },
@@ -572,7 +574,7 @@
     {
       "id": "RF-17",
       "title": "Generación Automatizada y Exportación de Balances Cuatrimestrales de Auditoría (Art. 137)",
-      "description": "El sistema debe generar de forma automática e instantánea los Informes y Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones exigidos por el Art. 137 del Reglamento Interno (dos veces al año), consolidando las actuaciones, saldos y métricas desglosadas por Subcomisión, Grupo Social (distinguiendo Juniors y Seniors) y socio individual, permitiendo su exportación oficial firmada en formato PDF y Excel para su tratamiento en Comisión Directiva y Asamblea.",
+      "description": "El sistema debe generar de forma automática e instantánea los Informes y Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones exigidos por el Art. 137 del Reglamento Interno (dos veces al año), consolidando las actuaciones, saldos y métricas desglosadas por Subcomisión, Grupo Social (distinguiendo Pasivos y Activos) y socio individual, permitiendo su exportación oficial firmada en formato PDF y Excel para su tratamiento en Comisión Directiva y Asamblea.",
       "module_or_epic": "Auditoría y Balances Institucionales",
       "primary_actor": "Tribunal de Disciplina",
       "secondary_actors": [
@@ -594,7 +596,7 @@
       "priority": "Must Have",
       "source_traceability": {
         "stakeholder_id": "STK-01",
-        "quote": "El sistema compila y genera instantáneamente el Informe y Balance Cuatrimestral de Premiaciones y Sanciones, categorizado por Subcomisión, Grupo Social (1º a 6º año, distinguiendo Juniors y Seniors) y Socio individual... para su presentación formal ante CD y Asamblea (Art. 137).",
+        "quote": "El sistema compila y genera instantáneamente el Informe y Balance Cuatrimestral de Premiaciones y Sanciones, categorizado por Subcomisión, Grupo Social (1º a 6º año, distinguiendo Pasivos y Activos) y Socio individual... para su presentación formal ante CD y Asamblea (Art. 137).",
         "paragraph_or_time_ref": "Estudio-Inicial: Sec 3.7 (Proceso 5) y Sec 4.2.8"
       }
     },
@@ -684,7 +686,7 @@
       "subcharacteristic": "Operability & Learnability",
       "planguage_specification": {
         "scale": "Puntuación de Usabilidad del Sistema (System Usability Scale - SUS) y compatibilidad visual en viewports móviles estándar de 360px a 414px de ancho.",
-        "meter": "Auditoría automatizada con Google Lighthouse Mobile y prueba de usabilidad con muestra representativa de 10 socios (5 Juniors y 5 Seniors) completando la carga de un descargo T02.",
+        "meter": "Auditoría automatizada con Google Lighthouse Mobile y prueba de usabilidad con muestra representativa de 10 socios (5 Pasivos y 5 Activos) completando la carga de un descargo T02.",
         "baseline": "0% de adaptabilidad móvil (Google Sheets requiere zoom y scroll bidireccional complejo en móvil).",
         "worst_acceptable": "Puntuación SUS >= 75 / Lighthouse Mobile Performance >= 80.",
         "target_plan": "Puntuación SUS >= 85 / Lighthouse Mobile >= 90 / Tiempo de carga de descargo < 2 minutos.",
@@ -786,7 +788,7 @@
     {
       "id": "RN-01",
       "title": "Pérdida Automática de Condición de Socio por Umbral Sancionatorio (Art. 93 Reglamento Interno)",
-      "statement": "Todo socio activo que acumule diez (10) o más puntos negativos netos pierde de forma automática y de pleno derecho su calidad y condición de socio de A.V.E.I.T., sin perjuicio de la posterior notificación formal que la Comisión Directiva y la Comisión Fiscalizadora deban cursar.",
+      "statement": "Todo socio con membresía vigente que acumule diez (10) o más puntos negativos netos pierde de forma automática y de pleno derecho su calidad y condición de socio de A.V.E.I.T., sin perjuicio de la posterior notificación formal que la Comisión Directiva y la Comisión Fiscalizadora deban cursar.",
       "rule_type": "Constraint",
       "logic_or_formula": "IF (Saldo_Neto_Puntos_Negativos >= 10.0) THEN Estado_Socio = 'Perdida_Automatica_Condicion_Socio' AND Disparar_Alerta_Roja(Socio, CD, Com_Fiscalizadora)",
       "enforcement_level": "Strict/Mandatory",
@@ -799,7 +801,7 @@
     {
       "id": "RN-02",
       "title": "Alerta Preventiva Temprana de Umbral Sancionatorio (7 Puntos Negativos)",
-      "statement": "Cuando un socio activo alcance o supere un saldo acumulado de siete (7) puntos negativos y menos de diez (10) puntos negativos, el sistema emitirá obligatoriamente una advertencia formal preventiva de riesgo de desvinculación asociativa.",
+      "statement": "Cuando un socio con membresía vigente alcance o supere un saldo acumulado de siete (7) puntos negativos y menos de diez (10) puntos negativos, el sistema emitirá obligatoriamente una advertencia formal preventiva de riesgo de desvinculación asociativa.",
       "rule_type": "Action Enabler",
       "logic_or_formula": "IF (Saldo_Neto_Puntos_Negativos >= 7.0 AND Saldo_Neto_Puntos_Negativos < 10.0) THEN Disparar_Alerta_Amarilla(Socio)",
       "enforcement_level": "Strict/Mandatory",
@@ -850,14 +852,14 @@
     },
     {
       "id": "RN-06",
-      "title": "Requisito de Firma Colegiada de Socios Seniors (Art. 12 Inc. 5 Reglamento 2026)",
-      "statement": "Toda resolución disciplinaria o de premiación requiere indefectiblemente el aval y la firma colegiada de los miembros titulares del Tribunal de Disciplina en representación de los grupos sociales seniors para adquirir eficacia jurídica y pasar al estado de emisión.",
+      "title": "Requisito de Firma Colegiada de Socios Activos (Art. 12 Inc. 5 Reglamento 2026)",
+      "statement": "Toda resolución disciplinaria o de premiación requiere indefectiblemente el aval y la firma colegiada de los miembros titulares del Tribunal de Disciplina en representación de los grupos sociales activos para adquirir eficacia jurídica y pasar al estado de emisión.",
       "rule_type": "Constraint",
-      "logic_or_formula": "IF (Firmas_Colegiadas_Seniors_Registradas == TRUE) THEN Estado_Expediente = 'Expedientes_Ya_Emitidos' ELSE Estado_Expediente = 'Pendiente_De_Firma'",
+      "logic_or_formula": "IF (Firmas_Colegiadas_Activos_Registradas == TRUE) THEN Estado_Expediente = 'Expedientes_Ya_Emitidos' ELSE Estado_Expediente = 'Pendiente_De_Firma'",
       "enforcement_level": "Strict/Mandatory",
       "source_traceability": {
         "stakeholder_id": "STK-01",
-        "quote": "La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales seniors.",
+        "quote": "La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales activos.",
         "paragraph_or_time_ref": "Estudio-Inicial: Sec 3.5.2 (Estado 5)"
       }
     },
@@ -903,13 +905,13 @@
     {
       "id": "RN-10",
       "title": "Segmentación y Atribuciones Estatutarias por Categoría Social (Estatuto 2026)",
-      "statement": "Los Socios Juniors (1º y 2º año social) se encuentran en etapa formativa y no pueden integrar el Tribunal de Disciplina ni presidir subcomisiones; los Socios Seniors (3º a 6º año social) tienen atribuciones de conducción operativa, elegibilidad estatutaria en órganos de control y firma colegiada de resoluciones.",
+      "statement": "Los Socios Pasivos (1º, 2º y 3º año social) se encuentran en etapa formativa y no pueden integrar el Tribunal de Disciplina ni presidir subcomisiones; los Socios Activos (4º a 6º año social) tienen atribuciones de conducción operativa, elegibilidad estatutaria en órganos de control y firma colegiada de resoluciones.",
       "rule_type": "Constraint",
-      "logic_or_formula": "IF (Ano_Social in [1, 2]) THEN Categoria = 'Junior' AND Elegible_TD = FALSE; IF (Ano_Social in [3, 4, 5, 6]) THEN Categoria = 'Senior' AND Elegible_TD = TRUE",
+      "logic_or_formula": "IF (Ano_Social in [1, 2, 3]) THEN Categoria = 'Pasivo' AND Elegible_TD = FALSE; IF (Ano_Social in [4, 5, 6]) THEN Categoria = 'Activo' AND Elegible_TD = TRUE",
       "enforcement_level": "Strict/Mandatory",
       "source_traceability": {
         "stakeholder_id": "STK-01",
-        "quote": "Socios Juniors (1º y 2º año social) en etapa formativa... Socios Seniors (3º a 6º año social) con mayores atribuciones de gestión, asignación de tareas y elegibilidad para órganos estatutarios de control.",
+        "quote": "Socios Pasivos (1º, 2º y 3º año social) en etapa formativa... Socios Activos (4º a 6º año social) con mayores atribuciones de gestión, asignación de tareas y elegibilidad para órganos estatutarios de control.",
         "paragraph_or_time_ref": "Estudio-Inicial: Glosario y Sec 3.4"
       }
     },
@@ -1017,12 +1019,12 @@
     {
       "id": "AMB-02",
       "target_stakeholder": "STK-01",
-      "raw_excerpt": "La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales seniors.",
+      "raw_excerpt": "La resolución redactada debe ser suscripta y avalada obligatoriamente por miembros del Tribunal en representación colegiada de los grupos sociales activos.",
       "detected_term": "firma colegiada digital",
       "risk": "Sobrediseño técnico (requerimiento de firma digital con token criptográfico X.509 PKI) vs falta de validez probatoria interna.",
       "clarification_question": "¿Qué mecanismo técnico de firma colegiada satisfará la validez interna exigida por el Tribunal de Disciplina?",
       "suggested_options": [
-        "Opción A (Recomendada): Firma electrónica interna mediante autenticación web con clave personal + PIN de confirmación de voto de los 3 miembros seniors habilitados.",
+        "Opción A (Recomendada): Firma electrónica interna mediante autenticación web con clave personal + PIN de confirmación de voto de los 3 miembros activos habilitados.",
         "Opción B: Firma visual digitalizada (imagen de rúbrica estampada en PDF generado automáticamente por el sistema con hash de integridad SHA-256).",
         "Opción C: Firma digital criptográfica avanzada con certificados personales de clave pública X.509."
       ]

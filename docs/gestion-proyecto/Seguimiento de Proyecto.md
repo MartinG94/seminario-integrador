@@ -96,7 +96,7 @@ El equipo de proyecto formaliza los siguientes acuerdos vinculantes de trabajo c
      │
 [Sprint 4: 21/10 al 03/11] -> Módulo Justificaciones, Deliberación Virtual, Votación y Firma Colegiada
      │
-[Sprint 5: 04/11 al 17/11] -> Cómputo Transaccional Inmutable, Publicación Transparente y Alertas 7/10 pts
+[Sprint 5: 04/11 al 17/11] -> Sumatoria Transaccional Inmutable de Puntos, Publicación Transparente y Alertas 7/10 pts
      │
 [Sprint 6: 18/11 al 01/12] -> Balances Cuatrimestrales Art. 137, Jurisprudencia, Homologación y Cierre
      │
@@ -257,8 +257,8 @@ El Product Backlog inicial consolida la totalidad de los requerimientos funciona
 
 | ID | Epic Asociada | Título de la Historia de Usuario | Descripción (Como / Quiero / Para) | Prioridad | SP | Sprint Asignado |
 | :---: | :--- | :--- | :--- | :---: | :---: | :---: |
-| **US-01** | **EP-01:** Núcleo de Socios y Seguridad | Autenticación con Roles y Control RBAC | **Como** socio o autoridad de AVEIT, **quiero** autenticarme con mis credenciales institucionales y que el sistema identifique mi rol y categoría (Junior/Senior), **para** acceder de forma segura a las funciones que me competen estatutariamente. | **Must** | 5 | **Sprint 1** |
-| **US-02** | **EP-01:** Núcleo de Socios y Seguridad | Visualización del Ranking Oficial de Puntos | **Como** integrante del TD o CD, **quiero** consultar el ranking consolidado de puntos (+/-) de los ~515 socios activos filtrando por categoría (Junior/Senior) y subcomisión, **para** supervisar el estado de cumplimiento y emitir informes ante Asambleas. | **Must** | 5 | **Sprint 1** |
+| **US-01** | **EP-01:** Núcleo de Socios y Seguridad | Autenticación con Roles y Control RBAC | **Como** socio o autoridad de AVEIT, **quiero** autenticarme con mis credenciales institucionales y que el sistema identifique mi rol y categoría (Pasivo/Activo), **para** acceder de forma segura a las funciones que me competen estatutariamente. | **Must** | 5 | **Sprint 1** |
+| **US-02** | **EP-01:** Núcleo de Socios y Seguridad | Visualización del Ranking Oficial de Puntos | **Como** integrante del TD o CD, **quiero** consultar el ranking consolidado de puntos (+/-) de los ~515 socios con membresía vigente filtrando por categoría (Pasivo/Activo) y subcomisión, **para** supervisar el estado de cumplimiento y emitir informes ante Asambleas. | **Must** | 5 | **Sprint 1** |
 | **US-03** | **EP-01:** Núcleo de Socios y Seguridad | Buscador Avanzado y Legajo Integral por Socio | **Como** miembro del TD o CD, **quiero** buscar a cualquier socio por nombre, legajo o subcomisión y abrir su legajo disciplinario completo, **para** auditar en una única vista todos sus antecedentes, causas, resoluciones y saldos. | **Must** | 5 | **Sprint 1** |
 | **US-04** | **EP-02:** Gestión de Expedientes y Formularios | Solicitud de Apertura con Formulario T01 + Anexo | **Como** autoridad habilitada (CD, Fiscalizadora, Subcomisión), **quiero** cargar digitalmente una solicitud T01 con hoja de Anexo detallando los hechos probados y la sanción/premio propuesto, **para** abrir formalmente un expediente ante el TD. | **Must** | 8 | **Sprint 2** |
 | **US-05** | **EP-02:** Gestión de Expedientes y Formularios | Validación Automática de Competencias de Inicio | **Como** sistema, **quiero** validar automáticamente que el solicitante del T01 posea competencia estatutaria sobre el imputado (Arts. 21 a 26), **para** rechazar de plano solicitudes improcedentes y evitar vicios procesales. | **Must** | 3 | **Sprint 2** |
@@ -270,10 +270,10 @@ El Product Backlog inicial consolida la totalidad de los requerimientos funciona
 | **US-11** | **EP-04:** Sustanciación, Votación y Resoluciones | Módulo 'Justificaciones' y Sustanciación del TD | **Como** integrante del TD, **quiero** evaluar en un visor unificado la solicitud T01, los descargos T02/T03 y los comprobantes adjuntos, **para** dictaminar la aprobación o rechazo fundado de cada justificación. | **Must** | 8 | **Sprint 4** |
 | **US-12** | **EP-04:** Sustanciación, Votación y Resoluciones | Gestión de Inhibiciones y Vocales Suplentes | **Como** miembro del TD, **quiero** registrar mi inhibición en expedientes donde haya promovido la acción de oficio o tenga conflicto de interés, **para** que el sistema inhabilite mi voto y asigne a un vocal suplente habilitado. | **Must** | 5 | **Sprint 4** |
 | **US-13** | **EP-04:** Sustanciación, Votación y Resoluciones | Deliberación Remota y Votación Nominal Fundada | **Como** vocal del TD en sesión virtual, **quiero** registrar mi voto nominal fundamentado y redactar la resolución con Vistos, Considerandos y Puntuación, **para** alcanzar la mayoría absoluta estatutaria de forma remota. | **Must** | 8 | **Sprint 4** |
-| **US-14** | **EP-04:** Sustanciación, Votación y Resoluciones | Formalización mediante Firma Colegiada de Seniors | **Como** vocal titular del TD (Socio Senior), **quiero** estampar mi firma colegiada digital reforzada sobre la resolución aprobada, **para** dar validez jurídica al dictamen y autorizar su promulgación oficial. | **Must** | 5 | **Sprint 4** |
-| **US-15** | **EP-05:** Cómputo Seguro, Publicación y Alarmas | Cómputo Transaccional Inalterable de Puntos (+/-) | **Como** sistema, **quiero** actualizar de forma atómica y auditada el saldo del socio tras la firma de la resolución, **para** erradicar sentencias manuales `UPDATE` en MySQL y garantizar inmutabilidad histórica. | **Must** | 5 | **Sprint 5** |
-| **US-16** | **EP-05:** Cómputo Seguro, Publicación y Alarmas | Portal 'Mis Expedientes' y Publicación Transparente | **Como** socio activo, **quiero** consultar desde mi celular mis expedientes en trámite y las resoluciones públicas promulgadas por el TD, **para** contar con máxima transparencia procesal. | **Must** | 5 | **Sprint 5** |
-| **US-17** | **EP-05:** Cómputo Seguro, Publicación y Alarmas | Motor de Alarmas Escalonadas (7 y 10 Puntos) | **Como** sistema, **quiero** despachar alertas preventivas a los 7 puntos negativos y alertas críticas rojas de pérdida automática de condición de socio a los 10 puntos a CD y Fiscalizadora, **para** alertar riesgos críticos. | **Must** | 5 | **Sprint 5** |
+| **US-14** | **EP-04:** Sustanciación, Votación y Resoluciones | Formalización mediante Firma Colegiada de Activos | **Como** vocal titular del TD (Socio Activo), **quiero** estampar mi firma colegiada digital reforzada sobre la resolución aprobada, **para** dar validez jurídica al dictamen y autorizar su promulgación oficial. | **Must** | 5 | **Sprint 4** |
+| **US-15** | **EP-05:** Sumatoria Segura de Puntos, Publicación y Alarmas | Sumatoria Transaccional Inalterable de Puntos (+/-) | **Como** sistema, **quiero** actualizar de forma atómica y auditada el saldo del socio tras la firma de la resolución, **para** erradicar sentencias manuales `UPDATE` en MySQL y garantizar inmutabilidad histórica. | **Must** | 5 | **Sprint 5** |
+| **US-16** | **EP-05:** Sumatoria Segura de Puntos, Publicación y Alarmas | Portal 'Mis Expedientes' y Publicación Transparente | **Como** socio con membresía vigente, **quiero** consultar desde mi celular mis expedientes en trámite y las resoluciones públicas promulgadas por el TD, **para** contar con máxima transparencia procesal. | **Must** | 5 | **Sprint 5** |
+| **US-17** | **EP-05:** Sumatoria Segura de Puntos, Publicación y Alarmas | Motor de Alarmas Escalonadas (7 y 10 Puntos) | **Como** sistema, **quiero** despachar alertas preventivas a los 7 puntos negativos y alertas críticas rojas de pérdida automática de condición de socio a los 10 puntos a CD y Fiscalizadora, **para** alertar riesgos críticos. | **Must** | 5 | **Sprint 5** |
 | **US-18** | **EP-06:** Auditoría, Balances y Jurisprudencia | Generación de Balances Cuatrimestrales (Art. 137) | **Como** autoridad del TD, **quiero** generar con un clic el balance cuatrimestral consolidado de premios y sanciones desglosado por subcomisión y grupo social en PDF, **para** presentarlo ante la Comisión Directiva y Asamblea. | **Must** | 8 | **Sprint 6** |
 | **US-19** | **EP-06:** Auditoría, Balances y Jurisprudencia | Repositorio de Antecedentes y Jurisprudencia | **Como** integrante del TD, **quiero** buscar resoluciones históricas por causal o palabra clave, **para** aplicar escalas de puntos homogéneas y previsibles conforme a la jurisprudencia interna de AVEIT. | **Should** | 5 | **Sprint 6** |
 
@@ -293,7 +293,7 @@ flowchart LR
         B2["2. Apertura y Notificación (T01)"]
         B3["3. Descargos y Plazos (T02/T03)"]
         B4["4. Sustanciación y Firma TD"]
-        B5["5. Cómputo, Portal y Alertas"]
+        B5["5. Sumatoria de Puntos, Portal y Alertas"]
         B6["6. Balances y Jurisprudencia"]
     end
     B1 --> B2 --> B3 --> B4 --> B5 --> B6
@@ -301,13 +301,13 @@ flowchart LR
 
 ##### Matriz Bidimensional del User Story Map:
 
-| Actividades del Backbone -> | 1. Acceso, Padrón y Legajos | 2. Apertura y Notificación (T01) | 3. Descargos y Plazos (T02/T03) | 4. Sustanciación y Firma TD | 5. Cómputo, Portal y Alertas | 6. Balances y Jurisprudencia |
+| Actividades del Backbone -> | 1. Acceso, Padrón y Legajos | 2. Apertura y Notificación (T01) | 3. Descargos y Plazos (T02/T03) | 4. Sustanciación y Firma TD | 5. Sumatoria de Puntos, Portal y Alertas | 6. Balances y Jurisprudencia |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Sprint 1**<br>*(Walking Skeleton: Auth & Visibilidad)* | • **US-01:** Auth RBAC y Roles<br>• **US-02:** Ranking Oficial Puntos<br>• **US-03:** Buscador y Legajo Socio | — | — | — | — | — |
 | **Sprint 2**<br>*(Inicio y Trazabilidad de Causas)* | — | • **US-04:** Apertura Formulario T01<br>• **US-05:** Validación Competencias<br>• **US-06:** Acuse Sanción por Email<br>• **US-07:** Tablero de 6 Estados | — | — | — | — |
 | **Sprint 3**<br>*(Defensa del Socio y Plazos)* | — | — | • **US-08:** Temporizador 5 Días<br>• **US-09:** Justificación Form T02<br>• **US-10:** Descargo Extraord. T03 | — | — | — |
-| **Sprint 4**<br>*(Resolución Colegiada del TD)* | — | — | — | • **US-11:** Módulo Justificaciones<br>• **US-12:** Inhibiciones y Suplentes<br>• **US-13:** Deliberación y Votación<br>• **US-14:** Firma Colegiada Seniors | — | — |
-| **Sprint 5**<br>*(Cómputo Seguro y Transparencia)* | — | — | — | — | • **US-15:** Cómputo Inalterable<br>• **US-16:** Portal 'Mis Expedientes'<br>• **US-17:** Alarmas Críticas 7/10 pts | — |
+| **Sprint 4**<br>*(Resolución Colegiada del TD)* | — | — | — | • **US-11:** Módulo Justificaciones<br>• **US-12:** Inhibiciones y Suplentes<br>• **US-13:** Deliberación y Votación<br>• **US-14:** Firma Colegiada Activos | — | — |
+| **Sprint 5**<br>*(Sumatoria Segura de Puntos y Transparencia)* | — | — | — | — | • **US-15:** Sumatoria Inalterable de Puntos<br>• **US-16:** Portal 'Mis Expedientes'<br>• **US-17:** Alarmas Críticas 7/10 pts | — |
 | **Sprint 6**<br>*(Auditoría, Cierre y Homologación)* | — | — | — | — | — | • **US-18:** Balances Art. 137<br>• **US-19:** Antecedentes Históricos<br>• **Integración & Pruebas E2E** |
 
 ---

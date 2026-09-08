@@ -12,8 +12,8 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 | **Sprint 1** | 09/09 al 22/09 | **Walking Skeleton:** Autenticación JWT, Roles RBAC, Padrón institucional, Ranking oficial de puntos y Legajo de socio. | `US-01` a `US-04` | **Próximo a Iniciar (Spec 001)** |
 | **Sprint 2** | 23/09 al 06/10 | **Expedientes y Apertura T01:** Formulario T01 digital con hoja de Anexo, validación de competencias (Arts. 21-26), notificaciones y Tablero de 6 Estados. | `US-05` a `US-08` | Planificado |
 | **Sprint 3** | 07/10 al 20/10 | **Descargos y Plazos Preclusivos:** Formularios T02 y T03 con adjuntos probatorios (PDF/imágenes) y temporizador regresivo de 5 días hábiles. | `US-09` a `US-11` | Planificado |
-| **Sprint 4** | 21/10 al 03/11 | **Sustanciación y Votación Colegiada:** Módulo 'Justificaciones' del TD, gestión de inhibiciones/suplencias, votación nominal remota y firma colegiada de Seniors. | `US-12` a `US-14` | Planificado |
-| **Sprint 5** | 04/11 al 17/11 | **Cómputo Inmutable y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `US-15` a `US-17` | Planificado |
+| **Sprint 4** | 21/10 al 03/11 | **Sustanciación y Votación Colegiada:** Módulo 'Justificaciones' del TD, gestión de inhibiciones/suplencias, votación nominal remota y firma colegiada de Activos. | `US-12` a `US-14` | Planificado |
+| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `US-15` a `US-17` | Planificado |
 | **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `US-18` a `US-19` | Planificado |
 
 ---
@@ -51,7 +51,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [ ] **T2. Conexión MySQL y Healthcheck en Docker:** Configurar conector MySQL y endpoint de estado `/api/health/`.  
       *(RF: —)* **Hecho cuando:** `docker compose up` levanta `db` y `backend`, y `curl http://localhost:8000/api/health/` devuelve `{"status": "ok", "db": "connected"}`.
 
-- [ ] **T3. Modelo de Socios y Subcomisiones:** Implementar modelos `Subcomision` y `Socio` con validación de año social y categorización automática Junior/Senior.  
+- [ ] **T3. Modelo de Socios y Subcomisiones:** Implementar modelos `Subcomision` y `Socio` con validación de año social y categorización automática Pasivo/Activo.
       *(RF: RF-06-WS)* **Hecho cuando:** Tests unitarios de creación de socios, unicidad de legajo y cálculo de categoría social en verde.
 
 - [ ] **T4. Libro Mayor de Puntos (Transacciones Inmutables):** Crear modelo `TransaccionPuntos` y servicio `calculate_socio_balance(socio_id)`.  

@@ -21,7 +21,7 @@ El modelo ha sido diseñado bajo las reglas del paradigma orientado a objetos co
 
 | Patrón ASI Canónico | Clases Participantes | Justificación y Regla de Negocio Soportada |
 | :--- | :--- | :--- |
-| **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioT02`<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, categorías Juniors vs Seniors con sus prerrogativas estatutarias) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
+| **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioT02`<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, categorías Pasivos vs Activos con sus prerrogativas estatutarias) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
 | **2. Encabezado - Detalle**<br>*(Master - Detail)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `DetalleImputacion` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `DetalleResolucionSocio` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `FirmaColegiada` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `ExpedienteDisciplinario` (1) *-- (0..*) `VotoNominal` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `FormularioJustificacion` (1) *-- (0..*) `ComprobanteAdjunto` | Modela la composición atómica de transacciones complejas: un expediente puede imputar a múltiples socios por un mismo hecho; la resolución dictamina los puntos definitivos individuales de cada socio involucrado; y se registra la deliberación nominal individual y la firma colegiada indelegable exigida por estatuto (`RN-04`, `RN-06`, `RN-08`). |
 | **3. Historial de Estados con Vigencia Temporal**<br>*(`[fechaHoraDesde, fechaHoraHasta]`)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `CambioEstadoExpediente` (*) $\rightarrow$ (1) `EstadoExpediente`<br>• `Socio` (1) *-- (1..*) `CambioEstadoSocio` (*) $\rightarrow$ (1) `EstadoSocio` | Otorga auditoría cronológica absoluta y trazabilidad inalterable con intervalos de vigencia temporal (`fechaHoraDesde` y `fechaHoraHasta = null` para el estado actual vigente). Soporta los seis (6) estados oficiales del expediente (Art. 12 del Reglamento 2026) y el ciclo de vida del socio (Activo, Alerta Amarilla 7 pts, Pérdida Automática de Condición 10 pts) (`RN-01`, `RN-02`, `RN-03`, `RN-06`, `RN-11`). |
 | **4. Rol / Tipo de Rol**<br>*(Party - Role)* | • `Socio` (1) *-- (1..*) `RolInstitucional`<br>$\ll$abstract$\gg$ `RolInstitucional` $\leftarrow$ `MiembroTribunal`, `MiembroComisionDirectiva`, `MiembroComisionFiscalizadora`, `MiembroComisionRevisora`, `JefeEquipo` | Permite que un mismo socio físico desempeñe diferentes roles institucionales simultáneamente o en diferentes mandatos sin duplicar su identidad ni generar herencia múltiple. Facilita la validación estricta de competencias para solicitar expedientes (Arts. 21 a 26) y la detección de incompatibilidades/inhibiciones (`RN-05`, `RN-07`, `RN-10`). |
@@ -51,8 +51,8 @@ classDiagram
         -Float saldoPuntosActual
         +conocerEstadoActual() EstadoSocio
         +calcularSaldoPuntos() Float
-        +esSenior() Boolean
-        +esJunior() Boolean
+        +esCategoriaActiva() Boolean
+        +esCategoriaPasiva() Boolean
         +tieneAlertaAmarilla() Boolean
         +tieneAlertaRoja() Boolean
         +cambiarEstado(nuevoEstado, motivo)
@@ -124,7 +124,7 @@ classDiagram
     class MiembroTribunal {
         -Boolean esTitular
         -Integer grupoSocialRepresentado
-        +esSeniorHabilitadoFirma() Boolean
+        +esCategoriaActivaHabilitadaFirma() Boolean
     }
 
     class MiembroComisionDirectiva {
@@ -408,8 +408,8 @@ package "Estructura Societaria y Categorización (Item - Item Descriptor)" {
         - saldoPuntosActual: Float
         + conocerEstadoActual(): EstadoSocio
         + calcularSaldoPuntos(): Float
-        + esSenior(): Boolean
-        + esJunior(): Boolean
+        + esCategoriaActiva(): Boolean
+        + esCategoriaPasiva(): Boolean
         + tieneAlertaAmarilla(): Boolean
         + tieneAlertaRoja(): Boolean
         + cambiarEstado(nuevoEstado: EstadoSocio, motivo: String): void
@@ -479,7 +479,7 @@ package "Roles Institucionales y Competencias (Party - Role)" {
     class MiembroTribunal {
         - esTitular: Boolean
         - grupoSocialRepresentado: Integer
-        + esSeniorHabilitadoFirma(): Boolean
+        + esCategoriaActivaHabilitadaFirma(): Boolean
     }
 
     class MiembroComisionDirectiva {
@@ -758,7 +758,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 * **Métodos Conceptuales:**
   - `conocerEstadoActual(): EstadoSocio`: Retorna el estado vigente (aquel cuyo `CambioEstadoSocio.fechaHoraHasta == null`).
   - `calcularSaldoPuntos(): Float`: Totaliza algebraicamente los asientos en `MovimientoPuntos`.
-  - `esSenior(): Boolean`: Evalúa si pertenece a la categoría Senior (3º a 6º año social).
+  - `esCategoriaActiva(): Boolean`: Evalúa si pertenece a la categoría Activo (4º a 6º año social), sin confundirla con el estado de vigencia.
   - `tieneAlertaAmarilla(): Boolean`: Evalúa si `saldoPuntosActual` $\le -7.0$ y $> -10.0$ (`RN-02`).
   - `tieneAlertaRoja(): Boolean`: Evalúa si `saldoPuntosActual` $\le -10.0$ (`RN-01`).
   - `cambiarEstado(nuevoEstado, motivo)`: Cierra la vigencia del estado actual y genera una nueva instancia de `CambioEstadoSocio`.
@@ -776,15 +776,15 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ### 4.2. Ficha Técnica: `CategoriaSocio`
 * **Patrón ASI:** Descriptor de Ítem (Item Descriptor).
-* **Propósito:** Almacena la caracterización estandarizada de las categorías societarias (Socios Juniors vs. Socios Seniors) y sus atribuciones normativas según el Estatuto 2026.
+* **Propósito:** Almacena la caracterización estandarizada de las categorías societarias (Socios Pasivos vs. Socios Activos) y sus atribuciones normativas según el Estatuto 2026.
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
-  | `denominacion` | `String` | Nombre de la categoría ("Junior", "Senior"). | Único ("Junior" / "Senior"). |
-  | `anioSocialMinimo` | `Integer` | Año social inicial de la categoría (1 para Junior, 3 para Senior). | Entre 1 y 6. |
-  | `anioSocialMaximo` | `Integer` | Año social final de la categoría (2 para Junior, 6 para Senior). | $\ge$ `anioSocialMinimo`. |
-  | `permiteIntegrarTD` | `Boolean` | Habilitación estatutaria para ser electo en el TD. | `false` para Juniors, `true` para Seniors (`RN-10`). |
-  | `permitePresidirSubcomision` | `Boolean` | Habilitación estatutaria para presidir subcomisiones. | `false` para Juniors, `true` para Seniors (`RN-10`). |
+  | `denominacion` | `String` | Nombre de la categoría ("Pasivo", "Activo"). | Único ("Pasivo" / "Activo"). |
+  | `anioSocialMinimo` | `Integer` | Año social inicial de la categoría (1 para Pasivo, 4 para Activo). | Entre 1 y 6. |
+  | `anioSocialMaximo` | `Integer` | Año social final de la categoría (3 para Pasivo, 6 para Activo). | $\ge$ `anioSocialMinimo`. |
+  | `permiteIntegrarTD` | `Boolean` | Habilitación estatutaria para ser electo en el TD. | `false` para Pasivos, `true` para Activos (`RN-10`). |
+  | `permitePresidirSubcomision` | `Boolean` | Habilitación estatutaria para presidir subcomisiones. | `false` para Pasivos, `true` para Activos (`RN-10`). |
   | `descripcion` | `String` | Alcance y rol formativo de la categoría. | Texto explicativo. |
 * **Relaciones:**
   - `categoriza` $\rightarrow$ `Socio` (1 a 0..*).
@@ -1102,9 +1102,9 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   | `considerandos` | `String` | Fundamentación doctrinaria, reglamentaria y valoración probatoria. | No Nulo. |
   | `parteDispositiva` | `String` | Texto resolutivo vinculante (Artículos de la resolución). | No Nulo. |
   | `esPublica` | `Boolean` | Indicador de publicación en el panel de transparencia. | `true` por defecto. |
-  | `hashFirmaDigital` | `String` | Firma criptográfica consolidada de los miembros seniors. | Inalterable (`RN-06`). |
+  | `hashFirmaDigital` | `String` | Firma criptográfica consolidada de los miembros activos. | Inalterable (`RN-06`). |
 * **Métodos Conceptuales:**
-  - `estaCompletamenteFirmada(): Boolean`: Verifica que existan las firmas colegiadas reglamentarias de los miembros seniors (`RN-06`).
+  - `estaCompletamenteFirmada(): Boolean`: Verifica que existan las firmas colegiadas reglamentarias de los miembros activos (`RN-06`).
   - `publicarResolucion()`: Habilita la visibilidad en el módulo público y de transparencia.
 * **Relaciones:**
   - `concluye en` $\leftarrow$ `ExpedienteDisciplinario` (0..1 a 1).
@@ -1131,13 +1131,13 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ### 4.21. Ficha Técnica: `FirmaColegiada`
 * **Patrón ASI:** Detalle de Transacción / Aval Institucional.
-* **Propósito:** Registra la suscripción formal y digital de cada integrante habilitado del TD en representación de los grupos sociales seniors para conferir eficacia jurídica al fallo.
+* **Propósito:** Registra la suscripción formal y digital de cada integrante habilitado del TD en representación de los grupos sociales activos para conferir eficacia jurídica al fallo.
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
   | `fechaHoraFirma` | `DateTime` | Momento exacto de suscripción digital. | Sellado de tiempo no nulo. |
   | `selloDigital` | `String` | Firma digital / hash criptográfico del firmante. | Inalterable (`RN-06`). |
-  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Vocal Titular Senior"). | No Nulo (`RN-06`, `RN-10`). |
+  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Vocal Titular Activo"). | No Nulo (`RN-06`, `RN-10`). |
 * **Relaciones:**
   - `respaldada por` $\leftarrow$ `ResolucionDisciplinaria` (1..* a 1 - Composición).
   - `firmada por` $\rightarrow$ `MiembroTribunal` (0..* a 1).
@@ -1215,11 +1215,11 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 | **`RN-03` (Art. 12 Inc. 2 Reglamento 2026)** | Plazo Preclusivo fatal de 5 días hábiles para presentar descargos (T02/T03). | • `ExpedienteDisciplinario.calcularPlazoPreclusivo()`<br>• `ExpedienteDisciplinario.estaEnPlazoDescargo()`<br>• `NotificacionAcuseSancion.fechaHoraLimiteDescargo`<br>• `FormularioJustificacion.esPresentadoEnTermino()` |
 | **`RN-04` (Art. 96 Estatuto Social)** | Mayoría absoluta reglamentaria ($\ge 2$ votos) e irrecurribilidad en fallos del TD. | • `ExpedienteDisciplinario.tieneQuorumVotacion()`<br>• `ExpedienteDisciplinario.calcularMayoriaVotacion()`<br>• `VotoNominal.esAfirmativo()` |
 | **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de vocal del TD con conflicto de interés o promotor de la acción. | • `VotoNominal.esInhibicion()`<br>• `MiembroTribunal`<br>• `RolInstitucional.validarCompetenciaAccion()` |
-| **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma Colegiada digital de Socios Seniors previa a la emisión del fallo. | • `FirmaColegiada`<br>• `MiembroTribunal.esSeniorHabilitadoFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
+| **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma Colegiada digital de Socios Activos previa a la emisión del fallo. | • `FirmaColegiada`<br>• `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
 | **`RN-07` (Arts. 21 a 26 Reglamento 2026)** | Delimitación estricta de competencias funcionales para solicitar apertura de causas. | • `RolInstitucional.validarCompetenciaAccion()`<br>• `SolicitudT01.validarCompetenciaSolicitante()`<br>• `MembresiaSubcomision.esAutoridadHabilitada()` |
 | **`RN-08` (Circular 001/2026)** | Escalas tarifadas y fraccionamiento obligatorio en múltiplos de 0.5 puntos. | • `TipificacionFaltaMerito.esPuntajeValido()`<br>• `DetalleImputacion.puntosPropuestos`<br>• `DetalleResolucionSocio.esPuntajeValido()`<br>• `MovimientoPuntos.puntosVariacion` |
 | **`RN-09` (Art. 137 Reglamento Interno)** | Emisión de 2 Balances Cuatrimestrales de Auditoría Interna por año social. | • `BalanceCuatrimestral.calcularMetricasGenerales()`<br>• `BalanceCuatrimestral.exportarInformePDF()`<br>• `DetalleBalanceSubcomision` |
-| **`RN-10` (Estatuto 2026)** | Segmentación Junior (1º-2º año) vs. Senior (3º-6º año) y derechos estatutarios. | • `CategoriaSocio.permiteIntegrarTD`<br>• `CategoriaSocio.permitePresidirSubcomision`<br>• `Socio.esSenior()` / `Socio.esJunior()` |
+| **`RN-10` (Estatuto 2026)** | Segmentación Pasivo (1º-3º año) vs. Activo (4º-6º año) y derechos estatutarios. Equivalencias históricas: Junior = Pasivo; Senior = Activo. | • `CategoriaSocio.permiteIntegrarTD`<br>• `CategoriaSocio.permitePresidirSubcomision`<br>• `Socio.esCategoriaActiva()` / `Socio.esCategoriaPasiva()` |
 | **`RN-11` (Pistas de Auditoría)** | Inmutabilidad de saldos y erradicación total de sentencias SQL UPDATE directas. | • `MovimientoPuntos.esInalterable()`<br>• `Socio.impactarMovimientoPuntos()`<br>• `CambioEstadoExpediente` / `CambioEstadoSocio` |
 
 ---

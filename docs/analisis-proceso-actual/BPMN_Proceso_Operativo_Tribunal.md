@@ -30,7 +30,7 @@
 | **Disparador (Trigger)** | Cierre administrativo de un evento institucional obligatorio con inasistencias detectadas o recepción de Formulario T01 formal con Hoja de Anexo por autoridad habilitada. |
 | **Límite Inicial** | Detección de falta/mérito o registro formal de solicitud de puntos. |
 | **Límite Final** | Publicación de la resolución firmada, impacto inalterable en el saldo de puntos y emisión de balances cuatrimestrales de auditoría. |
-| **Cliente(s) del Proceso** | Masa Societaria de AVEIT (Socios Juniors y Seniors), Comisión Directiva, Asamblea General. |
+| **Cliente(s) del Proceso** | Masa Societaria de AVEIT (Socios Pasivos y Activos), Comisión Directiva, Asamblea General. |
 | **Productos / Salidas** | 1. Expediente disciplinario tramitado y resuelto formalmente.<br>2. Resolución Oficial con estructura reglamentaria y firma digital de 3 jueces.<br>3. Saldo de puntos del socio actualizado de forma auditada e inmutable.<br>4. Alertas escalonadas (Amarilla a los -7 pts y Roja a los -10 pts) despachadas.<br>5. Balances Cuatrimestrales de Auditoría Interna consolidados en PDF/Excel. |
 
 ---
