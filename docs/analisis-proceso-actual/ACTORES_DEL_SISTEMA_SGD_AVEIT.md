@@ -1,4 +1,4 @@
-﻿# UNIVERSIDAD TECNOLÓGICA NACIONAL
+# UNIVERSIDAD TECNOLÓGICA NACIONAL
 ## FACULTAD REGIONAL CÓRDOBA
 ### Carrera: Analista Desarrollador Universitario de Sistemas de Información
 ### Cátedra: Seminario Integrador
@@ -119,7 +119,7 @@ classDiagram
 
 ### ACT-01: Socio Ordinario
 * **Tipo de Actor:** Actor Humano Principal (Masa Societaria).
-* **Alcance y Agrupación:** Agrupa al padrón total de más de 500 socios activos de AVEIT, integrando orgánicamente tanto a **Socios Juniors (1º y 2º año social)** como a **Socios Seniors (3º a 6º año social)** en su interacción base como miembros de la comunidad.
+* **Alcance y Agrupación:** Agrupa al padrón total de más de 500 socios con membresía vigente de AVEIT, integrando orgánicamente tanto a **Socios Pasivos (1º, 2º y 3º año social)** como a **Socios Activos (4º a 6º año social)** en su interacción base como miembros de la comunidad.
 * **Propósito con el Sistema:** Consultar su posición y saldo neto acumulado de puntos (+/-), revisar el estado procesal de sus trámites en "Mis Expedientes", recibir notificaciones fehacientes de causas y ejercer su derecho reglamentario a defensa mediante formularios digitales con prueba adjunta.
 * **Responsabilidades y Casos de Uso Clave:**
   1. Iniciar sesión en la aplicación web responsive mobile desde smartphones o PCs.
@@ -143,7 +143,7 @@ classDiagram
 * **Responsabilidades y Casos de Uso Clave:**
   1. Gestionar el **Tablero de Control de Estados** (*Expediente Creado, En período de subida de justificaciones, Las justificaciones están siendo revisadas, En espera de resolución, Pendiente de firma y envío, Expedientes ya emitidos*).
   2. Utilizar el **Buscador Integral de Legajos por Socio** para rastrear expedientes históricos, antecedentes y descargos previos de cualquier socio.
-  3. Consultar, filtrar y ordenar el **Ranking Consolidado de Puntos** de la masa societaria (por categoría Junior/Senior y por subcomisión).
+  3. Consultar, filtrar y ordenar el **Ranking Consolidado de Puntos** de la masa societaria (por categoría Pasivo/Activo y por subcomisión).
   4. Revisar justificaciones T02 y descargos T03 en el módulo *"Justificaciones"*, aprobando o desaprobando formalmente las solicitudes y analizando los archivos probatorios adjuntos.
   5. Iniciar expedientes disciplinarios de oficio o en concepto de "rectificación" (Art. 24 del Reglamento Procesal 2026).
   6. Emitir su **voto nominal fundado** durante las sesiones del Tribunal.
@@ -162,7 +162,7 @@ classDiagram
 * **Alcance y Agrupación:** Agrupa a los siete (7) integrantes de la Mesa Directiva de AVEIT (Presidente, Vicepresidente, Tesorero, Protesorero, Secretario General, Prosecretario y Secretario de Actas), y abarca las facultades institucionales ejecutivas y fiscalizadoras de inicio de actuaciones.
 * **Propósito con el Sistema:** Supervisar el orden y cumplimiento reglamentario global, requerir formalmente sumarios disciplinarios o premios, monitorear el ranking consolidado de la masa societaria, recepcionar alertas de límites críticos (7 y 10 puntos) y dar tratamiento a los balances cuatrimestrales de auditoría.
 * **Responsabilidades y Casos de Uso Clave:**
-  1. Iniciar solicitudes de premiación o sanción mediante el **Formulario T01 y Hoja Anexo T01** respecto a cualquier socio activo (Junior o Senior), subcomisión o equipo de trabajo (Art. 21 del Reglamento Procesal 2026).
+  1. Iniciar solicitudes de premiación o sanción mediante el **Formulario T01 y Hoja Anexo T01** respecto a cualquier socio con membresía vigente, sea de categoría Pasivo o Activo, subcomisión o equipo de trabajo (Art. 21 del Reglamento Procesal 2026).
   2. Acceder al **Módulo de Reportes Ejecutivos y Ranking General Consolidado** para el seguimiento global del padrón societario.
   3. Recepcionar las **Alertas Preventivas (7 Puntos Negativos)** y las **Alertas Críticas Rojas (10 Puntos Negativos)** por pérdida automática de condición de socio para su tratamiento formal (Art. 93 del Reglamento Interno de Disciplina).
   4. Recibir, revisar y tratar formalmente los **Balances Cuatrimestrales de Premiaciones y Sanciones** (Art. 137) emitidos por el TD.
@@ -183,7 +183,7 @@ classDiagram
   3. Consultar el estado de tramitación de los expedientes que hayan promovido.
   4. Realizar la evaluación cuatrimestral de desempeño de los integrantes de su área (Art. 91 del Reglamento Interno de Disciplina).
 * **Restricciones y Reglas de Negocio:**
-  - **Delimitación de Competencia Estricta (Arts. 25 y 26):** Solo pueden accionar sobre los socios activos o voluntarios **adscriptos a su propia subcomisión o equipo de trabajo**. No pueden solicitar sanciones sobre las demás autoridades de su misma subcomisión ni sobre integrantes de otras áreas.
+  - **Delimitación de Competencia Estricta (Arts. 25 y 26):** Solo pueden accionar sobre los socios con membresía vigente o voluntarios **adscriptos a su propia subcomisión o equipo de trabajo**. No pueden solicitar sanciones sobre las demás autoridades de su misma subcomisión ni sobre integrantes de otras áreas.
 
 ---
 

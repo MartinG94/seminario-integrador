@@ -46,9 +46,9 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
 - `email` (VARCHAR 150, Unique)
 - `subcomision_id` (FK `socios_subcomision`, Indexed)
 - `social_year` (INT) — Año social (1 a 6)
-- `category` (VARCHAR 10) — 'JUNIOR' (años 1-2) o 'SENIOR' (años 3-6)
+- `category` (VARCHAR 10) — `PASSIVE` (mostrar "Pasivo"; alias anterior Junior; años 1–3) o `ACTIVE` (mostrar "Activo"; alias anterior Senior; años 4–6)
 - `role` (VARCHAR 20) — 'SOCIO', 'TD', 'CD', 'FISCALIZADORA', 'ADMIN'
-- `is_active` (BOOLEAN, default True)
+- `is_enabled` (BOOLEAN, default True) — vigencia operativa de la cuenta; es independiente de `category`
 
 ### Tabla: `ranking_transaccionpuntos` (Libro Mayor Inmutable)
 - `id` (BIGINT, PK, Auto)
@@ -83,7 +83,7 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
 
 - **Backend (Pytest):**
   - `tests/test_auth.py`: Login exitoso, login con contraseña errónea, login de usuario inactivo, refresco de token JWT.
-  - `tests/test_socios.py`: Creación de socio con categoría automática (Junior/Senior según año social), unicidad de legajo.
+  - `tests/test_socios.py`: Creación de socio con categoría automática (Pasivo/Activo según año social), unicidad de legajo.
   - `tests/test_ranking.py`: Cálculo de saldo neto con transacciones mixtas (+/-), filtros por subcomisión, ordenamiento descendente, filtros RBAC.
 - **Frontend (Karma/Jasmine):**
   - `auth.service.spec.ts`: Almacenamiento seguro de tokens y decodificación de roles.

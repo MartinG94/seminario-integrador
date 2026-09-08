@@ -51,7 +51,7 @@ A continuación se formalizan los **Escenarios de Calidad de 6 Partes** y sus co
 | :--- | :--- |
 | **Identificador** | `ESC-REND-01` |
 | **1. Fuente del Estímulo** | 150 socios concurrentes y miembros del TD consultando y ordenando el Ranking General de Socios tras la emisión de una resolución o durante una asamblea. |
-| **2. Estímulo** | Peticiones simultáneas de ordenamiento ascendente/descendente sobre el padrón de más de 500 socios con filtros por subcomisión y categoría Junior/Senior. |
+| **2. Estímulo** | Peticiones simultáneas de ordenamiento ascendente/descendente sobre el padrón de más de 500 socios con filtros por subcomisión y categoría Pasivo/Activo. |
 | **3. Entorno** | Momento de alta demanda informativa (pico de tráfico post-asamblea). |
 | **4. Artefacto Afectado** | Módulo de Ranking, API REST Backend y Consultas Agregadas MySQL. |
 | **5. Respuesta del Sistema** | El backend resuelve la consulta utilizando una vista materializada indexada o caché en memoria con invalidación selectiva por eventos de resolución, retornando los datos en formato JSON ligero. |

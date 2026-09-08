@@ -490,7 +490,7 @@ La pertenencia a una subcomisión es una **FK directa sobre `Socio` (`codSubcomi
 **Catálogo de Subcomisiones Vigentes (`const_id_tipo_subcomision`):**  
 `1` Cómputos · `2` Recursos Humanos · `3` Relaciones Institucionales · `4` Prensa · `5` Mantenimiento · `6` Gestión Social y Ambiental · `7` Eventos · `8` Rifas · `9` Comisión Directiva · `10` Tribunal de Disciplina · `11` Ex Viajeros · `99` Sin Subcomisión.
 
-#### 6.1.2 Grupo Social y Categorías Estatutarias Junior / Senior
+#### 6.1.2 Grupo Social y Categorías Estatutarias Pasivo / Activo
 - El grupo social no es columna directa: se deduce del registro con fecha más reciente en `socio_estadoHistorial`.
 - Los grupos activos se deducen por aritmética temporal sobre el año en curso (`svaveit/tribunal/funciones.py`):
   ```python
@@ -499,7 +499,7 @@ La pertenencia a una subcomisión es una **FK directa sobre `Socio` (`codSubcomi
   primer_grupo_activo  = date.today().year - 1965 - 3
   grupo_viajero        = date.today().year - 1965 - 4
   ```
-- **Inexistencia de Junior/Senior:** La distinción estatutaria entre categoría *Junior* (1° y 2° año) y *Senior* (3° a 6° año) **no está modelada en la base de datos**; figuraba únicamente como regla hardcodeada en el frontend de tesorería.
+- **Inexistencia de Pasivo/Activo:** La distinción estatutaria entre categoría *Pasivo* (1°, 2° y 3° año) y *Activo* (4° a 6° año) **no está modelada en la base de datos**; figuraba únicamente como regla hardcodeada en el frontend de tesorería.
 
 #### 6.1.3 Cargos Oficiales e Incompatibilidades
 No existe tabla separada de autoridades: el cargo reside en `Socio.tipoSocio` (`socio_tipoSocio`):
@@ -564,7 +564,7 @@ Puntos críticos donde el sistema actual **no cumple** con los estándares y req
 | # | Área / Objetivo SGD-AVEIT | Limitación del Sistema Legado (As-Is) | Acción Requerida en SGD-AVEIT (Borrón y Cuenta Nueva) |
 |---|---|---|---|
 | **1** | **Escalafón y Ranking** | No existe endpoint de ranking; el puntaje se devolvía como string formateado con cálculo N+1 en Python. | Endpoint nativo paginado y ordenable en SQL sobre proyecciones indexadas. |
-| **2** | **Categorías Estatutarias** | Categoría Junior / Senior ausente en base de datos. | Tipificación explícita de categorías estatutarias con cálculo determinista de antigüedad. |
+| **2** | **Categorías Estatutarias** | Categoría Pasivo / Activo ausente en base de datos. | Tipificación explícita de categorías estatutarias con cálculo determinista de antigüedad. |
 | **3** | **Buscador de Padrón** | `/socios/buscar` no busca por legajo universitario ni filtra por subcomisión. | Buscador optimizado con indexación full-text sobre `legajo`, `subcomision`, `dni` y `nombres`. |
 | **4** | **Balances Cuatrimestrales (Art. 137)** | `PuntajeAplicado` carece de fecha propia; depende de `Expediente.fechaHora` (que es nullable). | Inclusión obligatoria de timestamp `created_at` e identificador de ciclo lectivo/cuatrimestre en cada asiento. |
 | **5** | **Trazabilidad de Subcomisión** | Pertenencia a subcomisión es un campo plano sin historial (se sobreescribe al transferirse). | Modelo inmutable de membresías y desnormalización de subcomisión de origen al labrar expedientes. |
