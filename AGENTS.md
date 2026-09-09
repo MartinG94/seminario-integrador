@@ -54,6 +54,13 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
   - Formato de ramas: `feature/US-xx-descripcion-corta`, `fix/issue-descripcion`.
   - Commits semánticos convencionales: `feat: ...`, `fix: ...`, `test: ...`, `docs: ...`.
 
+### Pull Requests
+
+- Antes de crear, revisar o sugerir un Pull Request, consulta [`docs/gestion-proyecto/GUIA_PULL_REQUESTS.md`](docs/gestion-proyecto/GUIA_PULL_REQUESTS.md).
+- Al asistir a una persona desarrolladora, propone un título conforme a la nomenclatura de la guía y una descripción obligatoria, clara, concisa, breve y redactada como una lista de ítems.
+- Cuando se solicite solamente la descripción de un PR, entrega un bloque listo para copiar, sin introducciones ni conclusiones, con un único cambio verificable por ítem.
+- Nunca sugieras abrir o integrar un PR sin la sección **Descripción** completada.
+
 ---
 
 ## 4. Reglas Innegociables
