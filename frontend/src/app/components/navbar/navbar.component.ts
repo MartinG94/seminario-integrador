@@ -86,7 +86,7 @@ export class NavbarComponent implements OnInit {
 
         if (this.mobile_menu_visible == 1) {
             body.classList.remove('nav-open');
-            var $layer: any = document.getElementsByClassName('close-layer')[0];
+            const $layer: any = document.getElementsByClassName('close-layer')[0];
             if ($layer) {
                 $layer.remove();
             }
@@ -100,7 +100,7 @@ export class NavbarComponent implements OnInit {
                 $toggle.classList.add('toggled');
             }, 430);
 
-            var $layer = document.createElement('div');
+            const $layer = document.createElement('div');
             $layer.setAttribute('class', 'close-layer');
 
             if (body.querySelectorAll('.main-panel')) {
