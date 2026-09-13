@@ -1,38 +1,30 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TribunalDataService, Socio } from '../services/tribunal-data.service';
-import { Subscription } from 'rxjs';
+import { Component, OnInit } from '@angular/core';
+import { RankingService } from '../services/ranking.service';
+import { RankingSocio } from './ranking-socio.model';
 
 @Component({
   selector: 'app-ranking-socios',
   templateUrl: './ranking-socios.component.html',
   styleUrls: ['./ranking-socios.component.scss']
 })
-export class RankingSociosComponent implements OnInit, OnDestroy {
-  socios: Socio[] = [];
+export class RankingSociosComponent implements OnInit {
+  socios: RankingSocio[] = [];
   criterioOrden: 'merito' | 'sancion' = 'merito';
   filtroTexto = '';
 
-  private subs: Subscription[] = [];
-
-  constructor(public dataService: TribunalDataService) {}
+  constructor(public rankingService: RankingService) {}
 
   ngOnInit(): void {
-    const sub = this.dataService.socios$.subscribe(list => {
-      this.socios = list;
-    });
-    this.subs.push(sub);
+    this.socios = this.rankingService.obtenerRanking();
   }
 
-  ngOnDestroy(): void {
-    this.subs.forEach(s => s.unsubscribe());
-  }
-
-  get sociosOrdenados(): Socio[] {
+  get sociosOrdenados(): RankingSocio[] {
     let list = [...this.socios];
     if (this.filtroTexto.trim()) {
       const q = this.filtroTexto.toLowerCase();
       list = list.filter(s => 
         s.nombre.toLowerCase().includes(q) ||
+        s.apellido.toLowerCase().includes(q) ||
         s.legajo.toLowerCase().includes(q) ||
         s.subcomision.toLowerCase().includes(q)
       );
@@ -51,13 +43,13 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
     this.criterioOrden = criterio;
   }
 
-  getBadgeClase(socio: Socio): string {
+  getBadgeClase(socio: RankingSocio): string {
     if (socio.saldo <= -10.0) return 'badge-mat-danger';
     if (socio.saldo <= -7.0) return 'badge-mat-warning';
     return 'badge-mat-success';
   }
 
-  getEstadoDescripcion(socio: Socio): string {
+  getEstadoDescripcion(socio: RankingSocio): string {
     if (socio.saldo <= -10.0) return 'Límite Crítico: Cese Estatutario';
     if (socio.saldo <= -7.0) return 'Alerta Preventiva';
     return 'Habilitado Regular';
