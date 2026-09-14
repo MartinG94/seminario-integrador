@@ -237,7 +237,7 @@ Conforme a la decisión de diseño acordada por el equipo, **los roles de Produc
 #### 2.1.5. Tecnologías para el Desarrollo del Producto y Política de IA
 
 ##### Stack Tecnológico Homologado:
-* **Backend:** **Python 3.11+** con framework **Django 4.2+ LTS** y **Django REST Framework (DRF)**. Provee arquitectura desacoplada, alta seguridad contra inyecciones SQL/CSRF, ORM robusto y compatibilidad plena con el backend preexistente en la infraestructura central de AVEIT.
+* **Backend:** **Python 3.12** con framework **Django 4.2 LTS** y **Django REST Framework (DRF)**. Provee arquitectura desacoplada, alta seguridad contra inyecciones SQL/CSRF, ORM robusto y compatibilidad plena con el backend preexistente en la infraestructura central de AVEIT.
 * **Base de Datos:** **MySQL 8.0**, asegurando integridad referencial, transaccionalidad ACID y compatibilidad nativa con las tablas del padrón de socios del servidor de la Asociación.
 * **Frontend Web:** **HTML5 semántico, CSS3 modular (con tokens de diseño predefinidos en `tokens.css`) y Vanilla JavaScript**, estructurado en vistas modulares responsive (`view-cd.js`, `view-td.js`, `view-socio.js`). Garantiza un diseño Mobile-First ligero, compatible con cualquier navegador de smartphone o PC sin dependencias pesadas.
 * **Infraestructura y Staging:** Entorno de hosting independiente administrado por el equipo de desarrollo, aislando completamente las pruebas para garantizar **riesgo cero sobre el servidor de producción de AVEIT**.
