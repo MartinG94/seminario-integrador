@@ -15,7 +15,7 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
 +─────────────────────────────┬─────────────────────────────+
                               │ REST API (JSON / Bearer JWT)
 +─────────────────────────────v─────────────────────────────+
-|               BACKEND (Django 4.2+ / DRF)                 |
+|               BACKEND (Django 4.2 LTS / DRF)               |
 |  - App `accounts`: Custom User, JWT login, RBAC roles     |
 |  - App `socios`: Modelos de Socio, Subcomisión, Categoría |
 |  - App `ranking`: Servicio de agregación de saldos        |
