@@ -768,7 +768,7 @@
       "subcharacteristic": "Co-existence & Interoperability",
       "planguage_specification": {
         "scale": "Grado de compatibilidad y coexistencia con el stack institucional preexistente de AVEIT (servicios backend en Python y motor relacional MySQL).",
-        "meter": "Ejecución de la suite de software sobre entorno de staging con Python >= 3.10 y MySQL >= 8.0 sin dependencias privativas.",
+        "meter": "Ejecución de la suite de software sobre entorno de staging con Python 3.12 y MySQL >= 8.0 sin dependencias privativas.",
         "baseline": "Arquitectura actual basada en Python y MySQL.",
         "worst_acceptable": "100% de servicios backend operando sobre Python y persistencia exclusiva en MySQL.",
         "target_plan": "Arquitectura desacoplada backend Python / frontend web responsive, con esquemas DDL versionados y compatibles con el padrón actual de MySQL.",
