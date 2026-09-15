@@ -88,10 +88,11 @@ jobs:
           cd frontend
           npm install --legacy-peer-deps
 
-      - name: Linting de código TypeScript / Angular
-        run: |
-          cd frontend
-          npm run lint
+      # NOTA: Omitido temporalmente hasta migrar de TSLint legado a @angular-eslint
+      # - name: Linting de código TypeScript / Angular
+      #   run: |
+      #     cd frontend
+      #     npm run lint
 
       - name: Ejecutar pruebas unitarias headless
         run: |
