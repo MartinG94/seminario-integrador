@@ -58,6 +58,8 @@ coverage.xml
 # Variables de entorno y Base de datos local
 .env
 .env.*
+.env.local
+.env.*.local
 !.env.example
 *.sqlite3
 *.db
