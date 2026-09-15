@@ -100,25 +100,25 @@ export class NavbarComponent implements OnInit {
                 $toggle.classList.add('toggled');
             }, 430);
 
-            var $layer = document.createElement('div');
-            $layer.setAttribute('class', 'close-layer');
+            const layerElement = document.createElement('div');
+            layerElement.setAttribute('class', 'close-layer');
 
             if (body.querySelectorAll('.main-panel')) {
-                document.getElementsByClassName('main-panel')[0].appendChild($layer);
+                document.getElementsByClassName('main-panel')[0].appendChild(layerElement);
             } else if (body.classList.contains('off-canvas-sidebar')) {
-                document.getElementsByClassName('wrapper-full-page')[0].appendChild($layer);
+                document.getElementsByClassName('wrapper-full-page')[0].appendChild(layerElement);
             }
 
             setTimeout(function() {
-                $layer.classList.add('visible');
+                layerElement.classList.add('visible');
             }, 100);
 
-            $layer.onclick = function() {
+            layerElement.onclick = function() {
               body.classList.remove('nav-open');
               this.mobile_menu_visible = 0;
-              $layer.classList.remove('visible');
+              layerElement.classList.remove('visible');
               setTimeout(function() {
-                  $layer.remove();
+                  layerElement.remove();
                   $toggle.classList.remove('toggled');
               }, 400);
             }.bind(this);
