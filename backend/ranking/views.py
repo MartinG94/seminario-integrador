@@ -29,6 +29,9 @@ class RankingListView(APIView):
     authentication_classes = ()
 
     VALID_ORDERING_FIELDS = {
+        "id",
+        "+id",
+        "-id",
         "saldo",
         "+saldo",
         "-saldo",
@@ -54,7 +57,9 @@ class RankingListView(APIView):
 
     def get(self, request: Request) -> Response:
         """Consultar nómina ordenada y reconciliada de socios."""
-        categoria = request.query_params.get("categoria")
+        categoria = request.query_params.get("categoria") or request.query_params.get(
+            "filtroCategoria"
+        )
         cat_clean = None
         if categoria is not None and categoria.strip():
             c_val = categoria.strip().upper()
@@ -70,10 +75,15 @@ class RankingListView(APIView):
                 )
             cat_clean = c_val
 
-        ordering = request.query_params.get("ordering") or request.query_params.get("order_by")
+        ordering = (
+            request.query_params.get("ordering")
+            or request.query_params.get("order_by")
+            or request.query_params.get("order")
+            or request.query_params.get("criterioOrden")
+        )
         ord_clean = None
         if ordering is not None and ordering.strip():
-            o_val = ordering.strip()
+            o_val = ordering.strip().lower()
             if o_val not in self.VALID_ORDERING_FIELDS:
                 allowed_str = ", ".join(sorted(self.VALID_ORDERING_FIELDS))
                 return Response(
@@ -91,7 +101,7 @@ class RankingListView(APIView):
         reconciliado_bool = None
         if reconciliado_param is not None and reconciliado_param.strip():
             rec_lower = reconciliado_param.strip().lower()
-            if rec_lower in ("true", "1", "si", "yes"):
+            if rec_lower in ("true", "1", "si", "sí", "yes"):
                 reconciliado_bool = True
             elif rec_lower in ("false", "0", "no"):
                 reconciliado_bool = False
@@ -106,11 +116,17 @@ class RankingListView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        subcomision = request.query_params.get("subcomision")
+        subcomision = request.query_params.get("subcomision") or request.query_params.get(
+            "filtroSubcomision"
+        )
         if subcomision is not None and not subcomision.strip():
             subcomision = None
 
-        search = request.query_params.get("search") or request.query_params.get("q")
+        search = (
+            request.query_params.get("search")
+            or request.query_params.get("q")
+            or request.query_params.get("filtroTexto")
+        )
         if search is not None and not search.strip():
             search = None
 

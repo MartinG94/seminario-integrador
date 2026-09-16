@@ -407,6 +407,116 @@ class TestRankingFilteringAndOrdering:
         assert len(r_null.json()) == 1
         assert r_null.json()[0]["id"] == str(s_orphan.nroSocio)
 
+    def test_search_by_subcomision_name_aligned_with_frontend(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """La búsqueda textual incluye la subcomisión según el contrato de frontend."""
+        # Búsqueda con tilde
+        r_accent = api_client.get("/api/v1/ranking/?search=Cómputos")
+        assert r_accent.status_code == status.HTTP_200_OK
+        data_accent = r_accent.json()
+        assert len(data_accent) == 2
+        for item in data_accent:
+            assert item["subcomision"] == "Cómputos"
+
+        # Búsqueda sin tilde
+        r_plain = api_client.get("/api/v1/ranking/?search=computos")
+        assert r_plain.status_code == status.HTTP_200_OK
+        data_plain = r_plain.json()
+        assert len(data_plain) == 2
+
+    def test_search_accent_insensitive_matching(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Búsqueda insensible a tildes (Díaz con/sin acento)."""
+        r_plain = api_client.get("/api/v1/ranking/?search=diaz")
+        assert r_plain.status_code == status.HTTP_200_OK
+        assert len(r_plain.json()) == 1
+        assert r_plain.json()[0]["apellido"] == "Díaz"
+
+        r_accent = api_client.get("/api/v1/ranking/?search=Díaz")
+        assert r_accent.status_code == status.HTTP_200_OK
+        assert len(r_accent.json()) == 1
+        assert r_accent.json()[0]["apellido"] == "Díaz"
+
+    def test_filter_by_subcomision_accent_insensitive(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """El filtro de subcomisión admite nombres sin tildes."""
+        r = api_client.get("/api/v1/ranking/?subcomision=computos")
+        assert r.status_code == status.HTTP_200_OK
+        data = r.json()
+        assert len(data) == 2
+        for item in data:
+            assert item["subcomision"] == "Cómputos"
+
+    def test_frontend_query_param_aliases(self, api_client: APIClient, seed_ranking_data) -> None:
+        """Soporta nombres de parámetros directamente ligados al estado de Angular."""
+        response = api_client.get(
+            "/api/v1/ranking/?filtroCategoria=ACTIVO&criterioOrden=merito&filtroSubcomision=Cómputos"
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        for item in data:
+            assert item["categoria"] == "ACTIVO"
+            assert item["subcomision"] == "Cómputos"
+        assert data[0]["saldo"] >= data[1]["saldo"]
+
+    def test_ordering_case_insensitive(self, api_client: APIClient, seed_ranking_data) -> None:
+        """El ordenamiento es insensible a mayúsculas/minúsculas."""
+        r_upper = api_client.get("/api/v1/ranking/?ordering=MERITO")
+        assert r_upper.status_code == status.HTTP_200_OK
+        r_title = api_client.get("/api/v1/ranking/?ordering=Saldo")
+        assert r_title.status_code == status.HTTP_200_OK
+
+    def test_ordering_by_id_asc_and_desc(self, api_client: APIClient, seed_ranking_data) -> None:
+        """Ordenamiento por id / nroSocio ascendente y descendente."""
+        r_asc = api_client.get("/api/v1/ranking/?ordering=id")
+        assert r_asc.status_code == status.HTTP_200_OK
+        ids_asc = [item["id"] for item in r_asc.json()]
+        assert ids_asc == ["101", "102", "103", "104"]
+
+        r_desc = api_client.get("/api/v1/ranking/?ordering=-id")
+        assert r_desc.status_code == status.HTTP_200_OK
+        ids_desc = [item["id"] for item in r_desc.json()]
+        assert ids_desc == ["104", "103", "102", "101"]
+
+    def test_reconciliado_filter_si_with_accent(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """El parámetro reconciliado acepta 'sí' con tilde."""
+        r = api_client.get("/api/v1/ranking/?reconciliado=sí")
+        assert r.status_code == status.HTTP_200_OK
+        data = r.json()
+        assert len(data) == 2
+        for item in data:
+            assert item["reconciliado"] is True
+
+    def test_ordering_by_legajo_with_missing_estudio(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Un socio sin estudio usa nroSocio como legajo y se ordena consistentemente."""
+        sub = seed_ranking_data["subcomisiones"][0]
+        Socio.objects.create(
+            nroSocio=999,
+            nombre="Zacarías",
+            apellido="Zárate",
+            anoSocial=1,
+            subcomision=sub,
+        )
+        r_asc = api_client.get("/api/v1/ranking/?ordering=legajo")
+        assert r_asc.status_code == status.HTTP_200_OK
+        legajos = [item["legajo"] for item in r_asc.json()]
+        # Todos los legajos son strings no nulos
+        assert all(isinstance(leg, str) and leg for leg in legajos)
+        assert "999" in legajos
+
+        r_desc = api_client.get("/api/v1/ranking/?ordering=-legajo")
+        assert r_desc.status_code == status.HTTP_200_OK
+        legajos_desc = [item["legajo"] for item in r_desc.json()]
+        assert legajos_desc == sorted(legajos, reverse=True)
+
 
 @pytest.mark.django_db
 class TestRankingQueryPerformance:

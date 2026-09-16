@@ -7,5 +7,5 @@ from ranking.views import RankingListView
 app_name = "ranking"
 
 urlpatterns = [
-    path("", RankingListView.as_view(), name="ranking-list"),
+    path('', RankingListView.as_view(), name="ranking-list"),
 ]

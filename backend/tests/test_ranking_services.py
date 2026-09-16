@@ -1,9 +1,11 @@
 """Pruebas unitarias para la lógica de cálculo y reconciliación de saldos."""
 
+import re
+
 import pytest
 
 from ranking.models import Socio, Subcomision, TipoSocio
-from ranking.services import calculate_reconciliation
+from ranking.services import calculate_reconciliation, make_accent_insensitive_regex
 
 
 @pytest.mark.unit
@@ -88,3 +90,28 @@ class TestSocioCategoryDerivation:
         assert s4.categoria == "ACTIVO"
         assert s5.categoria == "ACTIVO"
         assert s6.categoria == "ACTIVO"
+
+    def test_categoria_none_or_zero_social_year_defaults_to_pasivo(self) -> None:
+        """Año social None o 0 debe categorizarse como 'PASIVO' sin elevar excepciones."""
+        sub = Subcomision(codSubcomision=1, nombre="Cómputos")
+        tipo = TipoSocio(idTipoSocio=1, nombre="Socio Ordinario")
+
+        s_none = Socio(anoSocial=None, subcomision=sub, tipoSocio=tipo)
+        s_zero = Socio(anoSocial=0, subcomision=sub, tipoSocio=tipo)
+
+        assert s_none.categoria == "PASIVO"
+        assert s_zero.categoria == "PASIVO"
+
+
+@pytest.mark.unit
+class TestAccentInsensitiveRegex:
+    """Pruebas de construcción de expresiones regulares insensibles a tildes."""
+
+    def test_make_accent_insensitive_regex_expands_vowels(self) -> None:
+        pat = make_accent_insensitive_regex("perez")
+        assert re.search(pat, "Pérez", re.IGNORECASE)
+        assert re.search(pat, "perez", re.IGNORECASE)
+
+        pat_comp = make_accent_insensitive_regex("computos")
+        assert re.search(pat_comp, "Cómputos", re.IGNORECASE)
+        assert re.search(pat_comp, "computos", re.IGNORECASE)

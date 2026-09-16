@@ -63,7 +63,7 @@ class Socio(models.Model):
     fechaIngreso = models.DateField(default=datetime.date.today)
     codTipoDoc = models.IntegerField(default=1)
     nroDoc = models.IntegerField(default=0)
-    fechaNac = models.DateField(null=True, blank=True)
+    fechaNac = models.DateField(default=datetime.date.today, null=True, blank=True)
     codSexo = models.IntegerField(default=1)
     subcomision = models.ForeignKey(
         Subcomision,
@@ -103,7 +103,7 @@ class Socio(models.Model):
         - Junior / Pasivo: 1.º a 3.º año social -> 'PASIVO'
         - Senior / Activo: 4.º a 6.º año social -> 'ACTIVO'
         """
-        return "ACTIVO" if self.anoSocial >= 4 else "PASIVO"
+        return "ACTIVO" if (self.anoSocial or 0) >= 4 else "PASIVO"
 
 
 class SocioEstudio(models.Model):

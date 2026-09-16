@@ -51,7 +51,7 @@ class Command(BaseCommand):
         if is_sqlite:
             statements = self._adapt_mysql_to_sqlite(raw_sql, clean=options.get("clean", False))
         else:
-            statements = self._clean_mysql_statements(raw_sql)
+            statements = self._clean_mysql_statements(raw_sql, clean=options.get("clean", False))
 
         self.stdout.write(f"Ejecutando {len(statements)} sentencias SQL...")
 
@@ -112,25 +112,12 @@ class Command(BaseCommand):
             )
         )
 
-    def _clean_mysql_statements(self, sql: str) -> list[str]:
-        """Limpia sentencias MySQL manteniendo compatibilidad nativa."""
-        statements = []
-        for stmt in sql.split(";"):
-            cleaned = stmt.strip()
-            if cleaned and not cleaned.startswith("--"):
-                statements.append(cleaned)
-        return statements
-
-    def _adapt_mysql_to_sqlite(self, sql: str, clean: bool = False) -> list[str]:
-        """Convierte sentencias DDL y DML de MySQL a sintaxis nativa de SQLite."""
+    def _split_sql_statements(self, sql: str) -> list[str]:
+        """Separa sentencias SQL respetando cadenas de texto entre comillas."""
         lines = []
         for line in sql.splitlines():
             trimmed = line.strip()
             if trimmed.startswith("--") or not trimmed:
-                continue
-            if trimmed.upper().startswith(
-                ("SET NAMES", "SET FOREIGN_KEY_CHECKS", "CREATE DATABASE", "USE ")
-            ):
                 continue
             lines.append(line)
         clean_sql = "\n".join(lines)
@@ -156,6 +143,27 @@ class Command(BaseCommand):
             stmt = "".join(current).strip()
             if stmt:
                 raw_statements.append(stmt)
+        return raw_statements
+
+    def _clean_mysql_statements(self, sql: str, clean: bool = False) -> list[str]:
+        """
+        Limpia sentencias MySQL manteniendo compatibilidad nativa y preservando
+        la base de datos de Django.
+        """
+        raw_statements = self._split_sql_statements(sql)
+        statements = []
+        for stmt in raw_statements:
+            upper = stmt.upper()
+            if upper.startswith(("SET NAMES", "SET FOREIGN_KEY_CHECKS", "CREATE DATABASE", "USE ")):
+                continue
+            if upper.startswith("DROP TABLE") and not clean:
+                continue
+            statements.append(stmt)
+        return statements
+
+    def _adapt_mysql_to_sqlite(self, sql: str, clean: bool = False) -> list[str]:
+        """Convierte sentencias DDL y DML de MySQL a sintaxis nativa de SQLite."""
+        raw_statements = self._split_sql_statements(sql)
 
         sqlite_stmts = []
         for stmt in raw_statements:
@@ -251,6 +259,14 @@ class Command(BaseCommand):
                         part = re.sub(r"NOT NULL", "PRIMARY KEY", part, flags=re.IGNORECASE)
                         if "PRIMARY KEY" not in part.upper():
                             part = part.strip() + " PRIMARY KEY"
+
+                    if table_name.strip('"').lower() == "socio_lista":
+                        if stripped.startswith(('"codSubcomision"', "codSubcomision")):
+                            part = re.sub(r"NOT\s+NULL", "DEFAULT NULL", part, flags=re.IGNORECASE)
+                        elif stripped.startswith(('"idTipoSocio"', "idTipoSocio")):
+                            part = re.sub(r"NOT\s+NULL", "DEFAULT NULL", part, flags=re.IGNORECASE)
+                        elif stripped.startswith(('"fechaNac"', "fechaNac")):
+                            part = re.sub(r"NOT\s+NULL", "DEFAULT NULL", part, flags=re.IGNORECASE)
 
                     new_parts.append(part.strip())
 

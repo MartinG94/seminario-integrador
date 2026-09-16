@@ -1,5 +1,7 @@
 """Lógica de negocio y consultas optimizadas para el Ranking Reconciliado (SGD-AVEIT)."""
 
+import re
+import unicodedata
 from typing import Optional
 
 from django.db.models import (
@@ -14,9 +16,35 @@ from django.db.models import (
     Sum,
     Value,
 )
-from django.db.models.functions import Abs, Coalesce, Concat, Round
+from django.db.models.functions import Abs, Cast, Coalesce, Concat, Round
 
 from ranking.models import PuntajeAplicado, PuntajeGeneral, Socio, SocioEstudio
+
+
+def make_accent_insensitive_regex(text: str) -> str:
+    """
+    Construye un patrón regex compatible con SQLite y MySQL que empareja
+    caracteres con y sin tilde en español (ej: 'perez' -> 'p[eéèëêEÉÈËÊ]r[eéèëêEÉÈËÊ]z').
+    """
+    replacements = {
+        "a": "[aáàäâAÁÀÄÂ]",
+        "e": "[eéèëêEÉÈËÊ]",
+        "i": "[iíìïîIÍÌÏÎ]",
+        "o": "[oóòöôOÓÒÖÔ]",
+        "u": "[uúùüûUÚÙÜÛ]",
+        "n": "[nñNÑ]",
+    }
+    pattern_parts = []
+    for char in text:
+        nfkd = unicodedata.normalize("NFKD", char)
+        base_char = nfkd[0].lower()
+        if base_char in replacements:
+            pattern_parts.append(replacements[base_char])
+        elif char.isspace():
+            pattern_parts.append(r"\s+")
+        else:
+            pattern_parts.append(re.escape(char))
+    return "".join(pattern_parts)
 
 
 def calculate_reconciliation(
@@ -54,7 +82,11 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
         :1
     ]
 
-    legajo_subquery = SocioEstudio.objects.filter(socio_id=OuterRef("pk")).values("nroLegajo")[:1]
+    legajo_subquery = (
+        SocioEstudio.objects.filter(socio_id=OuterRef("pk"))
+        .order_by("compositeKey")
+        .values("nroLegajo")[:1]
+    )
 
     return Socio.objects.select_related("subcomision").annotate(
         saldo_historico_calc=Coalesce(
@@ -67,7 +99,11 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
             Value(0.0),
             output_field=FloatField(),
         ),
-        legajo_calc=Subquery(legajo_subquery, output_field=CharField()),
+        legajo_calc=Coalesce(
+            Subquery(legajo_subquery, output_field=CharField()),
+            Cast("nroSocio", output_field=CharField()),
+            output_field=CharField(),
+        ),
     )
 
 
@@ -87,9 +123,9 @@ def filter_ranking_queryset(
         if cat_upper == "ACTIVO":
             qs = qs.filter(anoSocial__gte=4)
         elif cat_upper == "PASIVO":
-            qs = qs.filter(anoSocial__lt=4)
+            qs = qs.filter(Q(anoSocial__lt=4) | Q(anoSocial__isnull=True))
 
-    # Filtro por subcomisión (por nombre, ID numérico o sin subcomisión)
+    # Filtro por subcomisión (por nombre insensible a acentos, ID numérico o sin subcomisión)
     if subcomision:
         sub_str = subcomision.strip()
         if sub_str:
@@ -104,12 +140,18 @@ def filter_ranking_queryset(
             elif sub_str.isdigit():
                 qs = qs.filter(subcomision_id=int(sub_str))
             else:
-                qs = qs.filter(subcomision__nombre__iexact=sub_str)
+                sub_pattern = f"^{make_accent_insensitive_regex(sub_str)}$"
+                qs = qs.filter(
+                    Q(subcomision__nombre__iexact=sub_str)
+                    | Q(subcomision__nombre__iregex=sub_pattern)
+                )
 
-    # Filtro de búsqueda textual por nombre, apellido, nroSocio, nombre completo o legajo
+    # Filtro de búsqueda textual por nombre, apellido, nroSocio,
+    # nombre completo, legajo o subcomisión
     if search:
         q_clean = search.strip()
         if q_clean:
+            regex_pat = make_accent_insensitive_regex(q_clean)
             legajo_match = SocioEstudio.objects.filter(
                 socio_id=OuterRef("pk"),
                 nroLegajo__icontains=q_clean,
@@ -119,10 +161,18 @@ def filter_ranking_queryset(
                 full_name_reverse=Concat("apellido", Value(" "), "nombre"),
             ).filter(
                 Q(nombre__icontains=q_clean)
+                | Q(nombre__iregex=regex_pat)
                 | Q(apellido__icontains=q_clean)
+                | Q(apellido__iregex=regex_pat)
                 | Q(full_name_direct__icontains=q_clean)
+                | Q(full_name_direct__iregex=regex_pat)
                 | Q(full_name_reverse__icontains=q_clean)
+                | Q(full_name_reverse__iregex=regex_pat)
+                | Q(subcomision__nombre__icontains=q_clean)
+                | Q(subcomision__nombre__iregex=regex_pat)
                 | Q(nroSocio__icontains=q_clean)
+                | Q(legajo_calc__icontains=q_clean)
+                | Q(legajo_calc__iregex=regex_pat)
                 | Exists(legajo_match)
             )
 
@@ -145,7 +195,12 @@ def order_ranking_queryset(
         # Por defecto: mayor saldo primero, desempata alfabéticamente por apellido y nombre
         return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
+    ord_key = ordering.strip().lower()
+
     ordering_map = {
+        "id": ("nroSocio",),
+        "+id": ("nroSocio",),
+        "-id": ("-nroSocio",),
         "saldo": ("saldo_historico_calc", "apellido", "nombre"),
         "+saldo": ("saldo_historico_calc", "apellido", "nombre"),
         "-saldo": ("-saldo_historico_calc", "apellido", "nombre"),
@@ -161,15 +216,15 @@ def order_ranking_queryset(
         "nombre": ("nombre", "apellido"),
         "+nombre": ("nombre", "apellido"),
         "-nombre": ("-nombre", "apellido"),
-        "legajo": ("legajo_calc", "apellido"),
-        "+legajo": ("legajo_calc", "apellido"),
-        "-legajo": ("-legajo_calc", "apellido"),
-        "subcomision": ("subcomision__nombre", "apellido"),
-        "+subcomision": ("subcomision__nombre", "apellido"),
-        "-subcomision": ("-subcomision__nombre", "apellido"),
+        "legajo": ("legajo_calc", "apellido", "nombre"),
+        "+legajo": ("legajo_calc", "apellido", "nombre"),
+        "-legajo": ("-legajo_calc", "apellido", "nombre"),
+        "subcomision": ("subcomision__nombre", "apellido", "nombre"),
+        "+subcomision": ("subcomision__nombre", "apellido", "nombre"),
+        "-subcomision": ("-subcomision__nombre", "apellido", "nombre"),
     }
 
-    fields = ordering_map.get(ordering.strip())
+    fields = ordering_map.get(ord_key)
     if fields:
         return queryset.order_by(*fields)
 
