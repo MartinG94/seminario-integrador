@@ -4,6 +4,7 @@ from typing import Optional
 
 from django.db.models import (
     CharField,
+    Exists,
     F,
     FloatField,
     OuterRef,
@@ -13,7 +14,7 @@ from django.db.models import (
     Sum,
     Value,
 )
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Abs, Coalesce, Concat, Round
 
 from ranking.models import PuntajeAplicado, PuntajeGeneral, Socio, SocioEstudio
 
@@ -57,12 +58,12 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
 
     return Socio.objects.select_related("subcomision").annotate(
         saldo_historico_calc=Coalesce(
-            Subquery(saldo_historico_subquery, output_field=FloatField()),
+            Round(Subquery(saldo_historico_subquery, output_field=FloatField()), 2),
             Value(0.0),
             output_field=FloatField(),
         ),
         saldo_cache_calc=Coalesce(
-            Subquery(saldo_cache_subquery, output_field=FloatField()),
+            Round(Subquery(saldo_cache_subquery, output_field=FloatField()), 2),
             Value(0.0),
             output_field=FloatField(),
         ),
@@ -88,31 +89,50 @@ def filter_ranking_queryset(
         elif cat_upper == "PASIVO":
             qs = qs.filter(anoSocial__lt=4)
 
-    # Filtro por subcomisión (por nombre o ID numérico)
+    # Filtro por subcomisión (por nombre, ID numérico o sin subcomisión)
     if subcomision:
         sub_str = subcomision.strip()
-        if sub_str.isdigit():
-            qs = qs.filter(subcomision_id=int(sub_str))
-        else:
-            qs = qs.filter(subcomision__nombre__iexact=sub_str)
+        if sub_str:
+            if sub_str.lower() in (
+                "sin subcomision",
+                "sin subcomisión",
+                "ninguna",
+                "none",
+                "null",
+            ):
+                qs = qs.filter(subcomision__isnull=True)
+            elif sub_str.isdigit():
+                qs = qs.filter(subcomision_id=int(sub_str))
+            else:
+                qs = qs.filter(subcomision__nombre__iexact=sub_str)
 
-    # Filtro de búsqueda textual por nombre, apellido o legajo
+    # Filtro de búsqueda textual por nombre, apellido, nroSocio, nombre completo o legajo
     if search:
         q_clean = search.strip()
         if q_clean:
-            qs = qs.filter(
+            legajo_match = SocioEstudio.objects.filter(
+                socio_id=OuterRef("pk"),
+                nroLegajo__icontains=q_clean,
+            )
+            qs = qs.annotate(
+                full_name_direct=Concat("nombre", Value(" "), "apellido"),
+                full_name_reverse=Concat("apellido", Value(" "), "nombre"),
+            ).filter(
                 Q(nombre__icontains=q_clean)
                 | Q(apellido__icontains=q_clean)
+                | Q(full_name_direct__icontains=q_clean)
+                | Q(full_name_reverse__icontains=q_clean)
                 | Q(nroSocio__icontains=q_clean)
-                | Q(estudios__nroLegajo__icontains=q_clean)
-            ).distinct()
+                | Exists(legajo_match)
+            )
 
-    # Filtro por reconciliado (True / False)
+    # Filtro por reconciliado (True / False) con tolerancia numérica estricta idéntica a Python
     if reconciliado is not None:
+        qs = qs.annotate(_reconciled_diff=Abs(F("saldo_historico_calc") - F("saldo_cache_calc")))
         if reconciliado:
-            qs = qs.filter(saldo_historico_calc=F("saldo_cache_calc"))
+            qs = qs.filter(_reconciled_diff__lt=0.0001)
         else:
-            qs = qs.exclude(saldo_historico_calc=F("saldo_cache_calc"))
+            qs = qs.filter(_reconciled_diff__gte=0.0001)
 
     return qs
 
@@ -126,9 +146,15 @@ def order_ranking_queryset(
         return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
     ordering_map = {
-        "saldo": ("saldo_historico_calc", "apellido"),
-        "+saldo": ("saldo_historico_calc", "apellido"),
-        "-saldo": ("-saldo_historico_calc", "apellido"),
+        "saldo": ("saldo_historico_calc", "apellido", "nombre"),
+        "+saldo": ("saldo_historico_calc", "apellido", "nombre"),
+        "-saldo": ("-saldo_historico_calc", "apellido", "nombre"),
+        "merito": ("-saldo_historico_calc", "apellido", "nombre"),
+        "+merito": ("-saldo_historico_calc", "apellido", "nombre"),
+        "-merito": ("saldo_historico_calc", "apellido", "nombre"),
+        "sancion": ("saldo_historico_calc", "apellido", "nombre"),
+        "+sancion": ("saldo_historico_calc", "apellido", "nombre"),
+        "-sancion": ("-saldo_historico_calc", "apellido", "nombre"),
         "apellido": ("apellido", "nombre"),
         "+apellido": ("apellido", "nombre"),
         "-apellido": ("-apellido", "nombre"),
@@ -138,6 +164,9 @@ def order_ranking_queryset(
         "legajo": ("legajo_calc", "apellido"),
         "+legajo": ("legajo_calc", "apellido"),
         "-legajo": ("-legajo_calc", "apellido"),
+        "subcomision": ("subcomision__nombre", "apellido"),
+        "+subcomision": ("subcomision__nombre", "apellido"),
+        "-subcomision": ("-subcomision__nombre", "apellido"),
     }
 
     fields = ordering_map.get(ordering.strip())

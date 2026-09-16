@@ -111,6 +111,18 @@ class TestRankingAPIEndpoints:
         assert isinstance(data, list)
         assert len(data) == 4
 
+    def test_get_ranking_without_trailing_slash_returns_200(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Endpoints sin barra final (/api/v1/ranking y /api/ranking) responden 200 sin 301."""
+        r_v1 = api_client.get("/api/v1/ranking")
+        assert r_v1.status_code == status.HTTP_200_OK
+        assert len(r_v1.json()) == 4
+
+        r_unv = api_client.get("/api/ranking")
+        assert r_unv.status_code == status.HTTP_200_OK
+        assert len(r_unv.json()) == 4
+
     def test_ranking_item_matches_contract_rankingsocio(
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
@@ -247,6 +259,154 @@ class TestRankingFilteringAndOrdering:
         for item in r_no_rec.json():
             assert item["reconciliado"] is False
 
+    def test_empty_query_params_returns_200_no_filter(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Query params vacíos o sólo espacios se ignoran sin disparar HTTP 400."""
+        response = api_client.get(
+            "/api/v1/ranking/?categoria=&ordering=&reconciliado=&subcomision=&search="
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.json()) == 4
+
+        response_spaces = api_client.get(
+            "/api/v1/ranking/?categoria=  &ordering=  &reconciliado=  "
+        )
+        assert response_spaces.status_code == status.HTTP_200_OK
+        assert len(response_spaces.json()) == 4
+
+    def test_ordering_merito_alias_descending(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Alias 'merito' ordena por saldo de mayor a menor (frontend contract)."""
+        response = api_client.get("/api/v1/ranking/?ordering=merito")
+        assert response.status_code == status.HTTP_200_OK
+        saldos = [item["saldo"] for item in response.json()]
+        assert saldos == sorted(saldos, reverse=True)
+
+    def test_ordering_sancion_alias_ascending(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Alias 'sancion' ordena por saldo de menor a mayor (más sancionados primero)."""
+        response = api_client.get("/api/v1/ranking/?ordering=sancion")
+        assert response.status_code == status.HTTP_200_OK
+        saldos = [item["saldo"] for item in response.json()]
+        assert saldos == sorted(saldos)
+
+    def test_ordering_by_subcomision(self, api_client: APIClient, seed_ranking_data) -> None:
+        """Ordenamiento alfabético por nombre de subcomisión."""
+        response = api_client.get("/api/v1/ranking/?ordering=subcomision")
+        assert response.status_code == status.HTTP_200_OK
+        subcomisiones = [item["subcomision"] for item in response.json()]
+        assert subcomisiones == sorted(subcomisiones)
+
+    def test_search_by_full_name_multiword(self, api_client: APIClient, seed_ranking_data) -> None:
+        """Búsqueda por nombre y apellido combinados en ambos sentidos."""
+        r_direct = api_client.get("/api/v1/ranking/?q=Carlos Alonso")
+        assert len(r_direct.json()) == 1
+        assert r_direct.json()[0]["id"] == "101"
+
+        r_reverse = api_client.get("/api/v1/ranking/?q=Alonso Carlos")
+        assert len(r_reverse.json()) == 1
+        assert r_reverse.json()[0]["id"] == "101"
+
+    def test_filter_by_subcomision_id(self, api_client: APIClient, seed_ranking_data) -> None:
+        """Filtrado numérico por codSubcomision."""
+        response = api_client.get("/api/v1/ranking/?subcomision=1")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        for item in data:
+            assert item["subcomision"] == "Cómputos"
+
+    def test_reconciliation_filter_float_precision_tolerance(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """
+        Prueba de estrés de tolerancia flotante:
+        Un socio cuyos movimientos suman 0.1 + 0.2 (= 0.30000000000000004) y caché 0.3
+        debe ser considerado reconciliado en Python y en filtro SQL (?reconciliado=true/false).
+        """
+        sub = seed_ranking_data["subcomisiones"][0]
+        s_float = Socio.objects.create(
+            nroSocio=199,
+            nombre="Flotante",
+            apellido="Prueba",
+            anoSocial=4,
+            subcomision=sub,
+        )
+        PuntajeAplicado.objects.create(idPuntajeAplicado=1991, socio=s_float, puntajeAplicado=0.1)
+        PuntajeAplicado.objects.create(idPuntajeAplicado=1992, socio=s_float, puntajeAplicado=0.2)
+        PuntajeGeneral.objects.create(idPuntajeGeneral=199, socio=s_float, puntos=0.3)
+
+        # Debe aparecer en reconciliado=true
+        r_true = api_client.get("/api/v1/ranking/?reconciliado=true")
+        assert r_true.status_code == status.HTTP_200_OK
+        ids_true = [item["id"] for item in r_true.json()]
+        assert "199" in ids_true
+
+        # NO debe aparecer en reconciliado=false
+        r_false = api_client.get("/api/v1/ranking/?reconciliado=false")
+        assert r_false.status_code == status.HTTP_200_OK
+        ids_false = [item["id"] for item in r_false.json()]
+        assert "199" not in ids_false
+
+    def test_search_with_multiple_estudios_no_duplicate_rows(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """
+        Prueba adversarial: Un socio con múltiples legajos universitarios en socio_estudio
+        no debe generar filas duplicadas ni errores al buscar por texto.
+        """
+        s1 = seed_ranking_data["socios"][0]
+        # Agregar un segundo estudio a Carlos Alonso (nroSocio 101)
+        SocioEstudio.objects.create(
+            compositeKey=10102,
+            socio=s1,
+            nroLegajo=99887,
+            codEspecialidad=2,
+        )
+
+        # Búsqueda por el segundo legajo
+        response = api_client.get("/api/v1/ranking/?search=99887")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["id"] == str(s1.nroSocio)
+        assert data[0]["apellido"] == "Alonso"
+
+    def test_missing_or_null_subcomision_handling(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """
+        Socio sin subcomisión asignada debe serializarse como 'Sin Subcomisión'
+        y responder a los filtros semánticos correspondientes.
+        """
+        s_orphan = Socio.objects.create(
+            nroSocio=299,
+            nombre="Sin",
+            apellido="SubcomisionSocio",
+            anoSocial=1,
+            subcomision=None,
+        )
+
+        r_all = api_client.get("/api/v1/ranking/?search=SubcomisionSocio")
+        assert r_all.status_code == status.HTTP_200_OK
+        assert len(r_all.json()) == 1
+        assert r_all.json()[0]["subcomision"] == "Sin Subcomisión"
+
+        # Filtrar por "Sin Subcomisión"
+        r_filter = api_client.get("/api/v1/ranking/?subcomision=Sin Subcomisión")
+        assert r_filter.status_code == status.HTTP_200_OK
+        assert len(r_filter.json()) == 1
+        assert r_filter.json()[0]["id"] == str(s_orphan.nroSocio)
+
+        # Filtrar por alias "null"
+        r_null = api_client.get("/api/v1/ranking/?subcomision=null")
+        assert r_null.status_code == status.HTTP_200_OK
+        assert len(r_null.json()) == 1
+        assert r_null.json()[0]["id"] == str(s_orphan.nroSocio)
+
 
 @pytest.mark.django_db
 class TestRankingQueryPerformance:
@@ -265,4 +425,29 @@ class TestRankingQueryPerformance:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.json()) == 4
         # Exactamente 1 consulta SQL para el listado completo
+        assert len(ctx.captured_queries) == 1
+
+    def test_constant_query_count_when_socios_lack_estudio(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """
+        Ataque N+1: Verificar que socios sin ningún registro de socio_estudio
+        no disparan consultas adicionales por socio en el serializador.
+        """
+        sub = seed_ranking_data["subcomisiones"][0]
+        for i in range(5):
+            Socio.objects.create(
+                nroSocio=500 + i,
+                nombre=f"NoEstudio_{i}",
+                apellido=f"Apellido_{i}",
+                anoSocial=2,
+                subcomision=sub,
+            )
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = api_client.get("/api/v1/ranking/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.json()) == 9  # 4 iniciales + 5 nuevos
+        # Debe mantenerse estrictamente en 1 única consulta SQL (cero N+1)
         assert len(ctx.captured_queries) == 1

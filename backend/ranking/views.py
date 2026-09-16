@@ -32,6 +32,12 @@ class RankingListView(APIView):
         "saldo",
         "+saldo",
         "-saldo",
+        "merito",
+        "+merito",
+        "-merito",
+        "sancion",
+        "+sancion",
+        "-sancion",
         "apellido",
         "+apellido",
         "-apellido",
@@ -41,14 +47,18 @@ class RankingListView(APIView):
         "legajo",
         "+legajo",
         "-legajo",
+        "subcomision",
+        "+subcomision",
+        "-subcomision",
     }
 
     def get(self, request: Request) -> Response:
         """Consultar nómina ordenada y reconciliada de socios."""
         categoria = request.query_params.get("categoria")
-        if categoria:
-            cat_clean = categoria.strip().upper()
-            if cat_clean not in ("ACTIVO", "PASIVO"):
+        cat_clean = None
+        if categoria is not None and categoria.strip():
+            c_val = categoria.strip().upper()
+            if c_val not in ("ACTIVO", "PASIVO"):
                 return Response(
                     {
                         "error": (
@@ -58,13 +68,13 @@ class RankingListView(APIView):
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        else:
-            cat_clean = None
+            cat_clean = c_val
 
         ordering = request.query_params.get("ordering") or request.query_params.get("order_by")
-        if ordering:
-            ord_clean = ordering.strip()
-            if ord_clean not in self.VALID_ORDERING_FIELDS:
+        ord_clean = None
+        if ordering is not None and ordering.strip():
+            o_val = ordering.strip()
+            if o_val not in self.VALID_ORDERING_FIELDS:
                 allowed_str = ", ".join(sorted(self.VALID_ORDERING_FIELDS))
                 return Response(
                     {
@@ -75,12 +85,11 @@ class RankingListView(APIView):
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        else:
-            ord_clean = None
+            ord_clean = o_val
 
         reconciliado_param = request.query_params.get("reconciliado")
         reconciliado_bool = None
-        if reconciliado_param is not None:
+        if reconciliado_param is not None and reconciliado_param.strip():
             rec_lower = reconciliado_param.strip().lower()
             if rec_lower in ("true", "1", "si", "yes"):
                 reconciliado_bool = True
@@ -98,7 +107,12 @@ class RankingListView(APIView):
                 )
 
         subcomision = request.query_params.get("subcomision")
+        if subcomision is not None and not subcomision.strip():
+            subcomision = None
+
         search = request.query_params.get("search") or request.query_params.get("q")
+        if search is not None and not search.strip():
+            search = None
 
         # 1. Obtener queryset optimizado (sin N+1)
         qs = get_reconciled_ranking_queryset()

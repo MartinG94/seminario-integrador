@@ -9,5 +9,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", HealthCheckView.as_view(), name="health-check"),
     path("api/v1/ranking/", include("ranking.urls", namespace="ranking-v1")),
+    path("api/v1/ranking", include("ranking.urls")),
     path("api/ranking/", include("ranking.urls", namespace="ranking")),
+    path("api/ranking", include("ranking.urls")),
 ]

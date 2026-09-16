@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from ranking.models import Socio
+from ranking.models import PuntajeGeneral, Socio, Subcomision
 from ranking.services import calculate_reconciliation
 
 
@@ -10,7 +10,6 @@ class RankingSocioSerializer(serializers.ModelSerializer):
     """
     Serializador que implementa el contrato RankingSocio esperado por Angular:
     - id (string / int)
-
     - legajo (string)
     - nombre (string)
     - apellido (string)
@@ -56,16 +55,27 @@ class RankingSocioSerializer(serializers.ModelSerializer):
 
     def get_legajo(self, obj: Socio) -> str:
         legajo_val = getattr(obj, "legajo_calc", None)
-        if legajo_val:
+        if legajo_val is not None and str(legajo_val).strip():
             return str(legajo_val)
-        estudio = obj.estudios.first() if hasattr(obj, "estudios") else None
-        return str(estudio.nroLegajo) if estudio else str(obj.nroSocio)
+        # Si la instancia viene de get_reconciled_ranking_queryset (tiene legajo_calc),
+        # sabemos que no tiene estudio sin disparar queries adicionales (evita N+1).
+        if hasattr(obj, "legajo_calc"):
+            return str(obj.nroSocio)
+        # Fallback defensivo cuando la instancia no fue anotada por la función de servicio
+        try:
+            estudio = obj.estudios.first() if hasattr(obj, "estudios") else None
+            return str(estudio.nroLegajo) if estudio else str(obj.nroSocio)
+        except Exception:
+            return str(obj.nroSocio)
 
     def get_categoria(self, obj: Socio) -> str:
         return obj.categoria
 
     def get_subcomision(self, obj: Socio) -> str:
-        return obj.subcomision.nombre if obj.subcomision else "Sin Subcomisión"
+        try:
+            return obj.subcomision.nombre if obj.subcomision else "Sin Subcomisión"
+        except (Subcomision.DoesNotExist, AttributeError):
+            return "Sin Subcomisión"
 
     def _get_reconciliation(self, obj: Socio) -> tuple[float, float, float, bool]:
         """Calcula o recupera del caché de instancia las cifras de reconciliación."""
@@ -78,11 +88,14 @@ class RankingSocioSerializer(serializers.ModelSerializer):
         if saldo_hist is None:
             saldo_hist = sum(p.puntajeAplicado for p in obj.puntajes_aplicados.all())
         if saldo_cache is None:
-            saldo_cache = (
-                obj.puntaje_general.puntos
-                if hasattr(obj, "puntaje_general") and obj.puntaje_general
-                else 0.0
-            )
+            try:
+                saldo_cache = (
+                    obj.puntaje_general.puntos
+                    if hasattr(obj, "puntaje_general") and obj.puntaje_general
+                    else 0.0
+                )
+            except (PuntajeGeneral.DoesNotExist, AttributeError):
+                saldo_cache = 0.0
 
         obj._cached_reconciliation = calculate_reconciliation(saldo_hist, saldo_cache)
         return obj._cached_reconciliation
