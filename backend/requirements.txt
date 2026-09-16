@@ -1,0 +1,14 @@
+# ==============================================================================
+# requirements.txt — Backend Dependencies (Python 3.10 / Django 4.2+ LTS)
+# ==============================================================================
+Django>=4.2,<5.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.0
+djangorestframework-simplejwt>=5.3.0
+mysqlclient>=2.2.0
+python-dotenv>=1.0.0
+
+# --- Pruebas y Linting ---
+pytest>=7.4.0
+pytest-django>=4.7.0
+ruff>=0.3.0
