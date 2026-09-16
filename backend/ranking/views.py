@@ -35,6 +35,9 @@ class RankingListView(APIView):
         "saldo",
         "+saldo",
         "-saldo",
+        "puntos",
+        "+puntos",
+        "-puntos",
         "merito",
         "+merito",
         "-merito",
@@ -53,6 +56,12 @@ class RankingListView(APIView):
         "subcomision",
         "+subcomision",
         "-subcomision",
+        "diferencia",
+        "+diferencia",
+        "-diferencia",
+        "reconciliado",
+        "+reconciliado",
+        "-reconciliado",
     }
 
     def get(self, request: Request) -> Response:
@@ -79,23 +88,25 @@ class RankingListView(APIView):
             request.query_params.get("ordering")
             or request.query_params.get("order_by")
             or request.query_params.get("order")
+            or request.query_params.get("sort")
             or request.query_params.get("criterioOrden")
         )
         ord_clean = None
         if ordering is not None and ordering.strip():
-            o_val = ordering.strip().lower()
-            if o_val not in self.VALID_ORDERING_FIELDS:
+            order_tokens = [tok.strip().lower() for tok in ordering.split(",") if tok.strip()]
+            invalid_tokens = [tok for tok in order_tokens if tok not in self.VALID_ORDERING_FIELDS]
+            if invalid_tokens:
                 allowed_str = ", ".join(sorted(self.VALID_ORDERING_FIELDS))
                 return Response(
                     {
                         "error": (
-                            f"Campo de ordenamiento '{ordering}' no válido. "
+                            f"Campo(s) de ordenamiento no válido(s): {', '.join(invalid_tokens)}. "
                             f"Opciones permitidas: {allowed_str}."
                         )
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            ord_clean = o_val
+            ord_clean = ",".join(order_tokens)
 
         reconciliado_param = request.query_params.get("reconciliado")
         reconciliado_bool = None

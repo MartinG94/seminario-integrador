@@ -147,34 +147,37 @@ def filter_ranking_queryset(
                 )
 
     # Filtro de búsqueda textual por nombre, apellido, nroSocio,
-    # nombre completo, legajo o subcomisión
+    # nombre completo, legajo o subcomisión (insensible a acentos y multi-término)
     if search:
         q_clean = search.strip()
         if q_clean:
-            regex_pat = make_accent_insensitive_regex(q_clean)
-            legajo_match = SocioEstudio.objects.filter(
-                socio_id=OuterRef("pk"),
-                nroLegajo__icontains=q_clean,
-            )
+            tokens = q_clean.split()
             qs = qs.annotate(
                 full_name_direct=Concat("nombre", Value(" "), "apellido"),
                 full_name_reverse=Concat("apellido", Value(" "), "nombre"),
-            ).filter(
-                Q(nombre__icontains=q_clean)
-                | Q(nombre__iregex=regex_pat)
-                | Q(apellido__icontains=q_clean)
-                | Q(apellido__iregex=regex_pat)
-                | Q(full_name_direct__icontains=q_clean)
-                | Q(full_name_direct__iregex=regex_pat)
-                | Q(full_name_reverse__icontains=q_clean)
-                | Q(full_name_reverse__iregex=regex_pat)
-                | Q(subcomision__nombre__icontains=q_clean)
-                | Q(subcomision__nombre__iregex=regex_pat)
-                | Q(nroSocio__icontains=q_clean)
-                | Q(legajo_calc__icontains=q_clean)
-                | Q(legajo_calc__iregex=regex_pat)
-                | Exists(legajo_match)
             )
+            for tok in tokens:
+                tok_pat = make_accent_insensitive_regex(tok)
+                legajo_match = SocioEstudio.objects.filter(
+                    socio_id=OuterRef("pk"),
+                    nroLegajo__icontains=tok,
+                )
+                qs = qs.filter(
+                    Q(nombre__icontains=tok)
+                    | Q(nombre__iregex=tok_pat)
+                    | Q(apellido__icontains=tok)
+                    | Q(apellido__iregex=tok_pat)
+                    | Q(full_name_direct__icontains=tok)
+                    | Q(full_name_direct__iregex=tok_pat)
+                    | Q(full_name_reverse__icontains=tok)
+                    | Q(full_name_reverse__iregex=tok_pat)
+                    | Q(subcomision__nombre__icontains=tok)
+                    | Q(subcomision__nombre__iregex=tok_pat)
+                    | Q(nroSocio__icontains=tok)
+                    | Q(legajo_calc__icontains=tok)
+                    | Q(legajo_calc__iregex=tok_pat)
+                    | Exists(legajo_match)
+                )
 
     # Filtro por reconciliado (True / False) con tolerancia numérica estricta idéntica a Python
     if reconciliado is not None:
@@ -195,15 +198,16 @@ def order_ranking_queryset(
         # Por defecto: mayor saldo primero, desempata alfabéticamente por apellido y nombre
         return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
-    ord_key = ordering.strip().lower()
-
-    ordering_map = {
+    ordering_map: dict[str, tuple[str, ...]] = {
         "id": ("nroSocio",),
         "+id": ("nroSocio",),
         "-id": ("-nroSocio",),
         "saldo": ("saldo_historico_calc", "apellido", "nombre"),
         "+saldo": ("saldo_historico_calc", "apellido", "nombre"),
         "-saldo": ("-saldo_historico_calc", "apellido", "nombre"),
+        "puntos": ("saldo_historico_calc", "apellido", "nombre"),
+        "+puntos": ("saldo_historico_calc", "apellido", "nombre"),
+        "-puntos": ("-saldo_historico_calc", "apellido", "nombre"),
         "merito": ("-saldo_historico_calc", "apellido", "nombre"),
         "+merito": ("-saldo_historico_calc", "apellido", "nombre"),
         "-merito": ("saldo_historico_calc", "apellido", "nombre"),
@@ -222,10 +226,36 @@ def order_ranking_queryset(
         "subcomision": ("subcomision__nombre", "apellido", "nombre"),
         "+subcomision": ("subcomision__nombre", "apellido", "nombre"),
         "-subcomision": ("-subcomision__nombre", "apellido", "nombre"),
+        "diferencia": ("_reconciled_diff", "apellido", "nombre"),
+        "+diferencia": ("_reconciled_diff", "apellido", "nombre"),
+        "-diferencia": ("-_reconciled_diff", "apellido", "nombre"),
+        "reconciliado": ("_reconciled_diff", "apellido", "nombre"),
+        "+reconciliado": ("_reconciled_diff", "apellido", "nombre"),
+        "-reconciliado": ("-_reconciled_diff", "apellido", "nombre"),
     }
 
-    fields = ordering_map.get(ord_key)
-    if fields:
-        return queryset.order_by(*fields)
+    raw_tokens = [tok.strip().lower() for tok in ordering.split(",") if tok.strip()]
+    if not raw_tokens:
+        return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
-    return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
+    qs = queryset
+    needs_reconciled_diff = any("diferencia" in tok or "reconciliado" in tok for tok in raw_tokens)
+    if needs_reconciled_diff:
+        qs = qs.annotate(_reconciled_diff=Abs(F("saldo_historico_calc") - F("saldo_cache_calc")))
+
+    combined_fields: list[str] = []
+    seen: set[str] = set()
+
+    for tok in raw_tokens:
+        fields = ordering_map.get(tok)
+        if fields:
+            for f in fields:
+                norm_f = f.lstrip("+-")
+                if norm_f not in seen:
+                    seen.add(norm_f)
+                    combined_fields.append(f)
+
+    if combined_fields:
+        return qs.order_by(*combined_fields)
+
+    return qs.order_by("-saldo_historico_calc", "apellido", "nombre")

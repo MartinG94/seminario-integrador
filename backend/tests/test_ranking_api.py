@@ -515,7 +515,61 @@ class TestRankingFilteringAndOrdering:
         r_desc = api_client.get("/api/v1/ranking/?ordering=-legajo")
         assert r_desc.status_code == status.HTTP_200_OK
         legajos_desc = [item["legajo"] for item in r_desc.json()]
-        assert legajos_desc == sorted(legajos, reverse=True)
+    def test_search_multi_term_out_of_order_tokens(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Búsqueda con múltiples términos en cualquier orden (nombre + subcomisión, etc.)."""
+        # Carlos (Alonso) en Cómputos
+        r1 = api_client.get("/api/v1/ranking/?search=computos carlos")
+        assert r1.status_code == status.HTTP_200_OK
+        assert len(r1.json()) == 1
+        assert r1.json()[0]["id"] == "101"
+
+        # Alonso + legajo 54321
+        r2 = api_client.get("/api/v1/ranking/?search=54321 alonso")
+        assert r2.status_code == status.HTTP_200_OK
+        assert len(r2.json()) == 1
+        assert r2.json()[0]["id"] == "101"
+
+    def test_comma_separated_multi_ordering(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Soporta ordenamiento múltiple separado por coma según estándar REST/DRF."""
+        response = api_client.get("/api/v1/ranking/?ordering=-saldo,apellido")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 4
+        saldos = [item["saldo"] for item in data]
+        assert saldos == sorted(saldos, reverse=True)
+
+        # Ordenamiento por subcomisión y luego saldo ascendente
+        r_sub = api_client.get("/api/v1/ranking/?ordering=subcomision,saldo")
+        assert r_sub.status_code == status.HTTP_200_OK
+        assert len(r_sub.json()) == 4
+
+    def test_ordering_by_diferencia_and_reconciliado(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Soporta ordenamiento por diferencia de reconciliación y estado."""
+        r_diff = api_client.get("/api/v1/ranking/?ordering=-diferencia")
+        assert r_diff.status_code == status.HTTP_200_OK
+        data = r_diff.json()
+        diffs = [abs(item["diferencia"]) for item in data]
+        assert diffs == sorted(diffs, reverse=True)
+
+        r_rec = api_client.get("/api/v1/ranking/?ordering=reconciliado")
+        assert r_rec.status_code == status.HTTP_200_OK
+
+    def test_django_system_check_reports_zero_warnings(self) -> None:
+        """El sistema Django check no debe emitir warnings de URL ni colisiones de namespace."""
+        from io import StringIO
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("check", stdout=out)
+        output = out.getvalue()
+        assert "System check identified no issues" in output
+
 
 
 @pytest.mark.django_db

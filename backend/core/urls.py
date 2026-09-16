@@ -1,7 +1,7 @@
 """URL configuration for SGD-AVEIT core project."""
 
 from django.contrib import admin
-from django.urls import include, path, re_path
+from django.urls import include, path
 
 from core.views import HealthCheckView
 
@@ -13,4 +13,3 @@ urlpatterns = [
     path("api/ranking/", include("ranking.urls", namespace="ranking")),
     path("api/ranking", include(("ranking.urls", "ranking"), namespace="ranking-noslash")),
 ]
-
