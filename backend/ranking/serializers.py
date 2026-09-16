@@ -72,6 +72,9 @@ class RankingSocioSerializer(serializers.ModelSerializer):
         return obj.categoria
 
     def get_subcomision(self, obj: Socio) -> str:
+        sub_calc = getattr(obj, "subcomision_nombre_calc", None)
+        if sub_calc is not None and str(sub_calc).strip():
+            return str(sub_calc)
         try:
             return obj.subcomision.nombre if obj.subcomision else "Sin Subcomisión"
         except (Subcomision.DoesNotExist, AttributeError):

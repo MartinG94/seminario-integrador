@@ -84,16 +84,41 @@ class RankingListView(APIView):
                 )
             cat_clean = c_val
 
-        ordering = (
+        sort_param = (
             request.query_params.get("ordering")
             or request.query_params.get("order_by")
-            or request.query_params.get("order")
             or request.query_params.get("sort")
             or request.query_params.get("criterioOrden")
         )
+        direction_param = (
+            request.query_params.get("direction")
+            or request.query_params.get("dir")
+        )
+        order_param = request.query_params.get("order")
+
+        # Si order es 'asc', 'desc', etc., actúa como modificador de dirección;
+        # si no, y no hay sort_param, actúa como fallback de campo.
+        if order_param:
+            ord_lower = order_param.strip().lower()
+            if ord_lower in ("asc", "desc", "ascending", "descending"):
+                if not direction_param:
+                    direction_param = ord_lower
+            elif not sort_param:
+                sort_param = order_param
+
+        ordering = sort_param
         ord_clean = None
         if ordering is not None and ordering.strip():
-            order_tokens = [tok.strip().lower() for tok in ordering.split(",") if tok.strip()]
+            dir_clean = direction_param.strip().lower() if direction_param else ""
+            is_desc = bool(dir_clean in ("desc", "descending"))
+
+            raw_tokens = [tok.strip().lower() for tok in ordering.split(",") if tok.strip()]
+            order_tokens = []
+            for tok in raw_tokens:
+                if is_desc and not tok.startswith(("-", "+")):
+                    tok = f"-{tok}"
+                order_tokens.append(tok)
+
             invalid_tokens = [tok for tok in order_tokens if tok not in self.VALID_ORDERING_FIELDS]
             if invalid_tokens:
                 allowed_str = ", ".join(sorted(self.VALID_ORDERING_FIELDS))

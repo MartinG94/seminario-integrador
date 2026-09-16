@@ -55,12 +55,14 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Ejecutando {len(statements)} sentencias SQL...")
 
-        with connection.cursor() as cursor:
-            if is_sqlite:
-                cursor.execute("PRAGMA foreign_keys = OFF;")
-            else:
+        if is_sqlite:
+            connection.ensure_connection()
+            connection.connection.execute("PRAGMA foreign_keys = OFF;")
+        else:
+            with connection.cursor() as cursor:
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
 
+        with connection.cursor() as cursor:
             executed_tables = 0
             executed_inserts = 0
 
@@ -83,7 +85,7 @@ class Command(BaseCommand):
                     self.stderr.write(self.style.WARNING(warn_msg))
 
             if is_sqlite:
-                cursor.execute("PRAGMA foreign_keys = ON;")
+                connection.connection.execute("PRAGMA foreign_keys = ON;")
             else:
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
@@ -107,42 +109,69 @@ class Command(BaseCommand):
                 f" - Inserciones ejecutadas: {executed_inserts}\n"
                 f" - Socios cargados: {socios_count}\n"
                 f" - Subcomisiones cargadas: {subcomisiones_count}\n"
-                f" - Puntajes Generales (caché): {ptj_gral_count}\n"
+                f" - Puntajes Generales (cache): {ptj_gral_count}\n"
                 f" - Puntajes Aplicados (libro mayor): {ptj_aplicado_count}"
             )
         )
 
     def _split_sql_statements(self, sql: str) -> list[str]:
-        """Separa sentencias SQL respetando cadenas de texto entre comillas."""
-        lines = []
-        for line in sql.splitlines():
-            trimmed = line.strip()
-            if trimmed.startswith("--") or not trimmed:
-                continue
-            lines.append(line)
-        clean_sql = "\n".join(lines)
-
+        """Separa sentencias SQL respetando cadenas de texto entre comillas y comentarios."""
         raw_statements = []
-        current = []
+        current: list[str] = []
         in_quote = False
         quote_char = ""
-        for char in clean_sql:
-            if char in ("'", '"') and not in_quote:
+        in_line_comment = False
+        i = 0
+        n = len(sql)
+
+        while i < n:
+            c = sql[i]
+
+            if in_line_comment:
+                if c == "\n":
+                    in_line_comment = False
+                i += 1
+                continue
+
+            if in_quote:
+                current.append(c)
+                if c == quote_char:
+                    if i + 1 < n and sql[i + 1] == quote_char:
+                        current.append(sql[i + 1])
+                        i += 1
+                    else:
+                        in_quote = False
+                i += 1
+                continue
+
+            if c in ("'", '"', "`"):
                 in_quote = True
-                quote_char = char
-            elif in_quote and char == quote_char:
-                in_quote = False
-            if char == ";" and not in_quote:
+                quote_char = c
+                current.append(c)
+                i += 1
+                continue
+
+            if c == "-" and i + 1 < n and sql[i + 1] == "-":
+                in_line_comment = True
+                i += 2
+                continue
+
+            if c == ";":
                 stmt = "".join(current).strip()
                 if stmt:
                     raw_statements.append(stmt)
                 current = []
-            else:
-                current.append(char)
+                i += 1
+                continue
+
+            current.append(c)
+            i += 1
+
         if current:
             stmt = "".join(current).strip()
             if stmt:
                 raw_statements.append(stmt)
+
         return raw_statements
 
     def _clean_mysql_statements(self, sql: str, clean: bool = False) -> list[str]:
@@ -153,12 +182,13 @@ class Command(BaseCommand):
         raw_statements = self._split_sql_statements(sql)
         statements = []
         for stmt in raw_statements:
-            upper = stmt.upper()
+            clean_stmt = stmt.strip()
+            upper = clean_stmt.upper()
             if upper.startswith(("SET NAMES", "SET FOREIGN_KEY_CHECKS", "CREATE DATABASE", "USE ")):
                 continue
             if upper.startswith("DROP TABLE") and not clean:
                 continue
-            statements.append(stmt)
+            statements.append(clean_stmt)
         return statements
 
     def _adapt_mysql_to_sqlite(self, sql: str, clean: bool = False) -> list[str]:
@@ -167,18 +197,21 @@ class Command(BaseCommand):
 
         sqlite_stmts = []
         for stmt in raw_statements:
-            upper_stmt = stmt.upper()
+            clean_stmt = stmt.strip()
+            upper_stmt = clean_stmt.upper()
             if upper_stmt.startswith("DROP TABLE"):
                 if clean:
-                    stmt = stmt.replace("`", '"')
-                    sqlite_stmts.append(stmt)
+                    clean_stmt = clean_stmt.replace("`", '"')
+                    sqlite_stmts.append(clean_stmt)
             elif upper_stmt.startswith("CREATE TABLE"):
-                stmt = re.sub(r"\)\s*ENGINE=.*$", ")", stmt, flags=re.IGNORECASE | re.DOTALL)
-                stmt = stmt.replace("`", '"')
+                clean_stmt = re.sub(
+                    r"\)\s*ENGINE=.*$", ")", clean_stmt, flags=re.IGNORECASE | re.DOTALL
+                )
+                clean_stmt = clean_stmt.replace("`", '"')
 
                 match = re.match(
                     r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?("?\w+"?)\s*\((.*)\)',
-                    stmt,
+                    clean_stmt,
                     flags=re.DOTALL | re.IGNORECASE,
                 )
                 if not match:
@@ -277,13 +310,15 @@ class Command(BaseCommand):
                 )
                 sqlite_stmts.append(sqlite_stmt)
             elif upper_stmt.startswith("INSERT INTO"):
-                stmt = stmt.replace("`", '"')
+                clean_stmt = clean_stmt.replace("`", '"')
                 # Anexar date_joined con CURRENT_TIMESTAMP para auth_user
-                if '"auth_user"' in stmt and "date_joined" not in stmt:
-                    stmt = stmt.replace('("id",', '("date_joined", "id",')
-                    stmt = re.sub(r"\(\s*(\d+)\s*,", r"(datetime('now'), \1,", stmt)
+                if '"auth_user"' in clean_stmt and "date_joined" not in clean_stmt:
+                    clean_stmt = clean_stmt.replace('("id",', '("date_joined", "id",')
+                    clean_stmt = re.sub(r"\(\s*(\d+)\s*,", r"(datetime('now'), \1,", clean_stmt)
                 # Reemplazar con INSERT OR REPLACE INTO para idempotencia
-                stmt = re.sub(r"^INSERT INTO", "INSERT OR REPLACE INTO", stmt, flags=re.IGNORECASE)
-                sqlite_stmts.append(stmt)
+                clean_stmt = re.sub(
+                    r"^INSERT INTO", "INSERT OR REPLACE INTO", clean_stmt, flags=re.IGNORECASE
+                )
+                sqlite_stmts.append(clean_stmt)
 
         return sqlite_stmts

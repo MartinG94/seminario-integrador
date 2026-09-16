@@ -5,16 +5,19 @@ import unicodedata
 from typing import Optional
 
 from django.db.models import (
+    Case,
     CharField,
     Exists,
     F,
     FloatField,
+    IntegerField,
     OuterRef,
     Q,
     QuerySet,
     Subquery,
     Sum,
     Value,
+    When,
 )
 from django.db.models.functions import Abs, Cast, Coalesce, Concat, Round
 
@@ -85,7 +88,8 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
     legajo_subquery = (
         SocioEstudio.objects.filter(socio_id=OuterRef("pk"))
         .order_by("compositeKey")
-        .values("nroLegajo")[:1]
+        .annotate(legajo_str=Cast("nroLegajo", output_field=CharField()))
+        .values("legajo_str")[:1]
     )
 
     return Socio.objects.select_related("subcomision").annotate(
@@ -102,6 +106,11 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
         legajo_calc=Coalesce(
             Subquery(legajo_subquery, output_field=CharField()),
             Cast("nroSocio", output_field=CharField()),
+            output_field=CharField(),
+        ),
+        subcomision_nombre_calc=Coalesce(
+            "subcomision__nombre",
+            Value("Sin Subcomisión"),
             output_field=CharField(),
         ),
     )
@@ -135,10 +144,22 @@ def filter_ranking_queryset(
                 "ninguna",
                 "none",
                 "null",
+                "99",
             ):
-                qs = qs.filter(subcomision__isnull=True)
+                qs = qs.filter(
+                    Q(subcomision__isnull=True)
+                    | Q(subcomision__nombre__iexact="Sin Subcomisión")
+                    | Q(subcomision_id=99)
+                )
             elif sub_str.isdigit():
-                qs = qs.filter(subcomision_id=int(sub_str))
+                if int(sub_str) == 99:
+                    qs = qs.filter(
+                        Q(subcomision__isnull=True)
+                        | Q(subcomision__nombre__iexact="Sin Subcomisión")
+                        | Q(subcomision_id=99)
+                    )
+                else:
+                    qs = qs.filter(subcomision_id=int(sub_str))
             else:
                 sub_pattern = f"^{make_accent_insensitive_regex(sub_str)}$"
                 qs = qs.filter(
@@ -173,6 +194,8 @@ def filter_ranking_queryset(
                     | Q(full_name_reverse__iregex=tok_pat)
                     | Q(subcomision__nombre__icontains=tok)
                     | Q(subcomision__nombre__iregex=tok_pat)
+                    | Q(subcomision_nombre_calc__icontains=tok)
+                    | Q(subcomision_nombre_calc__iregex=tok_pat)
                     | Q(nroSocio__icontains=tok)
                     | Q(legajo_calc__icontains=tok)
                     | Q(legajo_calc__iregex=tok_pat)
@@ -223,15 +246,15 @@ def order_ranking_queryset(
         "legajo": ("legajo_calc", "apellido", "nombre"),
         "+legajo": ("legajo_calc", "apellido", "nombre"),
         "-legajo": ("-legajo_calc", "apellido", "nombre"),
-        "subcomision": ("subcomision__nombre", "apellido", "nombre"),
-        "+subcomision": ("subcomision__nombre", "apellido", "nombre"),
-        "-subcomision": ("-subcomision__nombre", "apellido", "nombre"),
-        "diferencia": ("_reconciled_diff", "apellido", "nombre"),
-        "+diferencia": ("_reconciled_diff", "apellido", "nombre"),
-        "-diferencia": ("-_reconciled_diff", "apellido", "nombre"),
-        "reconciliado": ("_reconciled_diff", "apellido", "nombre"),
-        "+reconciliado": ("_reconciled_diff", "apellido", "nombre"),
-        "-reconciliado": ("-_reconciled_diff", "apellido", "nombre"),
+        "subcomision": ("subcomision_nombre_calc", "apellido", "nombre"),
+        "+subcomision": ("subcomision_nombre_calc", "apellido", "nombre"),
+        "-subcomision": ("-subcomision_nombre_calc", "apellido", "nombre"),
+        "diferencia": ("_signed_diff", "apellido", "nombre"),
+        "+diferencia": ("_signed_diff", "apellido", "nombre"),
+        "-diferencia": ("-_signed_diff", "apellido", "nombre"),
+        "reconciliado": ("_reconciled_bool", "apellido", "nombre"),
+        "+reconciliado": ("_reconciled_bool", "apellido", "nombre"),
+        "-reconciliado": ("-_reconciled_bool", "apellido", "nombre"),
     }
 
     raw_tokens = [tok.strip().lower() for tok in ordering.split(",") if tok.strip()]
@@ -239,9 +262,19 @@ def order_ranking_queryset(
         return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
     qs = queryset
-    needs_reconciled_diff = any("diferencia" in tok or "reconciliado" in tok for tok in raw_tokens)
-    if needs_reconciled_diff:
-        qs = qs.annotate(_reconciled_diff=Abs(F("saldo_historico_calc") - F("saldo_cache_calc")))
+    needs_diff_annotations = any(
+        "diferencia" in tok or "reconciliado" in tok for tok in raw_tokens
+    )
+    if needs_diff_annotations:
+        qs = qs.annotate(
+            _reconciled_diff=Abs(F("saldo_historico_calc") - F("saldo_cache_calc")),
+            _signed_diff=Round(F("saldo_historico_calc") - F("saldo_cache_calc"), 2),
+            _reconciled_bool=Case(
+                When(_reconciled_diff__lt=0.0001, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+        )
 
     combined_fields: list[str] = []
     seen: set[str] = set()

@@ -550,15 +550,152 @@ class TestRankingFilteringAndOrdering:
     def test_ordering_by_diferencia_and_reconciliado(
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
-        """Soporta ordenamiento por diferencia de reconciliación y estado."""
-        r_diff = api_client.get("/api/v1/ranking/?ordering=-diferencia")
-        assert r_diff.status_code == status.HTTP_200_OK
-        data = r_diff.json()
-        diffs = [abs(item["diferencia"]) for item in data]
-        assert diffs == sorted(diffs, reverse=True)
+        """Soporta ordenamiento con signo real por diferencia de reconciliación y estado."""
+        r_diff_desc = api_client.get("/api/v1/ranking/?ordering=-diferencia")
+        assert r_diff_desc.status_code == status.HTTP_200_OK
+        data_desc = r_diff_desc.json()
+        diffs_desc = [item["diferencia"] for item in data_desc]
+        assert diffs_desc == sorted(diffs_desc, reverse=True)
+        assert diffs_desc[0] == 0.5
+        assert diffs_desc[-1] == -0.5
 
+        r_diff_asc = api_client.get("/api/v1/ranking/?ordering=diferencia")
+        assert r_diff_asc.status_code == status.HTTP_200_OK
+        data_asc = r_diff_asc.json()
+        diffs_asc = [item["diferencia"] for item in data_asc]
+        assert diffs_asc == sorted(diffs_asc)
+        assert diffs_asc[0] == -0.5
+        assert diffs_asc[-1] == 0.5
+
+        # Ordenamiento por reconciliado (False/0 primero, True/1 después)
         r_rec = api_client.get("/api/v1/ranking/?ordering=reconciliado")
         assert r_rec.status_code == status.HTTP_200_OK
+        recs = [item["reconciliado"] for item in r_rec.json()]
+        assert recs == [False, False, True, True]
+
+        # Ordenamiento inverso por reconciliado (True/1 primero, False/0 después)
+        r_rec_desc = api_client.get("/api/v1/ranking/?ordering=-reconciliado")
+        assert r_rec_desc.status_code == status.HTTP_200_OK
+        recs_desc = [item["reconciliado"] for item in r_rec_desc.json()]
+        assert recs_desc == [True, True, False, False]
+
+    def test_subcomision_filter_matches_both_null_and_legacy_catalog_id_99(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """El filtro 'Sin Subcomisión' captura socios con subcomisión NULL y con id=99."""
+        sub99, _ = Subcomision.objects.get_or_create(
+            codSubcomision=99, defaults={"nombre": "Sin Subcomisión"}
+        )
+        s_id99 = Socio.objects.create(
+            nroSocio=301,
+            nombre="Hugo",
+            apellido="IdNoventaYNueve",
+            anoSocial=1,
+            subcomision=sub99,
+        )
+        s_null = Socio.objects.create(
+            nroSocio=302,
+            nombre="Ivana",
+            apellido="SubNull",
+            anoSocial=1,
+            subcomision=None,
+        )
+
+        r_text = api_client.get("/api/v1/ranking/?subcomision=Sin Subcomisión")
+        assert r_text.status_code == status.HTTP_200_OK
+        ids = [item["id"] for item in r_text.json()]
+        assert str(s_id99.nroSocio) in ids
+        assert str(s_null.nroSocio) in ids
+
+        r_code = api_client.get("/api/v1/ranking/?subcomision=99")
+        assert r_code.status_code == status.HTTP_200_OK
+        ids_code = [item["id"] for item in r_code.json()]
+        assert str(s_id99.nroSocio) in ids_code
+        assert str(s_null.nroSocio) in ids_code
+
+    def test_search_matches_null_subcomision_as_sin_subcomision(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """La búsqueda textual por 'sin subcomision' debe encontrar socios con subcomision=None."""
+        s_null = Socio.objects.create(
+            nroSocio=303,
+            nombre="Julieta",
+            apellido="Vargas",
+            anoSocial=1,
+            subcomision=None,
+        )
+        r = api_client.get("/api/v1/ranking/?search=sin subcomision")
+        assert r.status_code == status.HTTP_200_OK
+        ids = [item["id"] for item in r.json()]
+        assert str(s_null.nroSocio) in ids
+
+    def test_ordering_subcomision_places_null_under_sin_subcomision_alphabetically(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Al ordenar por subcomisión, 'Sin Subcomisión' va bajo 'S', no antes de 'A'."""
+        Socio.objects.create(
+            nroSocio=304,
+            nombre="Klaus",
+            apellido="Orphan",
+            anoSocial=1,
+            subcomision=None,
+        )
+        r = api_client.get("/api/v1/ranking/?ordering=subcomision")
+        assert r.status_code == status.HTTP_200_OK
+        subs = [item["subcomision"] for item in r.json()]
+        assert subs == sorted(subs)
+        # 'Sin Subcomisión' no debe ser el primer elemento en orden ascendente (Cómputos va antes)
+        assert subs[0] == "Cómputos"
+
+    def test_ordering_legajo_with_mixed_estudio_and_fallback(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Legajos numéricos con y sin estudio deben ordenarse como strings homogéneos en SQLite."""
+        Socio.objects.create(
+            nroSocio=10,
+            nombre="Chico",
+            apellido="Diez",
+            anoSocial=1,
+            subcomision=seed_ranking_data["subcomisiones"][0],
+        )
+        s_large = Socio.objects.create(
+            nroSocio=99,
+            nombre="Grande",
+            apellido="Millon",
+            anoSocial=1,
+            subcomision=seed_ranking_data["subcomisiones"][0],
+        )
+        SocioEstudio.objects.create(compositeKey=9901, socio=s_large, nroLegajo=999999)
+
+        r = api_client.get("/api/v1/ranking/?ordering=legajo")
+        assert r.status_code == status.HTTP_200_OK
+        legajos = [item["legajo"] for item in r.json() if item["id"] in ("10", "99")]
+        assert legajos == ["10", "999999"]
+
+    def test_sort_field_combined_with_order_direction_param(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Soporta ?sort=apellido&order=desc sin devolver HTTP 400."""
+        r = api_client.get("/api/v1/ranking/?sort=apellido&order=desc")
+        assert r.status_code == status.HTTP_200_OK
+        apellidos = [item["apellido"] for item in r.json()]
+        assert apellidos == sorted(apellidos, reverse=True)
+
+        r_asc = api_client.get("/api/v1/ranking/?sort=apellido&direction=asc")
+        assert r_asc.status_code == status.HTTP_200_OK
+        apellidos_asc = [item["apellido"] for item in r_asc.json()]
+        assert apellidos_asc == sorted(apellidos_asc)
+
+    def test_no_unmigrated_django_model_changes(self) -> None:
+        """Verifica que no existen migraciones pendientes o modelos desincronizados."""
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("makemigrations", "--check", "--dry-run", stdout=out)
+        output = out.getvalue()
+        assert "No changes detected" in output
 
     def test_django_system_check_reports_zero_warnings(self) -> None:
         """El sistema Django check no debe emitir warnings de URL ni colisiones de namespace."""
