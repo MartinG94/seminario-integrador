@@ -515,6 +515,8 @@ class TestRankingFilteringAndOrdering:
         r_desc = api_client.get("/api/v1/ranking/?ordering=-legajo")
         assert r_desc.status_code == status.HTTP_200_OK
         legajos_desc = [item["legajo"] for item in r_desc.json()]
+        assert legajos_desc == sorted(legajos, reverse=True)
+
     def test_search_multi_term_out_of_order_tokens(
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
@@ -531,9 +533,7 @@ class TestRankingFilteringAndOrdering:
         assert len(r2.json()) == 1
         assert r2.json()[0]["id"] == "101"
 
-    def test_comma_separated_multi_ordering(
-        self, api_client: APIClient, seed_ranking_data
-    ) -> None:
+    def test_comma_separated_multi_ordering(self, api_client: APIClient, seed_ranking_data) -> None:
         """Soporta ordenamiento múltiple separado por coma según estándar REST/DRF."""
         response = api_client.get("/api/v1/ranking/?ordering=-saldo,apellido")
         assert response.status_code == status.HTTP_200_OK
@@ -563,13 +563,13 @@ class TestRankingFilteringAndOrdering:
     def test_django_system_check_reports_zero_warnings(self) -> None:
         """El sistema Django check no debe emitir warnings de URL ni colisiones de namespace."""
         from io import StringIO
+
         from django.core.management import call_command
 
         out = StringIO()
         call_command("check", stdout=out)
         output = out.getvalue()
         assert "System check identified no issues" in output
-
 
 
 @pytest.mark.django_db
