@@ -545,25 +545,85 @@ El proyecto se estructura a lo largo del segundo semestre del Ciclo Lectivo 2026
 
 ```mermaid
 gantt
-    title Cronograma de Hitos y Fases SGD-AVEIT - Ciclo 2026
+    title Cronograma de Gantt Detallado por User Story con Tolerancia hacia Adelante - SGD-AVEIT
     dateFormat  YYYY-MM-DD
-    section Fase 1: Inicio
-    Relevamiento y Estudio Inicial           :done, 2026-08-01, 2026-08-20
-    Hito LCO (Lifecycle Objectives)         :milestone, done, 2026-08-20, 0d
-    section Fase 2: Elaboración
-    Arquitectura, Triggers MySQL y Core API :done, 2026-08-21, 2026-09-10
-    Hito LCA (Lifecycle Architecture)       :milestone, 2026-09-10, 0d
-    section Fase 3: Construcción
-    Sprint 1: Formularios Web T01/T02/T03    :active, 2026-09-11, 14d
-    Sprint 2: Tablero 6 Estados y Votación   :2026-09-25, 14d
-    Sprint 3: Cómputo Saldos y Alertas       :2026-10-09, 14d
-    Sprint 4: Balances Cuatrimestrales (137) :2026-10-23, 14d
-    Hito IOC (Initial Operational Capability):milestone, 2026-11-06, 0d
-    section Fase 4: Transición
-    Pruebas Piloto con Tribunal y QA UAT     :2026-11-07, 14d
-    Capacitación y Entrega Final             :2026-11-21, 14d
-    Hito PR (Product Release Final)          :milestone, 2026-12-05, 0d
+    axisFormat  %d/%m
+    excludes    weekends
+
+    section Sprint 0: Fundacional
+    Estudio Inicial y Marco Normativo        :done, us0_1, 2026-08-18, 5d
+    Arquitectura y Prototipo UX              :done, us0_2, after us0_1, 6d
+    Product Backlog v2 y Acuerdos            :done, us0_3, after us0_2, 5d
+    Hito LCO Lifecycle Objectives            :milestone, done, 2026-09-08, 0d
+
+    section Sprint 1: Walking Skeleton
+    S1-01 Contrato de integracion            :done, s1_1, 2026-09-09, 2d
+    S1-02 Baseline CI y secretos             :done, s1_2, 2026-09-12, 2d
+    S1-03 Autenticacion y roles RBAC         :active, s1_3, 2026-09-15, 3d
+    S1-04 Consumir padron institucional      :s1_4, 2026-09-18, 2d
+    S1-05 Ranking oficial reconciliado       :s1_5, 2026-09-18, 3d
+    S1-06 Busqueda y apertura de legajo      :s1_6, 2026-09-22, 2d
+    Hito LCA Lifecycle Architecture          :milestone, 2026-09-22, 0d
+
+    section Sprint 2: Apertura T01 & Tablero
+    S2-01 Expediente unico y 6 estados       :s2_1, 2026-09-23, 3d
+    S2-02 Cargar y validar T01 con anexo     :s2_2, 2026-09-28, 4d
+    S2-04 Notificar apertura enlace seguro   :s2_4, 2026-10-01, 3d
+    S2-05 Tablero responsive 6 estados       :s2_5, 2026-10-05, 2d
+    S3-02 Computo de 5 dias habiles          :s2_6, 2026-10-05, 2d
+
+    section Sprint 3: HITO MVP End-to-End
+    S3-03 Presentar T02 tipificado           :crit, s3_1, 2026-10-07, 4d
+    S3-04 Adjuntar evidencia protegida       :crit, s3_2, 2026-10-12, 3d
+    S3-05 Presentar T03 extraordinario       :crit, s3_3, 2026-10-12, 3d
+    S4-01 Visor unificado de causas TD       :crit, s3_4, 2026-10-15, 3d
+    S4-05 Votacion colegiada y dictamen      :crit, s3_5, 2026-10-19, 2d
+    Hito MVP Demostracion Funcional AVEIT    :milestone, crit, m_mvp, 2026-10-20, 0d
+    Tolerancia hacia adelante Feedback MVP   :crit, buf_mvp, 2026-10-21, 2026-10-23
+
+    section Sprint 4: Sustanciacion Formal
+    S2-03 Validar competencias arts 21-26    :s4_1, 2026-10-21, 3d
+    S3-01 Calendario dinamico de feriados    :s4_2, 2026-10-26, 3d
+    S3-06 Sanciones por reuniones 83-85-95   :s4_3, 2026-10-28, 2d
+    S4-02 Resolver causal con fundamento     :s4_4, 2026-10-29, 2d
+    S4-03 Antecedentes jurisprudenciales     :s4_5, 2026-10-29, 2d
+    S4-04 Apartamiento y suplencias art 95   :s4_6, 2026-11-02, 2d
+    S4-06 Redaccion Vistos y Considerandos   :s4_7, 2026-11-02, 2d
+
+    section Sprint 5: Emision & Ledger Puntos
+    S5-01 Firma de los 3 grupos Activos      :s5_1, 2026-11-04, 3d
+    S5-02 Emision y despacho notificacion    :s5_2, 2026-11-09, 2d
+    S5-03 Libro mayor inmutable cero UPDATE  :s5_3, 2026-11-11, 3d
+    S5-04 Portal socio Mis Expedientes       :s5_4, 2026-11-13, 2d
+    S5-05 Publicacion transparente fallos    :s5_5, 2026-11-16, 2d
+    S5-06 Alertas umbral -7 y -10 puntos     :s5_6, 2026-11-16, 2d
+    Hito IOC Capacidad Operativa Inicial     :milestone, 2026-11-17, 0d
+
+    section Sprint 6: Balances & Cierre
+    S6-01 Balance cuatrimestral Art 137      :s6_1, 2026-11-18, 3d
+    S6-02 Exportacion PDF y CSV verificable  :s6_2, 2026-11-23, 2d
+    S6-03 Jurisprudencia stretch             :s6_3, 2026-11-25, 2d
+    S6-04 Migracion legada rollback probado  :s6_4, 2026-11-26, 3d
+    S6-05 Hardening OWASP y pruebas carga    :s6_5, 2026-11-30, 2d
+    S6-06 Homologacion final en staging      :s6_6, 2026-12-01, 2d
+    Tolerancia hacia adelante Buffer Catedra :crit, buf_final, 2026-12-02, 2026-12-07
+    Hito PR Release Final y Defensa Catedra  :milestone, crit, 2026-12-08, 0d
 ```
+
+### 13.1. Detalle Operativo de Fases, Sprints y Tolerancias hacia Adelante (Buffers)
+
+1. **Fase 1: Inicio (Sprint 0 - 18/08 al 08/09):** Relevamiento, diagnóstico sistémico, constitución SDD, diseño UX preliminar, acuerdos de equipo y formulación de historias de usuario. Culmina con el **Hito LCO**.
+2. **Fase 2: Elaboración (Sprint 1 - 09/09 al 22/09):** Construcción del *Walking Skeleton*: integración de autenticación RBAC, adaptación de sólo lectura del padrón de ~515 socios, búsqueda insensible y ranking oficial reconciliado. Culmina con el **Hito LCA**.
+3. **Fase 3: Construcción (Sprints 2 a 5 - 23/09 al 17/11):**
+   - **Sprint 2 (23/09 al 06/10 - 18 pts):** Apertura formal de Formulario T01 con anexo opcional, notificaciones con token seguro al socio, tablero Kanban de 6 estados reglamentarios y cálculo del plazo preclusivo de 5 días hábiles.
+   - **Sprint 3 (07/10 al 20/10 - 20 pts) — HITO MVP:** Carga de descargos T02 (tipificado) y T03 (extraordinario) con comprobantes protegidos, visor unificado de causa para vocales del Tribunal, deliberación y voto colegiado nominal, y emisión del dictamen resolutivo en pantalla.
+   - **Tolerancia hacia Adelante MVP (Buffer de 3 días - 21/10 al 23/10):** Ventana de contingencia y estabilización en paralelo para demostración a Comisión Directiva y Tribunal de Disciplina de AVEIT y procesamiento de feedback temprano.
+   - **Sprint 4 (21/10 al 03/11 - 20 pts):** Sustanciación formal y reglas normativas avanzadas: validación de competencias estatutarias (arts. 21–26), calendario dinámico de feriados institucionales, propuestas por reuniones (arts. 83, 85, 95), suplencias del art. 95 y considerandos jurídicos estructurados.
+   - **Sprint 5 (04/11 al 17/11 - 20 pts):** Multi-firma colegiada por los 3 grupos Activos representados (4.º, 5.º, 6.º), despacho de notificaciones fehacientes, registro en libro mayor de puntos inmutable e idempotente (cero `UPDATE` manual), portal de autoservicio "Mis Expedientes" y alertas de riesgo (-7 y -10 puntos). Culmina con el **Hito IOC**.
+4. **Fase 4: Transición y Cierre (Sprint 6 - 18/11 al 01/12):**
+   - **Sprint 6 (18/11 al 01/12 - 24 pts):** Consolidación y exportación de Balances Cuatrimestrales (Art. 137) en PDF institucional y CSV abierto, migración y reconciliación de datos legados con rollback probado, hardening de seguridad OWASP, pruebas de carga (50 usuarios concurrentes), accesibilidad WCAG y homologación en staging.
+   - **Tolerancia hacia Adelante Final (Buffer de 5 días - 02/12 al 07/12):** Colchón de contingencia para imprevistos técnicos o demoras de Cátedra previo a la defensa formal del proyecto.
+   - **Hito PR (08/12/2026):** Entrega del producto 100% operativo, transferido a AVEIT y defendido ante la Cátedra de Seminario Integrador.
 
 ### 13.1. Matriz de Gestión y Mitigación de Riesgos
 

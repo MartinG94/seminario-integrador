@@ -88,19 +88,19 @@ El equipo de proyecto formaliza los siguientes acuerdos vinculantes de trabajo c
 ```
 [Sprint 0: 18/08 al 08/09] -> Fundacional: Relevamiento, Backlog, DoD/DoR, Prototipo UX
      │
-[Sprint 1: 09/09 al 22/09] -> Walking Skeleton: Auth, Roles RBAC, Ranking de Puntos y Legajos
+[Sprint 1: 09/09 al 22/09] -> Walking Skeleton: Auth, Roles RBAC, Padrón institucional y Ranking de Puntos
      │
-[Sprint 2: 23/09 al 06/10] -> Solicitud Formulario T01 con Anexo, Notificaciones y Tablero 6 Estados
+[Sprint 2: 23/09 al 06/10] -> Apertura T01 con Anexo, Notificaciones, Tablero 6 Estados y Plazo 5 Días Hábiles
      │
-[Sprint 3: 07/10 al 20/10] -> Descargos T02/T03, Adjuntos Digitales y Temporizador 5 Días Hábiles
+[Sprint 3: 07/10 al 20/10] -> ⭐ HITO MVP (End-to-End): Descargos T02/T03, Evidencia, Visor TD, Voto y Dictamen en Pantalla
+     │  ├── [Buffer MVP: 21/10 al 23/10] -> Demostración a AVEIT y Feedback de Usuarios (en paralelo a inicio de S4)
+[Sprint 4: 21/10 al 03/11] -> Sustanciación Formal, Reglas Estatutarias (Arts. 21-26), Calendario Dinámico y Considerandos
      │
-[Sprint 4: 21/10 al 03/11] -> Módulo Justificaciones, Deliberación Virtual, Votación y Firma Colegiada
+[Sprint 5: 04/11 al 17/11] -> Multi-Firma 3 Grupos Activos, Libro Mayor Inmutable de Puntos, Portal del Socio y Alertas
      │
-[Sprint 5: 04/11 al 17/11] -> Sumatoria Transaccional Inmutable de Puntos, Publicación Transparente y Alertas 7/10 pts
-     │
-[Sprint 6: 18/11 al 01/12] -> Balances Cuatrimestrales Art. 137, Jurisprudencia, Homologación y Cierre
-     │
-[Diciembre 2026: Entrega 100% Funcional y Presentación Final]
+[Sprint 6: 18/11 al 01/12] -> Balances Cuatrimestrales Art. 137, Migración Legada, Hardening, Staging y Homologación
+     │  └── [Buffer Final: 02/12 al 07/12] -> Tolerancia de Contingencia Pre-Entrega Académica
+[Diciembre 2026: Entrega 100% Funcional y Presentación Final ante Cátedra]
 ```
 
 ##### B. Eventos y Ceremonias Ágiles (Duración, Modalidad, Mecánica y Herramientas)

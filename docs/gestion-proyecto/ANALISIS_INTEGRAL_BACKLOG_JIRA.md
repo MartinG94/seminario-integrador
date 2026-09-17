@@ -111,15 +111,15 @@ La decisión final es un entregable de Sprint 1 y requiere aprobación del respo
 
 | Sprint | Puntos comprometidos | Stretch | Objetivo |
 |---|---:|---:|---|
-| 1 | 20 | 0 | Integración, identidad, padrón, ranking y búsqueda sobre datos reales/representativos. |
-| 2 | 18 | 0 | Apertura T01, competencias, notificación y máquina de seis estados. |
-| 3 | 19 | 0 | Plazos hábiles, T02/T03, evidencia y origen de sanciones. |
-| 4 | 22 | 0 | Revisión, conflicto/suplencias, voto nominal y resolución. |
-| 5 | 20 | 0 | Firma, emisión, libro mayor, portal y alertas. |
-| 6 | 21 | 3 | Balance, reconciliación, calidad, staging y homologación; jurisprudencia como stretch. |
-| **Total** | **120** | **3** | Pronóstico inicial; reestimar tras Sprint 1. |
+| 1 | 20 | 0 | Integración, identidad, padrón, ranking y búsqueda sobre datos reales/representativos (Walking Skeleton). |
+| 2 | 18 | 0 | Apertura T01 con anexo, notificación con enlace seguro, tablero de 6 estados y cálculo preclusivo de 5 días hábiles. |
+| 3 | 20 | 0 | **HITO MVP (End-to-End funcional):** Descargos T02/T03, evidencia protegida, visor del TD, voto colegiado y dictamen en pantalla. |
+| 4 | 20 | 0 | Sustanciación formal y reglas estatutarias: competencias arts. 21–26, calendario dinámico, sanciones por reunión, fundamentación, suplencias y considerandos. (Buffer de feedback MVP: 21/10–23/10). |
+| 5 | 20 | 0 | Multi-firma de 3 grupos Activos, despacho de notificaciones, libro mayor inmutable de puntos (cero UPDATE manual), portal del socio y alertas. |
+| 6 | 21 | 3 | Balances del art. 137 (PDF/CSV), migración/reconciliación legada, hardening, staging y homologación final; jurisprudencia como stretch. (Buffer final de contingencia: 02/12–07/12). |
+| **Total** | **119** | **3** | Pronóstico refinado con MVP en Sprint 3 sincronizado con Jira. |
 
-No se recomienda comprometer los 136 puntos del Product Backlog hoy: 120 forman el pronóstico base de seis sprints, 3 son *stretch* y 13 quedan sin calendarizar hasta validar los flujos de los arts. 13–15. El equipo dispone de unas 115,5 horas de foco nominal por sprint según el plan, pero Story Points no equivalen a horas. La decisión de alcance debe basarse en velocidad observada al cerrar Sprint 1. Si la velocidad queda debajo de 20, el orden de recorte sugerido es: jurisprudencia, PDF avanzado del balance y funcionalidades visuales no esenciales, preservando integridad, seguridad, trazabilidad y cumplimiento normativo.
+No se recomienda comprometer los 135 puntos del Product Backlog hoy: 119 forman el pronóstico base de seis sprints, 3 son *stretch* y 13 quedan sin calendarizar hasta validar los flujos de los arts. 13–15. El equipo dispone de unas 115,5 horas de foco nominal por sprint según el plan, pero Story Points no equivalen a horas. La decisión de alcance debe basarse en velocidad observada al cerrar Sprint 1. Si la velocidad queda debajo de 20, el orden de recorte sugerido es: jurisprudencia, PDF avanzado del balance y funcionalidades visuales no esenciales, preservando integridad, seguridad, trazabilidad y cumplimiento normativo.
 
 ## 7. Definition of Ready y Definition of Done aplicables
 
@@ -151,25 +151,30 @@ La importación debe hacerse en dos pasos: primero épicas; luego historias/spik
 
 El proyecto es viable en seis sprints sólo como **MVP disciplinario integrado**, con decisiones tempranas y control estricto de alcance. No conviene prometer simultáneamente reemplazo total del legado, migración exhaustiva, jurisprudencia avanzada y todos los refinamientos de reportería. El orden correcto es demostrar un walking skeleton conectado de manera segura, completar el expediente end-to-end y cerrar con reconciliación/homologación. La granularidad v2 permite mover alcance sin romper el valor vertical ni esconder riesgo dentro de historias de 8 puntos.
 
-## 11. Ejecución verificada en Jira (08/09/2026)
+## 11. Ejecución verificada en Jira (08/09/2026) y Reconfiguración MVP (16/09/2026)
 
 Se eliminó exclusivamente el backlog anterior, compuesto por `SCRUM-2` a `SCRUM-27` (26 incidencias). La consulta exacta de esas claves quedó sin resultados después de la operación masiva.
 
-La carga v2 creó y conservó 44 incidencias en el proyecto `SCRUM`:
-
+La carga v2 creó y conservó 44 incidencias base en el proyecto `SCRUM`:
 - 6 épicas: `SCRUM-28` a `SCRUM-33`.
 - 35 actividades planificadas: `SCRUM-34` a `SCRUM-68`.
 - 3 historias de decisión pendientes sin sprint: `SCRUM-69` a `SCRUM-71`.
+- Actividades técnicas de apoyo en Sprint 1: `SCRUM-72` a `SCRUM-74`.
 
-La jerarquía, descripción, prioridad, estimación, etiquetas y vínculo con épica se validaron por muestreo. Jira muestra el siguiente calendario y capacidad:
+Con fecha **16/09/2026**, por acuerdo entre Product Owner y Scrum Master, se reconfiguraron las asignaciones de sprints en Jira para estructurar un **MVP 100% funcional y testeable al cierre del Sprint 3 (20/10/2026)** con flujo *End-to-End*:
+- `SCRUM-46` (`S3-02`: Plazo de 5 días hábiles, 3 pts) se adelantó a **Sprint 2**.
+- `SCRUM-51` (`S4-01`: Visor unificado de causas y descargos, 5 pts) y `SCRUM-55` (`S4-05`: Votación colegiada y dictamen en pantalla, reestimada a 4 pts) se adelantaron a **Sprint 3 (HITO MVP)**.
+- `SCRUM-42` (`S2-03`: Competencias arts. 21–26, 3 pts), `SCRUM-45` (`S3-01`: Calendario dinámico de feriados, 3 pts) y `SCRUM-50` (`S3-06`: Origen por reuniones, 2 pts) se trasladaron a **Sprint 4**.
 
-| Sprint | Fechas en Jira | Actividades | Puntos |
-|---|---|---:|---:|
-| SCRUM Sprint 1 | 09/09/2026–22/09/2026 | 6 | 20 |
-| SCRUM Sprint 2 | 23/09/2026–06/10/2026 | 5 | 18 |
-| SCRUM Sprint 3 | 07/10/2026–20/10/2026 | 6 | 19 |
-| SCRUM Sprint 4 | 21/10/2026–03/11/2026 | 6 | 22 |
-| SCRUM Sprint 5 | 04/11/2026–17/11/2026 | 6 | 20 |
-| SCRUM Sprint 6 | 18/11/2026–01/12/2026 | 6 | 24, incluidos 3 puntos *stretch* |
+El tablero Jira `SCRUM` (Board 1) refleja la siguiente capacidad y calendario verificado:
 
-La comprobación final `project = SCRUM ORDER BY key ASC` devuelve `44 de 44`, y el backlog sin sprint contiene únicamente las tres historias `PB` por 13 puntos.
+| Sprint | Fechas en Jira | Actividades | Puntos | Hito / Foco |
+|---|---|---:|---:|---|
+| SCRUM Sprint 1 | 09/09/2026–22/09/2026 | 6 (+3 sub/tech) | 20 | Walking Skeleton: Auth, Padrón, Ranking y Búsqueda. |
+| SCRUM Sprint 2 | 23/09/2026–06/10/2026 | 5 | 18 | Apertura T01, Tablero 6 Estados, Notificación y Plazo 5 días. |
+| SCRUM Sprint 3 | 07/10/2026–20/10/2026 | 5 | 20 | **HITO MVP (End-to-End):** T02/T03, Evidencia, Visor TD, Voto y Dictamen. |
+| SCRUM Sprint 4 | 21/10/2026–03/11/2026 | 7 | 20 | Sustanciación Formal, Reglas Estatutarias y Considerandos (Buffer MVP: 21–23/10). |
+| SCRUM Sprint 5 | 04/11/2026–17/11/2026 | 6 | 20 | Multi-firma 3 grupos, Emisión, Ledger inmutable, Portal y Alertas. |
+| SCRUM Sprint 6 | 18/11/2026–01/12/2026 | 6 | 24 | Balances art. 137, Migración, Hardening, Staging y Homologación (Buffer: 02–07/12). |
+
+La comprobación en Jira mediante `project = SCRUM ORDER BY key ASC` valida la consistencia total de las 44 incidencias y las 3 historias `PB` (13 pts) en el Product Backlog.
