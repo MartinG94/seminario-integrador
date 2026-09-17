@@ -13,9 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env")
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-sgd-aveit-dev-secret-key-replace-in-production-2026",
+SECRET_KEY = (
+    os.getenv("DJANGO_SECRET_KEY")
+    or "django-insecure-sgd-aveit-dev-secret-key-replace-in-production-2026"
 )
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "t")
@@ -73,23 +73,33 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 ASGI_APPLICATION = "core.asgi.application"
 
-# Database — MySQL 8.0
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DATABASE_NAME", os.getenv("MYSQL_DATABASE", "aveit_tribunal_dev")),
-        "USER": os.getenv("DATABASE_USER", os.getenv("MYSQL_USER", "aveit_dev")),
-        "PASSWORD": os.getenv(
-            "DATABASE_PASSWORD", os.getenv("MYSQL_PASSWORD", "aveit_dev_password_2026")
-        ),
-        "HOST": os.getenv("DATABASE_HOST", os.getenv("MYSQL_HOST", "db")),
-        "PORT": os.getenv("DATABASE_PORT", os.getenv("MYSQL_PORT", "3306")),
-        "OPTIONS": {
-            "charset": "utf8mb4",
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+# Database — MySQL 8.0 (con fallback opcional a SQLite para desarrollo desacoplado)
+USE_SQLITE = os.getenv("USE_SQLITE", "False").lower() in ("true", "1", "t")
+
+if USE_SQLITE:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.getenv("DATABASE_NAME", os.getenv("MYSQL_DATABASE", "aveit_tribunal_dev")),
+            "USER": os.getenv("DATABASE_USER", os.getenv("MYSQL_USER", "aveit_dev")),
+            "PASSWORD": os.getenv(
+                "DATABASE_PASSWORD", os.getenv("MYSQL_PASSWORD", "aveit_dev_password_2026")
+            ),
+            "HOST": os.getenv("DATABASE_HOST", os.getenv("MYSQL_HOST", "db")),
+            "PORT": os.getenv("DATABASE_PORT", os.getenv("MYSQL_PORT", "3306")),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -120,13 +130,13 @@ REST_FRAMEWORK = {
 }
 
 # SimpleJWT Configuration
-JWT_SECRET = os.getenv("JWT_SIGNING_KEY", SECRET_KEY)
+JWT_SECRET = os.getenv("JWT_SIGNING_KEY") or SECRET_KEY
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", "60"))
+        minutes=int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_MINUTES") or "60")
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=int(os.getenv("JWT_REFRESH_TOKEN_LIFETIME_DAYS", "7"))
+        days=int(os.getenv("JWT_REFRESH_TOKEN_LIFETIME_DAYS") or "7")
     ),
     "SIGNING_KEY": JWT_SECRET,
     "AUTH_HEADER_TYPES": ("Bearer",),
