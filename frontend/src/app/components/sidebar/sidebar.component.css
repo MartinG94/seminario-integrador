@@ -1,0 +1,34 @@
+/* Cabecera de módulo: el nombre del módulo, no una sección navegable. */
+.aveit-modulo__cabecera p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.aveit-modulo__flecha {
+  font-size: 18px !important;
+  margin-left: 8px;
+}
+
+/* Secciones del módulo Tribunal: se leen como hijas de la cabecera. */
+.aveit-modulo__seccion .nav-link {
+  padding-left: 32px;
+}
+
+/*
+ * Módulos fuera del alcance de la tesis. Mantienen el color y el peso visual
+ * del resto del menú a pedido del equipo: sólo se les quita la navegación,
+ * no el protagonismo.
+ */
+.aveit-modulo--fijo .nav-link {
+  cursor: default;
+  pointer-events: none;
+}
+
+.aveit-modulo--fijo .nav-link:hover,
+.aveit-modulo--fijo .nav-link:focus {
+  background: transparent;
+  box-shadow: none;
+}
