@@ -3,6 +3,7 @@ import { ROUTES } from '../sidebar/sidebar.component';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { TribunalDataService, RolUsuario } from '../../services/tribunal-data.service';
+import { AuthService, PerfilSocio } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -19,17 +20,26 @@ export class NavbarComponent implements OnInit {
     currentRole: RolUsuario = 'tribunal';
     isDarkMode = false;
 
+    perfil: PerfilSocio | null = null;
+
     constructor(
-      location: Location,  
-      private element: ElementRef, 
+      location: Location,
+      private element: ElementRef,
       private router: Router,
-      public dataService: TribunalDataService
+      public dataService: TribunalDataService,
+      private auth: AuthService
     ) {
       this.location = location;
       this.sidebarVisible = false;
     }
 
+    cerrarSesion(): void {
+      this.auth.logout();
+      this.router.navigate(['/login']);
+    }
+
     ngOnInit(){
+      this.auth.perfil$.subscribe(perfil => this.perfil = perfil);
       this.listTitles = ROUTES.filter(listTitle => listTitle);
       const navbar: HTMLElement = this.element.nativeElement;
       this.toggleButton = navbar.getElementsByClassName('navbar-toggler')[0];
@@ -100,7 +110,7 @@ export class NavbarComponent implements OnInit {
                 $toggle.classList.add('toggled');
             }, 430);
 
-            var $layer = document.createElement('div');
+            $layer = document.createElement('div');
             $layer.setAttribute('class', 'close-layer');
 
             if (body.querySelectorAll('.main-panel')) {
