@@ -90,10 +90,7 @@ class RankingListView(APIView):
             or request.query_params.get("sort")
             or request.query_params.get("criterioOrden")
         )
-        direction_param = (
-            request.query_params.get("direction")
-            or request.query_params.get("dir")
-        )
+        direction_param = request.query_params.get("direction") or request.query_params.get("dir")
         order_param = request.query_params.get("order")
 
         # Si order es 'asc', 'desc', etc., actúa como modificador de dirección;

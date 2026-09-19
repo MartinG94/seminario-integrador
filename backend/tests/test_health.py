@@ -24,6 +24,7 @@ class TestHealthCheckEndpoint(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok", "db": "connected"})
+        self.assertEqual(response["Cache-Control"], "no-cache, no-store, must-revalidate")
         mock_ensure_connection.assert_called_once()
 
     @patch("django.db.connection.ensure_connection")
@@ -36,5 +37,13 @@ class TestHealthCheckEndpoint(SimpleTestCase):
         self.assertEqual(response.status_code, 503)
         data = response.json()
         self.assertEqual(data["status"], "error")
-        self.assertIn("Can't connect to MySQL server", data["db"])
+        self.assertEqual(data["db"], "unavailable")
+        self.assertEqual(response["Cache-Control"], "no-cache, no-store, must-revalidate")
         mock_ensure_connection.assert_called_once()
+
+    def test_health_check_disallowed_methods(self) -> None:
+        """Verificar que metodos de modificacion sean rechazados con 405 Method Not Allowed."""
+        for method in ("post", "put", "patch", "delete"):
+            client_method = getattr(self.client, method)
+            response = client_method(self.url)
+            self.assertEqual(response.status_code, 405)

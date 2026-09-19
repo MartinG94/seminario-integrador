@@ -8,7 +8,7 @@ Guía operativa obligatoria para agentes de Inteligencia Artificial (Antigravity
 
 Plataforma web 100% responsive (Mobile-First) para la gestión integral de expedientes disciplinarios, descargos tipificados (T02/T03), votación nominal colegiada del Tribunal de Disciplina y cómputo transaccional inmutable de saldos de puntos de la Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (**A.V.E.I.T.** - UTN FRC).
 
-- **Backend:** Python 3.11+ con Django 4.2+ LTS y Django REST Framework (DRF).
+- **Backend:** Python 3.12 con framework Django 4.2 LTS y Django REST Framework (DRF).
 - **Frontend:** SPA en Angular 14.2+ con TypeScript y Material Dashboard PRO (Angular Material).
 - **Base de Datos:** MySQL 8.0 relacional y transaccional (padrón institucional de ~515 socios).
 - **Entorno Local:** Orquestación en contenedores mediante `docker-compose.yml`.
@@ -42,7 +42,7 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
 ## 3. Estilo y Convenciones
 
 - **Lenguaje y Tipado:**
-  - Python 3.11+: Type hints obligatorios en todas las funciones, métodos y modelos públicos.
+  - Python 3.12: Type hints obligatorios en todas las funciones, métodos y modelos públicos.
   - TypeScript: Tipado estricto habilitado (`strict: true`), interfaces y DTOs para cada payload de API.
 - **Idioma del Código:**
   - Identificadores, nombres de clases, funciones, modelos, campos de BD y commits en **inglés** (ej. `MembershipStatus`, `calculate_balance`, `fetch_records`).

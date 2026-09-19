@@ -1,7 +1,7 @@
 # ==============================================================================
-# Dockerfile — Backend Django 4.2+ (Python 3.10 / SGD-AVEIT)
+# Dockerfile — Backend Django 4.2+ (Python 3.12 / SGD-AVEIT)
 # ==============================================================================
-FROM python:3.10-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 # Evitar buffering de salida de stdout/stderr y escritura de archivos .pyc
 ENV PYTHONDONTWRITEBYTECODE=1

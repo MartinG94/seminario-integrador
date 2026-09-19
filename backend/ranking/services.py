@@ -262,9 +262,7 @@ def order_ranking_queryset(
         return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
     qs = queryset
-    needs_diff_annotations = any(
-        "diferencia" in tok or "reconciliado" in tok for tok in raw_tokens
-    )
+    needs_diff_annotations = any("diferencia" in tok or "reconciliado" in tok for tok in raw_tokens)
     if needs_diff_annotations:
         qs = qs.annotate(
             _reconciled_diff=Abs(F("saldo_historico_calc") - F("saldo_cache_calc")),

@@ -13,9 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env")
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-sgd-aveit-dev-secret-key-replace-in-production-2026",
+SECRET_KEY = (
+    os.getenv("DJANGO_SECRET_KEY")
+    or "django-insecure-sgd-aveit-dev-secret-key-replace-in-production-2026"
 )
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "t")
@@ -27,7 +27,6 @@ ALLOWED_HOSTS = [
     )
     if host.strip()
 ]
-
 
 # Application definition
 INSTALLED_APPS = [
@@ -77,15 +76,10 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 ASGI_APPLICATION = "core.asgi.application"
 
-# Database — SQLite (default for local development) or MySQL (Docker / production)
-DATABASE_ENGINE = os.getenv("DATABASE_ENGINE", "sqlite").lower()
-USE_SQLITE = os.getenv("USE_SQLITE", "True" if DATABASE_ENGINE != "mysql" else "False").lower() in (
-    "true",
-    "1",
-    "t",
-)
+# Database — MySQL 8.0 (con fallback opcional a SQLite para desarrollo desacoplado)
+USE_SQLITE = os.getenv("USE_SQLITE", "False").lower() in ("true", "1", "t")
 
-if USE_SQLITE or DATABASE_ENGINE in ("sqlite", "sqlite3"):
+if USE_SQLITE:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -109,7 +103,6 @@ else:
             },
         }
     }
-
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -140,13 +133,13 @@ REST_FRAMEWORK = {
 }
 
 # SimpleJWT Configuration
-JWT_SECRET = os.getenv("JWT_SIGNING_KEY", SECRET_KEY)
+JWT_SECRET = os.getenv("JWT_SIGNING_KEY") or SECRET_KEY
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", "60"))
+        minutes=int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_MINUTES") or "60")
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=int(os.getenv("JWT_REFRESH_TOKEN_LIFETIME_DAYS", "7"))
+        days=int(os.getenv("JWT_REFRESH_TOKEN_LIFETIME_DAYS") or "7")
     ),
     "SIGNING_KEY": JWT_SECRET,
     "AUTH_HEADER_TYPES": ("Bearer",),
