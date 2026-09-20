@@ -4,3 +4,67 @@
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
 }
+
+// SCRUM-74: controles del ranking en pantallas moviles.
+@media (max-width: 576px) {
+  // Leyenda disciplinaria: una fila por estado, con badges alineados.
+  .card.p-3.mb-0 > .d-flex > .d-flex.gap-4 {
+    width: 100%;
+    min-width: 0;
+
+    > .small {
+      width: 100%;
+      min-width: 0;
+
+      > .badge-mat {
+        flex: 0 0 130px;
+        justify-content: center;
+        white-space: nowrap;
+      }
+
+      > .text-muted {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+    }
+  }
+
+  .card-header > div {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .card-header .btn-group {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .card-header .btn-group > .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .card-header select.form-control,
+  .card-header .input-group {
+    // Sobrescribe los anchos inline y la utilidad ml-2 de Bootstrap.
+    width: 100% !important;
+    min-width: 0;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .card-header .input-group .form-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}

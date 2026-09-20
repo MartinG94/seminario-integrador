@@ -98,4 +98,72 @@ describe('RankingSociosComponent', () => {
     expect(component.cargando).toBeFalse();
     expect(component.error).toBe('No se pudo cargar el ranking. Intentá nuevamente.');
   });
+
+  it('debería ordenar por mérito y desempatar por apellido y nombre', () => {
+    const crearSocio = (id: string, apellido: string, nombre: string, saldo: number): RankingSocio => ({
+      id, legajo: id, apellido, nombre, saldo,
+      categoria: 'ACTIVO', subcomision: 'Cómputos'
+    });
+    rankingServiceSpy.obtenerRanking.and.returnValue(of([
+      crearSocio('1', 'Zapata', 'Ana', 5),
+      crearSocio('2', 'Alonso', 'Bruno', 5),
+      crearSocio('3', 'Alonso', 'Ana', 5),
+      crearSocio('4', 'Zapata', 'Zoe', 10),
+      crearSocio('5', 'Abad', 'Ana', -2)
+    ]));
+    fixture.detectChanges();
+    component.criterioOrden = 'merito';
+
+    expect(component.sociosOrdenados.map(s => s.id)).toEqual(['4', '3', '2', '1', '5']);
+  });
+
+  it('debería ordenar por sanción de menor a mayor saldo', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(of([
+      { ...sociosMock[0], id: '1', saldo: 5 },
+      { ...sociosMock[1], id: '2', saldo: -1 },
+      { ...sociosMock[0], id: '3', saldo: -8 },
+      { ...sociosMock[1], id: '4', saldo: 0 }
+    ]));
+    fixture.detectChanges();
+    component.criterioOrden = 'sancion';
+
+    expect(component.sociosOrdenados.map(s => s.id)).toEqual(['3', '2', '4', '1']);
+  });
+
+  it('debería paginar 13 socios en una primera página de 10 y una segunda de 3', () => {
+    const sociosPagina: RankingSocio[] = Array.from({ length: 13 }, (_, i) => ({
+      ...sociosMock[0], id: String(i + 1), legajo: String(2001 + i), saldo: 13 - i
+    }));
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosPagina));
+    fixture.detectChanges();
+
+    expect(component.totalPaginas).toBe(2);
+    expect(component.sociosPaginados.length).toBe(10);
+    expect(component.sociosPaginados.map(s => s.id)).toEqual([
+      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'
+    ]);
+
+    component.cambiarPagina(2);
+
+    expect(component.paginaActual).toBe(2);
+    expect(component.sociosPaginados.length).toBe(3);
+    expect(component.sociosPaginados.map(s => s.id)).toEqual(['11', '12', '13']);
+    expect(component.totalPaginas).toBe(2);
+  });
+
+  it('debería cambiar el criterio de orden y volver a la primera página', () => {
+    fixture.detectChanges();
+    component.paginaActual = 2;
+
+    component.setOrden('sancion');
+
+    expect(component.criterioOrden).toBe('sancion');
+    expect(component.paginaActual).toBe(1);
+
+    component.paginaActual = 2;
+    component.setOrden('merito');
+
+    expect(component.criterioOrden).toBe('merito');
+    expect(component.paginaActual).toBe(1);
+  });
 });
