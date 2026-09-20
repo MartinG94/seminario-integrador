@@ -1,15 +1,19 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { RankingSocio } from '../ranking-socios/ranking-socio.model';
-import { RANKING_SOCIOS_MOCK } from '../ranking-socios/ranking.mock';
 
 /**
  * Servicio de SCRUM-38 que centraliza el acceso a los datos del ranking.
- * Actualmente usa mocks; posteriormente será el punto de integración
- * con GET /api/v1/ranking/.
+ * Consume el endpoint real del backend.
  */
 @Injectable({ providedIn: 'root' })
 export class RankingService {
-  obtenerRanking(): RankingSocio[] {
-    return [...RANKING_SOCIOS_MOCK];
+  private readonly apiUrl = 'http://127.0.0.1:8000/api/v1/ranking/';
+
+  constructor(private http: HttpClient) {}
+
+  obtenerRanking(): Observable<RankingSocio[]> {
+    return this.http.get<RankingSocio[]>(this.apiUrl);
   }
 }

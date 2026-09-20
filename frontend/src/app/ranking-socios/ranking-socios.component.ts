@@ -16,12 +16,28 @@ export class RankingSociosComponent implements OnInit {
   subcomisiones: string[] = [];
   paginaActual = 1;
   tamanoPagina = 10;
+  cargando = false;
+  error: string | null = null;
 
   constructor(public rankingService: RankingService) {}
 
   ngOnInit(): void {
-    this.socios = this.rankingService.obtenerRanking();
-    this.subcomisiones = [...new Set(this.socios.map(s => s.subcomision))].sort();
+    this.cargando = true;
+    this.error = null;
+
+    this.rankingService.obtenerRanking().subscribe({
+      next: (socios) => {
+        this.socios = socios;
+        this.subcomisiones = [...new Set(this.socios.map(s => s.subcomision))].sort();
+        this.cargando = false;
+      },
+      error: () => {
+        this.socios = [];
+        this.subcomisiones = [];
+        this.error = 'No se pudo cargar el ranking. Intentá nuevamente.';
+        this.cargando = false;
+      }
+    });
   }
 
   get sociosOrdenados(): RankingSocio[] {
