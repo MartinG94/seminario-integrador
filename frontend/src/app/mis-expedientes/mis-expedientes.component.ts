@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
+import { AuthService } from '../services/auth.service';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -10,8 +11,8 @@ import { Subscription, interval } from 'rxjs';
 export class MisExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
   misExpedientes: Expediente[] = [];
-  socioActual = 'Ignacio Morales';
-  saldoNeto = -2.5;
+  socioActual = '';
+  saldoNeto = 0;
 
   // Modal T02/T03
   modalAbierto = false;
@@ -24,22 +25,39 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
-  constructor(public dataService: TribunalDataService) {}
+  constructor(
+    public dataService: TribunalDataService,
+    private auth: AuthService
+  ) {}
 
   ngOnInit(): void {
+    const subPerfil = this.auth.perfil$.subscribe(perfil => {
+      this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
+      this.filtrarMisExpedientes();
+    });
+    this.subs.push(subPerfil);
+
     const subExp = this.dataService.expedientes$.subscribe(list => {
       this.expedientes = list;
-      this.misExpedientes = list.filter(e => e.socio.toLowerCase() === this.socioActual.toLowerCase());
+      this.filtrarMisExpedientes();
     });
     this.subs.push(subExp);
 
     const subSocios = this.dataService.socios$.subscribe(socios => {
       const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-      if (s) {
-        this.saldoNeto = s.saldo;
-      }
+      // Sin coincidencia en el padrón, el saldo real todavía no se conoce: el
+      // cálculo transaccional de puntos llega con el endpoint de ranking.
+      this.saldoNeto = s ? s.saldo : 0;
     });
     this.subs.push(subSocios);
+  }
+
+  /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
+  private filtrarMisExpedientes(): void {
+    const nombre = this.socioActual.trim().toLowerCase();
+    this.misExpedientes = nombre
+      ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
+      : [];
   }
 
   ngOnDestroy(): void {

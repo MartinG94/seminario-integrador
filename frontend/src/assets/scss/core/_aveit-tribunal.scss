@@ -203,27 +203,36 @@ body.dark-edition {
   margin-bottom: 30px;
   background: #FFFFFF;
 
-  .card-header-primary {
+  // En un encabezado con ícono el color viaja al ícono, no al encabezado: si se
+  // pintara el encabezado, el texto oscuro de las stat cards quedaría ilegible
+  // sobre el gradiente.
+  .card-header-primary:not(.card-header-icon),
+  .card-header-primary.card-header-icon .card-icon {
     background: $grad-primary-aveit !important;
     box-shadow: $shadow-primary-mat !important;
   }
-  .card-header-info {
+  .card-header-info:not(.card-header-icon),
+  .card-header-info.card-header-icon .card-icon {
     background: $grad-info-mat !important;
     box-shadow: $shadow-info-mat !important;
   }
-  .card-header-success {
+  .card-header-success:not(.card-header-icon),
+  .card-header-success.card-header-icon .card-icon {
     background: $grad-success-mat !important;
     box-shadow: $shadow-success-mat !important;
   }
-  .card-header-warning {
+  .card-header-warning:not(.card-header-icon),
+  .card-header-warning.card-header-icon .card-icon {
     background: $grad-warning-mat !important;
     box-shadow: $shadow-warning-mat !important;
   }
-  .card-header-danger {
+  .card-header-danger:not(.card-header-icon),
+  .card-header-danger.card-header-icon .card-icon {
     background: $grad-danger-mat !important;
     box-shadow: $shadow-danger-mat !important;
   }
-  .card-header-rose {
+  .card-header-rose:not(.card-header-icon),
+  .card-header-rose.card-header-icon .card-icon {
     background: $grad-rose-mat !important;
     box-shadow: $shadow-rose-mat !important;
   }
@@ -255,20 +264,30 @@ body.dark-edition {
 // ==========================================
 .card-stats {
   .card-header.card-header-icon {
-    float: left;
-    margin: -20px 15px 0;
-    border-radius: 3px;
-    padding: 15px;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    // La caja de 60x60 y el float son del ícono, no del encabezado: aplicarlos
+    // al encabezado lo reducía a 60px y el texto se desbordaba sobre el ícono.
+    &::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
 
-    i.material-icons {
-      font-size: 32px;
-      color: #FFFFFF;
-      line-height: 1;
+    .card-icon {
+      float: left;
+      margin: -20px 15px 0 0;
+      border-radius: 3px;
+      padding: 15px;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      i.material-icons {
+        font-size: 32px;
+        color: #FFFFFF;
+        line-height: 1;
+      }
     }
   }
 

@@ -1,4 +1,10 @@
-"""Django settings for SGD-AVEIT backend."""
+"""
+Django settings for the SGD-AVEIT backend (Spec 001 — Walking Skeleton).
+
+Configuration values that vary between environments (secrets, database
+credentials, debug flag) are read from environment variables / a local
+`.env` file, never hardcoded. See `.env.example` for the expected keys.
+"""
 
 import os
 from datetime import timedelta
@@ -37,8 +43,11 @@ INSTALLED_APPS = [
     # Dependencias de terceros
     "corsheaders",
     "rest_framework",
+    "rest_framework_simplejwt",
     # Módulos del núcleo
     "core",
+    "accounts",
+    "socios",
 ]
 
 MIDDLEWARE = [
@@ -109,6 +118,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# PBKDF2 (Django default, first in the list) satisfies RNF-04 without adding
+# a third-party hashing dependency (Argon2 would require `argon2-cffi`).
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
+
 # Internationalization
 LANGUAGE_CODE = "es-ar"
 TIME_ZONE = "America/Argentina/Buenos_Aires"
@@ -126,10 +141,14 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    # Deny by default (CA3): every endpoint must opt in to anonymous access
+    # explicitly instead of opting out of authentication.
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
 # SimpleJWT Configuration
+# RNF-04 / CA4: la sesión tiene duración limitada y un token vencido no da
+# acceso a ningún recurso protegido.
 JWT_SECRET = os.getenv("JWT_SIGNING_KEY") or SECRET_KEY
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
@@ -151,3 +170,31 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+
+# LOGGING: a dedicated, non-propagating "security" logger is the audit trail
+# required by CA4. Handlers/formatters here must never be given the raw
+# request body, password fields or full tokens — only the event name, the
+# username/legajo, the outcome and a timestamp (see accounts.audit, added in
+# the RBAC task).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "audit": {
+            "format": "%(asctime)s level=%(levelname)s logger=%(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "audit",
+        },
+    },
+    "loggers": {
+        "security": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

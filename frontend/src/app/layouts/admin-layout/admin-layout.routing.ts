@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
+import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
 import { ReportesComponent } from '../../reportes/reportes.component';
 import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.component';
@@ -17,6 +18,7 @@ import { UpgradeComponent } from '../../upgrade/upgrade.component';
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
+    { path: 'reglamentos',            component: ReglamentosComponent },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent },
     { path: 'reportes',               component: ReportesComponent },
     { path: 'ranking-socios',         component: RankingSociosComponent },

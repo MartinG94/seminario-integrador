@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AdminLayoutRoutes } from './admin-layout.routing';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
+import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
 import { ReportesComponent } from '../../reportes/reportes.component';
 import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.component';
@@ -39,6 +40,7 @@ import {MatSelectModule} from '@angular/material/select';
   ],
   declarations: [
     MisExpedientesComponent,
+    ReglamentosComponent,
     GestionarExpedientesComponent,
     ReportesComponent,
     RankingSociosComponent,
