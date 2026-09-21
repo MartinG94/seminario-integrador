@@ -23,9 +23,7 @@ class LoginSerializer(serializers.Serializer):
     )
 
     def _reject(self, identifier: str, reason_code: str):
-        audit.log_authentication_failure(
-            identifier=identifier, reason_code=reason_code
-        )
+        audit.log_authentication_failure(identifier=identifier, reason_code=reason_code)
         raise AuthenticationFailed(INVALID_CREDENTIALS_DETAIL)
 
     def validate(self, attrs: dict) -> dict:
@@ -59,9 +57,7 @@ class LoginSerializer(serializers.Serializer):
         refresh["role"] = socio.role
         refresh["category"] = socio.category
 
-        audit.log_authentication_success(
-            identifier=socio.legajo, role=socio.role
-        )
+        audit.log_authentication_success(identifier=socio.legajo, role=socio.role)
 
         return {
             "access": str(refresh.access_token),

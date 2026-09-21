@@ -143,9 +143,7 @@ REST_FRAMEWORK = {
     ),
     # Deny by default (CA3): every endpoint must opt in to anonymous access
     # explicitly instead of opting out of authentication.
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
 # SimpleJWT Configuration

@@ -58,9 +58,7 @@ class Socio(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(6)]
     )
     category = models.CharField(max_length=10, choices=SocialCategory.choices)
-    role = models.CharField(
-        max_length=20, choices=Role.choices, default=Role.SOCIO, db_index=True
-    )
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.SOCIO, db_index=True)
     # Vigencia operativa de la cuenta: independiente de `category` (Constitución, ppio. 8).
     is_enabled = models.BooleanField(default=True)
 

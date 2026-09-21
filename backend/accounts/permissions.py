@@ -37,13 +37,9 @@ class HasAnyRole(BasePermission):
 
         granted = bool(socio and socio.is_enabled and role in self.allowed_roles)
         if granted:
-            audit.log_access_granted(
-                identifier=identifier, role=role, resource=resource
-            )
+            audit.log_access_granted(identifier=identifier, role=role, resource=resource)
         else:
-            audit.log_access_denied(
-                identifier=identifier, role=role, resource=resource
-            )
+            audit.log_access_denied(identifier=identifier, role=role, resource=resource)
         return granted
 
 

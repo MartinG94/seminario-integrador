@@ -32,9 +32,7 @@ def make_socio(db, subcomision):
         email: str | None = None,
     ) -> Socio:
         email = email or f"socio{legajo}@aveit.test"
-        user = UserModel.objects.create_user(
-            username=legajo, email=email, password=password
-        )
+        user = UserModel.objects.create_user(username=legajo, email=email, password=password)
         return Socio.objects.create(
             user=user,
             legajo=legajo,
@@ -61,9 +59,7 @@ def authenticate(api_client):
             format="json",
         )
         assert response.status_code == 200, response.data
-        api_client.credentials(
-            HTTP_AUTHORIZATION=f"Bearer {response.data['access']}"
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
         return api_client
 
     return _authenticate

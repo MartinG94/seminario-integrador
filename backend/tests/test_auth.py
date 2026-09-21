@@ -142,8 +142,16 @@ def test_login_failures_are_indistinguishable(api_client, make_socio):
     assert len(bodies) == 1
 
     body = str(unknown_user.data).lower()
-    for leak in ("existe@aveit.test", "baja@aveit.test", "apellido", "inactiv",
-                 "deshabilit", "no existe", "password", "contraseña"):
+    for leak in (
+        "existe@aveit.test",
+        "baja@aveit.test",
+        "apellido",
+        "inactiv",
+        "deshabilit",
+        "no existe",
+        "password",
+        "contraseña",
+    ):
         assert leak not in body
 
 
@@ -171,9 +179,9 @@ def test_valid_token_has_limited_lifetime(api_client, make_socio):
     socio = make_socio(legajo="74907")
 
     token = AccessToken.for_user(socio.user)
-    lifetime = datetime.fromtimestamp(
-        token["exp"], tz=timezone.utc
-    ) - datetime.fromtimestamp(token["iat"], tz=timezone.utc)
+    lifetime = datetime.fromtimestamp(token["exp"], tz=timezone.utc) - datetime.fromtimestamp(
+        token["iat"], tz=timezone.utc
+    )
 
     assert lifetime == timedelta(minutes=60)
 
@@ -182,9 +190,7 @@ def test_valid_token_has_limited_lifetime(api_client, make_socio):
 
 
 @pytest.mark.django_db
-def test_audit_logs_success_and_failure_without_secrets(
-    api_client, make_socio, security_log
-):
+def test_audit_logs_success_and_failure_without_secrets(api_client, make_socio, security_log):
     make_socio(legajo="74907", role=Role.TD)
 
     ok = api_client.post(
@@ -223,9 +229,7 @@ def test_audit_truncates_oversized_identifier(api_client, security_log):
     """Si alguien pega su contraseña en el campo usuario, no se vuelca entera."""
     oversized = "x" * 200
 
-    api_client.post(
-        LOGIN_URL, {"identifier": oversized, "password": "y"}, format="json"
-    )
+    api_client.post(LOGIN_URL, {"identifier": oversized, "password": "y"}, format="json")
 
     logged = security_log.getvalue()
     assert oversized not in logged

@@ -73,9 +73,7 @@ def test_unauthorized_roles_get_403_on_padron(make_socio, authenticate, role):
 
 
 @pytest.mark.django_db
-def test_disabled_account_cannot_use_previously_issued_token(
-    make_socio, authenticate
-):
+def test_disabled_account_cannot_use_previously_issued_token(make_socio, authenticate):
     """La autorización se revalida contra el padrón, no contra el token."""
     socio = make_socio(legajo="74907", role=Role.TD)
     client = authenticate(socio)
@@ -155,9 +153,7 @@ def test_granted_access_is_audited(make_socio, authenticate, security_log):
         ("tribunal_alto", {Role.TD}),
     ],
 )
-def test_legacy_permission_maps_to_documented_roles(
-    legacy_permission, expected_roles
-):
+def test_legacy_permission_maps_to_documented_roles(legacy_permission, expected_roles):
     assert set(LEGACY_PERMISSION_TO_ROLES[legacy_permission]) == expected_roles
 
 
