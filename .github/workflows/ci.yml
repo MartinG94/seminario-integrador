@@ -45,7 +45,7 @@ jobs:
       - name: Instalar dependencias binarias del sistema (MySQL Client)
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config gcc
+          sudo apt-get install -y --no-install-recommends default-libmysqlclient-dev default-mysql-client pkg-config gcc
 
       - name: Instalar dependencias de Python
         run: |
@@ -57,6 +57,18 @@ jobs:
 
       - name: Verificación de formateo con Ruff
         run: ruff format --check backend/
+
+      - name: Conceder permisos a la base temporal de Django
+        env:
+          MYSQL_PWD: test_root_ci_2026
+        run: |
+          mysql \
+            --protocol=TCP \
+            --host=127.0.0.1 \
+            --port=3306 \
+            --user=root <<'SQL'
+          GRANT ALL PRIVILEGES ON `test_aveit_tribunal_test`.* TO 'aveit_test'@'%';
+          SQL
 
       - name: Ejecutar suite de pruebas con Pytest
         env:
