@@ -4,3 +4,12 @@
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
 }
+
+.socio-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover {
+    background-color: rgba(110, 157, 220, 0.12) !important;
+  }
+}

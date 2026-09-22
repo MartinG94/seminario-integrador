@@ -1,0 +1,216 @@
+@import "../../../assets/scss/core/aveit-tribunal";
+
+.legajo-dialog-container {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background-color: var(--color-surface-card, #ffffff);
+  color: var(--color-text-primary, #151846);
+  font-family: var(--font-body, 'Roboto', sans-serif);
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+
+  @media (min-width: 576px) {
+    padding: 1.5rem;
+  }
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid var(--color-tint, #B3D3E4);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  position: relative;
+
+  .header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: linear-gradient(60deg, #151846, #252B6B);
+    color: #ffffff;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+
+    i {
+      font-size: 24px;
+    }
+  }
+
+  .header-text {
+    flex: 1;
+    min-width: 0;
+
+    .dialog-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--color-primary, #151846);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      @media (max-width: 400px) {
+        font-size: 0.95rem;
+      }
+    }
+
+    .dialog-subtitle {
+      font-size: 0.75rem;
+      color: var(--color-text-secondary, #334155);
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .btn-close {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary, #334155);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: var(--color-danger, #B91C1C);
+    }
+  }
+}
+
+.dialog-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+
+  &.state-error {
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.socio-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  border-radius: 8px;
+  background-color: var(--color-surface, #F2EEE9);
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 380px) {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .socio-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--color-accent, #6E9DDC);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .socio-main-info {
+    min-width: 0;
+    flex: 1;
+
+    .socio-full-name {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--color-primary, #151846);
+      word-break: break-word;
+    }
+
+    .socio-legajo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--color-text-secondary, #334155);
+
+      i {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+
+  @media (min-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .data-item {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0.65rem;
+    background-color: #f8fafc;
+    border: 1px solid var(--color-border-main, #D1D5DB);
+    border-radius: 6px;
+    min-width: 0; // Previene desbordamiento en flex/grid
+
+    .data-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-secondary, #64748b);
+      margin-bottom: 0.2rem;
+    }
+
+    .data-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-primary, #151846);
+      word-break: break-word;
+    }
+  }
+}
+
+.notice-box {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.65rem;
+  background-color: rgba(110, 157, 220, 0.08);
+  border-left: 3px solid var(--color-accent, #6E9DDC);
+  border-radius: 4px;
+
+  i {
+    font-size: 18px;
+    margin-top: 2px;
+  }
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--color-border-main, #E2E8F0);
+}

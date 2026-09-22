@@ -70,7 +70,10 @@
                   <th>Estado Estatutario</th>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let s of sociosOrdenados; let i = index">
+                  <tr *ngFor="let s of sociosOrdenados; let i = index" 
+                      (click)="abrirLegajoSocio(s)" 
+                      class="socio-row-clickable" 
+                      title="Clic para ver legajo y antecedentes de {{s.nombre}}">
                     <td class="font-weight-bold text-muted">#{{i + 1}}</td>
                     <td>
                       <div class="font-weight-bold text-dark">{{s.nombre}}</div>

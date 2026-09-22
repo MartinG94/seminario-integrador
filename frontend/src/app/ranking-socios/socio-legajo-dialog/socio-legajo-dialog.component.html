@@ -1,0 +1,118 @@
+<div class="legajo-dialog-container">
+  <!-- Cabecera Institucional del Modal -->
+  <div class="dialog-header">
+    <div class="header-icon">
+      <i class="material-icons">badge</i>
+    </div>
+    <div class="header-text">
+      <h3 class="dialog-title">Legajo de Socio Institucional</h3>
+      <p class="dialog-subtitle">SGD-AVEIT &bull; Padrón Oficial y Antecedentes</p>
+    </div>
+    <button type="button" class="btn-close" (click)="cerrar()" aria-label="Cerrar modal">
+      <i class="material-icons">close</i>
+    </button>
+  </div>
+
+  <!-- Estado: Cargando -->
+  <div *ngIf="cargando" class="dialog-state state-loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">Cargando legajo...</span>
+    </div>
+    <p class="mt-2 text-muted">Consultando el padrón institucional...</p>
+  </div>
+
+  <!-- Estado: Error HTTP -->
+  <div *ngIf="!cargando && errorHttp" class="dialog-state state-error alert alert-warning">
+    <div class="d-flex align-items-center gap-2">
+      <i class="material-icons">warning</i>
+      <div>
+        <strong>Aviso de Seguridad:</strong>
+        <p class="mb-0">{{ errorHttp }}</p>
+      </div>
+    </div>
+    <div class="mt-3 text-right">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cerrar()">Cerrar</button>
+      <button type="button" class="btn btn-sm btn-primary ml-2" (click)="cargarLegajo()">Reintentar</button>
+    </div>
+  </div>
+
+  <!-- Estado: Legajo Cargado Correctamente -->
+  <div *ngIf="!cargando && legajo" class="dialog-content">
+    <div class="socio-summary-card">
+      <div class="socio-avatar">
+        <span>{{ legajo.first_name[0] }}{{ legajo.last_name[0] }}</span>
+      </div>
+      <div class="socio-main-info">
+        <h4 class="socio-full-name">{{ legajo.last_name }}, {{ legajo.first_name }}</h4>
+        <span class="socio-legajo-badge">
+          <i class="material-icons">pin</i> Legajo: <strong>{{ legajo.legajo }}</strong>
+        </span>
+      </div>
+    </div>
+
+    <div class="data-grid">
+      <div class="data-item">
+        <span class="data-label">Correo Electrónico</span>
+        <span class="data-value text-truncate" [title]="legajo.email">{{ legajo.email }}</span>
+      </div>
+
+      <div class="data-item">
+        <span class="data-label">Subcomisión</span>
+        <span class="data-value">{{ legajo.subcomision_name || 'Sin Asignar' }}</span>
+      </div>
+
+      <div class="data-item">
+        <span class="data-label">Año Social</span>
+        <span class="data-value">{{ legajo.social_year }}º Año</span>
+      </div>
+
+      <div class="data-item">
+        <span class="data-label">Categoría Estatutaria</span>
+        <span class="data-value">
+          <span class="badge-mat" [ngClass]="getBadgeClase(legajo.category)">
+            {{ legajo.category_display }}
+          </span>
+        </span>
+      </div>
+
+      <div class="data-item">
+        <span class="data-label">Rol en el Sistema</span>
+        <span class="data-value font-weight-bold">{{ legajo.role }}</span>
+      </div>
+
+      <div class="data-item">
+        <span class="data-label">Estado de la Cuenta</span>
+        <span class="data-value">
+          <span class="badge-mat" [ngClass]="getEstadoClase(legajo.is_enabled)">
+            {{ legajo.is_enabled ? 'Habilitado' : 'Inactivo' }}
+          </span>
+        </span>
+      </div>
+
+      <div class="data-item">
+        <span class="data-label">Saldo de Puntos</span>
+        <span class="data-value font-weight-bold" [ngClass]="saldoPuntos >= 0 ? 'text-success' : 'text-danger'">
+          {{ saldoPuntos > 0 ? '+' : '' }}{{ saldoPuntos }} pts
+        </span>
+      </div>
+    </div>
+
+    <!-- Sección de Información Procesal / Auditoría -->
+    <div class="notice-box mt-3">
+      <i class="material-icons text-info">info</i>
+      <div class="notice-text">
+        <small class="text-muted">
+          Legajo verificado bajo el padrón estatutario de AVEIT (UTN FRC).
+          El cómputo de sanciones e historial transaccional se articula con el Libro Mayor de Puntos.
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pie del Diálogo -->
+  <div class="dialog-actions">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="cerrar()">
+      Cerrar
+    </button>
+  </div>
+</div>
