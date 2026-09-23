@@ -166,4 +166,54 @@ describe('RankingSociosComponent', () => {
     expect(component.criterioOrden).toBe('merito');
     expect(component.paginaActual).toBe(1);
   });
+
+  it('debería mostrar Coincide sin detalle cuando está reconciliado', () => {
+    fixture.detectChanges();
+
+    const celda: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion');
+    expect(celda.textContent.trim()).toBe('Coincide');
+    expect(celda.querySelector('small')).toBeNull();
+  });
+
+  [2.5, -2.5].forEach(diferencia => {
+    it(`debería mostrar la diferencia ${diferencia} con su signo`, () => {
+      rankingServiceSpy.obtenerRanking.and.returnValue(of([
+        { ...sociosMock[0], reconciliado: false, diferencia }
+      ]));
+      fixture.detectChanges();
+
+      const celda: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion');
+      const signo = diferencia > 0 ? '+' : '';
+      expect(celda.textContent).toContain(`Diferencia: ${signo}${diferencia} pts`);
+      expect(celda.textContent).not.toContain('Coincide');
+    });
+  });
+
+  it('debería mostrar los saldos histórico y general cuando hay diferencia', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(of([
+      { ...sociosMock[0], reconciliado: false, saldoHistorico: 8, saldoPuntajeGeneral: 5, diferencia: 3 }
+    ]));
+    fixture.detectChanges();
+
+    const detalle: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion small');
+    expect(detalle.textContent.trim()).toBe('Histórico: 8 | General: 5');
+  });
+
+  it('debería respetar la diferencia del backend sin recalcular ni alterar saldo u orden', () => {
+    // Valores deliberadamente inconsistentes para detectar un recálculo en frontend.
+    rankingServiceSpy.obtenerRanking.and.returnValue(of([
+      { ...sociosMock[0], saldo: -4, saldoHistorico: 100, saldoPuntajeGeneral: 20,
+        diferencia: -0.25, reconciliado: false },
+      sociosMock[1]
+    ]));
+    fixture.detectChanges();
+
+    expect(component.sociosOrdenados.map(s => s.id)).toEqual(['2', '1']);
+    const filas: NodeListOf<HTMLTableRowElement> = fixture.nativeElement.querySelectorAll('tbody tr');
+    const celda = filas[1].querySelector('.reconciliacion');
+    expect(celda.textContent).toContain('Diferencia: -0.25 pts');
+    expect(celda.textContent).not.toContain('Diferencia: +80 pts');
+    expect(filas[1].cells[5].textContent.trim()).toBe('-4 pts');
+    expect(component.socios.find(s => s.id === '1').diferencia).toBe(-0.25);
+  });
 });

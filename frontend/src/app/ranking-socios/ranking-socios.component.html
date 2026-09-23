@@ -92,10 +92,11 @@
                   <th>Categoría</th>
                   <th>Subcomisión</th>
                   <th class="text-center">Saldo</th>
+                  <th>Reconciliación</th>
                 </thead>
                 <tbody>
                   <tr *ngIf="sociosOrdenados.length === 0">
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="7" class="text-center text-muted py-4">
                       No se encontraron socios con los criterios seleccionados.
                     </td>
                   </tr>
@@ -109,6 +110,13 @@
                     <td>{{s.subcomision}}</td>
                     <td class="text-center font-weight-bold" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
                       {{s.saldo > 0 ? '+' : ''}}{{s.saldo}} pts
+                    </td>
+                    <td class="reconciliacion">
+                      <span *ngIf="s.reconciliado === true">Coincide</span>
+                      <ng-container *ngIf="s.reconciliado === false">
+                        <div>Diferencia: {{s.diferencia != null && s.diferencia > 0 ? '+' : ''}}{{s.diferencia}} pts</div>
+                        <small class="d-block text-muted">Histórico: {{s.saldoHistorico}} | General: {{s.saldoPuntajeGeneral}}</small>
+                      </ng-container>
                     </td>
                   </tr>
                 </tbody>
