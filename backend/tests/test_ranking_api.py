@@ -319,33 +319,44 @@ class TestRankingFilteringAndOrdering:
         for item in data:
             assert item["subcomision"] == "Cómputos"
 
-    def test_reconciliation_filter_float_precision_tolerance(
+    def test_reconciliation_filter_decimal_exactness(
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
         """
-        Prueba de estrés de tolerancia flotante:
-        Un socio cuyos movimientos suman 0.1 + 0.2 (= 0.30000000000000004) y caché 0.3
-        debe ser considerado reconciliado en Python y en filtro SQL (?reconciliado=true/false).
+        Verifica reconciliación exacta con Decimal:
+        0.10 + 0.20 debe coincidir exactamente con 0.30.
         """
+        from decimal import Decimal
+
         sub = seed_ranking_data["subcomisiones"][0]
-        s_float = Socio.objects.create(
+        s_decimal = Socio.objects.create(
             nroSocio=199,
-            nombre="Flotante",
+            nombre="Decimal",
             apellido="Prueba",
             anoSocial=4,
             subcomision=sub,
         )
-        PuntajeAplicado.objects.create(idPuntajeAplicado=1991, socio=s_float, puntajeAplicado=0.1)
-        PuntajeAplicado.objects.create(idPuntajeAplicado=1992, socio=s_float, puntajeAplicado=0.2)
-        PuntajeGeneral.objects.create(idPuntajeGeneral=199, socio=s_float, puntos=0.3)
+        PuntajeAplicado.objects.create(
+            idPuntajeAplicado=1991,
+            socio=s_decimal,
+            puntajeAplicado=Decimal("0.10"),
+        )
+        PuntajeAplicado.objects.create(
+            idPuntajeAplicado=1992,
+            socio=s_decimal,
+            puntajeAplicado=Decimal("0.20"),
+        )
+        PuntajeGeneral.objects.create(
+            idPuntajeGeneral=199,
+            socio=s_decimal,
+            puntos=Decimal("0.30"),
+        )
 
-        # Debe aparecer en reconciliado=true
         r_true = api_client.get("/api/v1/ranking/?reconciliado=true")
         assert r_true.status_code == status.HTTP_200_OK
         ids_true = [item["id"] for item in r_true.json()]
         assert "199" in ids_true
 
-        # NO debe aparecer en reconciliado=false
         r_false = api_client.get("/api/v1/ranking/?reconciliado=false")
         assert r_false.status_code == status.HTTP_200_OK
         ids_false = [item["id"] for item in r_false.json()]

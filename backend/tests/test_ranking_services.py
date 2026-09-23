@@ -1,6 +1,7 @@
 """Pruebas unitarias para la lógica de cálculo y reconciliación de saldos."""
 
 import re
+from decimal import Decimal
 
 import pytest
 
@@ -14,50 +15,50 @@ class TestReconciliationCalculation:
 
     def test_calculate_reconciliation_zero_balances(self) -> None:
         """Caso 1: Socio sin movimientos previos ni saldo histórico (0 y 0)."""
-        sh, sc, diff, rec = calculate_reconciliation(0.0, 0.0)
-        assert sh == 0.0
-        assert sc == 0.0
-        assert diff == 0.0
+        sh, sc, diff, rec = calculate_reconciliation(Decimal("0.00"), Decimal("0.00"))
+        assert sh == Decimal("0.00")
+        assert sc == Decimal("0.00")
+        assert diff == Decimal("0.00")
         assert rec is True
 
     def test_calculate_reconciliation_matching_positive_balances(self) -> None:
         """Caso 2: Saldo histórico y caché coincidentes en valor positivo (+5.0)."""
-        sh, sc, diff, rec = calculate_reconciliation(5.0, 5.0)
-        assert sh == 5.0
-        assert sc == 5.0
-        assert diff == 0.0
+        sh, sc, diff, rec = calculate_reconciliation(Decimal("5.00"), Decimal("5.00"))
+        assert sh == Decimal("5.00")
+        assert sc == Decimal("5.00")
+        assert diff == Decimal("0.00")
         assert rec is True
 
     def test_calculate_reconciliation_matching_negative_balances(self) -> None:
         """Caso 3: Saldo histórico y caché coincidentes en valor negativo (-1.0)."""
-        sh, sc, diff, rec = calculate_reconciliation(-1.0, -1.0)
-        assert sh == -1.0
-        assert sc == -1.0
-        assert diff == 0.0
+        sh, sc, diff, rec = calculate_reconciliation(Decimal("-1.00"), Decimal("-1.00"))
+        assert sh == Decimal("-1.00")
+        assert sc == Decimal("-1.00")
+        assert diff == Decimal("0.00")
         assert rec is True
 
     def test_calculate_reconciliation_discrepancy_positive_diff(self) -> None:
         """Caso 4: Discrepancia donde el libro mayor supera a la caché (+3.5 vs +3.0)."""
-        sh, sc, diff, rec = calculate_reconciliation(3.5, 3.0)
-        assert sh == 3.5
-        assert sc == 3.0
-        assert diff == 0.5
+        sh, sc, diff, rec = calculate_reconciliation(Decimal("3.50"), Decimal("3.00"))
+        assert sh == Decimal("3.50")
+        assert sc == Decimal("3.00")
+        assert diff == Decimal("0.50")
         assert rec is False
 
     def test_calculate_reconciliation_discrepancy_negative_diff(self) -> None:
         """Caso 5: Discrepancia donde el libro mayor es menor a la caché (-2.0 vs -1.5)."""
-        sh, sc, diff, rec = calculate_reconciliation(-2.0, -1.5)
-        assert sh == -2.0
-        assert sc == -1.5
-        assert diff == -0.5
+        sh, sc, diff, rec = calculate_reconciliation(Decimal("-2.00"), Decimal("-1.50"))
+        assert sh == Decimal("-2.00")
+        assert sc == Decimal("-1.50")
+        assert diff == Decimal("-0.50")
         assert rec is False
 
     def test_calculate_reconciliation_none_values(self) -> None:
         """Caso 6: Valores nulos se tratan defensivamente como 0.0."""
         sh, sc, diff, rec = calculate_reconciliation(None, None)
-        assert sh == 0.0
-        assert sc == 0.0
-        assert diff == 0.0
+        assert sh == Decimal("0.00")
+        assert sc == Decimal("0.00")
+        assert diff == Decimal("0.00")
         assert rec is True
 
 

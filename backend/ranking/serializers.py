@@ -1,5 +1,7 @@
 """Serializadores para el Ranking de Socios Reconciliado (SGD-AVEIT)."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from ranking.models import PuntajeGeneral, Socio, Subcomision
@@ -80,7 +82,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
         except (Subcomision.DoesNotExist, AttributeError):
             return "Sin Subcomisión"
 
-    def _get_reconciliation(self, obj: Socio) -> tuple[float, float, float, bool]:
+    def _get_reconciliation(self, obj: Socio) -> tuple[Decimal, Decimal, Decimal, bool]:
         """Calcula o recupera del caché de instancia las cifras de reconciliación."""
         if hasattr(obj, "_cached_reconciliation"):
             return obj._cached_reconciliation
@@ -95,27 +97,27 @@ class RankingSocioSerializer(serializers.ModelSerializer):
                 saldo_cache = (
                     obj.puntaje_general.puntos
                     if hasattr(obj, "puntaje_general") and obj.puntaje_general
-                    else 0.0
+                    else Decimal("0.00")
                 )
             except (PuntajeGeneral.DoesNotExist, AttributeError):
-                saldo_cache = 0.0
+                saldo_cache = Decimal("0.00")
 
         obj._cached_reconciliation = calculate_reconciliation(saldo_hist, saldo_cache)
         return obj._cached_reconciliation
 
-    def get_saldo(self, obj: Socio) -> float:
+    def get_saldo(self, obj: Socio) -> Decimal:
         sh, _, _, _ = self._get_reconciliation(obj)
         return sh
 
-    def get_saldoHistorico(self, obj: Socio) -> float:
+    def get_saldoHistorico(self, obj: Socio) -> Decimal:
         sh, _, _, _ = self._get_reconciliation(obj)
         return sh
 
-    def get_saldoPuntajeGeneral(self, obj: Socio) -> float:
+    def get_saldoPuntajeGeneral(self, obj: Socio) -> Decimal:
         _, sc, _, _ = self._get_reconciliation(obj)
         return sc
 
-    def get_diferencia(self, obj: Socio) -> float:
+    def get_diferencia(self, obj: Socio) -> Decimal:
         _, _, diff, _ = self._get_reconciliation(obj)
         return diff
 

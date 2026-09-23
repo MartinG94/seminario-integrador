@@ -143,7 +143,7 @@ class PuntajeGeneral(models.Model):
         db_column="socio_id",
         related_name="puntaje_general",
     )
-    puntos = models.FloatField(default=0.0)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     felicitaciones = models.IntegerField(default=0)
     llamadosAtencion = models.IntegerField(default=0)
 
@@ -163,7 +163,11 @@ class PuntajeAplicado(models.Model):
     """
 
     idPuntajeAplicado = models.AutoField(primary_key=True, db_column="idPuntajeAplicado")
-    puntajeAplicado = models.FloatField(db_column="puntajeAplicado")
+    puntajeAplicado = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        db_column="puntajeAplicado",
+    )
     socio = models.ForeignKey(
         Socio,
         on_delete=models.CASCADE,
@@ -179,3 +183,4 @@ class PuntajeAplicado(models.Model):
 
     def __str__(self) -> str:
         return f"Socio {self.socio_id}: {self.puntajeAplicado} pts"
+
