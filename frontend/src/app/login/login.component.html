@@ -1,0 +1,57 @@
+<div class="aveit-login">
+  <div class="aveit-login__card">
+    <header class="aveit-login__header">
+      <h1 class="aveit-login__title">SGD-AVEIT</h1>
+      <p class="aveit-login__subtitle">
+        Sistema de Gestión del Tribunal de Disciplina y Premiaciones
+      </p>
+    </header>
+
+    <form class="aveit-login__form" [formGroup]="formulario" (ngSubmit)="ingresar()" novalidate>
+      <div *ngIf="sesionExpirada" class="aveit-login__aviso" role="status">
+        Tu sesión expiró. Volvé a iniciar sesión para continuar.
+      </div>
+
+      <div class="aveit-login__campo">
+        <label for="identifier">Legajo o correo institucional</label>
+        <input
+          id="identifier"
+          type="text"
+          formControlName="identifier"
+          autocomplete="username"
+          placeholder="Ej.: 74907"
+          [attr.aria-invalid]="formulario.get('identifier')?.touched && formulario.get('identifier')?.invalid" />
+        <span
+          class="aveit-login__ayuda-error"
+          *ngIf="formulario.get('identifier')?.touched && formulario.get('identifier')?.invalid">
+          Ingresá tu legajo o correo institucional.
+        </span>
+      </div>
+
+      <div class="aveit-login__campo">
+        <label for="password">Contraseña</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          [attr.aria-invalid]="formulario.get('password')?.touched && formulario.get('password')?.invalid" />
+        <span
+          class="aveit-login__ayuda-error"
+          *ngIf="formulario.get('password')?.touched && formulario.get('password')?.invalid">
+          Ingresá tu contraseña.
+        </span>
+      </div>
+
+      <p class="aveit-login__error" *ngIf="mensajeError" role="alert">{{ mensajeError }}</p>
+
+      <button class="aveit-login__boton" type="submit" [disabled]="enviando">
+        {{ enviando ? 'Verificando…' : 'Iniciar sesión' }}
+      </button>
+    </form>
+
+    <footer class="aveit-login__footer">
+      Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos · UTN FRC
+    </footer>
+  </div>
+</div>

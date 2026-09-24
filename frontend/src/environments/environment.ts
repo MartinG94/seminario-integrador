@@ -4,5 +4,8 @@
 // The list of which env maps to which file can be found in `.angular-cli.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  // Ruta relativa: `ng serve` la redirige al backend con proxy.conf.json, de
+  // modo que el navegador ve un único origen y no hace falta CORS.
+  apiUrl: '/api/v1'
 };
