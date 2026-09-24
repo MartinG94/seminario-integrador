@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "socios",
+    # Módulos funcionales
+    "padron",
 ]
 
 MIDDLEWARE = [
@@ -106,6 +108,8 @@ else:
             "OPTIONS": {
                 "charset": "utf8mb4",
                 "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "3")),
+                "read_timeout": int(os.getenv("DB_READ_TIMEOUT", "3")),
             },
         }
     }
