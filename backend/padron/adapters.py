@@ -130,10 +130,21 @@ class MockPadronAdapter:
         return None
 
     def get_by_legajo(self, legajo: str) -> Optional[SocioInstitucionalDTO]:
-        """Busca un socio por legajo en los fixtures."""
+        """Busca un socio por legajo en los fixtures con normalización de ceros y espacios."""
         self._raise_if_failure()
+        if not legajo or not legajo.strip():
+            return None
+
+        try:
+            legajo_int = int(legajo.strip())
+            if legajo_int <= 0:
+                return None
+            target_legajo = str(legajo_int)
+        except (ValueError, TypeError):
+            return None
+
         for socio in self._socios:
-            if socio.legajo == legajo:
+            if socio.legajo == target_legajo:
                 return socio
         return None
 

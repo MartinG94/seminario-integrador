@@ -13,14 +13,44 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 
 
+class ReadOnlyQuerySet(models.QuerySet):
+    """QuerySet inmutable para salvaguardar el padrón institucional contra mutaciones masivas.
+
+    Bloquea las operaciones DML masivas de Django ORM que omiten los métodos save() y delete()
+    del ciclo de vida de instancia del modelo.
+    """
+
+    def update(self, **kwargs):
+        raise PermissionDenied(
+            "Operación denegada: No se permiten actualizaciones masivas en modelos de sólo lectura."
+        )
+
+    def delete(self):
+        raise PermissionDenied(
+            "Operación denegada: No se permiten eliminaciones masivas en modelos de sólo lectura."
+        )
+
+    def bulk_create(self, objs, **kwargs):
+        raise PermissionDenied(
+            "Operación denegada: No se permite creación masiva en modelos de sólo lectura."
+        )
+
+    def bulk_update(self, objs, fields, **kwargs):
+        raise PermissionDenied(
+            "Operación denegada: No se permiten modificaciones masivas en modelos de sólo lectura."
+        )
+
+
 class ReadOnlyModel(models.Model):
     """Modelo base abstracto de estricta sólo lectura para el padrón institucional.
 
     Garantiza el cumplimiento innegociable de RF-PADRON-01 y RNF-PADRON-02 impidiendo cualquier
-    mutación (save/delete) originada desde el código de la aplicación.
+    mutación (save/delete/update masivo) originada desde el código de la aplicación.
     Permite sobreescritura controlada exclusiva para fixtures de testing
     mediante `_allow_write = True`.
     """
+
+    objects = ReadOnlyQuerySet.as_manager()
 
     class Meta:
         abstract = True

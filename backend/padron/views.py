@@ -10,6 +10,9 @@ Endpoints:
 Referencia: plan.md §5, spec.md §RF-PADRON-01.
 """
 
+import logging
+
+from django.db import DatabaseError, OperationalError
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -24,6 +27,27 @@ from padron.serializers import (
     SocioInstitucionalSerializer,
     SubcomisionSerializer,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _database_unavailable_response(exc: Exception) -> Response:
+    """Retorna una respuesta HTTP 503 formateada según RFC 9457 ante falla de conectividad."""
+    logger.error("Error de conectividad con la base de datos del padrón institucional: %s", exc)
+    response = Response(
+        {
+            "type": "https://errors.aveit.org.ar/padron-unavailable",
+            "title": "Servicio no disponible",
+            "status": status.HTTP_503_SERVICE_UNAVAILABLE,
+            "detail": (
+                "La fuente de datos del padrón institucional no se encuentra"
+                " disponible temporalmente."
+            ),
+        },
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 class PadronHealthCheckView(APIView):
@@ -73,16 +97,20 @@ class PadronSocioListView(APIView):
         page = params.get("page", 1)
         page_size = params.get("page_size", 20)
 
-        repo = get_padron_repository()
-        paginated_socios = repo.list_socios(
-            search=search,
-            subcomision_id=subcomision_id,
-            category=category,
-            is_active=is_active,
-            membership_status=membership_status,
-            page=page,
-            page_size=page_size,
-        )
+        try:
+            repo = get_padron_repository()
+            paginated_socios = repo.list_socios(
+                search=search,
+                subcomision_id=subcomision_id,
+                category=category,
+                is_active=is_active,
+                membership_status=membership_status,
+                page=page,
+                page_size=page_size,
+            )
+        except (DatabaseError, OperationalError) as exc:
+            return _database_unavailable_response(exc)
+
         serializer = PaginatedSociosSerializer(paginated_socios)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -94,8 +122,12 @@ class PadronSocioDetailView(APIView):
 
     def get(self, request, socio_id: int, *args, **kwargs):
         """Resuelve el socio por su identificador primario institucional."""
-        repo = get_padron_repository()
-        socio = repo.get_by_id(socio_id)
+        try:
+            repo = get_padron_repository()
+            socio = repo.get_by_id(socio_id)
+        except (DatabaseError, OperationalError) as exc:
+            return _database_unavailable_response(exc)
+
         if socio is None:
             return Response(
                 {"detail": "Socio no encontrado."},
@@ -112,8 +144,12 @@ class PadronSocioLegajoDetailView(APIView):
 
     def get(self, request, legajo: str, *args, **kwargs):
         """Resuelve el socio por su legajo universitario."""
-        repo = get_padron_repository()
-        socio = repo.get_by_legajo(legajo)
+        try:
+            repo = get_padron_repository()
+            socio = repo.get_by_legajo(legajo)
+        except (DatabaseError, OperationalError) as exc:
+            return _database_unavailable_response(exc)
+
         if socio is None:
             return Response(
                 {"detail": "Socio con el legajo indicado no encontrado."},
@@ -130,7 +166,11 @@ class PadronSubcomisionListView(APIView):
 
     def get(self, request, *args, **kwargs):
         """Retorna la nómina alfabética de subcomisiones activas excluyendo centinela 99."""
-        repo = get_padron_repository()
-        subcomisiones = repo.list_subcomisiones()
+        try:
+            repo = get_padron_repository()
+            subcomisiones = repo.list_subcomisiones()
+        except (DatabaseError, OperationalError) as exc:
+            return _database_unavailable_response(exc)
+
         serializer = SubcomisionSerializer(subcomisiones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

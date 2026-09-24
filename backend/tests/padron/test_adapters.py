@@ -82,7 +82,29 @@ class TestMockPadronAdapterQueries:
     def test_get_by_legajo_nonexistent_returns_none(self) -> None:
         """get_by_legajo() retorna None para un legajo inexistente."""
         adapter = self._get_adapter()
-        assert adapter.get_by_legajo("000000") is None
+        assert adapter.get_by_legajo("999999") is None
+
+    def test_get_by_legajo_normalizes_leading_zeros_and_spaces(self) -> None:
+        """get_by_legajo() normaliza espacios y ceros a la izquierda en MockPadronAdapter."""
+        adapter = self._get_adapter()
+        result = adapter.list_socios()
+        socio_with_legajo = next((s for s in result.results if s.legajo is not None), None)
+        assert socio_with_legajo is not None
+        # Probar con ceros a la izquierda y espacios circundantes
+        dirty_legajo = f"  00{socio_with_legajo.legajo}  "
+        found = adapter.get_by_legajo(dirty_legajo)
+        assert found is not None
+        assert found.socio_id == socio_with_legajo.socio_id
+        assert found.legajo == socio_with_legajo.legajo
+
+    def test_get_by_legajo_invalid_formats_return_none(self) -> None:
+        """get_by_legajo() retorna None ante formatos no numéricos o vacíos."""
+        adapter = self._get_adapter()
+        assert adapter.get_by_legajo("invalido") is None
+        assert adapter.get_by_legajo("") is None
+        assert adapter.get_by_legajo("   ") is None
+        assert adapter.get_by_legajo("0") is None
+        assert adapter.get_by_legajo("-123") is None
 
     def test_list_subcomisiones_returns_list(self) -> None:
         """list_subcomisiones() retorna lista de SubcomisionDTO."""

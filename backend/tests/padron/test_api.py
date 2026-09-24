@@ -95,6 +95,24 @@ class TestPadronSocioDetailView:
         data = response.json()
         assert "detail" in data
 
+    @patch("padron.views.get_padron_repository")
+    def test_database_error_returns_503(self, mock_get_repo) -> None:
+        """Falla de conectividad con la BD retorna HTTP 503 formateado según RFC 9457."""
+        from django.db import OperationalError
+
+        mock_repo = MagicMock()
+        mock_repo.get_by_id.side_effect = OperationalError("Can't connect to MySQL server")
+        mock_get_repo.return_value = mock_repo
+
+        self.client.force_authenticate(user=_make_dummy_user())
+        response = self.client.get(self.url)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        data = response.json()
+        assert data["status"] == 503
+        assert data["title"] == "Servicio no disponible"
+        assert "detail" in data
+
 
 # ==============================================================================
 # Endpoint: GET /api/v1/padron/socios/legajo/<str:legajo>/
@@ -142,6 +160,24 @@ class TestPadronSocioLegajoDetailView:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
+        assert "detail" in data
+
+    @patch("padron.views.get_padron_repository")
+    def test_database_error_returns_503(self, mock_get_repo) -> None:
+        """Falla de conectividad con la BD retorna HTTP 503 formateado según RFC 9457."""
+        from django.db import OperationalError
+
+        mock_repo = MagicMock()
+        mock_repo.get_by_legajo.side_effect = OperationalError("Connection timed out")
+        mock_get_repo.return_value = mock_repo
+
+        self.client.force_authenticate(user=_make_dummy_user())
+        response = self.client.get(self.url)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        data = response.json()
+        assert data["status"] == 503
+        assert data["title"] == "Servicio no disponible"
         assert "detail" in data
 
 
@@ -224,6 +260,24 @@ class TestPadronSubcomisionListView:
         data = response.json()
         names = [item["name"] for item in data]
         assert names == sorted(names)
+
+    @patch("padron.views.get_padron_repository")
+    def test_database_error_returns_503(self, mock_get_repo) -> None:
+        """Falla de conectividad con la BD retorna HTTP 503 formateado según RFC 9457."""
+        from django.db import DatabaseError
+
+        mock_repo = MagicMock()
+        mock_repo.list_subcomisiones.side_effect = DatabaseError("Can't connect to MySQL server")
+        mock_get_repo.return_value = mock_repo
+
+        self.client.force_authenticate(user=_make_dummy_user())
+        response = self.client.get(self.url)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        data = response.json()
+        assert data["status"] == 503
+        assert data["title"] == "Servicio no disponible"
+        assert "detail" in data
 
 
 # ==============================================================================
@@ -316,3 +370,21 @@ class TestPadronSocioListView:
             page=2,
             page_size=10,
         )
+
+    @patch("padron.views.get_padron_repository")
+    def test_database_error_returns_503(self, mock_get_repo) -> None:
+        """Falla de conectividad con la BD retorna HTTP 503 formateado según RFC 9457."""
+        from django.db import OperationalError
+
+        mock_repo = MagicMock()
+        mock_repo.list_socios.side_effect = OperationalError("Can't connect to MySQL server")
+        mock_get_repo.return_value = mock_repo
+
+        self.client.force_authenticate(user=_make_dummy_user())
+        response = self.client.get(self.url)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        data = response.json()
+        assert data["status"] == 503
+        assert data["title"] == "Servicio no disponible"
+        assert "detail" in data

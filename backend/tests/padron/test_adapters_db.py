@@ -114,6 +114,26 @@ class TestReadOnlyModelSafeguards:
         with pytest.raises(PermissionDenied, match="estricta sólo lectura"):
             sub.delete()
 
+    def test_queryset_update_raises_permission_denied(self) -> None:
+        """Valida que QuerySet.update() masivo sea bloqueado con PermissionDenied."""
+        with pytest.raises(PermissionDenied, match="actualizaciones masivas"):
+            Subcomision.objects.filter(codSubcomision=1).update(nombre="Ilegal")
+
+    def test_queryset_delete_raises_permission_denied(self) -> None:
+        """Valida que QuerySet.delete() masivo sea bloqueado con PermissionDenied."""
+        with pytest.raises(PermissionDenied, match="eliminaciones masivas"):
+            Subcomision.objects.all().delete()
+
+    def test_queryset_bulk_create_raises_permission_denied(self) -> None:
+        """Valida que QuerySet.bulk_create() sea bloqueado con PermissionDenied."""
+        with pytest.raises(PermissionDenied, match="creación masiva"):
+            Subcomision.objects.bulk_create([Subcomision(nombre="Ilegal")])
+
+    def test_queryset_bulk_update_raises_permission_denied(self) -> None:
+        """Valida que QuerySet.bulk_update() sea bloqueado con PermissionDenied."""
+        with pytest.raises(PermissionDenied, match="modificaciones masivas"):
+            Subcomision.objects.bulk_update([], fields=["nombre"])
+
 
 # ==============================================================================
 # IMPL-BLK-001: Pruebas de Integración Reales con Base de Datos
