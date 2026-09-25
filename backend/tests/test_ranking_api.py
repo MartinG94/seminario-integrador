@@ -6,13 +6,11 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from ranking.models import (
-    PuntajeAplicado,
-    PuntajeGeneral,
-    Socio,
-    SocioEstudio,
-    Subcomision,
-    TipoSocio,
+from padron.models import Socio, SocioEstudio, Subcomision
+from ranking.models import PuntajeAplicado, PuntajeGeneral
+from tests.legacy_schema import (
+    create_legacy_record,
+    get_or_create_legacy_record,
 )
 
 
@@ -24,64 +22,73 @@ def api_client() -> APIClient:
 @pytest.fixture
 def seed_ranking_data(db) -> dict[str, list]:
     """Crea una base de socios con casos balanceados, discrepantes y sin movimientos."""
-    sub_computos = Subcomision.objects.create(codSubcomision=1, nombre="Cómputos")
-    sub_eventos = Subcomision.objects.create(codSubcomision=7, nombre="Eventos")
-    sub_td = Subcomision.objects.create(codSubcomision=10, nombre="Tribunal de Disciplina")
-
-    tipo_ord = TipoSocio.objects.create(idTipoSocio=12, nombre="Socio Ordinario")
-    tipo_pres = TipoSocio.objects.create(idTipoSocio=1, nombre="Presidente Subcomisión")
+    sub_computos = create_legacy_record(Subcomision, codSubcomision=1, nombre="Cómputos")
+    sub_eventos = create_legacy_record(Subcomision, codSubcomision=7, nombre="Eventos")
+    sub_td = create_legacy_record(Subcomision, codSubcomision=10, nombre="Tribunal de Disciplina")
 
     # 1. Socio Activo Reconciliado (saldo = 10, caché = 10)
-    s1 = Socio.objects.create(
+    s1 = create_legacy_record(
+        Socio,
         nroSocio=101,
         nombre="Carlos",
         apellido="Alonso",
         anoSocial=5,  # ACTIVO
         subcomision=sub_computos,
-        tipoSocio=tipo_pres,
+        idTipoSocio=1,
     )
-    SocioEstudio.objects.create(compositeKey=10101, socio=s1, nroLegajo=54321, codEspecialidad=1)
-    PuntajeAplicado.objects.create(idPuntajeAplicado=1, socio=s1, puntajeAplicado=10.0)
-    PuntajeGeneral.objects.create(idPuntajeGeneral=1, socio=s1, puntos=10.0)
+    create_legacy_record(
+        SocioEstudio, compositeKey=10101, socio=s1, nroLegajo=54321, codEspecialidad=1
+    )
+    create_legacy_record(PuntajeAplicado, idPuntajeAplicado=1, socio=s1, puntajeAplicado=10.0)
+    create_legacy_record(PuntajeGeneral, idPuntajeGeneral=1, socio=s1, puntos=10.0)
 
     # 2. Socio Pasivo con Discrepancia (saldo = -2.0, caché = -1.5 -> dif = -0.5, no reconciliado)
-    s2 = Socio.objects.create(
+    s2 = create_legacy_record(
+        Socio,
         nroSocio=102,
         nombre="Beatriz",
         apellido="Bustos",
         anoSocial=2,  # PASIVO
         subcomision=sub_eventos,
-        tipoSocio=tipo_ord,
+        idTipoSocio=12,
     )
-    SocioEstudio.objects.create(compositeKey=10201, socio=s2, nroLegajo=65432, codEspecialidad=1)
-    PuntajeAplicado.objects.create(idPuntajeAplicado=2, socio=s2, puntajeAplicado=-2.0)
-    PuntajeGeneral.objects.create(idPuntajeGeneral=2, socio=s2, puntos=-1.5)
+    create_legacy_record(
+        SocioEstudio, compositeKey=10201, socio=s2, nroLegajo=65432, codEspecialidad=1
+    )
+    create_legacy_record(PuntajeAplicado, idPuntajeAplicado=2, socio=s2, puntajeAplicado=-2.0)
+    create_legacy_record(PuntajeGeneral, idPuntajeGeneral=2, socio=s2, puntos=-1.5)
 
     # 3. Socio Pasivo Reconciliado sin movimientos (saldo = 0, caché = 0)
-    s3 = Socio.objects.create(
+    s3 = create_legacy_record(
+        Socio,
         nroSocio=103,
         nombre="Daniel",
         apellido="Castro",
         anoSocial=1,  # PASIVO
         subcomision=sub_td,
-        tipoSocio=tipo_ord,
+        idTipoSocio=12,
     )
-    SocioEstudio.objects.create(compositeKey=10301, socio=s3, nroLegajo=76543, codEspecialidad=1)
-    PuntajeGeneral.objects.create(idPuntajeGeneral=3, socio=s3, puntos=0.0)
+    create_legacy_record(
+        SocioEstudio, compositeKey=10301, socio=s3, nroLegajo=76543, codEspecialidad=1
+    )
+    create_legacy_record(PuntajeGeneral, idPuntajeGeneral=3, socio=s3, puntos=0.0)
 
     # 4. Socio Activo con múltiples movimientos (5.0 + (-1.5) = 3.5, caché = 3.0 -> no reconciliado)
-    s4 = Socio.objects.create(
+    s4 = create_legacy_record(
+        Socio,
         nroSocio=104,
         nombre="Elena",
         apellido="Díaz",
         anoSocial=4,  # ACTIVO
         subcomision=sub_computos,
-        tipoSocio=tipo_ord,
+        idTipoSocio=12,
     )
-    SocioEstudio.objects.create(compositeKey=10401, socio=s4, nroLegajo=87654, codEspecialidad=1)
-    PuntajeAplicado.objects.create(idPuntajeAplicado=3, socio=s4, puntajeAplicado=5.0)
-    PuntajeAplicado.objects.create(idPuntajeAplicado=4, socio=s4, puntajeAplicado=-1.5)
-    PuntajeGeneral.objects.create(idPuntajeGeneral=4, socio=s4, puntos=3.0)
+    create_legacy_record(
+        SocioEstudio, compositeKey=10401, socio=s4, nroLegajo=87654, codEspecialidad=1
+    )
+    create_legacy_record(PuntajeAplicado, idPuntajeAplicado=3, socio=s4, puntajeAplicado=5.0)
+    create_legacy_record(PuntajeAplicado, idPuntajeAplicado=4, socio=s4, puntajeAplicado=-1.5)
+    create_legacy_record(PuntajeGeneral, idPuntajeGeneral=4, socio=s4, puntos=3.0)
 
     return {
         "socios": [s1, s2, s3, s4],
@@ -329,24 +336,28 @@ class TestRankingFilteringAndOrdering:
         from decimal import Decimal
 
         sub = seed_ranking_data["subcomisiones"][0]
-        s_decimal = Socio.objects.create(
+        s_decimal = create_legacy_record(
+            Socio,
             nroSocio=199,
             nombre="Decimal",
             apellido="Prueba",
             anoSocial=4,
             subcomision=sub,
         )
-        PuntajeAplicado.objects.create(
+        create_legacy_record(
+            PuntajeAplicado,
             idPuntajeAplicado=1991,
             socio=s_decimal,
             puntajeAplicado=Decimal("0.10"),
         )
-        PuntajeAplicado.objects.create(
+        create_legacy_record(
+            PuntajeAplicado,
             idPuntajeAplicado=1992,
             socio=s_decimal,
             puntajeAplicado=Decimal("0.20"),
         )
-        PuntajeGeneral.objects.create(
+        create_legacy_record(
+            PuntajeGeneral,
             idPuntajeGeneral=199,
             socio=s_decimal,
             puntos=Decimal("0.30"),
@@ -371,7 +382,8 @@ class TestRankingFilteringAndOrdering:
         """
         s1 = seed_ranking_data["socios"][0]
         # Agregar un segundo estudio a Carlos Alonso (nroSocio 101)
-        SocioEstudio.objects.create(
+        create_legacy_record(
+            SocioEstudio,
             compositeKey=10102,
             socio=s1,
             nroLegajo=99887,
@@ -393,7 +405,8 @@ class TestRankingFilteringAndOrdering:
         Socio sin subcomisión asignada debe serializarse como 'Sin Subcomisión'
         y responder a los filtros semánticos correspondientes.
         """
-        s_orphan = Socio.objects.create(
+        s_orphan = create_legacy_record(
+            Socio,
             nroSocio=299,
             nombre="Sin",
             apellido="SubcomisionSocio",
@@ -509,7 +522,8 @@ class TestRankingFilteringAndOrdering:
     ) -> None:
         """Un socio sin estudio usa nroSocio como legajo y se ordena consistentemente."""
         sub = seed_ranking_data["subcomisiones"][0]
-        Socio.objects.create(
+        create_legacy_record(
+            Socio,
             nroSocio=999,
             nombre="Zacarías",
             apellido="Zárate",
@@ -594,17 +608,19 @@ class TestRankingFilteringAndOrdering:
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
         """El filtro 'Sin Subcomisión' captura socios con subcomisión NULL y con id=99."""
-        sub99, _ = Subcomision.objects.get_or_create(
-            codSubcomision=99, defaults={"nombre": "Sin Subcomisión"}
+        sub99, _ = get_or_create_legacy_record(
+            Subcomision, codSubcomision=99, defaults={"nombre": "Sin Subcomisión"}
         )
-        s_id99 = Socio.objects.create(
+        s_id99 = create_legacy_record(
+            Socio,
             nroSocio=301,
             nombre="Hugo",
             apellido="IdNoventaYNueve",
             anoSocial=1,
             subcomision=sub99,
         )
-        s_null = Socio.objects.create(
+        s_null = create_legacy_record(
+            Socio,
             nroSocio=302,
             nombre="Ivana",
             apellido="SubNull",
@@ -628,7 +644,8 @@ class TestRankingFilteringAndOrdering:
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
         """La búsqueda textual por 'sin subcomision' debe encontrar socios con subcomision=None."""
-        s_null = Socio.objects.create(
+        s_null = create_legacy_record(
+            Socio,
             nroSocio=303,
             nombre="Julieta",
             apellido="Vargas",
@@ -644,7 +661,8 @@ class TestRankingFilteringAndOrdering:
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
         """Al ordenar por subcomisión, 'Sin Subcomisión' va bajo 'S', no antes de 'A'."""
-        Socio.objects.create(
+        create_legacy_record(
+            Socio,
             nroSocio=304,
             nombre="Klaus",
             apellido="Orphan",
@@ -662,21 +680,23 @@ class TestRankingFilteringAndOrdering:
         self, api_client: APIClient, seed_ranking_data
     ) -> None:
         """Legajos numéricos con y sin estudio deben ordenarse como strings homogéneos en SQLite."""
-        Socio.objects.create(
+        create_legacy_record(
+            Socio,
             nroSocio=10,
             nombre="Chico",
             apellido="Diez",
             anoSocial=1,
             subcomision=seed_ranking_data["subcomisiones"][0],
         )
-        s_large = Socio.objects.create(
+        s_large = create_legacy_record(
+            Socio,
             nroSocio=99,
             nombre="Grande",
             apellido="Millon",
             anoSocial=1,
             subcomision=seed_ranking_data["subcomisiones"][0],
         )
-        SocioEstudio.objects.create(compositeKey=9901, socio=s_large, nroLegajo=999999)
+        create_legacy_record(SocioEstudio, compositeKey=9901, socio=s_large, nroLegajo=999999)
 
         r = api_client.get("/api/v1/ranking/?ordering=legajo")
         assert r.status_code == status.HTTP_200_OK
@@ -748,7 +768,8 @@ class TestRankingQueryPerformance:
         """
         sub = seed_ranking_data["subcomisiones"][0]
         for i in range(5):
-            Socio.objects.create(
+            create_legacy_record(
+                Socio,
                 nroSocio=500 + i,
                 nombre=f"NoEstudio_{i}",
                 apellido=f"Apellido_{i}",
@@ -763,3 +784,18 @@ class TestRankingQueryPerformance:
         assert len(response.json()) == 9  # 4 iniciales + 5 nuevos
         # Debe mantenerse estrictamente en 1 única consulta SQL (cero N+1)
         assert len(ctx.captured_queries) == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_ranking_initial_migration_has_no_database_operations():
+    from django.db.migrations.executor import MigrationExecutor
+
+    executor = MigrationExecutor(connection)
+    migration = executor.loader.get_migration("ranking", "0001_initial")
+    statements = executor.loader.collect_sql([(migration, False)])
+    # CreateModel(managed=False) sólo produce comentarios, nunca DDL.
+    assert all(
+        not line.strip() or line.lstrip().startswith("--")
+        for statement in statements
+        for line in statement.splitlines()
+    )

@@ -8,9 +8,9 @@ from typing import Optional
 from django.db.models import (
     Case,
     CharField,
+    DecimalField,
     Exists,
     F,
-    DecimalField,
     IntegerField,
     OuterRef,
     Q,
@@ -22,7 +22,8 @@ from django.db.models import (
 )
 from django.db.models.functions import Abs, Cast, Coalesce, Concat, Round
 
-from ranking.models import PuntajeAplicado, PuntajeGeneral, Socio, SocioEstudio
+from padron.models import Socio, SocioEstudio, Subcomision
+from ranking.models import PuntajeAplicado, PuntajeGeneral
 
 
 def make_accent_insensitive_regex(text: str) -> str:
@@ -88,14 +89,25 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
         .values("legajo_str")[:1]
     )
 
-    return Socio.objects.select_related("subcomision").annotate(
+    # padron declara la FK no nullable; select_related produciría un INNER JOIN
+    # que excluiría socios sin subcomisión. La subconsulta preserva esos casos
+    # legados sin modificar padron ni agregar consultas por socio.
+    return Socio.objects.annotate(
+        _subcomision_nombre=Subquery(
+            Subcomision.objects.filter(pk=OuterRef("subcomision_id")).values("nombre")[:1],
+            output_field=CharField(),
+        ),
         saldo_historico_calc=Coalesce(
-            Subquery(saldo_historico_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)),
+            Subquery(
+                saldo_historico_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)
+            ),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=10, decimal_places=2),
         ),
         saldo_cache_calc=Coalesce(
-            Subquery(saldo_cache_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)),
+            Subquery(
+                saldo_cache_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)
+            ),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=10, decimal_places=2),
         ),
@@ -105,7 +117,7 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
             output_field=CharField(),
         ),
         subcomision_nombre_calc=Coalesce(
-            "subcomision__nombre",
+            "_subcomision_nombre",
             Value("Sin Subcomisión"),
             output_field=CharField(),
         ),
@@ -144,14 +156,14 @@ def filter_ranking_queryset(
             ):
                 qs = qs.filter(
                     Q(subcomision__isnull=True)
-                    | Q(subcomision__nombre__iexact="Sin Subcomisión")
+                    | Q(_subcomision_nombre__iexact="Sin Subcomisión")
                     | Q(subcomision_id=99)
                 )
             elif sub_str.isdigit():
                 if int(sub_str) == 99:
                     qs = qs.filter(
                         Q(subcomision__isnull=True)
-                        | Q(subcomision__nombre__iexact="Sin Subcomisión")
+                        | Q(_subcomision_nombre__iexact="Sin Subcomisión")
                         | Q(subcomision_id=99)
                     )
                 else:
@@ -159,8 +171,8 @@ def filter_ranking_queryset(
             else:
                 sub_pattern = f"^{make_accent_insensitive_regex(sub_str)}$"
                 qs = qs.filter(
-                    Q(subcomision__nombre__iexact=sub_str)
-                    | Q(subcomision__nombre__iregex=sub_pattern)
+                    Q(_subcomision_nombre__iexact=sub_str)
+                    | Q(_subcomision_nombre__iregex=sub_pattern)
                 )
 
     # Filtro de búsqueda textual por nombre, apellido, nroSocio,
@@ -188,8 +200,8 @@ def filter_ranking_queryset(
                     | Q(full_name_direct__iregex=tok_pat)
                     | Q(full_name_reverse__icontains=tok)
                     | Q(full_name_reverse__iregex=tok_pat)
-                    | Q(subcomision__nombre__icontains=tok)
-                    | Q(subcomision__nombre__iregex=tok_pat)
+                    | Q(_subcomision_nombre__icontains=tok)
+                    | Q(_subcomision_nombre__iregex=tok_pat)
                     | Q(subcomision_nombre_calc__icontains=tok)
                     | Q(subcomision_nombre_calc__iregex=tok_pat)
                     | Q(nroSocio__icontains=tok)
@@ -201,9 +213,7 @@ def filter_ranking_queryset(
     # Filtro por reconciliado (True / False) con tolerancia numérica estricta idéntica a Python
     if reconciliado is not None:
         qs = qs.annotate(
-            _reconciled_diff=Round(
-                Abs(F("saldo_historico_calc") - F("saldo_cache_calc")), 2
-            )
+            _reconciled_diff=Round(Abs(F("saldo_historico_calc") - F("saldo_cache_calc")), 2)
         )
         if reconciliado:
             qs = qs.filter(_reconciled_diff=Decimal("0.00"))
@@ -265,9 +275,7 @@ def order_ranking_queryset(
     needs_diff_annotations = any("diferencia" in tok or "reconciliado" in tok for tok in raw_tokens)
     if needs_diff_annotations:
         qs = qs.annotate(
-            _reconciled_diff=Round(
-                Abs(F("saldo_historico_calc") - F("saldo_cache_calc")), 2
-            ),
+            _reconciled_diff=Round(Abs(F("saldo_historico_calc") - F("saldo_cache_calc")), 2),
             _signed_diff=Round(F("saldo_historico_calc") - F("saldo_cache_calc"), 2),
             _reconciled_bool=Case(
                 When(_reconciled_diff=Decimal("0.00"), then=Value(1)),

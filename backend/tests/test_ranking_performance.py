@@ -9,21 +9,18 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from ranking.models import (
-    PuntajeAplicado,
-    PuntajeGeneral,
-    Socio,
-    SocioEstudio,
-    Subcomision,
-    TipoSocio,
+from padron.models import Socio, SocioEstudio, Subcomision
+from ranking.models import PuntajeAplicado, PuntajeGeneral
+from tests.legacy_schema import (
+    create_legacy_record,
+    save_legacy_records,
 )
 
 
 @pytest.fixture
 def padron_scale_data(db) -> None:
     """Genera 515 socios con cinco movimientos cada uno y saldos mixtos."""
-    sub = Subcomision.objects.create(codSubcomision=1, nombre="Cómputos")
-    tipo = TipoSocio.objects.create(idTipoSocio=1, nombre="Socio Ordinario")
+    sub = create_legacy_record(Subcomision, codSubcomision=1, nombre="Cómputos")
 
     socios_bulk = [
         Socio(
@@ -32,11 +29,11 @@ def padron_scale_data(db) -> None:
             apellido=f"Apellido_{i}",
             anoSocial=(i % 6) + 1,
             subcomision=sub,
-            tipoSocio=tipo,
+            idTipoSocio=1,
         )
         for i in range(1, 516)
     ]
-    Socio.objects.bulk_create(socios_bulk)
+    save_legacy_records(Socio, socios_bulk)
 
     estudios_bulk = [
         SocioEstudio(
@@ -47,7 +44,7 @@ def padron_scale_data(db) -> None:
         )
         for i in range(1, 516)
     ]
-    SocioEstudio.objects.bulk_create(estudios_bulk)
+    save_legacy_records(SocioEstudio, estudios_bulk)
 
     # Cinco movimientos por socio: totales +3, -3 y 0; ambos estados de reconciliacion.
     movement_patterns = (
@@ -75,8 +72,8 @@ def padron_scale_data(db) -> None:
                     puntajeAplicado=points,
                 )
             )
-    PuntajeGeneral.objects.bulk_create(ptj_gral_bulk)
-    PuntajeAplicado.objects.bulk_create(ptj_apl_bulk)
+    save_legacy_records(PuntajeGeneral, ptj_gral_bulk)
+    save_legacy_records(PuntajeAplicado, ptj_apl_bulk)
     assert Socio.objects.count() == 515
     assert PuntajeAplicado.objects.count() == 2575
 

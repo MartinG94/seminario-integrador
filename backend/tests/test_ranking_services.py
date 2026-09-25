@@ -5,7 +5,8 @@ from decimal import Decimal
 
 import pytest
 
-from ranking.models import Socio, Subcomision, TipoSocio
+from padron.models import Socio, Subcomision
+from ranking.serializers import RankingSocioSerializer
 from ranking.services import calculate_reconciliation, make_accent_insensitive_regex
 
 
@@ -69,39 +70,36 @@ class TestSocioCategoryDerivation:
     def test_categoria_pasivo_for_first_three_social_years(self) -> None:
         """Años sociales 1, 2 y 3 deben categorizarse como 'PASIVO' (ex Junior)."""
         sub = Subcomision(codSubcomision=1, nombre="Cómputos")
-        tipo = TipoSocio(idTipoSocio=1, nombre="Socio Ordinario")
 
-        s1 = Socio(anoSocial=1, subcomision=sub, tipoSocio=tipo)
-        s2 = Socio(anoSocial=2, subcomision=sub, tipoSocio=tipo)
-        s3 = Socio(anoSocial=3, subcomision=sub, tipoSocio=tipo)
+        s1 = Socio(anoSocial=1, subcomision=sub, idTipoSocio=1)
+        s2 = Socio(anoSocial=2, subcomision=sub, idTipoSocio=1)
+        s3 = Socio(anoSocial=3, subcomision=sub, idTipoSocio=1)
 
-        assert s1.categoria == "PASIVO"
-        assert s2.categoria == "PASIVO"
-        assert s3.categoria == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s1) == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s2) == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s3) == "PASIVO"
 
     def test_categoria_activo_for_fourth_to_sixth_social_years(self) -> None:
         """Años sociales 4, 5 y 6 deben categorizarse como 'ACTIVO' (ex Senior)."""
         sub = Subcomision(codSubcomision=1, nombre="Cómputos")
-        tipo = TipoSocio(idTipoSocio=1, nombre="Socio Ordinario")
 
-        s4 = Socio(anoSocial=4, subcomision=sub, tipoSocio=tipo)
-        s5 = Socio(anoSocial=5, subcomision=sub, tipoSocio=tipo)
-        s6 = Socio(anoSocial=6, subcomision=sub, tipoSocio=tipo)
+        s4 = Socio(anoSocial=4, subcomision=sub, idTipoSocio=1)
+        s5 = Socio(anoSocial=5, subcomision=sub, idTipoSocio=1)
+        s6 = Socio(anoSocial=6, subcomision=sub, idTipoSocio=1)
 
-        assert s4.categoria == "ACTIVO"
-        assert s5.categoria == "ACTIVO"
-        assert s6.categoria == "ACTIVO"
+        assert RankingSocioSerializer().get_categoria(s4) == "ACTIVO"
+        assert RankingSocioSerializer().get_categoria(s5) == "ACTIVO"
+        assert RankingSocioSerializer().get_categoria(s6) == "ACTIVO"
 
     def test_categoria_none_or_zero_social_year_defaults_to_pasivo(self) -> None:
         """Año social None o 0 debe categorizarse como 'PASIVO' sin elevar excepciones."""
         sub = Subcomision(codSubcomision=1, nombre="Cómputos")
-        tipo = TipoSocio(idTipoSocio=1, nombre="Socio Ordinario")
 
-        s_none = Socio(anoSocial=None, subcomision=sub, tipoSocio=tipo)
-        s_zero = Socio(anoSocial=0, subcomision=sub, tipoSocio=tipo)
+        s_none = Socio(anoSocial=None, subcomision=sub, idTipoSocio=1)
+        s_zero = Socio(anoSocial=0, subcomision=sub, idTipoSocio=1)
 
-        assert s_none.categoria == "PASIVO"
-        assert s_zero.categoria == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s_none) == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s_zero) == "PASIVO"
 
 
 @pytest.mark.unit
@@ -116,3 +114,34 @@ class TestAccentInsensitiveRegex:
         pat_comp = make_accent_insensitive_regex("computos")
         assert re.search(pat_comp, "Cómputos", re.IGNORECASE)
         assert re.search(pat_comp, "computos", re.IGNORECASE)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("model_name", ["PuntajeAplicado", "PuntajeGeneral"])
+def test_score_models_are_read_only_unmanaged_decimal(model_name):
+    from django.core.exceptions import PermissionDenied
+    from django.db.models import DecimalField
+
+    from ranking import models as ranking_models
+
+    model = getattr(ranking_models, model_name)
+    field_name = "puntajeAplicado" if model_name == "PuntajeAplicado" else "puntos"
+    field = model._meta.get_field(field_name)
+    assert model._meta.managed is False
+    assert isinstance(field, DecimalField)
+    assert (field.max_digits, field.decimal_places) == (10, 2)
+    assert model._meta.get_field("socio").related_model is Socio
+    with pytest.raises(PermissionDenied):
+        model().save()
+    with pytest.raises(PermissionDenied):
+        model.objects.bulk_create([])
+
+
+@pytest.mark.unit
+def test_ranking_only_registers_score_models():
+    from django.apps import apps
+
+    assert {model.__name__ for model in apps.get_app_config("ranking").get_models()} == {
+        "PuntajeAplicado",
+        "PuntajeGeneral",
+    }

@@ -184,7 +184,7 @@ describe('RankingSociosComponent', () => {
 
       const celda: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion');
       const signo = diferencia > 0 ? '+' : '';
-      expect(celda.textContent).toContain(`Diferencia: ${signo}${diferencia} pts`);
+      expect(celda.textContent).toContain(`Diferencia: ${signo}${diferencia.toFixed(2)} pts`);
       expect(celda.textContent).not.toContain('Coincide');
     });
   });
@@ -196,7 +196,7 @@ describe('RankingSociosComponent', () => {
     fixture.detectChanges();
 
     const detalle: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion small');
-    expect(detalle.textContent.trim()).toBe('Histórico: 8 | General: 5');
+    expect(detalle.textContent.trim()).toBe('Histórico: 8.00 | General: 5.00');
   });
 
   it('debería respetar la diferencia del backend sin recalcular ni alterar saldo u orden', () => {
@@ -212,8 +212,9 @@ describe('RankingSociosComponent', () => {
     const filas: NodeListOf<HTMLTableRowElement> = fixture.nativeElement.querySelectorAll('tbody tr');
     const celda = filas[1].querySelector('.reconciliacion');
     expect(celda.textContent).toContain('Diferencia: -0.25 pts');
-    expect(celda.textContent).not.toContain('Diferencia: +80 pts');
-    expect(filas[1].cells[5].textContent.trim()).toBe('-4 pts');
+    expect(celda.textContent).not.toContain('Diferencia: +80.00 pts');
+    expect(filas[1].cells[5].textContent).toContain('-4.00 pts');
+    expect(filas[1].cells[5].textContent).toContain('Habilitado Regular');
     expect(component.socios.find(s => s.id === '1').diferencia).toBe(-0.25);
   });
 });

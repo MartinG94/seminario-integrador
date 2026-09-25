@@ -4,7 +4,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from ranking.models import PuntajeGeneral, Socio, Subcomision
+from padron.models import Socio, Subcomision
+from ranking.models import PuntajeGeneral
 from ranking.services import calculate_reconciliation
 
 
@@ -71,7 +72,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
             return str(obj.nroSocio)
 
     def get_categoria(self, obj: Socio) -> str:
-        return obj.categoria
+        return "ACTIVO" if (obj.anoSocial or 0) >= 4 else "PASIVO"
 
     def get_subcomision(self, obj: Socio) -> str:
         sub_calc = getattr(obj, "subcomision_nombre_calc", None)
