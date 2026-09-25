@@ -1,3 +1,4 @@
+import re
 import unicodedata
 
 from django.db.models import Q, QuerySet
@@ -34,7 +35,7 @@ def make_accent_insensitive_regex(term: str) -> str:
         if low in accent_map:
             pattern_parts.append(accent_map[low])
         else:
-            pattern_parts.append(unicodedata.normalize("NFD", char))
+            pattern_parts.append(re.escape(char))
     return "".join(pattern_parts)
 
 

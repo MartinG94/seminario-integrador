@@ -13,7 +13,7 @@ export interface SocioLegajoDTO {
   role: string;
   category: 'PASSIVE' | 'ACTIVE';
   category_display: string;
-  subcomision_name: string | null;
+  subcomision: string | null;
   social_year: number;
   is_enabled: boolean;
   points_balance?: number;
@@ -27,6 +27,7 @@ export interface PaginatedResponse<T> {
 }
 
 export interface SocioListItemDTO {
+  id: number;
   legajo: string;
   first_name: string;
   last_name: string;

@@ -61,4 +61,4 @@ class SocioLegajoDetailView(RetrieveAPIView):
 
     permission_classes = [IsAuthenticated, CanViewSocioLegajo]
     serializer_class = SocioLegajoSerializer
-    queryset = Socio.objects.select_related("subcomision").filter(is_enabled=True)
+    queryset = Socio.objects.select_related("subcomision").all()

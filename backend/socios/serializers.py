@@ -11,9 +11,7 @@ class SocioLegajoSerializer(serializers.ModelSerializer):
     """
 
     category_display = serializers.CharField(source="get_category_display", read_only=True)
-    subcomision_name = serializers.CharField(
-        source="subcomision.name", default=None, read_only=True
-    )
+    subcomision = serializers.CharField(source="subcomision.name", default=None, read_only=True)
     points_balance = serializers.SerializerMethodField()
 
     class Meta:
@@ -27,7 +25,7 @@ class SocioLegajoSerializer(serializers.ModelSerializer):
             "role",
             "category",
             "category_display",
-            "subcomision_name",
+            "subcomision",
             "social_year",
             "is_enabled",
             "points_balance",

@@ -52,7 +52,7 @@
               </div>
 
               <div class="input-group no-border ml-2" style="width: 220px; margin: 0;">
-                <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" style="border-bottom-color: rgba(255,255,255,0.4);">
+                <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" (ngModelChange)="onFiltroChange($event)" style="border-bottom-color: rgba(255,255,255,0.4);">
               </div>
             </div>
           </div>
@@ -72,8 +72,12 @@
                 <tbody>
                   <tr *ngFor="let s of sociosOrdenados; let i = index" 
                       (click)="abrirLegajoSocio(s)" 
+                      (keydown)="onRowKeyDown($event, s)"
+                      tabindex="0"
+                      role="button"
+                      [attr.aria-label]="'Consultar legajo de ' + s.nombre + ', legajo ' + s.legajo"
                       class="socio-row-clickable" 
-                      title="Clic para ver legajo y antecedentes de {{s.nombre}}">
+                      title="Clic o presione Enter/Espacio para ver legajo y antecedentes de {{s.nombre}}">
                     <td class="font-weight-bold text-muted">#{{i + 1}}</td>
                     <td>
                       <div class="font-weight-bold text-dark">{{s.nombre}}</div>

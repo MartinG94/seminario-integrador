@@ -136,6 +136,20 @@ def test_search_without_matches_returns_empty_paginated_list(test_setup, authent
     assert res.data["results"] == []
 
 
+@pytest.mark.django_db
+def test_search_with_special_characters_returns_200_without_regex_error(test_setup, authenticate):
+    """Caracteres especiales como '(', '[', '*', '?' se tratan como literales y no causan 500."""
+    create = test_setup["create_socio"]
+    td_user = create("408917", "Nicolás", "Rosales", role=Role.TD)
+    create("74907", "Lucas", "Gastiaburu")
+
+    client = authenticate(td_user)
+    for special_query in ["(", "[", "*", "?", "(test)*?[", "+", "Lucas (74907)"]:
+        res = client.get(f"/api/v1/socios/?search={special_query}")
+        assert res.status_code == 200, f"Falló con query: {special_query}"
+        assert "results" in res.data
+
+
 # ==============================================================================
 # CA2: Detalle de Legajo
 # ==============================================================================
@@ -161,7 +175,7 @@ def test_legajo_detail_returns_expected_fields_and_exact_legajo(test_setup, auth
     assert data["role"] == Role.SOCIO
     assert data["category"] == "ACTIVE"
     assert data["category_display"] == "Activo"
-    assert data["subcomision_name"] == "Cómputos"
+    assert data["subcomision"] == "Cómputos"
     assert data["social_year"] == 5
     assert data["is_enabled"] is True
     assert data["points_balance"] == 0.0
@@ -236,6 +250,20 @@ def test_authorized_authorities_can_view_any_legajo(test_setup, authenticate, ro
 
 
 @pytest.mark.django_db
+def test_authorized_authorities_can_view_inactive_socio_legajo(test_setup, authenticate):
+    """Autoridades (TD, CD, ADMIN) pueden consultar legajos de socios inactivos/inhabilitados."""
+    create = test_setup["create_socio"]
+    td_user = create("408917", "Nicolás", "Rosales", role=Role.TD)
+    socio_inactivo = create("74908", "Inactivo", "Prueba", role=Role.SOCIO, is_enabled=False)
+
+    client = authenticate(td_user)
+    res = client.get(f"/api/v1/socios/{socio_inactivo.pk}/legajo/")
+    assert res.status_code == 200
+    assert res.data["legajo"] == "74908"
+    assert res.data["is_enabled"] is False
+
+
+@pytest.mark.django_db
 def test_socio_can_view_own_legajo(test_setup, authenticate):
     create = test_setup["create_socio"]
     socio = create("74907", "Lucas", "Gastiaburu", role=Role.SOCIO)
@@ -273,6 +301,7 @@ def test_unauthenticated_user_cannot_access_legajo_detail_returns_401(test_setup
 # ==============================================================================
 
 
+@pytest.mark.performance
 @pytest.mark.django_db
 def test_search_response_time_under_500ms(test_setup, authenticate):
     create = test_setup["create_socio"]

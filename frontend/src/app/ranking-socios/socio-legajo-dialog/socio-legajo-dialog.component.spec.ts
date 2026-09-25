@@ -20,7 +20,7 @@ describe('SocioLegajoDialogComponent', () => {
     role: 'SOCIO',
     category: 'ACTIVE',
     category_display: 'Activo',
-    subcomision_name: 'Cómputos',
+    subcomision: 'Cómputos',
     social_year: 4,
     is_enabled: true,
     points_balance: 3.5
@@ -76,6 +76,11 @@ describe('SocioLegajoDialogComponent', () => {
 
     expect(component.cargando).toBeFalse();
     expect(component.errorHttp).toContain('No posee autorización para consultar este legajo (CA4)');
+  });
+
+  it('debe reflejar el saldo recibido en data.saldo si está definido', () => {
+    component.data.saldo = -7.5;
+    expect(component.saldoPuntos).toBe(-7.5);
   });
 
   it('debe cerrar el modal al invocar cerrar()', () => {

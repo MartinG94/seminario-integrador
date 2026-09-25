@@ -31,7 +31,7 @@
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background: linear-gradient(60deg, #151846, #252B6B);
+    background: $grad-primary-aveit;
     color: #ffffff;
     margin-right: 0.75rem;
     flex-shrink: 0;
@@ -109,7 +109,7 @@
   gap: 0.85rem;
   padding: 0.85rem;
   border-radius: 8px;
-  background-color: var(--color-surface, #F2EEE9);
+  background-color: var(--color-surface);
   margin-bottom: 1.25rem;
 
   @media (max-width: 380px) {

@@ -31,6 +31,7 @@ describe('SocioApiService', () => {
       previous: null,
       results: [
         {
+          id: 5,
           legajo: '74907',
           first_name: 'Lucas',
           last_name: 'Gastiaburu',
@@ -63,7 +64,7 @@ describe('SocioApiService', () => {
       role: 'SOCIO',
       category: 'ACTIVE',
       category_display: 'Activo',
-      subcomision_name: 'Cómputos',
+      subcomision: 'Cómputos',
       social_year: 4,
       is_enabled: true
     };
@@ -71,7 +72,7 @@ describe('SocioApiService', () => {
     service.getLegajo(5).subscribe((legajo) => {
       expect(legajo.legajo).toBe('74907');
       expect(legajo.first_name).toBe('Lucas');
-      expect(legajo.subcomision_name).toBe('Cómputos');
+      expect(legajo.subcomision).toBe('Cómputos');
     });
 
     const req = httpMock.expectOne((r) => r.url.endsWith('/socios/5/legajo/'));
