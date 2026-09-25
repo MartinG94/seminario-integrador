@@ -296,6 +296,68 @@ def test_unauthenticated_user_cannot_access_legajo_detail_returns_401(test_setup
     assert res.status_code == 401
 
 
+@pytest.mark.django_db
+def test_legajo_detail_for_institutional_padron_socio_by_id_and_legajo(
+    test_setup, authenticate, monkeypatch
+):
+    """Las autoridades pueden consultar legajos de socios del padrón
+    institucional tanto por socio_id como por legajo.
+    """
+    from padron.adapters import MockPadronAdapter
+
+    monkeypatch.setattr("socios.views.get_padron_repository", lambda: MockPadronAdapter())
+
+    create = test_setup["create_socio"]
+    td_user = create("408917", "Nicolás", "Rosales", role=Role.TD)
+    client = authenticate(td_user)
+
+    # 1. Consulta por ID institucional (1002 -> Lucía Gómez)
+    res_by_id = client.get("/api/v1/socios/1002/legajo/")
+    assert res_by_id.status_code == 200
+    data_id = res_by_id.data
+    assert data_id["id"] == 1002
+    assert data_id["legajo"] == "89123"
+    assert data_id["first_name"] == "Lucía"
+    assert data_id["last_name"] == "Gómez"
+    assert data_id["subcomision"] == "Cómputos"
+    assert data_id["category"] == "PASSIVE"
+    assert data_id["category_display"] == "Pasivo"
+    assert data_id["is_enabled"] is True
+
+    # 2. Consulta por número de legajo ("89123" -> Lucía Gómez)
+    res_by_legajo = client.get("/api/v1/socios/89123/legajo/")
+    assert res_by_legajo.status_code == 200
+    assert res_by_legajo.data["legajo"] == "89123"
+    assert res_by_legajo.data["last_name"] == "Gómez"
+
+
+@pytest.mark.django_db
+def test_socio_cannot_view_other_institutional_socio_legajo(test_setup, authenticate, monkeypatch):
+    """Un socio ordinario no puede consultar el legajo de un socio institucional ajeno (403)."""
+    from padron.adapters import MockPadronAdapter
+
+    monkeypatch.setattr("socios.views.get_padron_repository", lambda: MockPadronAdapter())
+
+    create = test_setup["create_socio"]
+    socio_user = create("74907", "Lucas", "Gastiaburu", role=Role.SOCIO)
+    client = authenticate(socio_user)
+
+    res = client.get("/api/v1/socios/1002/legajo/")
+    assert res.status_code == 403
+    assert res.data["detail"] == "No posee autorización para acceder a este legajo."
+
+
+@pytest.mark.django_db
+def test_nonexistent_socio_legajo_returns_404(test_setup, authenticate):
+    """Consultar un legajo inexistente retorna HTTP 404."""
+    create = test_setup["create_socio"]
+    td_user = create("408917", "Nicolás", "Rosales", role=Role.TD)
+    client = authenticate(td_user)
+
+    res = client.get("/api/v1/socios/999999/legajo/")
+    assert res.status_code == 404
+
+
 # ==============================================================================
 # Performance: Respuesta bajo 500 ms (RNF-01)
 # ==============================================================================

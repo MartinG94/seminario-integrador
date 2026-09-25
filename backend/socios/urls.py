@@ -6,5 +6,5 @@ app_name = "socios"
 
 urlpatterns = [
     path("", PadronListView.as_view(), name="padron-list"),
-    path("<int:pk>/legajo/", SocioLegajoDetailView.as_view(), name="socio-legajo"),
+    path("<str:pk>/legajo/", SocioLegajoDetailView.as_view(), name="socio-legajo"),
 ]
