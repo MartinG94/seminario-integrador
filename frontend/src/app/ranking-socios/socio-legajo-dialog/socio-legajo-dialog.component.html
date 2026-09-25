@@ -40,7 +40,7 @@
   <div *ngIf="!cargando && legajo" class="dialog-content">
     <div class="socio-summary-card">
       <div class="socio-avatar">
-        <span>{{ legajo.first_name[0] }}{{ legajo.last_name[0] }}</span>
+        <span>{{ legajo.first_name ? legajo.first_name[0] : '' }}{{ legajo.last_name ? legajo.last_name[0] : '' }}</span>
       </div>
       <div class="socio-main-info">
         <h4 class="socio-full-name">{{ legajo.last_name }}, {{ legajo.first_name }}</h4>
