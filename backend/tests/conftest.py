@@ -63,3 +63,17 @@ def authenticate(api_client):
         return api_client
 
     return _authenticate
+
+
+@pytest.fixture(scope="session")
+def django_db_setup(django_db_setup, django_db_blocker):
+    """Agrega el esquema externo sólo después de crear la base de pruebas."""
+    from django.db import connection
+
+    from tests.legacy_schema import create_legacy_tables, drop_legacy_tables
+
+    with django_db_blocker.unblock():
+        created = create_legacy_tables(connection)
+    yield
+    with django_db_blocker.unblock():
+        drop_legacy_tables(connection, created)

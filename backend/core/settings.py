@@ -28,7 +28,9 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "t")
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,backend").split(",")
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,backend,testserver").split(
+        ","
+    )
     if host.strip()
 ]
 
@@ -48,6 +50,9 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "socios",
+    # Módulos funcionales
+    "padron",
+    "ranking",
 ]
 
 MIDDLEWARE = [
@@ -89,7 +94,7 @@ if USE_SQLITE:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": BASE_DIR / os.getenv("SQLITE_DATABASE_NAME", "db.sqlite3"),
         }
     }
 else:
@@ -106,6 +111,8 @@ else:
             "OPTIONS": {
                 "charset": "utf8mb4",
                 "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "3")),
+                "read_timeout": int(os.getenv("DB_READ_TIMEOUT", "3")),
             },
         }
     }

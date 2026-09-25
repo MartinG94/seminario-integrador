@@ -51,6 +51,22 @@
                 </button>
               </div>
 
+              <select class="form-control ml-2 filtro-categoria"
+                      [(ngModel)]="filtroCategoria" (ngModelChange)="paginaActual = 1">
+                <option value="">Todas las categorías</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="PASIVO">Pasivo</option>
+              </select>
+
+              <select class="form-control ml-2"
+                      style="width: 190px;"
+                      [(ngModel)]="filtroSubcomision" (ngModelChange)="paginaActual = 1">
+                <option value="">Todas las subcomisiones</option>
+                <option *ngFor="let subcomision of subcomisiones"
+                        [value]="subcomision">
+                  {{subcomision}}
+                </option>
+              </select>
               <div class="input-group no-border ml-2" style="width: 220px; margin: 0;">
                 <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" (ngModelChange)="onFiltroChange($event)" style="border-bottom-color: rgba(255,255,255,0.4);">
               </div>
@@ -58,45 +74,84 @@
           </div>
 
           <div class="card-body">
-            <div class="table-responsive">
+            <div *ngIf="cargando" class="text-center text-muted py-4">
+              Cargando ranking...
+            </div>
+
+            <div *ngIf="error" class="alert alert-danger text-center">
+              {{error}}
+            </div>
+
+            <div *ngIf="!cargando && !error" class="table-responsive">
               <table class="table table-hover table-mat">
                 <thead class="text-primary">
                   <th>Posición</th>
-                  <th>Socio / Miembro</th>
+                  <th>Socio</th>
+                  <th>Legajo</th>
+                  <th>Categoría</th>
                   <th>Subcomisión</th>
-                  <th class="text-center">Reconocimientos</th>
-                  <th class="text-center">Sanciones</th>
-                  <th class="text-center">Saldo Neto</th>
-                  <th>Estado Estatutario</th>
+                  <th class="text-center">Saldo</th>
+                  <th>Reconciliación</th>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let s of sociosOrdenados; let i = index" 
+                  <tr *ngIf="sociosOrdenados.length === 0">
+                    <td colspan="7" class="text-center text-muted py-4">
+                      No se encontraron socios con los criterios seleccionados.
+                    </td>
+                  </tr>
+                  <tr *ngFor="let s of sociosPaginados; let i = index"
                       (click)="abrirLegajoSocio(s)" 
                       (keydown)="onRowKeyDown($event, s)"
                       tabindex="0"
                       role="button"
-                      [attr.aria-label]="'Consultar legajo de ' + s.nombre + ', legajo ' + s.legajo"
+                      [attr.aria-label]="'Consultar legajo de ' + s.nombre + ' ' + (s.apellido || '') + ', legajo ' + s.legajo"
                       class="socio-row-clickable" 
-                      title="Clic o presione Enter/Espacio para ver legajo y antecedentes de {{s.nombre}}">
-                    <td class="font-weight-bold text-muted">#{{i + 1}}</td>
+                      title="Clic o presione Enter/Espacio para ver legajo y antecedentes de {{s.nombre}} {{s.apellido}}">
+                    <td class="font-weight-bold text-muted">#{{((paginaActual - 1) * tamanoPagina) + i + 1}}</td>
                     <td>
-                      <div class="font-weight-bold text-dark">{{s.nombre}}</div>
-                      <small class="text-muted">{{s.legajo}} &bull; {{s.email}}</small>
+                      <div class="font-weight-bold text-dark">{{s.nombre}} {{s.apellido}}</div>
                     </td>
+                    <td>{{s.legajo}}</td>
+                    <td>{{s.categoria}}</td>
                     <td>{{s.subcomision}}</td>
-                    <td class="text-center text-success font-weight-bold">{{s.felicitaciones}}</td>
-                    <td class="text-center text-danger font-weight-bold">{{s.sanciones}}</td>
                     <td class="text-center font-weight-bold" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
-                      {{s.saldo > 0 ? '+' : ''}}{{s.saldo}} pts
-                    </td>
-                    <td>
-                      <span class="badge-mat" [ngClass]="getBadgeClase(s)">
-                        {{getEstadoDescripcion(s)}}
+                      <div>{{s.saldo > 0 ? '+' : ''}}{{s.saldo | number:'1.2-2'}} pts</div>
+                      <span class="badge-mat mt-1" [ngClass]="getBadgeClase(s)">
+                        {{ getEstadoDescripcion(s) }}
                       </span>
+                    </td>
+                    <td class="reconciliacion">
+                      <span *ngIf="s.reconciliado === true">Coincide</span>
+                      <ng-container *ngIf="s.reconciliado === false">
+                        <div>Diferencia: {{s.diferencia != null && s.diferencia > 0 ? '+' : ''}}{{s.diferencia | number:'1.2-2'}} pts</div>
+                        <small class="d-block text-muted">Histórico: {{s.saldoHistorico | number:'1.2-2'}} | General: {{s.saldoPuntajeGeneral | number:'1.2-2'}}</small>
+                      </ng-container>
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div *ngIf="sociosOrdenados.length > tamanoPagina" class="d-flex justify-content-between align-items-center mt-3">
+              <span class="text-muted">
+                Página {{paginaActual}} de {{totalPaginas}}
+              </span>
+
+              <div>
+                <button mat-raised-button
+                        class="btn btn-sm btn-outline-primary mr-2"
+                        [disabled]="paginaActual === 1"
+                        (click)="cambiarPagina(paginaActual - 1)">
+                  Anterior
+                </button>
+
+                <button mat-raised-button
+                        class="btn btn-sm btn-outline-primary"
+                        [disabled]="paginaActual === totalPaginas"
+                        (click)="cambiarPagina(paginaActual + 1)">
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </div>

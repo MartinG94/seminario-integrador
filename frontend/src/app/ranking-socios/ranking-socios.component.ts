@@ -1,10 +1,7 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
-
-import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
-import { TribunalDataService, Socio } from '../services/tribunal-data.service';
+import { RankingService } from '../services/ranking.service';
+import { RankingSocio } from './ranking-socio.model';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
 
 @Component({
@@ -12,35 +9,37 @@ import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-d
   templateUrl: './ranking-socios.component.html',
   styleUrls: ['./ranking-socios.component.scss']
 })
-export class RankingSociosComponent implements OnInit, OnDestroy {
-  socios: Socio[] = [];
+export class RankingSociosComponent implements OnInit {
+  socios: RankingSocio[] = [];
   criterioOrden: 'merito' | 'sancion' = 'merito';
   filtroTexto = '';
-
-  private searchSubject = new Subject<string>();
-  private rankingMock: Map<string, Socio> = new Map();
-  private subs: Subscription[] = [];
+  filtroCategoria: 'ACTIVO' | 'PASIVO' | '' = '';
+  filtroSubcomision = '';
+  subcomisiones: string[] = [];
+  paginaActual = 1;
+  tamanoPagina = 10;
+  cargando = false;
+  error: string | null = null;
 
   constructor(
-    public dataService: TribunalDataService,
-    private socioApiService: SocioApiService,
-    private dialog: MatDialog
+    public rankingService: RankingService,
+    public dialog: MatDialog
   ) {}
 
-  abrirLegajoSocio(socio: Socio): void {
+  abrirLegajoSocio(socio: RankingSocio): void {
     if (!socio) return;
     this.dialog.open(SocioLegajoDialogComponent, {
       width: '100%',
       maxWidth: '600px',
       data: {
         socioId: socio.id,
-        nombreSocio: socio.nombre,
+        nombreSocio: `${socio.nombre} ${socio.apellido}`.trim(),
         saldo: socio.saldo
       }
     });
   }
 
-  onRowKeyDown(event: KeyboardEvent, socio: Socio): void {
+  onRowKeyDown(event: KeyboardEvent, socio: RankingSocio): void {
     if (!event) return;
 
     if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
@@ -71,83 +70,96 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const subTribunal = this.dataService.socios$.subscribe(mockList => {
-      this.rankingMock = new Map((mockList || []).map(s => [s.legajo, s]));
-    });
-    this.subs.push(subTribunal);
+    this.cargando = true;
+    this.error = null;
 
-    const searchSub = this.searchSubject.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap(query => this.socioApiService.searchSocios(query))
-    ).subscribe({
-      next: (res) => {
-        this.mapearResultados(res.results);
+    this.rankingService.obtenerRanking().subscribe({
+      next: (socios) => {
+        this.socios = socios;
+        this.subcomisiones = [...new Set(this.socios.map(s => s.subcomision))].sort();
+        this.cargando = false;
       },
-      error: (err) => {
-        console.error('Error al consultar el padrón:', err);
+      error: () => {
+        this.socios = [];
+        this.subcomisiones = [];
+        this.error = 'No se pudo cargar el ranking. Intentá nuevamente.';
+        this.cargando = false;
       }
     });
-    this.subs.push(searchSub);
-
-    this.buscar(this.filtroTexto);
-  }
-
-  ngOnDestroy(): void {
-    this.subs.forEach(s => s.unsubscribe());
   }
 
   onFiltroChange(texto: string): void {
     this.filtroTexto = texto;
-    this.searchSubject.next(texto);
+    this.paginaActual = 1;
   }
 
-  buscar(query?: string): void {
-    const q = query !== undefined ? query : this.filtroTexto;
-    this.socioApiService.searchSocios(q).subscribe({
-      next: (res) => this.mapearResultados(res.results),
-      error: (err) => console.error('Error al consultar el padrón:', err)
-    });
-  }
+  get sociosOrdenados(): RankingSocio[] {
+    let list = [...this.socios];
 
-  private mapearResultados(items: SocioListItemDTO[]): void {
-    this.socios = (items || []).map(item => {
-      const match = this.rankingMock.get(item.legajo);
-      return {
-        id: item.id.toString(),
-        nombre: `${item.first_name} ${item.last_name}`.trim(),
-        legajo: item.legajo,
-        email: item.email,
-        subcomision: item.subcomision || 'Sin Asignar',
-        saldo: match ? match.saldo : 0,
-        estado: match ? match.estado : 'HABILITADO',
-        felicitaciones: match ? match.felicitaciones : 0,
-        sanciones: match ? match.sanciones : 0
-      };
-    });
-  }
-
-  get sociosOrdenados(): Socio[] {
-    const list = [...this.socios];
-    if (this.criterioOrden === 'merito') {
-      list.sort((a, b) => b.saldo - a.saldo);
-    } else {
-      list.sort((a, b) => a.saldo - b.saldo);
+    if (this.filtroCategoria) {
+      list = list.filter(s => s.categoria === this.filtroCategoria);
     }
+
+    if (this.filtroSubcomision) {
+      list = list.filter(s => s.subcomision === this.filtroSubcomision);
+    }
+    if (this.filtroTexto.trim()) {
+      const q = this.filtroTexto.toLowerCase();
+      list = list.filter(s => 
+        s.nombre.toLowerCase().includes(q) ||
+        s.apellido.toLowerCase().includes(q) ||
+        s.legajo.toLowerCase().includes(q) ||
+        s.subcomision.toLowerCase().includes(q)
+      );
+    }
+
+    list.sort((a, b) => {
+      const diferenciaSaldo = this.criterioOrden === 'merito'
+        ? b.saldo - a.saldo
+        : a.saldo - b.saldo;
+
+      if (diferenciaSaldo !== 0) {
+        return diferenciaSaldo;
+      }
+
+      const diferenciaApellido = a.apellido.localeCompare(b.apellido);
+      if (diferenciaApellido !== 0) {
+        return diferenciaApellido;
+      }
+
+      return a.nombre.localeCompare(b.nombre);
+    });
+
     return list;
+  }
+
+  get sociosPaginados(): RankingSocio[] {
+    const inicio = (this.paginaActual - 1) * this.tamanoPagina;
+    return this.sociosOrdenados.slice(inicio, inicio + this.tamanoPagina);
+  }
+
+  get totalPaginas(): number {
+    return Math.max(1, Math.ceil(this.sociosOrdenados.length / this.tamanoPagina));
+  }
+
+  cambiarPagina(pagina: number): void {
+    if (pagina >= 1 && pagina <= this.totalPaginas) {
+      this.paginaActual = pagina;
+    }
   }
 
   setOrden(criterio: 'merito' | 'sancion'): void {
     this.criterioOrden = criterio;
+    this.paginaActual = 1;
   }
 
-  getBadgeClase(socio: Socio): string {
+  getBadgeClase(socio: RankingSocio): string {
     if (socio.saldo <= -10.0) return 'badge-mat-danger';
     if (socio.saldo <= -7.0) return 'badge-mat-warning';
     return 'badge-mat-success';
   }
 
-  getEstadoDescripcion(socio: Socio): string {
+  getEstadoDescripcion(socio: RankingSocio): string {
     if (socio.saldo <= -10.0) return 'Límite Crítico: Cese Estatutario';
     if (socio.saldo <= -7.0) return 'Alerta Preventiva';
     return 'Habilitado Regular';

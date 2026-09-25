@@ -93,4 +93,5 @@ testem.log
 !.vscode/launch.json
 !.vscode/extensions.json
 
-
+# --- Agentes y Workspaces Temporales ---
+.agents/
