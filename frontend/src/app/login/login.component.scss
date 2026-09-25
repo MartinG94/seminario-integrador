@@ -131,6 +131,76 @@
     }
   }
 
+  &__demo-roles {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--color-border-main);
+  }
+
+  &__demo-titulo {
+    display: block;
+    margin-bottom: 10px;
+    font-family: var(--font-subtitle);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-align: center;
+  }
+
+  &__demo-botones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-demo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border-main);
+    border-radius: 6px;
+    background: var(--color-surface, #F2EEE9);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+
+    &:hover {
+      background: var(--color-accent, #6E9DDC);
+      color: var(--color-text-inverse, #FFFFFF);
+      border-color: var(--color-accent, #6E9DDC);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+
+      .badge-rol {
+        background: rgba(255, 255, 255, 0.25);
+        color: var(--color-text-inverse, #FFFFFF);
+      }
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    .badge-rol {
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(21, 24, 70, 0.08);
+      color: var(--color-primary, #151846);
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .legajo-num {
+      font-weight: 600;
+      font-family: monospace;
+    }
+  }
+
   &__footer {
     margin-top: 24px;
     text-align: center;

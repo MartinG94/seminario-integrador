@@ -35,9 +35,13 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
-  login(identifier: string, password: string): Observable<LoginResponse> {
+  login(identifier: string, password?: string): Observable<LoginResponse> {
+    const payload: { identifier: string; password?: string } = { identifier };
+    if (password !== undefined) {
+      payload.password = password;
+    }
     return this.http
-      .post<LoginResponse>(`${environment.apiUrl}/auth/login/`, { identifier, password })
+      .post<LoginResponse>(`${environment.apiUrl}/auth/login/`, payload)
       .pipe(tap(respuesta => this.guardarSesion(respuesta)));
   }
 

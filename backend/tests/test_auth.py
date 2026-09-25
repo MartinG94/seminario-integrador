@@ -58,6 +58,31 @@ def test_login_success_returns_tokens_and_profile(api_client, make_socio):
 
 
 @pytest.mark.django_db
+def test_login_with_legajo_without_password_succeeds(api_client, make_socio):
+    socio = make_socio(legajo="74907", role=Role.TD, social_year=5)
+
+    # 1. Sin enviar el campo password en el payload
+    response = api_client.post(
+        LOGIN_URL,
+        {"identifier": "74907"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.data["access"]
+    assert response.data["user"]["legajo"] == socio.legajo
+    assert response.data["user"]["role"] == Role.TD
+
+    # 2. Con password enviada como cadena vacía
+    response_empty = api_client.post(
+        LOGIN_URL,
+        {"identifier": "74907", "password": ""},
+        format="json",
+    )
+    assert response_empty.status_code == 200
+    assert response_empty.data["access"]
+
+
+@pytest.mark.django_db
 def test_login_accepts_email_as_identifier(api_client, make_socio):
     make_socio(legajo="85194", email="lucas@aveit.test")
 

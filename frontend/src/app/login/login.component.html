@@ -13,7 +13,7 @@
       </div>
 
       <div class="aveit-login__campo">
-        <label for="identifier">Legajo o correo institucional</label>
+        <label for="identifier">Legajo del socio</label>
         <input
           id="identifier"
           type="text"
@@ -24,22 +24,7 @@
         <span
           class="aveit-login__ayuda-error"
           *ngIf="formulario.get('identifier')?.touched && formulario.get('identifier')?.invalid">
-          Ingresá tu legajo o correo institucional.
-        </span>
-      </div>
-
-      <div class="aveit-login__campo">
-        <label for="password">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-          [attr.aria-invalid]="formulario.get('password')?.touched && formulario.get('password')?.invalid" />
-        <span
-          class="aveit-login__ayuda-error"
-          *ngIf="formulario.get('password')?.touched && formulario.get('password')?.invalid">
-          Ingresá tu contraseña.
+          Ingresá tu número de legajo.
         </span>
       </div>
 
@@ -48,6 +33,21 @@
       <button class="aveit-login__boton" type="submit" [disabled]="enviando">
         {{ enviando ? 'Verificando…' : 'Iniciar sesión' }}
       </button>
+
+      <div class="aveit-login__demo-roles">
+        <span class="aveit-login__demo-titulo">Ingreso rápido por rol (demo):</span>
+        <div class="aveit-login__demo-botones">
+          <button
+            type="button"
+            *ngFor="let demo of cuentasDemo"
+            class="btn-demo-chip"
+            (click)="seleccionarDemo(demo.legajo)"
+            [title]="demo.nombre + ' (' + demo.legajo + ')'">
+            <span class="badge-rol">{{ demo.rol }}</span>
+            <span class="legajo-num">{{ demo.legajo }}</span>
+          </button>
+        </div>
+      </div>
     </form>
 
     <footer class="aveit-login__footer">

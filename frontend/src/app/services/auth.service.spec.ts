@@ -56,6 +56,20 @@ describe('AuthService', () => {
     expect(service.getPerfil()?.role).toBe('TD');
   });
 
+  it('permite iniciar sesión sólo con el legajo sin contraseña', () => {
+    service.login('408917').subscribe();
+
+    const peticion = httpMock.expectOne('/api/v1/auth/login/');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({
+      identifier: '408917'
+    });
+    peticion.flush(RESPUESTA_LOGIN);
+
+    expect(service.isAuthenticated()).toBeTrue();
+    expect(service.getPerfil()?.role).toBe('TD');
+  });
+
   it('no guarda la contraseña en el almacenamiento local', () => {
     service.login('408917', 'Aveit-Demo-2026!').subscribe();
     httpMock.expectOne('/api/v1/auth/login/').flush(RESPUESTA_LOGIN);

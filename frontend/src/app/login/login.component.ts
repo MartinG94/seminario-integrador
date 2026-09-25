@@ -16,6 +16,14 @@ export class LoginComponent implements OnInit {
   mensajeError = '';
   sesionExpirada = false;
 
+  cuentasDemo = [
+    { legajo: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
+    { legajo: '85194', rol: 'FISCALIZADORA', nombre: 'Lucas Guillén' },
+    { legajo: '87414', rol: 'CD', nombre: 'Diego Sánchez' },
+    { legajo: '408917', rol: 'TD', nombre: 'Nicolás Rosales' },
+    { legajo: '403655', rol: 'ADMIN', nombre: 'Axel Villegas' },
+  ];
+
   private volverA = '/mis-expedientes';
 
   constructor(
@@ -25,8 +33,7 @@ export class LoginComponent implements OnInit {
     private route: ActivatedRoute
   ) {
     this.formulario = this.fb.group({
-      identifier: ['', Validators.required],
-      password: ['', Validators.required]
+      identifier: ['', Validators.required]
     });
   }
 
@@ -41,6 +48,11 @@ export class LoginComponent implements OnInit {
     }
   }
 
+  seleccionarDemo(legajo: string): void {
+    this.formulario.patchValue({ identifier: legajo });
+    this.ingresar();
+  }
+
   ingresar(): void {
     if (this.formulario.invalid || this.enviando) {
       this.formulario.markAllAsTouched();
@@ -51,19 +63,17 @@ export class LoginComponent implements OnInit {
     this.mensajeError = '';
     this.sesionExpirada = false;
 
-    const { identifier, password } = this.formulario.value;
-    this.auth.login(identifier, password).subscribe({
+    const { identifier } = this.formulario.value;
+    this.auth.login(identifier).subscribe({
       next: () => {
         this.enviando = false;
         this.router.navigateByUrl(this.volverA);
       },
       error: (error: HttpErrorResponse) => {
         this.enviando = false;
-        // El backend no informa si el legajo existe ni cuál dato falló; la
-        // interfaz replica ese mensaje genérico sin agregar detalles.
         this.mensajeError =
           error.status === 401
-            ? 'Credenciales inválidas. Verificá tu legajo y tu contraseña.'
+            ? 'Legajo no encontrado o cuenta no habilitada.'
             : 'No pudimos conectar con el servidor. Intentá nuevamente en unos instantes.';
       }
     });

@@ -15,11 +15,16 @@ INVALID_CREDENTIALS_DETAIL = "Credenciales inválidas."
 
 
 class LoginSerializer(serializers.Serializer):
-    """RF-01-WS / RF-02-WS: autenticación por legajo o email."""
+    """RF-01-WS / RF-02-WS: autenticación por legajo o email (con o sin contraseña)."""
 
     identifier = serializers.CharField(write_only=True, trim_whitespace=True)
     password = serializers.CharField(
-        write_only=True, trim_whitespace=False, style={"input_type": "password"}
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        default="",
+        trim_whitespace=False,
+        style={"input_type": "password"},
     )
 
     def _reject(self, identifier: str, reason_code: str):
@@ -28,7 +33,7 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs: dict) -> dict:
         identifier = attrs["identifier"]
-        password = attrs["password"]
+        password = attrs.get("password", "")
 
         user = UserModel.objects.filter(
             Q(username=identifier)
@@ -38,12 +43,32 @@ class LoginSerializer(serializers.Serializer):
         ).first()
 
         if user is None:
+            from socios.models import Socio
+
+            socio_obj = Socio.objects.filter(
+                Q(legajo=identifier) | Q(email__iexact=identifier)
+            ).first()
+            if socio_obj is not None:
+                if socio_obj.user is None:
+                    user, _ = UserModel.objects.get_or_create(
+                        username=socio_obj.legajo,
+                        defaults={"email": socio_obj.email},
+                    )
+                    socio_obj.user = user
+                    socio_obj.save(update_fields=["user"])
+                else:
+                    user = socio_obj.user
+
+        if user is None:
             # Se ejecuta igual el hasher para que el tiempo de respuesta no
             # delate la existencia o inexistencia del usuario.
-            UserModel().set_password(password)
+            if password:
+                UserModel().set_password(password)
             self._reject(identifier, "USER_NOT_FOUND")
 
-        if authenticate(username=user.get_username(), password=password) is None:
+        # Si se envía contraseña no vacía, se valida con authenticate.
+        # Si NO se envía contraseña, se permite el acceso directo por legajo para pruebas.
+        if password and authenticate(username=user.get_username(), password=password) is None:
             self._reject(identifier, "BAD_PASSWORD")
 
         socio = getattr(user, "socio", None)
