@@ -79,6 +79,7 @@ def padron_scale_data(db) -> None:
 
 
 @pytest.mark.django_db
+@pytest.mark.performance
 class TestRankingResponseTimePerformance:
     """Benchmark secuencial compatible con SQLite; validar CA4 tambien en MySQL 8 (CI)."""
 
