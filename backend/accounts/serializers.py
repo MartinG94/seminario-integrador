@@ -69,6 +69,7 @@ class LoginSerializer(serializers.Serializer):
 class SocioProfileSerializer(serializers.Serializer):
     """Perfil devuelto al autenticar. Nunca incluye credenciales ni tokens."""
 
+    id = serializers.IntegerField(read_only=True)
     legajo = serializers.CharField()
     first_name = serializers.CharField()
     last_name = serializers.CharField()

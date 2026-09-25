@@ -68,7 +68,7 @@
                 </option>
               </select>
               <div class="input-group no-border ml-2" style="width: 220px; margin: 0;">
-                <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" (ngModelChange)="paginaActual = 1" style="border-bottom-color: rgba(255,255,255,0.4);">
+                <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" (ngModelChange)="onFiltroChange($event)" style="border-bottom-color: rgba(255,255,255,0.4);">
               </div>
             </div>
           </div>
@@ -99,7 +99,14 @@
                       No se encontraron socios con los criterios seleccionados.
                     </td>
                   </tr>
-                  <tr *ngFor="let s of sociosPaginados; let i = index">
+                  <tr *ngFor="let s of sociosPaginados; let i = index"
+                      (click)="abrirLegajoSocio(s)" 
+                      (keydown)="onRowKeyDown($event, s)"
+                      tabindex="0"
+                      role="button"
+                      [attr.aria-label]="'Consultar legajo de ' + s.nombre + ' ' + (s.apellido || '') + ', legajo ' + s.legajo"
+                      class="socio-row-clickable" 
+                      title="Clic o presione Enter/Espacio para ver legajo y antecedentes de {{s.nombre}} {{s.apellido}}">
                     <td class="font-weight-bold text-muted">#{{((paginaActual - 1) * tamanoPagina) + i + 1}}</td>
                     <td>
                       <div class="font-weight-bold text-dark">{{s.nombre}} {{s.apellido}}</div>

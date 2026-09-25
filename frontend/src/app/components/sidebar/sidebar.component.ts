@@ -21,6 +21,7 @@ export const ROUTES: RouteInfo[] = [
     { path: '/mis-expedientes',        title: 'Mis Expedientes',       icon: 'folder_shared',    class: '' },
     { path: '/reglamentos',            title: 'Reglamentos',           icon: 'menu_book',        class: '' },
     { path: '/solicitar-puntos',       title: 'Solicitar T-01',        icon: 'assignment_add',   class: '' },
+    { path: '/ranking-socios',         title: 'Ranking de Socios',     icon: 'military_tech',    class: '' },
 ];
 
 /**
@@ -30,7 +31,6 @@ export const ROUTES: RouteInfo[] = [
 export const MODULOS_FUERA_DE_ALCANCE: ModuloInfo[] = [
     { title: 'Gestionar Expedientes', icon: 'gavel',           secciones: [] },
     { title: 'Reportes & Balance',    icon: 'bar_chart',       secciones: [] },
-    { title: 'Ranking de Socios',     icon: 'military_tech',   secciones: [] },
     { title: 'Eventos & Asistencia',  icon: 'event_available', secciones: [] },
 ];
 

@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { RankingService } from '../services/ranking.service';
 import { RankingSocio } from './ranking-socio.model';
+import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
 
 @Component({
   selector: 'app-ranking-socios',
@@ -19,7 +21,53 @@ export class RankingSociosComponent implements OnInit {
   cargando = false;
   error: string | null = null;
 
-  constructor(public rankingService: RankingService) {}
+  constructor(
+    public rankingService: RankingService,
+    public dialog: MatDialog
+  ) {}
+
+  abrirLegajoSocio(socio: RankingSocio): void {
+    if (!socio) return;
+    this.dialog.open(SocioLegajoDialogComponent, {
+      width: '100%',
+      maxWidth: '600px',
+      data: {
+        socioId: socio.id,
+        nombreSocio: `${socio.nombre} ${socio.apellido}`.trim(),
+        saldo: socio.saldo
+      }
+    });
+  }
+
+  onRowKeyDown(event: KeyboardEvent, socio: RankingSocio): void {
+    if (!event) return;
+
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.abrirLegajoSocio(socio);
+      return;
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'Down') {
+      event.preventDefault();
+      const currentTr = (event.target as HTMLElement)?.closest('tr');
+      const nextTr = currentTr?.nextElementSibling as HTMLElement | null;
+      if (nextTr && typeof nextTr.focus === 'function') {
+        nextTr.focus();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp' || event.key === 'Up') {
+      event.preventDefault();
+      const currentTr = (event.target as HTMLElement)?.closest('tr');
+      const prevTr = currentTr?.previousElementSibling as HTMLElement | null;
+      if (prevTr && typeof prevTr.focus === 'function') {
+        prevTr.focus();
+      }
+      return;
+    }
+  }
 
   ngOnInit(): void {
     this.cargando = true;
@@ -38,6 +86,11 @@ export class RankingSociosComponent implements OnInit {
         this.cargando = false;
       }
     });
+  }
+
+  onFiltroChange(texto: string): void {
+    this.filtroTexto = texto;
+    this.paginaActual = 1;
   }
 
   get sociosOrdenados(): RankingSocio[] {
@@ -94,6 +147,7 @@ export class RankingSociosComponent implements OnInit {
       this.paginaActual = pagina;
     }
   }
+
   setOrden(criterio: 'merito' | 'sancion'): void {
     this.criterioOrden = criterio;
     this.paginaActual = 1;

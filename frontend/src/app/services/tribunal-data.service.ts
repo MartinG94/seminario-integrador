@@ -88,9 +88,9 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-001',
       numero: 'EXP-001/2026',
-      socio: 'Ignacio Morales',
-      legajo: 'LEG-8921',
-      subcomision: 'Finanzas',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      subcomision: 'Cómputos',
       motivo: 'Inasistencia no informada a asamblea general ordinaria',
       fechaCreacion: '2026-03-01',
       estado: 'justificando',
@@ -101,9 +101,9 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-002',
       numero: 'EXP-002/2026',
-      socio: 'Florencia Herrera',
-      legajo: 'LEG-7845',
-      subcomision: 'Comunicaciones',
+      socio: 'Lucas Martín Guillén',
+      legajo: '85194',
+      subcomision: 'Cómputos',
       motivo: 'Falta reiterada de entrega de informes operativos cuatrimestrales',
       fechaCreacion: '2026-03-02',
       estado: 'revision_resolucion',
@@ -126,15 +126,16 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-003',
       numero: 'EXP-003/2026',
-      socio: 'Lucas Benítez',
-      legajo: 'LEG-9120',
-      subcomision: 'Extensión Universitaria',
+      socio: 'Nicolás Rosales',
+      legajo: '408917',
+      subcomision: 'Cómputos',
       motivo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
       fechaCreacion: '2026-02-28',
       estado: 'pendiente_firma',
       horasRestantes: 0,
       tipo: 'merito',
       puntos: 2.0,
+
       votacion: {
         votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE', 'Juez 3': 'FAVORABLE' },
         considerandos: 'Desempeño sobresaliente con impacto directo en la comunidad.',
@@ -181,13 +182,11 @@ export class TribunalDataService {
   public expedientes$ = this.expedientesSubject.asObservable();
 
   private sociosSubject = new BehaviorSubject<Socio[]>([
-    { id: '1', nombre: 'Ignacio Morales', legajo: 'LEG-8921', email: 'imorales@aveit.frc.utn.edu.ar', subcomision: 'Finanzas', saldo: -2.5, estado: 'HABILITADO', felicitaciones: 1, sanciones: 2 },
-    { id: '2', nombre: 'Florencia Herrera', legajo: 'LEG-7845', email: 'fherrera@aveit.frc.utn.edu.ar', subcomision: 'Comunicaciones', saldo: 4.0, estado: 'HABILITADO', felicitaciones: 3, sanciones: 0 },
-    { id: '3', nombre: 'Lucas Benítez', legajo: 'LEG-9120', email: 'lbenitez@aveit.frc.utn.edu.ar', subcomision: 'Extensión', saldo: 6.5, estado: 'HABILITADO', felicitaciones: 4, sanciones: 0 },
-    { id: '4', nombre: 'Valentina Rossi', legajo: 'LEG-6541', email: 'vrossi@aveit.frc.utn.edu.ar', subcomision: 'Prensa', saldo: -7.5, estado: 'ADVERTENCIA', felicitaciones: 0, sanciones: 4 },
-    { id: '5', nombre: 'Esteban Domínguez', legajo: 'LEG-4123', email: 'edominguez@aveit.frc.utn.edu.ar', subcomision: 'Relaciones Públicas', saldo: -10.5, estado: 'CESE_ESTATUTARIO', felicitaciones: 0, sanciones: 6 },
-    { id: '6', nombre: 'Camila Peralta', legajo: 'LEG-8234', email: 'cperalta@aveit.frc.utn.edu.ar', subcomision: 'Tesorería', saldo: 3.0, estado: 'HABILITADO', felicitaciones: 2, sanciones: 1 },
-    { id: '7', nombre: 'Martín Gómez', legajo: 'LEG-5412', email: 'mgomez@aveit.frc.utn.edu.ar', subcomision: 'Deportes', saldo: 1.5, estado: 'HABILITADO', felicitaciones: 1, sanciones: 1 }
+    { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907', email: '74907@aveit.test', subcomision: 'Cómputos', saldo: 4.5, estado: 'HABILITADO', felicitaciones: 3, sanciones: 0 },
+    { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194', email: '85194@aveit.test', subcomision: 'Cómputos', saldo: 2.0, estado: 'HABILITADO', felicitaciones: 2, sanciones: 1 },
+    { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414', email: '87414@aveit.test', subcomision: 'Cómputos', saldo: -2.5, estado: 'HABILITADO', felicitaciones: 1, sanciones: 2 },
+    { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', email: '408917@aveit.test', subcomision: 'Cómputos', saldo: 6.0, estado: 'HABILITADO', felicitaciones: 4, sanciones: 0 },
+    { id: '5', nombre: 'Axel René Villegas', legajo: '403655', email: '403655@aveit.test', subcomision: 'Cómputos', saldo: -7.5, estado: 'ADVERTENCIA', felicitaciones: 0, sanciones: 4 }
   ]);
   public socios$ = this.sociosSubject.asObservable();
 

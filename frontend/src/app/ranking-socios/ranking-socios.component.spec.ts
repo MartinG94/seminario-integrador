@@ -1,15 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
 
 import { RankingSociosComponent } from './ranking-socios.component';
 import { RankingService } from '../services/ranking.service';
 import { RankingSocio } from './ranking-socio.model';
+import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
 
 describe('RankingSociosComponent', () => {
   let component: RankingSociosComponent;
   let fixture: ComponentFixture<RankingSociosComponent>;
   let rankingServiceSpy: jasmine.SpyObj<RankingService>;
+  let dialogSpy: jasmine.SpyObj<MatDialog>;
 
   const sociosMock: RankingSocio[] = [
     {
@@ -42,13 +45,16 @@ describe('RankingSociosComponent', () => {
 
   beforeEach(async () => {
     rankingServiceSpy = jasmine.createSpyObj('RankingService', ['obtenerRanking']);
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+
     rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
 
     await TestBed.configureTestingModule({
       imports: [FormsModule],
       declarations: [RankingSociosComponent],
       providers: [
-        { provide: RankingService, useValue: rankingServiceSpy }
+        { provide: RankingService, useValue: rankingServiceSpy },
+        { provide: MatDialog, useValue: dialogSpy }
       ]
     }).compileComponents();
 
@@ -85,6 +91,13 @@ describe('RankingSociosComponent', () => {
 
     expect(component.sociosOrdenados.length).toBe(1);
     expect(component.sociosOrdenados[0].apellido).toBe('Pérez');
+  });
+
+  it('onFiltroChange debería actualizar filtroTexto y resetear paginaActual a 1', () => {
+    component.paginaActual = 2;
+    component.onFiltroChange('computos');
+    expect(component.filtroTexto).toBe('computos');
+    expect(component.paginaActual).toBe(1);
   });
 
   it('debería mostrar estado de error si falla la carga', () => {
@@ -200,7 +213,6 @@ describe('RankingSociosComponent', () => {
   });
 
   it('debería respetar la diferencia del backend sin recalcular ni alterar saldo u orden', () => {
-    // Valores deliberadamente inconsistentes para detectar un recálculo en frontend.
     rankingServiceSpy.obtenerRanking.and.returnValue(of([
       { ...sociosMock[0], saldo: -4, saldoHistorico: 100, saldoPuntajeGeneral: 20,
         diferencia: -0.25, reconciliado: false },
@@ -216,5 +228,101 @@ describe('RankingSociosComponent', () => {
     expect(filas[1].cells[5].textContent).toContain('-4.00 pts');
     expect(filas[1].cells[5].textContent).toContain('Habilitado Regular');
     expect(component.socios.find(s => s.id === '1').diferencia).toBe(-0.25);
+  });
+
+  it('abrirLegajoSocio debe abrir el diálogo con socioId, nombre y saldo correspondiente', () => {
+    fixture.detectChanges();
+    const socio = component.socios[0];
+    component.abrirLegajoSocio(socio);
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(SocioLegajoDialogComponent, {
+      width: '100%',
+      maxWidth: '600px',
+      data: {
+        socioId: '1',
+        nombreSocio: 'Ana Gómez',
+        saldo: 5
+      }
+    });
+  });
+
+  it('onRowKeyDown debe abrir el legajo al presionar Enter', () => {
+    fixture.detectChanges();
+    const socio = component.socios[0];
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    spyOn(event, 'preventDefault');
+
+    component.onRowKeyDown(event, socio);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(dialogSpy.open).toHaveBeenCalledWith(SocioLegajoDialogComponent, {
+      width: '100%',
+      maxWidth: '600px',
+      data: {
+        socioId: '1',
+        nombreSocio: 'Ana Gómez',
+        saldo: 5
+      }
+    });
+  });
+
+  it('onRowKeyDown debe abrir el legajo al presionar Space', () => {
+    fixture.detectChanges();
+    const socio = component.socios[0];
+    const event = new KeyboardEvent('keydown', { key: ' ' });
+    spyOn(event, 'preventDefault');
+
+    component.onRowKeyDown(event, socio);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(dialogSpy.open).toHaveBeenCalledWith(SocioLegajoDialogComponent, {
+      width: '100%',
+      maxWidth: '600px',
+      data: {
+        socioId: '1',
+        nombreSocio: 'Ana Gómez',
+        saldo: 5
+      }
+    });
+  });
+
+  it('onRowKeyDown con ArrowDown debe prevenir scroll y dar foco a la siguiente fila', () => {
+    const socio = component.socios[0];
+    const nextTr = document.createElement('tr');
+    spyOn(nextTr, 'focus');
+
+    const currentTr = document.createElement('tr');
+    const tbody = document.createElement('tbody');
+    tbody.appendChild(currentTr);
+    tbody.appendChild(nextTr);
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+    spyOn(event, 'preventDefault');
+    Object.defineProperty(event, 'target', { value: currentTr });
+
+    component.onRowKeyDown(event, socio);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(nextTr.focus).toHaveBeenCalled();
+  });
+
+  it('onRowKeyDown con ArrowUp debe prevenir scroll y dar foco a la fila anterior', () => {
+    const socio = component.socios[1];
+    const prevTr = document.createElement('tr');
+    spyOn(prevTr, 'focus');
+
+    const currentTr = document.createElement('tr');
+    const tbody = document.createElement('tbody');
+    tbody.appendChild(prevTr);
+    tbody.appendChild(currentTr);
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowUp' });
+    spyOn(event, 'preventDefault');
+    Object.defineProperty(event, 'target', { value: currentTr });
+
+    component.onRowKeyDown(event, socio);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(prevTr.focus).toHaveBeenCalled();
   });
 });
