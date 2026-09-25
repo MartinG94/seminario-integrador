@@ -45,20 +45,22 @@ UNMANAGED_MODELS = [
 def setup_unmanaged_tables(django_db_setup, django_db_blocker):
     """Crea dinámicamente las tablas para los modelos `managed = False` en la BD de pruebas."""
     with django_db_blocker.unblock():
+        existing_tables = set(connection.introspection.table_names())
+        created_models = []
         with connection.schema_editor() as editor:
             for model in UNMANAGED_MODELS:
-                try:
+                if model._meta.db_table not in existing_tables:
                     editor.create_model(model)
-                except Exception:
-                    pass  # Tabla ya creada
+                    created_models.append(model)
+                    existing_tables.add(model._meta.db_table)
     yield
     with django_db_blocker.unblock():
         with connection.schema_editor() as editor:
-            for model in reversed(UNMANAGED_MODELS):
-                try:
+            existing_tables = set(connection.introspection.table_names())
+            for model in reversed(created_models):
+                if model._meta.db_table in existing_tables:
                     editor.delete_model(model)
-                except Exception:
-                    pass
+                    existing_tables.remove(model._meta.db_table)
 
 
 def _create_record(model_cls, **kwargs):
