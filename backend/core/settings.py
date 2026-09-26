@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     # Módulos funcionales
     "padron",
     "ranking",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -205,3 +206,14 @@ LOGGING = {
         },
     },
 }
+
+# --- Notificaciones & Servicio de Correo (Outbox Resiliente) ---
+INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "aveit-internal-service-secret-2026")
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() in ("true", "1", "t")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "notificaciones@aveit.utn.edu.ar")
