@@ -49,7 +49,9 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
   - Interfaz de usuario, etiquetas, reglamentos, mensajes de error, justificaciones y documentación formal en **español rioplatense institucional** (ej. "Socio Activo", "Expediente Creado", "Formulario T02").
 - **Tokens de Diseño:**
   - Prohibido utilizar colores hexadecimales arbitrarios o estilos ad-hoc.
-  - Toda interfaz debe consumir las variables canónicas y CSS Custom Properties de [`DESIGN.md`](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/DESIGN.md) y [`frontend/src/assets/scss/core/_aveit-tribunal.scss`](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/frontend/src/assets/scss/core/_aveit-tribunal.scss).
+  - Toda interfaz debe consumir exclusivamente las variables canónicas y tokens definidos en [`DESIGN.md`](DESIGN.md).
+- **Componentes y Búsqueda de Socios:**
+  - Siempre que se tenga que desarrollar un componente donde sea necesario seleccionar un socio, se debe implementar **Select2** (o componente de autocompletado equivalente con búsqueda reactiva) para ir mostrando dinámicamente las posibles coincidencias a medida que se escribe.
 - **Control de Versiones y Ramas:**
   - Formato de ramas: `feature/US-xx-descripcion-corta`, `fix/issue-descripcion`.
   - Commits semánticos convencionales: `feat: ...`, `fix: ...`, `test: ...`, `docs: ...`.

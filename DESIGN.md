@@ -212,6 +212,9 @@ El sistema consolida una evolución estética que conjuga la **identidad institu
 4. **Accesibilidad Universal (WCAG 2.2 AA):** Todo par fondo-texto cumple estrictamente un contraste cromático $\ge 4.5:1$ en texto estándar y $\ge 3.0:1$ en componentes de interfaz.
 5. **Lenguaje Institucional sin Sobrecarga Jurídica (Regla Estricta de UI):** La interfaz comunica las directivas en lenguaje natural institucional claro, suprimiendo estrictamente números o citas de leyes y artículos ("Art. XX", "Art. 93", etc.).
 
+### Implementación Técnica en Frontend
+La materialización y derivación técnica de estos tokens de diseño en variables Sass y CSS Custom Properties (`:root` y `[data-theme="dark"]`) reside en [`frontend/src/assets/scss/core/_aveit-tribunal.scss`](frontend/src/assets/scss/core/_aveit-tribunal.scss).
+
 ---
 
 ## 2. Paleta Cromática y Modos de Color
