@@ -8,7 +8,7 @@
 [![Arquitectura](https://img.shields.io/badge/Plataforma-100%25%20Web%20%7C%20Responsive%20Mobile-teal.svg)](#stack-tecnológico)
 [![Database](https://img.shields.io/badge/Database-MySQL-blue.svg)](#stack-tecnológico)
 [![Backend](https://img.shields.io/badge/Backend-Python-yellow.svg)](#stack-tecnológico)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 **Trabajo Práctico Integrador — Cátedra de Seminario Integrador**  
 *Carrera de Analista Desarrollador Universitario de Sistemas de Información*  
@@ -228,7 +228,8 @@ seminario-integrador/
 ├── DESIGN.md                                   # Sistema de diseño institucional, tokens de color y tipografía
 ├── TASK.md                                     # Matriz de trazabilidad y seguimiento granular de tareas
 ├── docker-compose.yml                          # Orquestación de contenedores (MySQL 8.0, Django, Angular)
-├── LICENSE                                     # Licencia de código abierto del proyecto (MIT)
+├── LICENSE                                     # Licencia de código abierto del proyecto (Apache 2.0)
+├── NOTICE                                      # Atribución y derechos de autor de los integrantes del grupo
 └── README.md                                   # Presentación y guía principal del repositorio
 ```
 
@@ -287,4 +288,5 @@ El proyecto se desarrolla bajo el marco de **Metodologías Ágiles (Scrum)**:
 
 ## 📄 Licencia
 
-Este proyecto se distribuye bajo los términos de la licencia [MIT](LICENSE).
+Este proyecto se distribuye bajo los términos de la licencia [Apache 2.0](LICENSE).  
+Copyright © 2026 Integrantes del Grupo de Desarrollo (Curso 3K2 — UTN FRC). Para más detalles y atribuciones, consultar el archivo [NOTICE](NOTICE).
