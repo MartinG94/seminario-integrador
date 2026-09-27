@@ -3,54 +3,28 @@
 
     <!-- Tarjetas de Estadísticas Personales -->
     <div class="row">
-      <div class="col-lg-4 col-md-6 col-sm-6">
+      <div class="col-lg-6 col-md-6 col-sm-12">
         <div class="card card-stats">
-          <div class="card-header card-header-primary card-header-icon">
-            <div class="card-icon">
-              <i class="material-icons">account_circle</i>
-            </div>
-            <p class="card-category">Socio Autenticado</p>
-            <h3 class="card-title">{{socioActual}}</h3>
-          </div>
-          <div class="card-footer">
-            <div class="stats">
-              <i class="material-icons text-info">verified_user</i> Padrón Activo de la Asociación
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-4 col-md-6 col-sm-6">
-        <div class="card card-stats">
-          <div class="card-header card-header-icon" [ngClass]="saldoNeto >= 0 ? 'card-header-success' : (saldoNeto <= -7.0 ? 'card-header-danger' : 'card-header-warning')">
+          <div class="card-header card-header-icon" [ngClass]="getHeaderClassPuntos(saldoNeto)">
             <div class="card-icon">
               <i class="material-icons">account_balance_wallet</i>
             </div>
-            <p class="card-category">Saldo Neto de Puntos</p>
-            <h3 class="card-title">{{saldoNeto > 0 ? '+' : ''}}{{saldoNeto}} <small>pts</small></h3>
-          </div>
-          <div class="card-footer">
-            <div class="stats">
-              <i class="material-icons" [ngClass]="saldoNeto >= 0 ? 'text-success' : 'text-danger'">{{saldoNeto >= 0 ? 'check_circle' : 'warning'}}</i>
-              <span>{{saldoNeto >= 0 ? 'Situación Regular Habilitada' : (saldoNeto <= -10.0 ? 'Límite Crítico: Cese Estatutario' : 'Alerta Preventiva en Trámite')}}</span>
-            </div>
+            <p class="card-category">Puntos Totales</p>
+            <h3 class="card-title font-weight-bold" [ngClass]="getColorClasePuntos(saldoNeto)">
+              {{saldoNeto > 0 ? '+' : ''}}{{saldoNeto}} <small>pts</small>
+            </h3>
           </div>
         </div>
       </div>
 
-      <div class="col-lg-4 col-md-6 col-sm-6">
+      <div class="col-lg-6 col-md-6 col-sm-12">
         <div class="card card-stats">
           <div class="card-header card-header-info card-header-icon">
             <div class="card-icon">
               <i class="material-icons">folder_open</i>
             </div>
-            <p class="card-category">Causas en Trámite</p>
+            <p class="card-category">Expedientes en Trámite</p>
             <h3 class="card-title">{{misExpedientes.length}}</h3>
-          </div>
-          <div class="card-footer">
-            <div class="stats">
-              <i class="material-icons">schedule</i> Plazos preclusivos en curso
-            </div>
           </div>
         </div>
       </div>
@@ -62,28 +36,40 @@
         <div class="card">
           <div class="card-header card-header-primary">
             <h4 class="card-title">Mis Expedientes y Descargos Reglamentarios</h4>
-            <p class="card-category">Registro formal de causas disciplinarias y reconocimientos institucionales asignados a tu legajo.</p>
+            <p class="card-category">Registro formal de causas disciplinarias y reconocimientos institucionales asignados a tu número de socio.</p>
           </div>
           <div class="card-body">
             <div *ngIf="misExpedientes.length === 0" class="text-center py-5">
               <i class="material-icons text-muted" style="font-size: 56px;">verified</i>
               <h4 class="text-muted mt-2">No registras causas ni expedientes en trámite</h4>
-              <p class="text-muted small">Tu legajo se encuentra en orden estatutario regular.</p>
+              <p class="text-muted small">Tu número de socio se encuentra en orden estatutario regular.</p>
             </div>
 
             <div *ngIf="misExpedientes.length > 0" class="table-responsive">
               <table class="table table-hover table-mat">
                 <thead class="text-primary">
-                  <th>N° Expediente</th>
-                  <th>Motivo de la Causa</th>
-                  <th>Fecha de Apertura</th>
-                  <th>Puntos en Trámite</th>
-                  <th>Estado Procesal</th>
-                  <th>Plazo Preclusivo</th>
+                  <th class="sortable-th" (click)="cambiarOrden('numero')" title="Ordenar por N° Expediente">
+                    N° Expediente <i class="material-icons">{{getIconoOrden('numero')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('motivo')" title="Ordenar por Motivo">
+                    Motivo de la Causa <i class="material-icons">{{getIconoOrden('motivo')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('fechaCreacion')" title="Ordenar por Fecha">
+                    Fecha de Apertura <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('puntos')" title="Ordenar por Puntos">
+                    Puntos en Trámite <i class="material-icons">{{getIconoOrden('puntos')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('estado')" title="Ordenar por Estado">
+                    Estado Procesal <i class="material-icons">{{getIconoOrden('estado')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('horasRestantes')" title="Ordenar por Plazo">
+                    Plazo Preclusivo <i class="material-icons">{{getIconoOrden('horasRestantes')}}</i>
+                  </th>
                   <th class="text-right">Acciones</th>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let exp of misExpedientes">
+                  <tr *ngFor="let exp of expedientesOrdenados">
                     <td class="font-weight-bold text-dark">{{exp.numero}}</td>
                     <td>
                       <div>{{exp.motivo}}</div>

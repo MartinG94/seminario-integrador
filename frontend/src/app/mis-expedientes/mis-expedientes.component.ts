@@ -14,6 +14,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   socioActual = '';
   saldoNeto = 0;
 
+  // Ordenamiento de tabla
+  columnaOrden = 'numero';
+  ordenAscendente = true;
+
   // Modal T02/T03
   modalAbierto = false;
   expedienteSeleccionado: Expediente | null = null;
@@ -130,5 +134,60 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }
+  }
+
+  get expedientesOrdenados(): Expediente[] {
+    const lista = [...this.misExpedientes];
+    lista.sort((a, b) => {
+      let valA = (a as any)[this.columnaOrden];
+      let valB = (b as any)[this.columnaOrden];
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return this.ordenAscendente ? -1 : 1;
+      if (valA > valB) return this.ordenAscendente ? 1 : -1;
+      return 0;
+    });
+    return lista;
+  }
+
+  cambiarOrden(col: string): void {
+    if (this.columnaOrden === col) {
+      this.ordenAscendente = !this.ordenAscendente;
+    } else {
+      this.columnaOrden = col;
+      this.ordenAscendente = true;
+    }
+  }
+
+  getIconoOrden(col: string): string {
+    if (this.columnaOrden !== col) return 'swap_vert';
+    return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
+  }
+
+  getColorClasePuntos(puntos: number): string {
+    if (puntos < -9.0) {
+      return 'puntos-rojo';
+    }
+    if (puntos < -7.0) {
+      return 'puntos-amarillo';
+    }
+    if (puntos < 0) {
+      return 'puntos-gris';
+    }
+    return 'puntos-verde';
+  }
+
+  getHeaderClassPuntos(puntos: number): string {
+    if (puntos < -9.0) {
+      return 'card-header-danger';
+    }
+    if (puntos < -7.0) {
+      return 'card-header-warning';
+    }
+    if (puntos < 0) {
+      return 'card-header-secondary';
+    }
+    return 'card-header-success';
   }
 }

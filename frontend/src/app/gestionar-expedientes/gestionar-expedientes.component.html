@@ -16,18 +16,18 @@
         <div class="d-flex align-items-center gap-3">
           <div class="btn-group">
             <button mat-raised-button 
-                    [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
-                    class="btn btn-sm" 
-                    [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
-                    (click)="vistaActual = 'kanban'">
-              <i class="material-icons" style="font-size: 16px;">view_kanban</i> Tablero Kanban
-            </button>
-            <button mat-raised-button 
                     [color]="vistaActual === 'tabla' ? 'primary' : 'default'" 
                     class="btn btn-sm" 
                     [ngClass]="vistaActual === 'tabla' ? 'btn-primary' : 'btn-white'"
                     (click)="vistaActual = 'tabla'">
-              <i class="material-icons" style="font-size: 16px;">view_list</i> Explorador de Datos
+              <i class="material-icons" style="font-size: 16px;">view_list</i> Detalles
+            </button>
+            <button mat-raised-button 
+                    [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
+                    class="btn btn-sm" 
+                    [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
+                    (click)="vistaActual = 'kanban'">
+              <i class="material-icons" style="font-size: 16px;">view_kanban</i> Estados
             </button>
           </div>
           <span class="text-muted small ml-2">Total expedientes en sistema: <strong>{{expedientes.length}}</strong></span>
@@ -69,7 +69,7 @@
             </span>
           </div>
           <h5 class="card-title-text">{{exp.socio}}</h5>
-          <div class="card-subcomm">{{exp.subcomision}} &bull; {{exp.legajo}}</div>
+          <div class="card-subcomm">{{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}</div>
           <p class="text-muted small text-truncate mb-2" title="{{exp.motivo}}">{{exp.motivo}}</p>
           
           <div class="card-bottom">
@@ -81,7 +81,7 @@
             </div>
 
             <!-- Botones de Acción de Estado -->
-            <div class="d-flex gap-1" (click)="$event.stopPropagation()">
+            <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
               <button *ngIf="exp.estado === 'revision_resolucion'" 
                       mat-button 
                       class="btn btn-info btn-link btn-sm p-1"
@@ -105,7 +105,7 @@
     <!-- VISTA 2: EXPLORADOR DENSO DE DATOS -->
     <div *ngIf="vistaActual === 'tabla'" class="card">
       <div class="card-header card-header-primary">
-        <h4 class="card-title">Explorador Detallado de Expedientes</h4>
+        <h4 class="card-title">Detalle de Expedientes</h4>
         <p class="card-category">Grilla interactiva para auditoría del Tribunal de Disciplina con ordenamiento dinámico por columnas.</p>
       </div>
       <div class="card-body">
@@ -113,7 +113,7 @@
           <table class="table table-hover table-mat">
             <thead>
               <th (click)="cambiarOrden('numero')">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('socio')">Socio / Legajo <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('socio')">Socio / N° de Socio <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('subcomision')">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('motivo')">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('puntos')">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
@@ -125,7 +125,7 @@
                 <td class="font-weight-bold text-dark">{{exp.numero}}</td>
                 <td>
                   <div>{{exp.socio}}</div>
-                  <small class="text-muted">{{exp.legajo}}</small>
+                  <small class="text-muted">N° {{exp.legajo}}</small>
                 </td>
                 <td>{{exp.subcomision}}</td>
                 <td style="max-width: 300px;">
@@ -142,17 +142,17 @@
                   </span>
                 </td>
                 <td class="text-right" (click)="$event.stopPropagation()">
-                  <button mat-button class="btn btn-info btn-link btn-just-icon" (click)="abrirDetalle(exp)" title="Ver Legajo">
+                  <button mat-button class="btn btn-info btn-link btn-just-icon" (click)="abrirDetalle(exp)" title="Ver Detalle de Expediente">
                     <i class="material-icons">visibility</i>
                   </button>
-                  <button *ngIf="exp.estado === 'revision_resolucion'" 
+                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'revision_resolucion'" 
                           mat-button 
                           class="btn btn-warning btn-link btn-just-icon" 
                           (click)="abrirVotacion(exp)" 
                           title="Votar Dictamen">
                     <i class="material-icons">how_to_vote</i>
                   </button>
-                  <button *ngIf="exp.estado === 'pendiente_firma'" 
+                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'pendiente_firma'" 
                           mat-button 
                           class="btn btn-success btn-link btn-just-icon" 
                           (click)="abrirFirma(exp)" 
@@ -175,8 +175,8 @@
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-primary">
-        <h4 class="card-title">Legajo de Expediente: {{expedienteSeleccionado.numero}}</h4>
-        <p class="card-category">Socio: {{expedienteSeleccionado.socio}} &bull; Legajo: {{expedienteSeleccionado.legajo}}</p>
+        <h4 class="card-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
+        <p class="card-category">Socio: {{expedienteSeleccionado.socio}} &bull; N° de Socio: {{expedienteSeleccionado.legajo}}</p>
       </div>
       <div class="card-body">
         <div class="row">

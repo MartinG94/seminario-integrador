@@ -164,11 +164,7 @@ material-dashboard-angular
 │   │   │   ├── upgrade.component.html
 │   │   │   ├── upgrade.component.spec.ts
 │   │   │   └── upgrade.component.ts
-│   │   └── user-profile
-│   │       ├── user-profile.component.css
-│   │       ├── user-profile.component.html
-│   │       ├── user-profile.component.spec.ts
-│   │       └── user-profile.component.ts
+
 │   ├── assets
 │   │   ├── css
 │   │   │   └── demo.css

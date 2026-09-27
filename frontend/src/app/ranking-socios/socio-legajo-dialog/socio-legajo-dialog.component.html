@@ -5,7 +5,7 @@
       <i class="material-icons">badge</i>
     </div>
     <div class="header-text">
-      <h3 class="dialog-title">Legajo de Socio Institucional</h3>
+      <h3 class="dialog-title">Ficha Institucional de Socio</h3>
       <p class="dialog-subtitle">SGD-AVEIT &bull; Padrón Oficial y Antecedentes</p>
     </div>
     <button type="button" class="btn-close" (click)="cerrar()" aria-label="Cerrar modal">
@@ -16,7 +16,7 @@
   <!-- Estado: Cargando -->
   <div *ngIf="cargando" class="dialog-state state-loading">
     <div class="spinner-border text-primary" role="status">
-      <span class="sr-only">Cargando legajo...</span>
+      <span class="sr-only">Cargando ficha de socio...</span>
     </div>
     <p class="mt-2 text-muted">Consultando el padrón institucional...</p>
   </div>
@@ -36,7 +36,7 @@
     </div>
   </div>
 
-  <!-- Estado: Legajo Cargado Correctamente -->
+  <!-- Estado: Ficha Cargada Correctamente -->
   <div *ngIf="!cargando && legajo" class="dialog-content">
     <div class="socio-summary-card">
       <div class="socio-avatar">
@@ -45,7 +45,7 @@
       <div class="socio-main-info">
         <h4 class="socio-full-name">{{ legajo.last_name }}, {{ legajo.first_name }}</h4>
         <span class="socio-legajo-badge">
-          <i class="material-icons">pin</i> Legajo: <strong>{{ legajo.legajo }}</strong>
+          <i class="material-icons">pin</i> Número de Socio: <strong>{{ legajo.legajo }}</strong>
         </span>
       </div>
     </div>
@@ -102,7 +102,7 @@
       <i class="material-icons text-info">info</i>
       <div class="notice-text">
         <small class="text-muted">
-          Legajo verificado bajo el padrón estatutario de AVEIT (UTN FRC).
+          Ficha verificada bajo el padrón estatutario de AVEIT (UTN FRC).
           El cómputo de sanciones e historial transaccional se articula con el Libro Mayor de Puntos.
         </small>
       </div>

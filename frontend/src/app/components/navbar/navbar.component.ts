@@ -2,7 +2,7 @@ import { Component, OnInit, ElementRef } from '@angular/core';
 import { ROUTES } from '../sidebar/sidebar.component';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
-import { TribunalDataService, RolUsuario } from '../../services/tribunal-data.service';
+import { TribunalDataService } from '../../services/tribunal-data.service';
 import { AuthService, PerfilSocio } from '../../services/auth.service';
 
 @Component({
@@ -17,7 +17,6 @@ export class NavbarComponent implements OnInit {
     private toggleButton: any;
     private sidebarVisible: boolean;
 
-    currentRole: RolUsuario = 'tribunal';
     isDarkMode = false;
 
     perfil: PerfilSocio | null = null;
@@ -52,12 +51,7 @@ export class NavbarComponent implements OnInit {
         }
       });
 
-      this.dataService.currentRole$.subscribe(r => this.currentRole = r);
       this.dataService.darkMode$.subscribe(d => this.isDarkMode = d);
-    }
-
-    setRole(role: RolUsuario): void {
-      this.dataService.setRole(role);
     }
 
     toggleTheme(): void {

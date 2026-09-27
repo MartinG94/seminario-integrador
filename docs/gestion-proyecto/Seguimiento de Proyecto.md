@@ -21,7 +21,7 @@
 | **Nombre del Sistema** | SGD-AVEIT (Sistema de Gestión del Tribunal de Disciplina y Premiaciones de AVEIT) |
 | **Documento** | Seguimiento de Proyecto y Marco Metodológico Ágil (Sprint 0 a Sprint N) |
 | **Metodología Adoptada** | Marco Ágil Adaptativo Scrum / Scrumban |
-| **Integrantes del Equipo** | • **Sanchez, Diego Gabriel** (Legajo: 87414) - Product Owner<br>• **Guillén, Lucas Martín** (Legajo: 85194) - Scrum Master<br>• **Rosales, Nicolás** (Legajo: 408917) - Equipo de Desarrollo<br>• **Gastiaburu, Lucas** (Legajo: 74907) - Equipo de Desarrollo<br>• **Villegas, Axel Rene** (Legajo: 403655) - Equipo de Desarrollo<br>• **Urviola, Luis** (Legajo: 409953) - Equipo de Desarrollo<br>• **Quiroz, Tomas Augusto** (Legajo: 415327) - Equipo de Desarrollo |
+| **Integrantes del Equipo** | • **Sanchez, Diego Gabriel** (Número de Socio: 87414) - Product Owner<br>• **Guillén, Lucas Martín** (Número de Socio: 85194) - Scrum Master<br>• **Rosales, Nicolás** (Número de Socio: 408917) - Equipo de Desarrollo<br>• **Gastiaburu, Lucas** (Número de Socio: 74907) - Equipo de Desarrollo<br>• **Villegas, Axel Rene** (Número de Socio: 403655) - Equipo de Desarrollo<br>• **Urviola, Luis** (Número de Socio: 409953) - Equipo de Desarrollo<br>• **Quiroz, Tomas Augusto** (Número de Socio: 415327) - Equipo de Desarrollo |
 
 ---
 
@@ -163,7 +163,7 @@ El dimensionamiento de la capacidad productiva del equipo se calcula con base en
 
 ##### Distribución Nominal de Integrantes:
 
-| Integrante | Legajo | Rol Principal | Horas Cursada | Horas Asíncronas | Total Semanal | Total Sprint (14 d) |
+| Integrante | Número de Socio | Rol Principal | Horas Cursada | Horas Asíncronas | Total Semanal | Total Sprint (14 d) |
 | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **Sanchez, Diego Gabriel** | 87414 | Product Owner / Dev Backend | 6 hs | 5 hs | 11 hs | 22 hs |
 | **Guillén, Lucas Martín** | 85194 | Scrum Master / Dev Fullstack | 6 hs | 5 hs | 11 hs | 22 hs |

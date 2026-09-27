@@ -87,7 +87,7 @@
                 <thead class="text-primary">
                   <th>Posición</th>
                   <th>Socio</th>
-                  <th>Legajo</th>
+                  <th>N° de Socio</th>
                   <th>Categoría</th>
                   <th>Subcomisión</th>
                   <th class="text-center">Saldo</th>
@@ -104,9 +104,9 @@
                       (keydown)="onRowKeyDown($event, s)"
                       tabindex="0"
                       role="button"
-                      [attr.aria-label]="'Consultar legajo de ' + s.nombre + ' ' + (s.apellido || '') + ', legajo ' + s.legajo"
+                      [attr.aria-label]="'Consultar ficha de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + s.legajo"
                       class="socio-row-clickable" 
-                      title="Clic o presione Enter/Espacio para ver legajo y antecedentes de {{s.nombre}} {{s.apellido}}">
+                      title="Clic o presione Enter/Espacio para ver ficha y antecedentes de {{s.nombre}} {{s.apellido}}">
                     <td class="font-weight-bold text-muted">#{{((paginaActual - 1) * tamanoPagina) + i + 1}}</td>
                     <td>
                       <div class="font-weight-bold text-dark">{{s.nombre}} {{s.apellido}}</div>

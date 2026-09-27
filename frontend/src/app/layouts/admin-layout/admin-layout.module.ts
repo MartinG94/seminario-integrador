@@ -11,7 +11,6 @@ import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.comp
 import { SolicitarPuntosComponent } from '../../solicitar-puntos/solicitar-puntos.component';
 import { EventosAsistenciaComponent } from '../../eventos-asistencia/eventos-asistencia.component';
 import { DashboardComponent } from '../../dashboard/dashboard.component';
-import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { TableListComponent } from '../../table-list/table-list.component';
 import { TypographyComponent } from '../../typography/typography.component';
 import { IconsComponent } from '../../icons/icons.component';
@@ -26,6 +25,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatSelectModule} from '@angular/material/select';
 import { MatDialogModule } from '@angular/material/dialog';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
+import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 
 @NgModule({
   imports: [
@@ -51,13 +51,13 @@ import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-di
     SolicitarPuntosComponent,
     EventosAsistenciaComponent,
     DashboardComponent,
-    UserProfileComponent,
     TableListComponent,
     TypographyComponent,
     IconsComponent,
     MapsComponent,
     NotificationsComponent,
     UpgradeComponent,
+    EnDesarrolloComponent,
   ]
 })
 

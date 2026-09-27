@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TribunalDataService, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
+import { AuthService } from '../services/auth.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -9,7 +10,7 @@ import { Subscription } from 'rxjs';
 })
 export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
-  vistaActual: 'kanban' | 'tabla' = 'kanban';
+  vistaActual: 'kanban' | 'tabla' = 'tabla';
   filtroTexto = '';
   columnaOrden = 'numero';
   ordenAscendente = true;
@@ -49,7 +50,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
-  constructor(public dataService: TribunalDataService) {}
+  constructor(
+    public dataService: TribunalDataService,
+    private auth: AuthService
+  ) {}
+
+  get puedeVotarOFirmar(): boolean {
+    return this.auth.tieneRol('TD', 'ADMIN');
+  }
 
   ngOnInit(): void {
     const sub = this.dataService.expedientes$.subscribe(list => {
