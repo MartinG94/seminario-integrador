@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 })
 export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
-  vistaActual: 'kanban' | 'tabla' = 'kanban';
+  vistaActual: 'kanban' | 'tabla' = 'tabla';
   filtroTexto = '';
   columnaOrden = 'numero';
   ordenAscendente = true;

@@ -15,15 +15,40 @@ import { MapsComponent } from '../../maps/maps.component';
 import { NotificationsComponent } from '../../notifications/notifications.component';
 import { UpgradeComponent } from '../../upgrade/upgrade.component';
 import { TribunalGuard } from '../../services/tribunal.guard';
+import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
-    { path: 'reglamentos',            component: ReglamentosComponent },
+    { 
+      path: 'reglamentos',            
+      component: EnDesarrolloComponent,
+      data: {
+        titulo: 'Reglamentos',
+        descripcion: 'Consulta del Estatuto Social, el Reglamento Interno de Disciplina y el Reglamento Procesal Disciplinario 2026.',
+        icono: 'construction'
+      }
+    },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
-    { path: 'reportes',               component: ReportesComponent },
+    { 
+      path: 'reportes',               
+      component: EnDesarrolloComponent,
+      data: {
+        titulo: 'Reportes & Balance',
+        descripcion: 'Emisión de balances cuatrimestrales, métricas de sanciones y reconocimientos por subcomisión.',
+        icono: 'bar_chart'
+      }
+    },
     { path: 'ranking-socios',         component: RankingSociosComponent },
     { path: 'solicitar-puntos',       component: SolicitarPuntosComponent },
-    { path: 'eventos-asistencia',     component: EventosAsistenciaComponent },
+    { 
+      path: 'eventos-asistencia',     
+      component: EnDesarrolloComponent,
+      data: {
+        titulo: 'Eventos & Asistencia',
+        descripcion: 'Programación de actividades institucionales obligatorias con registro digital de asistencia.',
+        icono: 'event_available'
+      }
+    },
     { path: 'dashboard',              component: DashboardComponent },
     { path: 'table-list',             component: TableListComponent },
     { path: 'typography',             component: TypographyComponent },

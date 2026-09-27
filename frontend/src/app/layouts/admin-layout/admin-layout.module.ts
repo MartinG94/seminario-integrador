@@ -25,6 +25,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatSelectModule} from '@angular/material/select';
 import { MatDialogModule } from '@angular/material/dialog';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
+import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 
 @NgModule({
   imports: [
@@ -56,6 +57,7 @@ import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-di
     MapsComponent,
     NotificationsComponent,
     UpgradeComponent,
+    EnDesarrolloComponent,
   ]
 })
 

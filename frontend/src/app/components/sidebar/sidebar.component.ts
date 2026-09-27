@@ -24,16 +24,14 @@ export const ROUTES: RouteInfo[] = [
     { path: '/solicitar-puntos',       title: 'Solicitar T-01',        icon: 'assignment_add',   class: '' },
     { path: '/ranking-socios',         title: 'Ranking de Socios',     icon: 'military_tech',    class: '' },
     { path: '/gestionar-expedientes',  title: 'Gestionar Expedientes', icon: 'gavel',           class: '', roles: ['TD', 'ADMIN', 'CD'] },
+    { path: '/reportes',               title: 'Reportes & Balance',    icon: 'bar_chart',       class: '' },
+    { path: '/eventos-asistencia',     title: 'Eventos & Asistencia',  icon: 'event_available', class: '' },
 ];
 
 /**
- * Módulos que la aplicación contempla pero que quedan fuera del alcance de
- * esta tesis: se listan para dar contexto institucional, sin navegación.
+ * Módulos fuera de alcance institucional: vacíos ya que todos se integraron en Tribunal.
  */
-export const MODULOS_FUERA_DE_ALCANCE: ModuloInfo[] = [
-    { title: 'Reportes & Balance',    icon: 'bar_chart',       secciones: [] },
-    { title: 'Eventos & Asistencia',  icon: 'event_available', secciones: [] },
-];
+export const MODULOS_FUERA_DE_ALCANCE: ModuloInfo[] = [];
 
 @Component({
   selector: 'app-sidebar',

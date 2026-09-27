@@ -1,0 +1,51 @@
+.aveit-pendiente {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 60vh;
+  padding: 40px 16px;
+
+  &__icono {
+    font-size: 64px;
+    color: var(--color-accent, #5b8def);
+    margin-bottom: 16px;
+  }
+
+  &__titulo {
+    margin: 0 0 8px;
+    font-family: var(--font-display, inherit);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1e293b);
+  }
+
+  &__bajada {
+    max-width: 520px;
+    margin: 0 0 20px;
+    font-family: var(--font-body, inherit);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary, #64748b);
+  }
+
+  &__etiqueta {
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-family: var(--font-subtitle, inherit);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-inverse, #ffffff);
+    background: linear-gradient(60deg, var(--grad-primary-start, #1e293b), var(--grad-primary-end, #334155));
+  }
+
+  &__nota {
+    margin: 16px 0 0;
+    font-family: var(--font-body, inherit);
+    font-size: 0.82rem;
+    color: var(--color-text-secondary, #64748b);
+  }
+}

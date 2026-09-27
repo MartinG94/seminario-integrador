@@ -38,6 +38,10 @@ describe('GestionarExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('debe tener como vista por defecto el detalle/tabla de expedientes', () => {
+    expect(component.vistaActual).toBe('tabla');
+  });
+
   it('puedeVotarOFirmar debe ser true para miembros del Tribunal (TD) o ADMIN', () => {
     spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
     expect(component.puedeVotarOFirmar).toBeTrue();

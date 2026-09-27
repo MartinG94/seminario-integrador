@@ -16,18 +16,18 @@
         <div class="d-flex align-items-center gap-3">
           <div class="btn-group">
             <button mat-raised-button 
-                    [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
-                    class="btn btn-sm" 
-                    [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
-                    (click)="vistaActual = 'kanban'">
-              <i class="material-icons" style="font-size: 16px;">view_kanban</i> Tablero Kanban
-            </button>
-            <button mat-raised-button 
                     [color]="vistaActual === 'tabla' ? 'primary' : 'default'" 
                     class="btn btn-sm" 
                     [ngClass]="vistaActual === 'tabla' ? 'btn-primary' : 'btn-white'"
                     (click)="vistaActual = 'tabla'">
-              <i class="material-icons" style="font-size: 16px;">view_list</i> Explorador de Datos
+              <i class="material-icons" style="font-size: 16px;">view_list</i> Detalles
+            </button>
+            <button mat-raised-button 
+                    [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
+                    class="btn btn-sm" 
+                    [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
+                    (click)="vistaActual = 'kanban'">
+              <i class="material-icons" style="font-size: 16px;">view_kanban</i> Estados
             </button>
           </div>
           <span class="text-muted small ml-2">Total expedientes en sistema: <strong>{{expedientes.length}}</strong></span>
@@ -105,7 +105,7 @@
     <!-- VISTA 2: EXPLORADOR DENSO DE DATOS -->
     <div *ngIf="vistaActual === 'tabla'" class="card">
       <div class="card-header card-header-primary">
-        <h4 class="card-title">Explorador Detallado de Expedientes</h4>
+        <h4 class="card-title">Detalle de Expedientes</h4>
         <p class="card-category">Grilla interactiva para auditoría del Tribunal de Disciplina con ordenamiento dinámico por columnas.</p>
       </div>
       <div class="card-body">

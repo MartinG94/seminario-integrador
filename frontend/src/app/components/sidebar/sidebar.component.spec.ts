@@ -42,4 +42,11 @@ describe('SidebarComponent', () => {
     const titulos = component.menuItems.map(m => m.title);
     expect(titulos).toContain('Gestionar Expedientes');
   });
+
+  it('incluye Reportes & Balance y Eventos & Asistencia en el menú de Tribunal', () => {
+    component.actualizarMenu();
+    const titulos = component.menuItems.map(m => m.title);
+    expect(titulos).toContain('Reportes & Balance');
+    expect(titulos).toContain('Eventos & Asistencia');
+  });
 });
