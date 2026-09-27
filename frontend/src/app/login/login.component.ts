@@ -73,7 +73,7 @@ export class LoginComponent implements OnInit {
         this.enviando = false;
         this.mensajeError =
           error.status === 401
-            ? 'Legajo no encontrado o cuenta no habilitada.'
+            ? 'Número de Socio no encontrado o cuenta no habilitada.'
             : 'No pudimos conectar con el servidor. Intentá nuevamente en unos instantes.';
       }
     });

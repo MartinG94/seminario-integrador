@@ -11,7 +11,6 @@ import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.comp
 import { SolicitarPuntosComponent } from '../../solicitar-puntos/solicitar-puntos.component';
 import { EventosAsistenciaComponent } from '../../eventos-asistencia/eventos-asistencia.component';
 import { DashboardComponent } from '../../dashboard/dashboard.component';
-import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { TableListComponent } from '../../table-list/table-list.component';
 import { TypographyComponent } from '../../typography/typography.component';
 import { IconsComponent } from '../../icons/icons.component';
@@ -51,7 +50,6 @@ import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-di
     SolicitarPuntosComponent,
     EventosAsistenciaComponent,
     DashboardComponent,
-    UserProfileComponent,
     TableListComponent,
     TypographyComponent,
     IconsComponent,

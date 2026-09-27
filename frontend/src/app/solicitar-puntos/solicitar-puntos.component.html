@@ -25,7 +25,7 @@
                 <div class="form-group">
                   <label class="bmd-label-floating font-weight-bold text-dark">Socio o Miembro Postulado / Imputado:</label>
                   <select class="form-control" [(ngModel)]="socioSeleccionado">
-                    <option *ngFor="let s of socios" [value]="s.nombre">{{s.nombre}} ({{s.legajo}} - {{s.subcomision}})</option>
+                    <option *ngFor="let s of socios" [value]="s.nombre">{{s.nombre}} (N° {{s.legajo}} - {{s.subcomision}})</option>
                   </select>
                 </div>
               </div>

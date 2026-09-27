@@ -22,9 +22,9 @@
 | **Tipo de Proyecto** | Proyecto de Software de Impacto Institucional / Tesina de Título Intermedio (ADUSI) |
 | **Modalidad Presupuestaria** | Desarrollo y Donación Ad Honorem (Costo de Licencias y Mano de Obra: $0 Pesos) |
 | **Metodología de Trabajo** | Metodología Ágil Adaptativa (**Scrumban**) alineada con Hitos de Ciclo de Vida de Software |
-| **Líder de Proyecto / Product Owner** | **Sanchez, Diego Gabriel** (Legajo: 87414) - diegogabriel.stm@gmail.com |
-| **Scrum Master** | **Guillén, Lucas Martín** (Legajo: 85194) |
-| **Equipo de Desarrollo (Full-Stack)** | • **Rosales, Nicolás** (Legajo: 408917)<br>• **Gastiaburu, Lucas** (Legajo: 74907)<br>• **Villegas, Axel Rene** (Legajo: 403655)<br>• **Urviola, Luis** (Legajo: 409953)<br>• **Quiroz, Tomas Augusto** (Legajo: 415327) |
+| **Líder de Proyecto / Product Owner** | **Sanchez, Diego Gabriel** (Número de Socio: 87414) - diegogabriel.stm@gmail.com |
+| **Scrum Master** | **Guillén, Lucas Martín** (Número de Socio: 85194) |
+| **Equipo de Desarrollo (Full-Stack)** | • **Rosales, Nicolás** (Número de Socio: 408917)<br>• **Gastiaburu, Lucas** (Número de Socio: 74907)<br>• **Villegas, Axel Rene** (Número de Socio: 403655)<br>• **Urviola, Luis** (Número de Socio: 409953)<br>• **Quiroz, Tomas Augusto** (Número de Socio: 415327) |
 | **Cátedra Evaluadora** | Seminario Integrador - Departamento de Ingeniería en Sistemas de Información - UTN FRC |
 
 ---

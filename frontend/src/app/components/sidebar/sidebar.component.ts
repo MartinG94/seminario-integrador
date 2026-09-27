@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { TribunalDataService, RolUsuario } from '../../services/tribunal-data.service';
-import { AuthService, PerfilSocio } from '../../services/auth.service';
+import { TribunalDataService } from '../../services/tribunal-data.service';
+import { AuthService, PerfilSocio, RolRbac } from '../../services/auth.service';
 
 declare const $: any;
-declare interface RouteInfo {
+export declare interface RouteInfo {
     path: string;
     title: string;
     icon: string;
     class: string;
+    roles?: RolRbac[];
 }
 
 /** Módulo del sistema. Sólo el Tribunal se despliega y se navega. */
@@ -22,6 +23,7 @@ export const ROUTES: RouteInfo[] = [
     { path: '/reglamentos',            title: 'Reglamentos',           icon: 'menu_book',        class: '' },
     { path: '/solicitar-puntos',       title: 'Solicitar T-01',        icon: 'assignment_add',   class: '' },
     { path: '/ranking-socios',         title: 'Ranking de Socios',     icon: 'military_tech',    class: '' },
+    { path: '/gestionar-expedientes',  title: 'Gestionar Expedientes', icon: 'gavel',           class: '', roles: ['TD', 'ADMIN', 'CD'] },
 ];
 
 /**
@@ -29,7 +31,6 @@ export const ROUTES: RouteInfo[] = [
  * esta tesis: se listan para dar contexto institucional, sin navegación.
  */
 export const MODULOS_FUERA_DE_ALCANCE: ModuloInfo[] = [
-    { title: 'Gestionar Expedientes', icon: 'gavel',           secciones: [] },
     { title: 'Reportes & Balance',    icon: 'bar_chart',       secciones: [] },
     { title: 'Eventos & Asistencia',  icon: 'event_available', secciones: [] },
 ];
@@ -40,10 +41,9 @@ export const MODULOS_FUERA_DE_ALCANCE: ModuloInfo[] = [
   styleUrls: ['./sidebar.component.css']
 })
 export class SidebarComponent implements OnInit {
-  menuItems: any[];
+  menuItems: RouteInfo[] = [];
   modulosFueraDeAlcance = MODULOS_FUERA_DE_ALCANCE;
   tribunalDesplegado = true;
-  currentRole: RolUsuario = 'tribunal';
   perfil: PerfilSocio | null = null;
 
   constructor(
@@ -52,11 +52,20 @@ export class SidebarComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.menuItems = ROUTES.filter(menuItem => menuItem);
-    this.dataService.currentRole$.subscribe(role => {
-      this.currentRole = role;
+    this.actualizarMenu();
+    this.auth.perfil$.subscribe(perfil => {
+      this.perfil = perfil;
+      this.actualizarMenu();
     });
-    this.auth.perfil$.subscribe(perfil => this.perfil = perfil);
+  }
+
+  actualizarMenu(): void {
+    this.menuItems = ROUTES.filter(route => {
+      if (!route.roles || route.roles.length === 0) {
+        return true;
+      }
+      return this.auth.tieneRol(...route.roles);
+    });
   }
 
   alternarTribunal(): void {
@@ -76,8 +85,4 @@ export class SidebarComponent implements OnInit {
       }
       return true;
   };
-
-  onRoleChange(newRole: RolUsuario): void {
-    this.dataService.setRole(newRole);
-  }
 }

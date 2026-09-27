@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export type EstadoExpediente = 
   | 'creado' 
@@ -220,11 +221,22 @@ export class TribunalDataService {
   ]);
   public eventos$ = this.eventosSubject.asObservable();
 
-  constructor() {
+  constructor(private auth: AuthService) {
     const savedDark = localStorage.getItem('aveit_dark_mode') === 'true';
     if (savedDark) {
       this.setDarkMode(true);
     }
+    this.auth.perfil$.subscribe(perfil => {
+      if (!perfil) {
+        this.currentRoleSubject.next('socio');
+      } else if (perfil.role === 'TD' || perfil.role === 'ADMIN') {
+        this.currentRoleSubject.next('tribunal');
+      } else if (perfil.role === 'CD') {
+        this.currentRoleSubject.next('presidente_cd');
+      } else {
+        this.currentRoleSubject.next('socio');
+      }
+    });
   }
 
   setRole(role: RolUsuario): void {
