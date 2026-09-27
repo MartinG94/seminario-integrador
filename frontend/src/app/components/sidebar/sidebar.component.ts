@@ -21,7 +21,7 @@ declare interface ModuloInfo {
 export const ROUTES: RouteInfo[] = [
     { path: '/mis-expedientes',        title: 'Mis Expedientes',       icon: 'folder_shared',    class: '' },
     { path: '/reglamentos',            title: 'Reglamentos',           icon: 'menu_book',        class: '' },
-    { path: '/solicitar-puntos',       title: 'Solicitar T-01',        icon: 'assignment_add',   class: '' },
+    { path: '/solicitar-puntos',       title: 'Crear Expediente',      icon: 'assignment_add',   class: '' },
     { path: '/ranking-socios',         title: 'Ranking de Socios',     icon: 'military_tech',    class: '' },
     { path: '/gestionar-expedientes',  title: 'Gestionar Expedientes', icon: 'gavel',           class: '', roles: ['TD', 'ADMIN', 'CD'] },
     { path: '/reportes',               title: 'Reportes & Balance',    icon: 'bar_chart',       class: '' },

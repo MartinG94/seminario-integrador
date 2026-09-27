@@ -49,4 +49,10 @@ describe('SidebarComponent', () => {
     expect(titulos).toContain('Reportes & Balance');
     expect(titulos).toContain('Eventos & Asistencia');
   });
+
+  it('incluye Crear Expediente en el menu principal', () => {
+    component.actualizarMenu();
+    const titulos = component.menuItems.map(m => m.title);
+    expect(titulos).toContain('Crear Expediente');
+  });
 });

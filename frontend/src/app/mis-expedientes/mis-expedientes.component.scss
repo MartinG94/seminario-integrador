@@ -19,3 +19,35 @@
   max-height: 90vh;
   overflow-y: auto;
 }
+
+.puntos-verde {
+  color: #4caf50 !important;
+}
+
+.puntos-gris {
+  color: #757575 !important;
+}
+
+.puntos-amarillo {
+  color: #ff9800 !important;
+}
+
+.puntos-rojo {
+  color: #f44336 !important;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  i.material-icons {
+    vertical-align: middle;
+    font-size: 16px;
+    margin-left: 4px;
+  }
+}
