@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/v1/socios/", include("socios.urls")),
     path("api/v1/padron/", include("padron.urls")),
     path("api/v1/notifications/", include("notifications.urls")),
+    path("api/v1/expedientes/", include("expedientes.urls", namespace="expedientes")),
     path("api/v1/ranking/", include("ranking.urls", namespace="ranking-v1")),
     path("api/v1/ranking", include(("ranking.urls", "ranking"), namespace="ranking-v1-noslash")),
     path("api/ranking/", include("ranking.urls", namespace="ranking")),
