@@ -87,21 +87,33 @@
                       </span>
                     </td>
                     <td>
-                      <div *ngIf="exp.estado === 'justificando'" class="timer-badge">
-                        <i class="material-icons" style="font-size: 14px;">hourglass_top</i>
-                        <span>{{exp.horasRestantes}}h restantes</span>
+                      <div *ngIf="exp.estado === 'justificando'">
+                        <div class="timer-badge mb-1" [ngClass]="esPlazoVencido(exp) ? 'badge-mat-danger' : 'badge-mat-warning'">
+                          <i class="material-icons" style="font-size: 14px;">hourglass_top</i>
+                          <span class="font-weight-bold">{{getCountdownLabel(exp)}}</span>
+                        </div>
+                        <div class="small text-muted font-italic" *ngIf="exp.plazoLimiteAt">
+                          {{getDeadlineLabel(exp)}}
+                        </div>
                       </div>
                       <span *ngIf="exp.estado !== 'justificando'" class="text-muted small">
                         Plazo concluido
                       </span>
                     </td>
                     <td class="text-right">
-                      <button *ngIf="exp.estado === 'justificando'" 
+                      <button *ngIf="exp.estado === 'justificando' && !esPlazoVencido(exp)" 
                               mat-raised-button 
                               color="primary" 
                               class="btn btn-primary btn-sm"
                               (click)="abrirModalDescargo(exp)">
                         <i class="material-icons" style="font-size: 16px;">edit_document</i> Presentar Descargo
+                      </button>
+                      <button *ngIf="exp.estado === 'justificando' && esPlazoVencido(exp)" 
+                              mat-button 
+                              class="btn btn-danger btn-sm"
+                              disabled
+                              title="El plazo de 5 días hábiles ha expirado">
+                        <i class="material-icons" style="font-size: 16px;">timer_off</i> Plazo Expirado
                       </button>
                       <button *ngIf="exp.estado !== 'justificando'" 
                               mat-button 

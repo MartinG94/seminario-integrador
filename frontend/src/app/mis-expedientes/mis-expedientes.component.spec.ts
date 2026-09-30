@@ -113,4 +113,53 @@ describe('MisExpedientesComponent', () => {
       expect(component.ordenAscendente).toBeTrue();
     });
   });
+
+  describe('Temporizador Dinámico y Plazo Preclusivo (S3-02 / CA3)', () => {
+    const expEnPlazo: Expediente = {
+      id: 'EXP-01',
+      numero: 'EXP-001/2026',
+      tipo: 'falta',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      motivo: 'Inasistencia',
+      subcomision: 'Cómputos',
+      puntos: -1,
+      estado: 'justificando',
+      fechaCreacion: '2026-10-08',
+      horasRestantes: 48,
+      plazoInicioAt: '2026-10-08T18:00:00-03:00',
+      plazoLimiteAt: '2026-10-15T18:00:00-03:00',
+      descargoPresentado: false
+    };
+
+    it('formatea la fecha y hora exacta del vencimiento (getDeadlineLabel)', () => {
+      const label = component.getDeadlineLabel(expEnPlazo);
+      expect(label).toContain('Vence:');
+      expect(label).toContain('15/10/2026');
+      expect(label).toContain('18:00 hs');
+    });
+
+    it('calcula el countdown dinámico restante cuando está en plazo (getCountdownLabel)', () => {
+      // Fijamos ahoraMs a 2 días y 4 horas antes del vencimiento
+      const vencimientoMs = new Date('2026-10-15T18:00:00-03:00').getTime();
+      component.ahoraMs = vencimientoMs - (2 * 86400 + 4 * 3600 + 15 * 60) * 1000;
+
+      const countdown = component.getCountdownLabel(expEnPlazo);
+      expect(countdown).toBe('2d 04h 15m restantes');
+      expect(component.esPlazoVencido(expEnPlazo)).toBeFalse();
+    });
+
+    it('detecta plazo vencido y muestra "Plazo expirado" al superar el límite', () => {
+      const vencimientoMs = new Date('2026-10-15T18:00:00-03:00').getTime();
+      component.ahoraMs = vencimientoMs + 1000; // 1 segundo después
+
+      expect(component.esPlazoVencido(expEnPlazo)).toBeTrue();
+      expect(component.getCountdownLabel(expEnPlazo)).toBe('Plazo expirado');
+    });
+
+    it('limpia el timer subscription en ngOnDestroy para evitar memory leaks', () => {
+      component.ngOnDestroy();
+      expect((component as any).tickerSub).toBeNull();
+    });
+  });
 });

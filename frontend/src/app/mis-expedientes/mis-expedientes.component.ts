@@ -27,6 +27,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   relatoTexto = '';
   errorMensaje = '';
 
+  // Temporizador dinámico para cuenta regresiva (CA3)
+  private tickerSub: Subscription | null = null;
+  ahoraMs: number = Date.now();
+
   private subs: Subscription[] = [];
 
   constructor(
@@ -49,11 +53,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     const subSocios = this.dataService.socios$.subscribe(socios => {
       const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-      // Sin coincidencia en el padrón, el saldo real todavía no se conoce: el
-      // cálculo transaccional de puntos llega con el endpoint de ranking.
       this.saldoNeto = s ? s.saldo : 0;
     });
     this.subs.push(subSocios);
+
+    // Actualizador dinámico del reloj cada segundo (evita memory leaks desuscribiéndose en ngOnDestroy)
+    this.tickerSub = interval(1000).subscribe(() => {
+      this.ahoraMs = Date.now();
+    });
   }
 
   /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
@@ -65,7 +72,74 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.tickerSub) {
+      this.tickerSub.unsubscribe();
+      this.tickerSub = null;
+    }
     this.subs.forEach(s => s.unsubscribe());
+  }
+
+  /**
+   * Determina si el expediente tiene su plazo vencido según el timestamp del límite.
+   */
+  esPlazoVencido(exp: Expediente): boolean {
+    if (!exp.plazoLimiteAt) {
+      return exp.horasRestantes <= 0;
+    }
+    const limiteMs = new Date(exp.plazoLimiteAt).getTime();
+    return this.ahoraMs > limiteMs;
+  }
+
+  /**
+   * Formato de fecha exacta de vencimiento: "Vence: Jueves 15/10/2026 - 18:00 hs".
+   */
+  getDeadlineLabel(exp: Expediente): string {
+    if (!exp.plazoLimiteAt) {
+      return 'Vencimiento no fijado';
+    }
+    const d = new Date(exp.plazoLimiteAt);
+    if (isNaN(d.getTime())) {
+      return 'Fecha inválida';
+    }
+    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const diaNom = diasSemana[d.getDay()];
+    const diaNum = String(d.getDate()).padStart(2, '0');
+    const mesNum = String(d.getMonth() + 1).padStart(2, '0');
+    const anio = d.getFullYear();
+    const hora = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+
+    return `Vence: ${diaNom} ${diaNum}/${mesNum}/${anio} - ${hora}:${mins} hs`;
+  }
+
+  /**
+   * Formato dinámico del contador: "2d 04h 15m restantes" o "Plazo expirado".
+   */
+  getCountdownLabel(exp: Expediente): string {
+    if (!exp.plazoLimiteAt) {
+      return `${exp.horasRestantes}h restantes`;
+    }
+    const limiteMs = new Date(exp.plazoLimiteAt).getTime();
+    const diffMs = limiteMs - this.ahoraMs;
+
+    if (diffMs <= 0) {
+      return 'Plazo expirado';
+    }
+
+    const segundosTotales = Math.floor(diffMs / 1000);
+    const dias = Math.floor(segundosTotales / 86400);
+    const horas = Math.floor((segundosTotales % 86400) / 3600);
+    const minutos = Math.floor((segundosTotales % 3600) / 60);
+
+    const horasStr = String(horas).padStart(2, '0');
+    const minsStr = String(minutos).padStart(2, '0');
+
+    if (dias > 0) {
+      return `${dias}d ${horasStr}h ${minsStr}m restantes`;
+    }
+    const segs = segundosTotales % 60;
+    const segsStr = String(segs).padStart(2, '0');
+    return `${horasStr}h ${minsStr}m ${segsStr}s restantes`;
   }
 
   abrirModalDescargo(exp: Expediente): void {

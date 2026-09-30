@@ -23,6 +23,9 @@ export interface Expediente {
   horasRestantes: number;
   tipo: 'falta' | 'merito';
   puntos: number;
+  plazoInicioAt?: string;
+  plazoLimiteAt?: string;
+  descargoPresentado?: boolean;
   descargo?: {
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
     causal?: string;
@@ -97,7 +100,10 @@ export class TribunalDataService {
       estado: 'justificando',
       horasRestantes: 74,
       tipo: 'falta',
-      puntos: -1.0
+      puntos: -1.0,
+      plazoInicioAt: '2026-10-08T18:00:00-03:00',
+      plazoLimiteAt: '2026-10-15T18:00:00-03:00',
+      descargoPresentado: false
     },
     {
       id: 'EXP-2026-002',
