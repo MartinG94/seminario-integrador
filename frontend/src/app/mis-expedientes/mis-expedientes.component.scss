@@ -10,14 +10,77 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px 16px;
+  cursor: pointer;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .modal-dialog-custom {
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  cursor: default;
+  overscroll-behavior: contain;
+  touch-action: auto;
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    margin-bottom: 0;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    background: #ffffff;
+    overflow: hidden;
+
+    .card-header {
+      flex-shrink: 0;
+      z-index: 2;
+      margin: 0;
+      border-radius: 6px 6px 0 0;
+      padding: 15px 20px;
+    }
+
+    .card-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 20px 24px;
+
+      // Barra de desplazamiento estilizada, moderna y discreta
+      scrollbar-width: thin;
+      scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(100, 116, 139, 0.4);
+        border-radius: 4px;
+
+        &:hover {
+          background-color: rgba(100, 116, 139, 0.7);
+        }
+      }
+    }
+
+    .card-footer {
+      flex-shrink: 0;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      padding: 12px 20px;
+      border-radius: 0 0 6px 6px;
+    }
+  }
 }
 
 .puntos-verde {

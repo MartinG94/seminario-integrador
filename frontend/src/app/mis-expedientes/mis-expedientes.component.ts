@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { Subscription, interval } from 'rxjs';
@@ -26,6 +26,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   nombreArchivo = '';
   relatoTexto = '';
   errorMensaje = '';
+  esEdicion = false;
 
   // Temporizador dinámico para cuenta regresiva (CA3)
   private tickerSub: Subscription | null = null;
@@ -35,7 +36,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   constructor(
     public dataService: TribunalDataService,
-    private auth: AuthService
+    private auth: AuthService,
+    private renderer: Renderer2
   ) {}
 
   ngOnInit(): void {
@@ -48,6 +50,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const subExp = this.dataService.expedientes$.subscribe(list => {
       this.expedientes = list;
       this.filtrarMisExpedientes();
+      if (this.expedienteDetalle) {
+        const actualizado = list.find(e => e.id === this.expedienteDetalle!.id);
+        if (actualizado) {
+          this.expedienteDetalle = actualizado;
+        }
+      }
     });
     this.subs.push(subExp);
 
@@ -77,6 +85,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.tickerSub = null;
     }
     this.subs.forEach(s => s.unsubscribe());
+    this.removerScrollBloqueo();
   }
 
   /**
@@ -127,11 +136,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   abrirModalDetalle(exp: Expediente): void {
     this.expedienteDetalle = exp;
     this.modalDetalleAbierto = true;
+    this.actualizarScrollBloqueo();
   }
 
   cerrarModalDetalle(): void {
     this.modalDetalleAbierto = false;
     this.expedienteDetalle = null;
+    this.actualizarScrollBloqueo();
   }
 
   /**
@@ -194,17 +205,76 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   abrirModalDescargo(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.esEdicion = false;
     this.tipoDescargo = 'T02_CERTIFICADO';
     this.causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = '';
     this.relatoTexto = '';
     this.errorMensaje = '';
     this.modalAbierto = true;
+    this.actualizarScrollBloqueo();
+  }
+
+  abrirModalEditarDescargo(exp: Expediente): void {
+    if (!exp.descargo) return;
+    this.expedienteSeleccionado = exp;
+    this.esEdicion = true;
+    this.tipoDescargo = exp.descargo.tipo;
+    this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
+    this.nombreArchivo = exp.descargo.archivo || '';
+    this.relatoTexto = exp.descargo.texto || '';
+    this.errorMensaje = '';
+    this.modalAbierto = true;
+    this.actualizarScrollBloqueo();
+  }
+
+  eliminarDescargo(exp: Expediente): void {
+    if (!exp.descargo) return;
+    const confirma = confirm(`¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`);
+    if (!confirma) return;
+
+    const perfil = this.auth.getPerfil();
+    const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
+    const legajo = perfil?.legajo || '';
+
+    this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
   }
 
   cerrarModal(): void {
     this.modalAbierto = false;
     this.expedienteSeleccionado = null;
+    this.actualizarScrollBloqueo();
+  }
+
+  private actualizarScrollBloqueo(): void {
+    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto;
+    const body = document.body;
+    const docElem = document.documentElement;
+    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
+
+    if (estaAbierto) {
+      this.renderer.addClass(body, 'modal-open');
+      this.renderer.setStyle(body, 'overflow', 'hidden');
+      this.renderer.setStyle(docElem, 'overflow', 'hidden');
+      if (mainPanel) {
+        this.renderer.setStyle(mainPanel, 'overflow', 'hidden');
+      }
+    } else {
+      this.removerScrollBloqueo();
+    }
+  }
+
+  private removerScrollBloqueo(): void {
+    const body = document.body;
+    const docElem = document.documentElement;
+    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
+
+    this.renderer.removeClass(body, 'modal-open');
+    this.renderer.removeStyle(body, 'overflow');
+    this.renderer.removeStyle(docElem, 'overflow');
+    if (mainPanel) {
+      this.renderer.removeStyle(mainPanel, 'overflow');
+    }
   }
 
   onFileSelected(event: any): void {
@@ -229,13 +299,35 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.dataService.enviarDescargo(this.expedienteSeleccionado.id, this.tipoDescargo, {
-      causal: this.causalSeleccionada,
-      archivo: this.nombreArchivo,
-      texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`
-    });
+    const perfil = this.auth.getPerfil();
+    const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
+    const legajo = perfil?.legajo || '';
+
+    this.dataService.enviarDescargo(
+      this.expedienteSeleccionado.id, 
+      this.tipoDescargo, 
+      {
+        causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
+        archivo: this.nombreArchivo,
+        texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`
+      },
+      {
+        nombre,
+        legajo,
+        esEdicion: this.esEdicion
+      }
+    );
 
     this.cerrarModal();
+  }
+
+  getBadgeClaseOperacion(operacion: string): string {
+    switch (operacion) {
+      case 'CREACION': return 'badge-success';
+      case 'EDICION': return 'badge-info';
+      case 'ELIMINACION': return 'badge-danger';
+      default: return 'badge-secondary';
+    }
   }
 
   getEstadoLabel(estado: string, exp?: Expediente): string {

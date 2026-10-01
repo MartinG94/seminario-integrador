@@ -184,4 +184,156 @@ describe('MisExpedientesComponent', () => {
       expect((component as any).tickerSub).toBeNull();
     });
   });
+
+  describe('Gestión de Justificativos y Auditoría en Modal Detalle', () => {
+    const expConDescargo: Expediente = {
+      id: 'EXP-99',
+      numero: 'EXP-099/2026',
+      tipo: 'falta',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      motivo: 'Inasistencia',
+      subcomision: 'Cómputos',
+      puntos: -1,
+      estado: 'revision_resolucion',
+      fechaCreacion: '2026-10-01',
+      horasRestantes: 0,
+      descargoPresentado: true,
+      descargo: {
+        tipo: 'T02_CERTIFICADO',
+        causal: 'Examen Académico Universitario en UTN FRC',
+        archivo: 'comprobante.pdf',
+        texto: 'Certificado de examen rendido',
+        fecha: '2026-10-01'
+      },
+      logsDescargo: [
+        {
+          operacion: 'CREACION',
+          accionLabel: 'Añadir Justificativo',
+          usuario: 'Lucas Gastiaburu (Legajo 74907)',
+          timestamp: '01/10/2026 10:00 hs',
+          detalle: 'Modalidad T02 (Certificado)'
+        }
+      ]
+    };
+
+    it('abre el modal de añadir justificativo en modo creación', () => {
+      const expSinDescargo: Expediente = { ...expConDescargo, descargo: undefined, logsDescargo: [] };
+      component.abrirModalDescargo(expSinDescargo);
+      expect(component.modalAbierto).toBeTrue();
+      expect(component.esEdicion).toBeFalse();
+      expect(component.expedienteSeleccionado).toBe(expSinDescargo);
+      expect(component.nombreArchivo).toBe('');
+    });
+
+    it('abre el modal de editar justificativo precargando los datos existentes', () => {
+      component.abrirModalEditarDescargo(expConDescargo);
+      expect(component.modalAbierto).toBeTrue();
+      expect(component.esEdicion).toBeTrue();
+      expect(component.tipoDescargo).toBe('T02_CERTIFICADO');
+      expect(component.causalSeleccionada).toBe('Examen Académico Universitario en UTN FRC');
+      expect(component.nombreArchivo).toBe('comprobante.pdf');
+      expect(component.relatoTexto).toBe('Certificado de examen rendido');
+    });
+
+    it('elimina el justificativo al confirmar en el diálogo', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      const dataSpy = spyOn(component.dataService, 'eliminarDescargo').and.callThrough();
+
+      component.eliminarDescargo(expConDescargo);
+      expect(dataSpy).toHaveBeenCalledWith('EXP-99', jasmine.objectContaining({ nombre: jasmine.any(String) }));
+    });
+
+    it('no elimina el justificativo si el usuario cancela la confirmación', () => {
+      spyOn(window, 'confirm').and.returnValue(false);
+      const dataSpy = spyOn(component.dataService, 'eliminarDescargo').and.callThrough();
+
+      component.eliminarDescargo(expConDescargo);
+      expect(dataSpy).not.toHaveBeenCalled();
+    });
+
+    it('asigna clases badge adecuadas a cada tipo de operación', () => {
+      expect(component.getBadgeClaseOperacion('CREACION')).toBe('badge-success');
+      expect(component.getBadgeClaseOperacion('EDICION')).toBe('badge-info');
+      expect(component.getBadgeClaseOperacion('ELIMINACION')).toBe('badge-danger');
+    });
+  });
+
+  describe('Bloqueo de scroll al abrir modales', () => {
+    const mockExpediente: Expediente = {
+      id: 'EXP-101',
+      numero: 'EXP-2026-101',
+      tipo: 'falta',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      motivo: 'Inasistencia',
+      subcomision: 'Cómputos',
+      puntos: -1,
+      estado: 'justificando',
+      fechaCreacion: '2026-10-01',
+      horasRestantes: 72
+    };
+
+    afterEach(() => {
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.documentElement.style.removeProperty('overflow');
+    });
+
+    it('bloquea el scroll del fondo al abrir el modal de detalle y lo restaura al cerrar', () => {
+      component.abrirModalDetalle(mockExpediente);
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(document.body.classList.contains('modal-open')).toBeTrue();
+      expect(document.body.style.overflow).toBe('hidden');
+      expect(document.documentElement.style.overflow).toBe('hidden');
+
+      component.cerrarModalDetalle();
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(document.body.classList.contains('modal-open')).toBeFalse();
+      expect(document.body.style.overflow).toBe('');
+      expect(document.documentElement.style.overflow).toBe('');
+    });
+
+    it('bloquea el scroll al abrir el modal de justificación T02/T03 y lo restaura al cerrar', () => {
+      component.abrirModalDescargo(mockExpediente);
+      expect(component.modalAbierto).toBeTrue();
+      expect(document.body.classList.contains('modal-open')).toBeTrue();
+      expect(document.body.style.overflow).toBe('hidden');
+
+      component.cerrarModal();
+      expect(component.modalAbierto).toBeFalse();
+      expect(document.body.classList.contains('modal-open')).toBeFalse();
+      expect(document.body.style.overflow).toBe('');
+    });
+
+    it('mantiene el bloqueo de scroll activo si el modal de detalle sigue abierto al cerrar el de justificación', () => {
+      component.abrirModalDetalle(mockExpediente);
+      component.abrirModalDescargo(mockExpediente);
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(component.modalAbierto).toBeTrue();
+      expect(document.body.style.overflow).toBe('hidden');
+
+      // Cerrar solo el de justificación
+      component.cerrarModal();
+      expect(component.modalAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(document.body.style.overflow).toBe('hidden');
+      expect(document.body.classList.contains('modal-open')).toBeTrue();
+
+      // Cerrar finalmente el de detalle
+      component.cerrarModalDetalle();
+      expect(document.body.style.overflow).toBe('');
+      expect(document.body.classList.contains('modal-open')).toBeFalse();
+    });
+
+    it('limpia las clases y estilos de scroll al destruir el componente', () => {
+      component.abrirModalDetalle(mockExpediente);
+      expect(document.body.classList.contains('modal-open')).toBeTrue();
+      expect(document.body.style.overflow).toBe('hidden');
+
+      component.ngOnDestroy();
+      expect(document.body.classList.contains('modal-open')).toBeFalse();
+      expect(document.body.style.overflow).toBe('');
+    });
+  });
 });
