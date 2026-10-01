@@ -69,4 +69,19 @@ describe('SolicitarPuntosComponent', () => {
     component.guardarBorrador();
     expect(component.errorMensaje).toBe('No autorizado');
   });
+
+  it('muestra un mensaje seguro para errores 500', () => {
+    expediente.crearBorrador.and.returnValue(throwError(() => ({ status: 500, error: '<pre>traceback</pre>' })));
+    component.guardarBorrador();
+    expect(component.errorMensaje).toContain('servicio no está disponible');
+    expect(component.errorMensaje).not.toContain('traceback');
+    expect(component.errorMensaje).not.toContain('<pre>');
+  });
+
+  it('no trata una respuesta string o HTML como objeto de errores', () => {
+    expediente.crearBorrador.and.returnValue(throwError(() => ({ status: 400, error: '<html>Error interno</html>' })));
+    component.guardarBorrador();
+    expect(component.errorMensaje).toBe('No se pudo completar la operación.');
+    expect(component.errorMensaje).not.toContain('<html>');
+  });
 });

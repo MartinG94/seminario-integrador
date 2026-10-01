@@ -95,10 +95,29 @@ export class SolicitarPuntosComponent implements OnInit {
     this.numeroExpediente = solicitud.numero_expediente;
   }
 
-  private mostrarError(error: { error?: { detail?: string; [key: string]: unknown } }): void {
+  private mostrarError(error: { status?: number; error?: unknown }): void {
+    if (error && typeof error.status === 'number' && error.status >= 500) {
+      this.errorMensaje = 'El servicio no está disponible en este momento. Intentá nuevamente más tarde.';
+      return;
+    }
+
     const body = error && error.error;
-    if (body && body.detail) this.errorMensaje = body.detail;
-    else if (body) this.errorMensaje = Object.values(body).flat().join(' ');
-    else this.errorMensaje = 'No se pudo completar la operación.';
+    if (typeof body === 'string') {
+      this.errorMensaje = 'No se pudo completar la operación.';
+      return;
+    }
+    if (body && typeof body === 'object') {
+      const detail = (body as { detail?: unknown }).detail;
+      if (typeof detail === 'string' && detail.trim()) {
+        this.errorMensaje = detail;
+        return;
+      }
+      const messages = Object.values(body).flat().filter(value => typeof value === 'string');
+      if (messages.length > 0) {
+        this.errorMensaje = messages.join(' ');
+        return;
+      }
+    }
+    this.errorMensaje = 'No se pudo completar la operación.';
   }
 }
