@@ -61,10 +61,7 @@
                     Puntos en Trámite <i class="material-icons">{{getIconoOrden('puntos')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('estado')" title="Ordenar por Estado">
-                    Estado Procesal <i class="material-icons">{{getIconoOrden('estado')}}</i>
-                  </th>
-                  <th class="sortable-th" (click)="cambiarOrden('horasRestantes')" title="Ordenar por Plazo">
-                    Plazo Preclusivo <i class="material-icons">{{getIconoOrden('horasRestantes')}}</i>
+                    Estado <i class="material-icons">{{getIconoOrden('estado')}}</i>
                   </th>
                   <th class="text-right">Acciones</th>
                 </thead>
@@ -82,25 +79,17 @@
                       </span>
                     </td>
                     <td>
-                      <span class="badge-mat" [ngClass]="getEstadoBadgeClass(exp.estado)">
-                        {{getEstadoLabel(exp.estado)}}
-                      </span>
-                    </td>
-                    <td>
-                      <div *ngIf="exp.estado === 'justificando'">
-                        <div class="timer-badge mb-1" [ngClass]="esPlazoVencido(exp) ? 'badge-mat-danger' : 'badge-mat-warning'">
-                          <i class="material-icons" style="font-size: 14px;">hourglass_top</i>
-                          <span class="font-weight-bold">{{getCountdownLabel(exp)}}</span>
-                        </div>
-                        <div class="small text-muted font-italic" *ngIf="exp.plazoLimiteAt">
-                          {{getDeadlineLabel(exp)}}
-                        </div>
-                      </div>
-                      <span *ngIf="exp.estado !== 'justificando'" class="text-muted small">
-                        Plazo concluido
+                      <span class="badge-mat" [ngClass]="getEstadoBadgeClass(exp.estado, exp)">
+                        {{getEstadoLabel(exp.estado, exp)}}
                       </span>
                     </td>
                     <td class="text-right">
+                      <button mat-icon-button
+                              class="btn btn-info btn-link btn-sm mr-2"
+                              (click)="abrirModalDetalle(exp)"
+                              title="Ver Detalle del Expediente">
+                        <i class="material-icons">visibility</i>
+                      </button>
                       <button *ngIf="exp.estado === 'justificando' && !esPlazoVencido(exp)" 
                               mat-raised-button 
                               color="primary" 
@@ -131,6 +120,73 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Modal Ver Detalle del Expediente -->
+<div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom">
+  <div class="modal-dialog-custom">
+    <div class="card">
+      <div class="card-header card-header-info">
+        <h4 class="card-title">Detalle del Expediente</h4>
+        <p class="card-category">{{expedienteDetalle?.numero}} &bull; Socio: {{socioActual}}</p>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-borderless">
+            <tbody>
+              <tr>
+                <th style="width: 35%;" class="text-muted">N° de Expediente:</th>
+                <td class="font-weight-bold text-dark">{{expedienteDetalle?.numero}}</td>
+              </tr>
+              <tr>
+                <th class="text-muted">Motivo / Causa:</th>
+                <td>{{expedienteDetalle?.motivo}}</td>
+              </tr>
+              <tr>
+                <th class="text-muted">Subcomisión de Origen:</th>
+                <td>{{expedienteDetalle?.subcomision}}</td>
+              </tr>
+              <tr>
+                <th class="text-muted">Fecha de Apertura:</th>
+                <td>{{expedienteDetalle?.fechaCreacion}}</td>
+              </tr>
+              <tr>
+                <th class="text-muted">Puntos en Trámite:</th>
+                <td>
+                  <span class="font-weight-bold" [ngClass]="(expedienteDetalle?.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
+                    {{(expedienteDetalle?.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle?.puntos}} pts
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <th class="text-muted">Estado Procesal:</th>
+                <td>
+                  <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteDetalle?.estado || '', expedienteDetalle || undefined)">
+                    {{expedienteDetalle ? getEstadoLabel(expedienteDetalle.estado, expedienteDetalle) : ''}}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="expedienteDetalle?.plazoLimiteAt">
+                <th class="text-muted">Vencimiento del Plazo:</th>
+                <td>
+                  <div class="font-weight-bold text-dark">
+                    {{expedienteDetalle ? getDeadlineLabel(expedienteDetalle) : ''}}
+                  </div>
+                  <div class="small text-muted mt-1" *ngIf="expedienteDetalle?.estado === 'justificando'">
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">timer</i>
+                    Tiempo restante: {{expedienteDetalle ? getCountdownLabel(expedienteDetalle) : ''}}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-end">
+        <button mat-button class="btn btn-default" (click)="cerrarModalDetalle()">Cerrar</button>
+      </div>
+    </div>
   </div>
 </div>
 

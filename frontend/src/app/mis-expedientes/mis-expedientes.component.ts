@@ -120,6 +120,48 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     return `Vence: ${diaNom} ${map['day']}/${map['month']}/${map['year']} - ${map['hour']}:${map['minute']} hs`;
   }
 
+  // Modal Detalle
+  modalDetalleAbierto = false;
+  expedienteDetalle: Expediente | null = null;
+
+  abrirModalDetalle(exp: Expediente): void {
+    this.expedienteDetalle = exp;
+    this.modalDetalleAbierto = true;
+  }
+
+  cerrarModalDetalle(): void {
+    this.modalDetalleAbierto = false;
+    this.expedienteDetalle = null;
+  }
+
+  /**
+   * Formato dinámico compacto para el badge: "14d 17h" o "04h 12m" o "Plazo expirado".
+   */
+  getCompactCountdownLabel(exp: Expediente): string {
+    if (!exp.plazoLimiteAt) {
+      return exp.horasRestantes > 0 ? `${exp.horasRestantes}h` : '';
+    }
+    const limiteMs = new Date(exp.plazoLimiteAt).getTime();
+    const diffMs = limiteMs - this.ahoraMs;
+
+    if (diffMs <= 0) {
+      return 'Expirado';
+    }
+
+    const segundosTotales = Math.floor(diffMs / 1000);
+    const dias = Math.floor(segundosTotales / 86400);
+    const horas = Math.floor((segundosTotales % 86400) / 3600);
+    const minutos = Math.floor((segundosTotales % 3600) / 60);
+
+    const horasStr = String(horas).padStart(2, '0');
+    const minsStr = String(minutos).padStart(2, '0');
+
+    if (dias > 0) {
+      return `${dias}d ${horasStr}h`;
+    }
+    return `${horasStr}h ${minsStr}m`;
+  }
+
   /**
    * Formato dinámico del contador: "2d 04h 15m restantes" o "Plazo expirado".
    */
@@ -196,18 +238,32 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.cerrarModal();
   }
 
-  getEstadoLabel(estado: string): string {
+  getEstadoLabel(estado: string, exp?: Expediente): string {
+    if (estado === 'justificando' && exp) {
+      if (this.esPlazoVencido(exp)) {
+        return 'Resolviendo';
+      }
+      const tiempo = this.getCompactCountdownLabel(exp);
+      return tiempo ? `Justificando · ${tiempo}` : 'Justificando';
+    }
+    if (estado === 'revision_resolucion') {
+      return exp?.descargo ? 'Revisando Justificación' : 'Resolviendo';
+    }
+
     switch (estado) {
       case 'creado': return 'Expediente Creado';
-      case 'justificando': return 'En período de justificaciones';
-      case 'revision_resolucion': return 'En revisión y resolución';
-      case 'pendiente_firma': return 'Pendiente de firma y envío';
-      case 'emitido': return 'Expedientes ya emitidos';
+      case 'justificando': return 'Justificando';
+      case 'revision_resolucion': return 'Revisando Justificación';
+      case 'pendiente_firma': return 'Pendiente de firma';
+      case 'emitido': return 'Emitido';
       default: return estado;
     }
   }
 
-  getEstadoBadgeClass(estado: string): string {
+  getEstadoBadgeClass(estado: string, exp?: Expediente): string {
+    if (estado === 'justificando' && exp && this.esPlazoVencido(exp)) {
+      return 'badge-mat-danger';
+    }
     switch (estado) {
       case 'creado': return 'badge-mat-primary';
       case 'justificando': return 'badge-mat-warning';

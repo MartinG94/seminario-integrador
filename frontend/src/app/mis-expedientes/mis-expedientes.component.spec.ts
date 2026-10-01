@@ -157,6 +157,28 @@ describe('MisExpedientesComponent', () => {
       expect(component.getCountdownLabel(expEnPlazo)).toBe('Plazo expirado');
     });
 
+    it('formatea countdown compacto para el badge (getCompactCountdownLabel)', () => {
+      const vencimientoMs = new Date('2026-10-15T18:00:00-03:00').getTime();
+      component.ahoraMs = vencimientoMs - (2 * 86400 + 4 * 3600 + 15 * 60) * 1000;
+
+      const compact = component.getCompactCountdownLabel(expEnPlazo);
+      expect(compact).toBe('2d 04h');
+      expect(component.getEstadoLabel('justificando', expEnPlazo)).toBe('Justificando · 2d 04h');
+    });
+
+    it('abre y cierra el modal de detalle del expediente', () => {
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(component.expedienteDetalle).toBeNull();
+
+      component.abrirModalDetalle(expEnPlazo);
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(component.expedienteDetalle).toBe(expEnPlazo);
+
+      component.cerrarModalDetalle();
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(component.expedienteDetalle).toBeNull();
+    });
+
     it('limpia el timer subscription en ngOnDestroy para evitar memory leaks', () => {
       component.ngOnDestroy();
       expect((component as any).tickerSub).toBeNull();
