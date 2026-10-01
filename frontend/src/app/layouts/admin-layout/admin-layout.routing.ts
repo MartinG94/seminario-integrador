@@ -39,7 +39,12 @@ export const AdminLayoutRoutes: Routes = [
       }
     },
     { path: 'ranking-socios',         component: RankingSociosComponent },
-    { path: 'solicitar-puntos',       component: SolicitarPuntosComponent },
+    {
+      path: 'solicitar-puntos',
+      component: SolicitarPuntosComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD'] }
+    },
     { 
       path: 'eventos-asistencia',     
       component: EnDesarrolloComponent,
