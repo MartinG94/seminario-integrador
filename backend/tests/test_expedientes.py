@@ -189,9 +189,7 @@ def test_usuario_socio_no_puede_crear_t01(make_socio, authenticate):
 
 
 @pytest.mark.django_db
-def test_solicitante_no_puede_acceder_a_borrador_ajeno(
-    expediente_client, make_socio
-):
+def test_solicitante_no_puede_acceder_a_borrador_ajeno(expediente_client, make_socio):
     data = create_draft(expediente_client).data
     otro = make_socio(legajo="41002", role=Role.CD)
     otro_client = APIClient()
