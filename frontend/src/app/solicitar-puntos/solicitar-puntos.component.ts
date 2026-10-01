@@ -1,104 +1,108 @@
 import { Component, OnInit } from '@angular/core';
+import { TribunalDataService, Socio } from '../services/tribunal-data.service';
+import { Router } from '@angular/router';
 
-import { ExpedienteApiService, SolicitudT01, SolicitudT01Payload, TipoAccionT01 } from '../services/expediente-api.service';
-import { PadronApiService, PadronSocio } from '../services/padron-api.service';
-
-@Component({ selector: 'app-solicitar-puntos', templateUrl: './solicitar-puntos.component.html', styleUrls: ['./solicitar-puntos.component.scss'] })
+@Component({
+  selector: 'app-solicitar-puntos',
+  templateUrl: './solicitar-puntos.component.html',
+  styleUrls: ['./solicitar-puntos.component.scss']
+})
 export class SolicitarPuntosComponent implements OnInit {
-  socios: PadronSocio[] = [];
-  socioSeleccionado: number | null = null;
-  tipoAccion: TipoAccionT01 = 'SANCTION';
-  puntosSeleccionados: number | null = -1;
-  causal = '';
+  socios: Socio[] = [];
+  subcomisiones = [
+    'Comunicaciones', 'Deportes', 'Extensión Universitaria', 
+    'Finanzas', 'Prensa y Difusión', 'Relaciones Públicas', 'Tesorería'
+  ];
+
+  // Modelo del Formulario T01
+  socioSeleccionado = '';
+  subcomisionSeleccionada = 'Finanzas';
+  tipoAccion: 'falta' | 'merito' = 'falta';
+  puntosSeleccionados = -1.0;
   motivoTexto = '';
-  anexoFecha = '';
-  anexoLugar = '';
+
+  // Hoja de Anexo Circunstanciada Obligatoria
+  anexoFecha = new Date().toISOString().split('T')[0];
   anexoTestigos = '';
   anexoRelato = '';
-  borradorId: string | null = null;
-  estado: 'DRAFT' | 'ISSUED' | null = null;
-  numeroExpediente: string | null = null;
-  cargando = false;
+
   errorMensaje = '';
   exitoMensaje = '';
 
   escalasSancion = [
-    { valor: -0.5, desc: '-0.5 pts: Falta Leve' }, { valor: -1, desc: '-1.0 pts: Falta Media' },
-    { valor: -1.5, desc: '-1.5 pts: Falta Grave' }, { valor: -2, desc: '-2.0 pts: Falta Muy Grave' }
-  ];
-  escalasMerito = [
-    { valor: 0.5, desc: '+0.5 pts: Reconocimiento Leve' }, { valor: 1, desc: '+1.0 pts: Reconocimiento Estándar' },
-    { valor: 2, desc: '+2.0 pts: Reconocimiento Destacado' }, { valor: 3, desc: '+3.0 pts: Máximo Reconocimiento' }
+    { valor: -0.5, desc: '-0.5 pts: Falta Leve (Llegada tarde a convocatoria obligatoria)' },
+    { valor: -1.0, desc: '-1.0 pts: Falta Media (Inasistencia injustificada a asamblea o evento institucional)' },
+    { valor: -1.5, desc: '-1.5 pts: Falta Grave (Omisión reiterada de informes y tareas operativas)' },
+    { valor: -2.0, desc: '-2.0 pts: Falta Muy Grave (Conducta lesiva al patrimonio o principios asociativos)' }
   ];
 
-  constructor(private padronApi: PadronApiService, private expedienteApi: ExpedienteApiService) {}
+  escalasMerito = [
+    { valor: 0.5, desc: '+0.5 pts: Reconocimiento Leve (Colaboración voluntaria en eventos)' },
+    { valor: 1.0, desc: '+1.0 pts: Reconocimiento Estándar (Cumplimiento sobresaliente en subcomisión)' },
+    { valor: 2.0, desc: '+2.0 pts: Reconocimiento Destacado (Liderazgo exitoso en proyecto técnico o social)' },
+    { valor: 3.0, desc: '+3.0 pts: Máximo Reconocimiento (Aporte extraordinario al prestigio de AVEIT)' }
+  ];
+
+  constructor(
+    public dataService: TribunalDataService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
-    this.padronApi.listarSocios().subscribe({
-      next: socios => this.socios = socios,
-      error: error => this.mostrarError(error)
+    this.dataService.socios$.subscribe(list => {
+      this.socios = list;
+      if (list.length > 0) {
+        this.socioSeleccionado = list[0].nombre;
+      }
     });
   }
 
-  onTipoAccionChange(tipo: TipoAccionT01): void {
-    this.tipoAccion = tipo;
-    this.puntosSeleccionados = tipo === 'SANCTION' ? -1 : 1;
+  onTipoAccionChange(nuevoTipo: 'falta' | 'merito'): void {
+    this.tipoAccion = nuevoTipo;
+    this.puntosSeleccionados = nuevoTipo === 'falta' ? -1.0 : 1.0;
   }
 
-  guardarBorrador(): void {
+  enviarSolicitud(): void {
     this.errorMensaje = '';
     this.exitoMensaje = '';
-    if (this.estado === 'ISSUED') return;
-    this.cargando = true;
-    const request = this.borradorId ? this.expedienteApi.actualizarBorrador(this.borradorId, this.payload()) : this.expedienteApi.crearBorrador(this.payload());
-    request.subscribe({
-      next: solicitud => { this.aplicarSolicitud(solicitud); this.exitoMensaje = 'Borrador guardado.'; this.cargando = false; },
-      error: error => { this.mostrarError(error); this.cargando = false; }
+
+    if (!this.socioSeleccionado) {
+      this.errorMensaje = 'Selecciona al socio o miembro implicado.';
+      return;
+    }
+    if (!this.motivoTexto.trim()) {
+      this.errorMensaje = 'Describe el motivo sucinto de la solicitud reglamentaria.';
+      return;
+    }
+    if (!this.anexoRelato.trim()) {
+      this.errorMensaje = 'La Hoja de Anexo Circunstanciada es obligatoria. Describe detalladamente el relato de los hechos.';
+      return;
+    }
+    if (!this.anexoTestigos.trim()) {
+      this.errorMensaje = 'Indica al menos un testigo presencial o autoridad informante en el anexo.';
+      return;
+    }
+
+    const exp = this.dataService.solicitarPuntos({
+      socio: this.socioSeleccionado,
+      subcomision: this.subcomisionSeleccionada,
+      tipo: this.tipoAccion,
+      puntos: this.puntosSeleccionados,
+      motivo: this.motivoTexto,
+      anexoRelato: this.anexoRelato,
+      anexoFecha: this.anexoFecha,
+      anexoTestigos: this.anexoTestigos
     });
-  }
 
-  emitirT01(): void {
-    this.errorMensaje = '';
-    this.exitoMensaje = '';
-    if (!this.validarEmision() || this.estado === 'ISSUED') return;
-    this.cargando = true;
-    const guardar = this.borradorId ? this.expedienteApi.actualizarBorrador(this.borradorId, this.payload()) : this.expedienteApi.crearBorrador(this.payload());
-    guardar.subscribe({
-      next: solicitud => this.emitirPersistido(solicitud),
-      error: error => { this.mostrarError(error); this.cargando = false; }
-    });
-  }
+    this.exitoMensaje = `Solicitud procesada con éxito. Se ha generado el expediente ${exp.numero} en estado Expediente Creado.`;
 
-  private emitirPersistido(solicitud: SolicitudT01): void {
-    this.aplicarSolicitud(solicitud);
-    this.expedienteApi.emitir(solicitud.id).subscribe({
-      next: emitida => { this.aplicarSolicitud(emitida); this.exitoMensaje = `Expediente creado: ${emitida.numero_expediente}.`; this.cargando = false; },
-      error: error => { this.mostrarError(error); this.cargando = false; }
-    });
-  }
+    // Limpiar formulario
+    this.motivoTexto = '';
+    this.anexoRelato = '';
+    this.anexoTestigos = '';
 
-  private payload(): SolicitudT01Payload {
-    return { destinatario_socio_id: this.socioSeleccionado, tipo_accion: this.tipoAccion, causal: this.causal, puntos: this.puntosSeleccionados, motivo: this.motivoTexto, anexo_fecha: this.anexoFecha || null, anexo_lugar: this.anexoLugar, anexo_relato: this.anexoRelato, anexo_testigos: this.anexoTestigos };
-  }
-
-  private validarEmision(): boolean {
-    if (this.socioSeleccionado === null) { this.errorMensaje = 'Selecciona al socio destinatario.'; return false; }
-    if (!this.motivoTexto.trim()) { this.errorMensaje = 'Describe el motivo de la solicitud.'; return false; }
-    if (this.puntosSeleccionados === null || this.puntosSeleccionados === undefined) { this.errorMensaje = 'Indica los puntos antes de emitir.'; return false; }
-    if ((this.tipoAccion === 'SANCTION' && this.puntosSeleccionados >= 0) || (this.tipoAccion === 'MERIT' && this.puntosSeleccionados <= 0)) { this.errorMensaje = 'Los puntos no son coherentes con el tipo de acción.'; return false; }
-    return true;
-  }
-
-  private aplicarSolicitud(solicitud: SolicitudT01): void {
-    this.borradorId = solicitud.id;
-    this.estado = solicitud.estado;
-    this.numeroExpediente = solicitud.numero_expediente;
-  }
-
-  private mostrarError(error: { error?: { detail?: string; [key: string]: unknown } }): void {
-    const body = error && error.error;
-    if (body && body.detail) this.errorMensaje = body.detail;
-    else if (body) this.errorMensaje = Object.values(body).flat().join(' ');
-    else this.errorMensaje = 'No se pudo completar la operación.';
+    setTimeout(() => {
+      this.router.navigate(['/gestionar-expedientes']);
+    }, 2500);
   }
 }

@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     "padron",
     "ranking",
     "notifications",
-    "expedientes",
 ]
 
 MIDDLEWARE = [
