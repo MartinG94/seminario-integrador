@@ -7,9 +7,9 @@ Implementa:
 - Integración transaccional con libro mayor.
 """
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction

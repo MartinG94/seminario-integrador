@@ -5,9 +5,8 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 
-from padron.factory import get_padron_repository
-
 from expedientes.models import Expediente, SolicitudT01, TipoDescargoEnum
+from padron.factory import get_padron_repository
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
