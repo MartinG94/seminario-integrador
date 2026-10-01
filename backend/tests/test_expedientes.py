@@ -103,9 +103,12 @@ def test_snapshot_emitido_conserva_todos_los_campos(padron_repo, expediente_clie
     assert snapshot == {
         "id": data["id"],
         "tipo_accion": "SANCTION",
+        "titulo": "",
         "causal": "Art. 21",
         "puntos": "-2.00",
         "motivo": "Motivo",
+        "razon": "",
+        "reglamentos_respaldantes": [],
         "destinatario": response.data["snapshot_destinatario"],
         "anexo_fecha": "2026-09-30",
         "anexo_lugar": "Sede central",
@@ -258,6 +261,37 @@ def test_borrador_se_puede_borrar(expediente_client):
     solicitud = SolicitudT01.objects.get(pk=data["id"])
     solicitud.delete()
     assert not SolicitudT01.objects.filter(pk=data["id"]).exists()
+
+
+@pytest.mark.django_db
+def test_borrador_persiste_titulo_razon_y_reglamentos(expediente_client):
+    response = expediente_client.post(
+        "/api/v1/expedientes/",
+        {
+            "tipo_accion": "SANCTION",
+            "puntos": "-1.00",
+            "titulo": "Título de prueba",
+            "razon": "Razón de prueba",
+            "reglamentos_respaldantes": ["Estatuto AVEIT Reforma 2026"],
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    solicitud = SolicitudT01.objects.get(pk=response.data["id"])
+    assert solicitud.titulo == "Título de prueba"
+    assert solicitud.razon == "Razón de prueba"
+    assert solicitud.reglamentos_respaldantes == ["Estatuto AVEIT Reforma 2026"]
+
+
+@pytest.mark.django_db
+def test_endpoint_reglamentos_vigentes(expediente_client):
+    response = expediente_client.get("/api/v1/expedientes/reglamentos/")
+    assert response.status_code == 200
+    assert response.data["reglamentos"] == [
+        "Estatuto AVEIT Reforma 2026",
+        "Reglamento Procesal Disciplinario 2026",
+        "Reglamento Interno de Disciplina",
+    ]
 
 
 @pytest.mark.django_db

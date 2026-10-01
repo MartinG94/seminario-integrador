@@ -13,9 +13,12 @@ export interface SolicitudT01 {
   solicitante: number;
   destinatario_socio_id: number | null;
   tipo_accion: TipoAccionT01;
+  titulo: string;
   causal: string;
   puntos: number | null;
   motivo: string;
+  razon: string;
+  reglamentos_respaldantes: string[];
   anexo_fecha: string | null;
   anexo_lugar: string;
   anexo_relato: string;
@@ -31,9 +34,12 @@ export interface SolicitudT01 {
 export interface SolicitudT01Payload {
   destinatario_socio_id?: number | null;
   tipo_accion: TipoAccionT01;
+  titulo?: string;
   causal?: string;
   puntos?: number | null;
   motivo?: string;
+  razon?: string;
+  reglamentos_respaldantes?: string[];
   anexo_fecha?: string | null;
   anexo_lugar?: string;
   anexo_relato?: string;
@@ -60,5 +66,9 @@ export class ExpedienteApiService {
 
   obtener(id: string): Observable<SolicitudT01> {
     return this.http.get<SolicitudT01>(`${this.apiUrl}/${id}/`);
+  }
+
+  listarReglamentos(): Observable<{ reglamentos: string[] }> {
+    return this.http.get<{ reglamentos: string[] }>(`${this.apiUrl}/reglamentos/`);
   }
 }

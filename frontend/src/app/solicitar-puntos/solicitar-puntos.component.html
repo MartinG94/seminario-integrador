@@ -25,6 +25,13 @@
         </div>
       </div>
 
+      <div class="form-group"><label class="font-weight-bold text-dark">Título:</label><input class="form-control" [(ngModel)]="titulo" [disabled]="estado === 'ISSUED'"></div>
+      <div class="form-group"><label class="font-weight-bold text-dark">Reglamentos respaldantes:</label>
+        <select class="form-control" multiple [(ngModel)]="reglamentosSeleccionados" [disabled]="estado === 'ISSUED'">
+          <option *ngFor="let reglamento of reglamentosDisponibles" [ngValue]="reglamento">{{ reglamento }}</option>
+        </select>
+      </div>
+
       <div class="form-group mt-3">
         <label class="font-weight-bold text-dark">Tipo de acción:</label>
         <label class="form-check form-check-inline ml-3"><input type="radio" name="tipoAccion" [checked]="tipoAccion === 'SANCTION'" (change)="onTipoAccionChange('SANCTION')" [disabled]="estado === 'ISSUED'"> Sanción</label>
@@ -36,7 +43,7 @@
           <option *ngFor="let escala of (tipoAccion === 'SANCTION' ? escalasSancion : escalasMerito)" [ngValue]="escala.valor">{{ escala.desc }}</option>
         </select>
       </div>
-      <div class="form-group"><label class="font-weight-bold text-dark">Motivo:</label><input class="form-control" [(ngModel)]="motivoTexto" [disabled]="estado === 'ISSUED'"></div>
+      <div class="form-group"><label class="font-weight-bold text-dark">Razón:</label><textarea class="form-control" rows="3" [(ngModel)]="razon" [disabled]="estado === 'ISSUED'"></textarea></div>
 
       <div class="mt-4 p-4 rounded" style="background:#F8FAFC;border:1px solid #CBD5E1">
         <h5 class="font-weight-bold text-dark">Hoja de Anexo Circunstanciada (Opcional)</h5>

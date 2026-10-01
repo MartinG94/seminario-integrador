@@ -11,6 +11,10 @@ export class SolicitarPuntosComponent implements OnInit {
   puntosSeleccionados: number | null = -1;
   causal = '';
   motivoTexto = '';
+  titulo = '';
+  razon = '';
+  reglamentosDisponibles: string[] = [];
+  reglamentosSeleccionados: string[] = [];
   anexoFecha = '';
   anexoLugar = '';
   anexoTestigos = '';
@@ -36,6 +40,10 @@ export class SolicitarPuntosComponent implements OnInit {
   ngOnInit(): void {
     this.padronApi.listarSocios().subscribe({
       next: socios => this.socios = socios,
+      error: error => this.mostrarError(error)
+    });
+    this.expedienteApi.listarReglamentos().subscribe({
+      next: response => this.reglamentosDisponibles = response.reglamentos,
       error: error => this.mostrarError(error)
     });
   }
@@ -78,12 +86,12 @@ export class SolicitarPuntosComponent implements OnInit {
   }
 
   private payload(): SolicitudT01Payload {
-    return { destinatario_socio_id: this.socioSeleccionado, tipo_accion: this.tipoAccion, causal: this.causal, puntos: this.puntosSeleccionados, motivo: this.motivoTexto, anexo_fecha: this.anexoFecha || null, anexo_lugar: this.anexoLugar, anexo_relato: this.anexoRelato, anexo_testigos: this.anexoTestigos };
+    return { destinatario_socio_id: this.socioSeleccionado, tipo_accion: this.tipoAccion, titulo: this.titulo, causal: this.causal, puntos: this.puntosSeleccionados, motivo: this.razon, razon: this.razon, reglamentos_respaldantes: this.reglamentosSeleccionados, anexo_fecha: this.anexoFecha || null, anexo_lugar: this.anexoLugar, anexo_relato: this.anexoRelato, anexo_testigos: this.anexoTestigos };
   }
 
   private validarEmision(): boolean {
     if (this.socioSeleccionado === null) { this.errorMensaje = 'Selecciona al socio destinatario.'; return false; }
-    if (!this.motivoTexto.trim()) { this.errorMensaje = 'Describe el motivo de la solicitud.'; return false; }
+    if (!this.razon.trim()) { this.errorMensaje = 'Describe la razón de la solicitud.'; return false; }
     if (this.puntosSeleccionados === null || this.puntosSeleccionados === undefined) { this.errorMensaje = 'Indica los puntos antes de emitir.'; return false; }
     if ((this.tipoAccion === 'SANCTION' && this.puntosSeleccionados >= 0) || (this.tipoAccion === 'MERIT' && this.puntosSeleccionados <= 0)) { this.errorMensaje = 'Los puntos no son coherentes con el tipo de acción.'; return false; }
     return true;

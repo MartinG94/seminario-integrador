@@ -15,19 +15,20 @@ describe('SolicitarPuntosComponent', () => {
   let padron: jasmine.SpyObj<PadronApiService>;
   const draft: SolicitudT01 = {
     id: 'draft-1', estado: 'DRAFT', solicitante: 1, destinatario_socio_id: 7,
-    tipo_accion: 'SANCTION', causal: '', puntos: -1, motivo: 'Motivo',
+    tipo_accion: 'SANCTION', titulo: '', causal: '', puntos: -1, motivo: 'Motivo', razon: '', reglamentos_respaldantes: [],
     anexo_fecha: null, anexo_lugar: '', anexo_relato: '', anexo_testigos: '',
     snapshot_destinatario: null, snapshot_emitido: null, numero_expediente: null,
     created_at: '', updated_at: '', issued_at: null
   };
 
   beforeEach(() => {
-    expediente = jasmine.createSpyObj('ExpedienteApiService', ['crearBorrador', 'actualizarBorrador', 'emitir', 'obtener']);
+    expediente = jasmine.createSpyObj('ExpedienteApiService', ['crearBorrador', 'actualizarBorrador', 'emitir', 'obtener', 'listarReglamentos']);
     padron = jasmine.createSpyObj('PadronApiService', ['listarSocios']);
     padron.listarSocios.and.returnValue(of([{ socio_id: 7, legajo: '77', first_name: 'Ana', last_name: 'Prueba', subcomision: { id: 1, name: 'Cómputos' }, is_active: true }]));
     expediente.crearBorrador.and.returnValue(of(draft));
     expediente.actualizarBorrador.and.returnValue(of(draft));
     expediente.emitir.and.returnValue(of({ ...draft, estado: 'ISSUED', numero_expediente: 'T01-2026-1', issued_at: '2026-01-01' }));
+    expediente.listarReglamentos.and.returnValue(of({ reglamentos: ['Estatuto AVEIT Reforma 2026'] }));
     TestBed.configureTestingModule({
       imports: [FormsModule, MatButtonModule, RouterTestingModule],
       declarations: [SolicitarPuntosComponent],
@@ -57,7 +58,7 @@ describe('SolicitarPuntosComponent', () => {
 
   it('emite usando el id del borrador y bloquea el estado ISSUED', () => {
     component.socioSeleccionado = 7;
-    component.motivoTexto = 'Motivo';
+    component.razon = 'Motivo';
     component.emitirT01();
     expect(expediente.emitir).toHaveBeenCalledWith('draft-1');
     expect(component.estado).toBe('ISSUED');

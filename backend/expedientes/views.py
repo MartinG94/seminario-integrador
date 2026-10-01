@@ -127,6 +127,21 @@ class PresentarDescargoView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
+REGLAMENTOS_VIGENTES = (
+    "Estatuto AVEIT Reforma 2026",
+    "Reglamento Procesal Disciplinario 2026",
+    "Reglamento Interno de Disciplina",
+)
+
+
+class ReglamentosVigentesView(APIView):
+    """Lista de reglamentos institucionales vigentes para respaldar un T01."""
+
+    permission_classes = (CanCreateT01,)
+
+    def get(self, request):
+        return Response({"reglamentos": list(REGLAMENTOS_VIGENTES)})
+
 
 class SolicitudT01CreateView(APIView):
     permission_classes = (CanCreateT01,)
