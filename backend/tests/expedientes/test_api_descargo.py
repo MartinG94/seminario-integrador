@@ -200,3 +200,104 @@ class TestDescargoEndpoint:
         assert item["numero"] == "EXP-204/2026"
         assert item["plazo_limite_at"] is not None
         assert "esta_en_plazo" in item
+
+    def test_rechaza_descargo_si_ya_fue_presentado(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Si ya existe un descargo formal registrado, rechaza con HTTP 409 Conflict."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exp = Expediente.objects.create(
+            numero="EXP-205/2026",
+            socio=socio_titular,
+            motivo="Doble presentación",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now() - timedelta(days=1),
+            plazo_limite_at=timezone.now() + timedelta(days=3),
+            descargo_presentado=True,
+            descargo_texto="Primer descargo válido",
+        )
+
+        payload = {
+            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
+            "texto": "Segundo descargo redundante.",
+        }
+
+        response = api_client.post(
+            f"/api/v1/expedientes/{exp.id}/descargo/", payload, format="json"
+        )
+        assert response.status_code == status.HTTP_409_CONFLICT
+        data = response.json()
+        assert "ya existe un descargo" in data.get("detail", "").lower()
+
+    def test_rechaza_descargo_si_no_esta_en_estado_justificando(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Si el expediente no está en 'justificando', rechaza con HTTP 409 Conflict."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exp = Expediente.objects.create(
+            numero="EXP-206/2026",
+            socio=socio_titular,
+            motivo="Estado prematuro",
+            estado=EstadoExpedienteEnum.CREADO,
+            descargo_presentado=False,
+        )
+
+        payload = {
+            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
+            "texto": "Descargo antes de apertura.",
+        }
+
+        response = api_client.post(
+            f"/api/v1/expedientes/{exp.id}/descargo/", payload, format="json"
+        )
+        assert response.status_code == status.HTTP_409_CONFLICT
+        data = response.json()
+        assert "no admitiendo descargos" in data.get("detail", "").lower()
+
+    def test_expediente_inexistente_retorna_404(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Si se envía descargo a un ID inexistente, devuelve HTTP 404 Not Found."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        payload = {
+            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
+            "texto": "Descargo a la nada.",
+        }
+
+        response = api_client.post("/api/v1/expedientes/999999/descargo/", payload, format="json")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_presentar_descargo_en_limite_exacto_inclusivo(
+        self, api_client: APIClient, socio_titular: Socio, monkeypatch
+    ) -> None:
+        """En el límite exacto (now == plazo_limite_at), se acepta el descargo (201 Created)."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exact_limit = timezone.now() + timedelta(days=2)
+        exp = Expediente.objects.create(
+            numero="EXP-207/2026",
+            socio=socio_titular,
+            motivo="Límite exacto buzzer-beater",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now() - timedelta(days=3),
+            plazo_limite_at=exact_limit,
+            descargo_presentado=False,
+        )
+
+        # Simulamos que el servidor evalúa exactamente en el microsegundo del deadline
+        monkeypatch.setattr("expedientes.views.timezone.now", lambda: exact_limit)
+
+        payload = {
+            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
+            "texto": "Descargo ingresado en el límite exacto.",
+        }
+
+        response = api_client.post(
+            f"/api/v1/expedientes/{exp.id}/descargo/", payload, format="json"
+        )
+        assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED)
+        exp.refresh_from_db()
+        assert exp.descargo_presentado is True

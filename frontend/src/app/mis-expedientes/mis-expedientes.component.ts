@@ -101,15 +101,23 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     if (isNaN(d.getTime())) {
       return 'Fecha inválida';
     }
-    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const diaNom = diasSemana[d.getDay()];
-    const diaNum = String(d.getDate()).padStart(2, '0');
-    const mesNum = String(d.getMonth() + 1).padStart(2, '0');
-    const anio = d.getFullYear();
-    const hora = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
+    const formatter = new Intl.DateTimeFormat('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      weekday: 'long',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const parts = formatter.formatToParts(d);
+    const map: { [key: string]: string } = {};
+    parts.forEach(p => (map[p.type] = p.value));
+    const rawWeekday = map['weekday'] || '';
+    const diaNom = rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1);
 
-    return `Vence: ${diaNom} ${diaNum}/${mesNum}/${anio} - ${hora}:${mins} hs`;
+    return `Vence: ${diaNom} ${map['day']}/${map['month']}/${map['year']} - ${map['hour']}:${map['minute']} hs`;
   }
 
   /**
