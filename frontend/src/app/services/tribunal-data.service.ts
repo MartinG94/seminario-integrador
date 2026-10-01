@@ -11,6 +11,15 @@ export type EstadoExpediente =
 
 export type RolUsuario = 'socio' | 'tribunal' | 'presidente_cd';
 
+export interface LogJustificativo {
+  operacion: 'CREACION' | 'EDICION' | 'ELIMINACION';
+  accionLabel: string;
+  usuario: string;
+  legajo?: string;
+  timestamp: string;
+  detalle: string;
+}
+
 export interface Expediente {
   id: string;
   numero: string;
@@ -23,6 +32,9 @@ export interface Expediente {
   horasRestantes: number;
   tipo: 'falta' | 'merito';
   puntos: number;
+  plazoInicioAt?: string;
+  plazoLimiteAt?: string;
+  descargoPresentado?: boolean;
   descargo?: {
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
     causal?: string;
@@ -30,6 +42,7 @@ export interface Expediente {
     texto: string;
     fecha: string;
   };
+  logsDescargo?: LogJustificativo[];
   votacion?: {
     votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
     considerandos?: string;
@@ -97,7 +110,10 @@ export class TribunalDataService {
       estado: 'justificando',
       horasRestantes: 74,
       tipo: 'falta',
-      puntos: -1.0
+      puntos: -1.0,
+      plazoInicioAt: '2026-10-08T18:00:00-03:00',
+      plazoLimiteAt: '2026-10-15T18:00:00-03:00',
+      descargoPresentado: false
     },
     {
       id: 'EXP-2026-002',
@@ -118,6 +134,16 @@ export class TribunalDataService {
         texto: 'Presento constancia de examen final rendido el mismo día en sede central.',
         fecha: '2026-03-03'
       },
+      logsDescargo: [
+        {
+          operacion: 'CREACION',
+          accionLabel: 'Añadir Justificativo',
+          usuario: 'Lucas Martín Guillén (Legajo 85194)',
+          legajo: '85194',
+          timestamp: '03/03/2026 10:15 hs',
+          detalle: 'Modalidad T02 (Certificado): Examen Académico Universitario en UTN FRC • Archivo: certificado_examen_utn.pdf'
+        }
+      ],
       votacion: {
         votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE' },
         considerandos: 'El justificativo académico cumple las formalidades estatutarias requeridas.',
@@ -268,14 +294,17 @@ export class TribunalDataService {
   enviarDescargo(
     expedienteId: string, 
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO', 
-    datos: { causal?: string; archivo?: string; texto: string }
+    datos: { causal?: string; archivo?: string; texto: string },
+    usuarioInfo?: { nombre: string; legajo?: string; esEdicion?: boolean }
   ): boolean {
     const current = this.expedientesSubject.value;
     const index = current.findIndex(e => e.id === expedienteId);
     if (index === -1) return false;
 
     const updated = { ...current[index] };
+    const esEdicion = usuarioInfo?.esEdicion !== undefined ? usuarioInfo.esEdicion : !!updated.descargo;
     updated.estado = 'revision_resolucion';
+    updated.descargoPresentado = true;
     updated.descargo = {
       tipo,
       causal: datos.causal,
@@ -283,6 +312,70 @@ export class TribunalDataService {
       texto: datos.texto,
       fecha: new Date().toISOString().split('T')[0]
     };
+
+    const usuarioStr = usuarioInfo?.nombre || updated.socio;
+    const legajoStr = usuarioInfo?.legajo || updated.legajo;
+    const operacion: 'CREACION' | 'EDICION' = esEdicion ? 'EDICION' : 'CREACION';
+    const accionLabel = esEdicion ? 'Edición de Justificativo' : 'Añadir Justificativo';
+    const detalle = tipo === 'T02_CERTIFICADO'
+      ? `Modalidad T02 (Certificado): ${datos.causal || 'Causal tipificada'}${datos.archivo ? ' • Archivo: ' + datos.archivo : ''}`
+      : `Modalidad T03 (Extraordinario): ${datos.texto ? datos.texto.slice(0, 60) + '...' : 'Fundamentación expuesta'}`;
+
+    const now = new Date();
+    const timestamp = now.toLocaleDateString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    }) + ' hs';
+
+    const nuevoLog: LogJustificativo = {
+      operacion,
+      accionLabel,
+      usuario: `${usuarioStr}${legajoStr ? ' (Legajo ' + legajoStr + ')' : ''}`,
+      legajo: legajoStr,
+      timestamp,
+      detalle
+    };
+
+    updated.logsDescargo = [nuevoLog, ...(updated.logsDescargo || [])];
+
+    const newArr = [...current];
+    newArr[index] = updated;
+    this.expedientesSubject.next(newArr);
+    return true;
+  }
+
+  eliminarDescargo(
+    expedienteId: string, 
+    usuarioInfo?: { nombre: string; legajo?: string }
+  ): boolean {
+    const current = this.expedientesSubject.value;
+    const index = current.findIndex(e => e.id === expedienteId);
+    if (index === -1) return false;
+
+    const updated = { ...current[index] };
+    const descargoAnterior = updated.descargo;
+    delete updated.descargo;
+    updated.descargoPresentado = false;
+    updated.estado = 'justificando';
+
+    const usuarioStr = usuarioInfo?.nombre || updated.socio;
+    const legajoStr = usuarioInfo?.legajo || updated.legajo;
+    const now = new Date();
+    const timestamp = now.toLocaleDateString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    }) + ' hs';
+
+    const nuevoLog: LogJustificativo = {
+      operacion: 'ELIMINACION',
+      accionLabel: 'Eliminación de Justificativo',
+      usuario: `${usuarioStr}${legajoStr ? ' (Legajo ' + legajoStr + ')' : ''}`,
+      legajo: legajoStr,
+      timestamp,
+      detalle: descargoAnterior ? `Se eliminó el justificativo previo (${descargoAnterior.tipo === 'T02_CERTIFICADO' ? 'T02' : 'T03'})` : 'Justificativo eliminado'
+    };
+
+    updated.logsDescargo = [nuevoLog, ...(updated.logsDescargo || [])];
 
     const newArr = [...current];
     newArr[index] = updated;
