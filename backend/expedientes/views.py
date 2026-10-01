@@ -132,6 +132,7 @@ class PresentarDescargoView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
+
 REGLAMENTOS_VIGENTES = (
     "Estatuto AVEIT Reforma 2026",
     "Reglamento Procesal Disciplinario 2026",
@@ -189,4 +190,3 @@ class SolicitudT01EmitView(APIView):
         serializer.is_valid(raise_exception=True)
         solicitud = serializer.save()
         return Response(SolicitudT01Serializer(solicitud).data)
-

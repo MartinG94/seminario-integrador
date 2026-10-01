@@ -227,4 +227,3 @@ class SolicitudT01(models.Model):
                 raise ValidationError("Una solicitud emitida es inmutable.")
         self.full_clean()
         return super().save(*args, **kwargs)
-

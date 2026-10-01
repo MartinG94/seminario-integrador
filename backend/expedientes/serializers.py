@@ -182,4 +182,3 @@ class EmitirT01Serializer(serializers.Serializer):
         )
         solicitud.save()
         return solicitud
-
