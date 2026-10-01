@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot } from '@angular/router';
 
-import { AuthService } from './auth.service';
+import { AuthService, RolRbac } from './auth.service';
 
 /**
  * Permite el acceso a la gestión operativa de expedientes únicamente
@@ -13,8 +13,9 @@ import { AuthService } from './auth.service';
 export class TribunalGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
 
-  canActivate(_route: ActivatedRouteSnapshot, _state: RouterStateSnapshot): boolean {
-    if (this.auth.tieneRol('TD', 'ADMIN', 'CD')) {
+  canActivate(route: ActivatedRouteSnapshot, _state: RouterStateSnapshot): boolean {
+    const roles: RolRbac[] = route.data?.roles || ['TD', 'ADMIN', 'CD'];
+    if (this.auth.tieneRol(...roles)) {
       return true;
     }
     this.router.navigate(['/mis-expedientes']);
