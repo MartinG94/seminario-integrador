@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { FormControl } from '@angular/forms';
 
 import { ExpedienteApiService, SolicitudT01, SolicitudT01Payload, TipoAccionT01 } from '../services/expediente-api.service';
 import { PadronApiService, PadronSocio } from '../services/padron-api.service';
@@ -7,6 +8,8 @@ import { PadronApiService, PadronSocio } from '../services/padron-api.service';
 export class SolicitarPuntosComponent implements OnInit {
   socios: PadronSocio[] = [];
   socioSeleccionado: number | null = null;
+  socioBusqueda = new FormControl('');
+  sociosFiltrados: PadronSocio[] = [];
   tipoAccion: TipoAccionT01 = 'SANCTION';
   puntosSeleccionados: number | null = -1;
   causal = '';
@@ -42,10 +45,32 @@ export class SolicitarPuntosComponent implements OnInit {
       next: socios => this.socios = socios,
       error: error => this.mostrarError(error)
     });
+    this.socioBusqueda.valueChanges.subscribe(value => this.filtrarSocios(value || ''));
     this.expedienteApi.listarReglamentos().subscribe({
       next: response => this.reglamentosDisponibles = response.reglamentos,
       error: error => this.mostrarError(error)
     });
+  }
+
+  filtrarSocios(termino: string): void {
+    const texto = termino.trim().toLowerCase();
+    if (texto.length < 3) {
+      this.sociosFiltrados = [];
+      return;
+    }
+    this.sociosFiltrados = this.socios.filter(socio =>
+      [socio.legajo, socio.first_name, socio.last_name]
+        .some(valor => valor && valor.toLowerCase().includes(texto))
+    );
+  }
+
+  seleccionarSocio(socio: PadronSocio): void {
+    this.socioSeleccionado = socio.socio_id;
+    this.socioBusqueda.setValue(this.nombreSocio(socio), { emitEvent: false });
+  }
+
+  nombreSocio(socio: PadronSocio): string {
+    return `${socio.last_name}, ${socio.first_name}`;
   }
 
   onTipoAccionChange(tipo: TipoAccionT01): void {
@@ -101,6 +126,15 @@ export class SolicitarPuntosComponent implements OnInit {
     this.borradorId = solicitud.id;
     this.estado = solicitud.estado;
     this.numeroExpediente = solicitud.numero_expediente;
+    this.sincronizarEstadoSocio();
+  }
+
+  sincronizarEstadoSocio(): void {
+    if (this.estado === 'ISSUED') {
+      this.socioBusqueda.disable({ emitEvent: false });
+    } else {
+      this.socioBusqueda.enable({ emitEvent: false });
+    }
   }
 
   private mostrarError(error: { status?: number; error?: unknown }): void {

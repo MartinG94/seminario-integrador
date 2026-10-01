@@ -1,6 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
@@ -24,13 +29,16 @@ describe('SolicitarPuntosComponent', () => {
   beforeEach(() => {
     expediente = jasmine.createSpyObj('ExpedienteApiService', ['crearBorrador', 'actualizarBorrador', 'emitir', 'obtener', 'listarReglamentos']);
     padron = jasmine.createSpyObj('PadronApiService', ['listarSocios']);
-    padron.listarSocios.and.returnValue(of([{ socio_id: 7, legajo: '77', first_name: 'Ana', last_name: 'Prueba', subcomision: { id: 1, name: 'Cómputos' }, is_active: true }]));
+    padron.listarSocios.and.returnValue(of([
+      { socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba', subcomision: { id: 1, name: 'Cómputos' }, is_active: true },
+      { socio_id: 8, legajo: '888', first_name: 'Bruno', last_name: 'García', subcomision: null, is_active: true }
+    ]));
     expediente.crearBorrador.and.returnValue(of(draft));
     expediente.actualizarBorrador.and.returnValue(of(draft));
     expediente.emitir.and.returnValue(of({ ...draft, estado: 'ISSUED', numero_expediente: 'T01-2026-1', issued_at: '2026-01-01' }));
     expediente.listarReglamentos.and.returnValue(of({ reglamentos: ['Estatuto AVEIT Reforma 2026'] }));
     TestBed.configureTestingModule({
-      imports: [FormsModule, MatButtonModule, RouterTestingModule],
+      imports: [FormsModule, ReactiveFormsModule, MatAutocompleteModule, MatButtonModule, MatFormFieldModule, MatInputModule, NoopAnimationsModule, RouterTestingModule],
       declarations: [SolicitarPuntosComponent],
       providers: [
         { provide: ExpedienteApiService, useValue: expediente },
@@ -46,6 +54,30 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.socios[0].socio_id).toBe(7);
     component.socioSeleccionado = 7;
     expect(component.socioSeleccionado).toBe(7);
+  });
+
+  it('no muestra coincidencias con menos de tres caracteres', () => {
+    component.filtrarSocios('Pr');
+    expect(component.sociosFiltrados).toEqual([]);
+  });
+
+  it('filtra por legajo y por nombre o apellido', () => {
+    component.filtrarSocios('777');
+    expect(component.sociosFiltrados.map(socio => socio.socio_id)).toEqual([7]);
+    component.filtrarSocios('gar');
+    expect(component.sociosFiltrados.map(socio => socio.socio_id)).toEqual([8]);
+  });
+
+  it('conserva socio_id al seleccionar una coincidencia', () => {
+    component.seleccionarSocio(component.socios[1]);
+    expect(component.socioSeleccionado).toBe(8);
+  });
+
+  it('deshabilita el control cuando el expediente está emitido', () => {
+    component.estado = 'ISSUED';
+    component.sincronizarEstadoSocio();
+    fixture.detectChanges();
+    expect(component.socioBusqueda.disabled).toBeTrue();
   });
 
   it('guarda por POST y luego por PATCH, sin exigir anexo', () => {

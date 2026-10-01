@@ -12,12 +12,14 @@
       <div class="row">
         <div class="col-md-6 form-group">
           <label class="font-weight-bold text-dark">Socio destinatario:</label>
-          <select class="form-control" [(ngModel)]="socioSeleccionado" [disabled]="estado === 'ISSUED'">
-            <option [ngValue]="null">Seleccionar socio</option>
-            <option *ngFor="let socio of socios" [ngValue]="socio.socio_id">
-              {{ socio.last_name }}, {{ socio.first_name }}<ng-container *ngIf="socio.legajo"> (Legajo {{ socio.legajo }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
-            </option>
-          </select>
+          <mat-form-field appearance="outline" class="w-100">
+            <input matInput [formControl]="socioBusqueda" [matAutocomplete]="sociosAuto" placeholder="Buscar por legajo, nombre o apellido">
+            <mat-autocomplete #sociosAuto="matAutocomplete" (optionSelected)="seleccionarSocio($event.option.value)">
+              <mat-option *ngFor="let socio of sociosFiltrados" [value]="socio">
+                {{ nombreSocio(socio) }}<ng-container *ngIf="socio.legajo"> (Legajo {{ socio.legajo }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
         </div>
         <div class="col-md-6 form-group">
           <label class="font-weight-bold text-dark">Causal:</label>
