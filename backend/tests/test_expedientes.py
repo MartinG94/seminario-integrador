@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from expedientes.models import SolicitudT01
@@ -189,6 +190,41 @@ def test_usuario_socio_no_puede_crear_t01(make_socio, authenticate):
 
 
 @pytest.mark.django_db
+def test_usuario_admin_no_puede_crear_t01(make_socio, authenticate):
+    client = authenticate(make_socio(legajo="41004", role=Role.ADMIN))
+    response = client.post(
+        "/api/v1/expedientes/",
+        {"tipo_accion": "SANCTION", "puntos": "-1.00", "motivo": "Motivo"},
+        format="json",
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_usuario_anonimo_no_puede_crear_t01():
+    response = APIClient().post(
+        "/api/v1/expedientes/",
+        {"tipo_accion": "SANCTION", "puntos": "-1.00", "motivo": "Motivo"},
+        format="json",
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("tipo_accion", "puntos"),
+    [("SANCTION", "0"), ("SANCTION", "1.00"), ("MERIT", "0"), ("MERIT", "-1.00")],
+)
+def test_puntos_deben_respetar_signo_de_la_accion(expediente_client, tipo_accion, puntos):
+    response = expediente_client.post(
+        "/api/v1/expedientes/",
+        {"tipo_accion": tipo_accion, "puntos": puntos, "motivo": "Motivo"},
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
 def test_solicitante_no_puede_acceder_a_borrador_ajeno(expediente_client, make_socio):
     data = create_draft(expediente_client).data
     otro = make_socio(legajo="41002", role=Role.CD)
@@ -214,3 +250,23 @@ def test_uuid_inexistente_devuelve_404(expediente_client):
     missing = "00000000-0000-0000-0000-000000000000"
     assert expediente_client.get(f"/api/v1/expedientes/{missing}/").status_code == 404
     assert expediente_client.post(f"/api/v1/expedientes/{missing}/emitir/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_borrador_se_puede_borrar(expediente_client):
+    data = create_draft(expediente_client).data
+    solicitud = SolicitudT01.objects.get(pk=data["id"])
+    solicitud.delete()
+    assert not SolicitudT01.objects.filter(pk=data["id"]).exists()
+
+
+@pytest.mark.django_db
+def test_emitida_no_se_puede_borrar(padron_repo, expediente_client):
+    data = create_draft(expediente_client, destinatario_socio_id=9001).data
+    response = expediente_client.post(
+        f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
+    )
+    assert response.status_code == 200
+    solicitud = SolicitudT01.objects.get(pk=data["id"])
+    with pytest.raises(ValidationError, match="inmutable"):
+        solicitud.delete()
