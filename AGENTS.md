@@ -67,14 +67,19 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
 
 ## 4. Reglas Innegociables
 
-1. **Lee `docs/constitution.md` y la spec activa:** Antes de escribir una sola línea de código, revisa la constitución y el archivo `specs/<spec-activa>/spec.md`. Si una decisión no está en la spec, **pregunta antes de asumir**.
-2. **Cero sentencias `UPDATE`/`DELETE` manuales en MySQL:** Ninguna operación debe modificar el saldo de puntos de un socio de forma no auditada. Los saldos se recalculan o acreditan mediante eventos de libro mayor transaccional vinculados a una resolución emitida.
-3. **Flujo de trabajo SDD estricto:**
-   - La spec describe el **QUÉ** y el **POR QUÉ** (requisitos en notación EARS).
+1. **Lee `docs/constitution.md`, la spec activa y las Notas del PO:** Antes de escribir una sola línea de código, revisa la constitución, el archivo `specs/<spec-activa>/spec.md` y [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md). Si una decisión no está en la spec o genera dudas frente a las notas del PO, **pregunta antes de asumir**.
+2. **Referencia y chequeo continuo de las Notas del PO ([`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md)):** Cada vez que se quiera desarrollar algo nuevo, es obligatorio tomar como documento de referencia rector las notas del Product Owner. El desarrollo debe ser verificado y contrastado contra este documento en tres momentos ineludibles:
+   - **Al inicio:** Como base obligatoria antes de definir la arquitectura, historias o código.
+   - **Durante el desarrollo:** Chequeando iterativamente que cada componente, pantalla, regla de negocio y modelo mantenga consistencia con lo definido por el PO.
+   - **Al finalizar:** Realizando un control final de consistencia previa a dar por concluida la tarea.
+3. **Cero sentencias `UPDATE`/`DELETE` manuales en MySQL:** Ninguna operación debe modificar el saldo de puntos de un socio de forma no auditada. Los saldos se recalculan o acreditan mediante eventos de libro mayor transaccional vinculados a una resolución emitida.
+4. **Flujo de trabajo SDD estricto:**
+   - La spec describe el **QUÉ** y el **POR QUÉ** (requisitos en notación EARS alineados con las notas del PO).
    - El plan describe el **CÓMO** (arquitectura, módulos, esquema DDL, alternativas descartadas).
    - Las tareas desglosan el trabajo en unidades verificables de `<30 min`.
    - La implementación se hace **una sola tarea a la vez**, con **tests primero (TDD)**.
-4. **Límites de edición:**
+5. **Límites de edición e inmutabilidad:**
+   - **Inmutabilidad estricta de las Notas del PO:** Queda terminantemente prohibido modificar o editar [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md). Las notas se deberán mantener inalterables en todo momento, salvo cambio por orden explícita y directa del Product Owner (PO).
    - No toques archivos dentro de `specs/` salvo petición explícita de cambio de requerimiento.
    - No agregues dependencias pesadas a `requirements.txt` o `package.json` sin previa aprobación del Product Owner.
    - Respeta estrictamente los 6 estados del expediente (Art. 12 del Reglamento Procesal 2026).
@@ -85,5 +90,6 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
 
 1. Ejecuta la suite de pruebas correspondiente (`pytest` o `npm test`).
 2. Confirma en tu respuesta que todos los tests pasan en verde (0 errores).
-3. Marca la tarea completada con `[x]` en el `tasks.md` de la spec y en [`TASK.md`](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/TASK.md).
-4. **PÁRATE** y solicita confirmación antes de iniciar la siguiente tarea.
+3. **Chequeo de consistencia con el PO:** Verifica y corrobora que la solución implementada sea 100% consistente con lo establecido en [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md).
+4. Marca la tarea completada con `[x]` en el `tasks.md` de la spec y en [`TASK.md`](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/TASK.md).
+5. **PÁRATE** y solicita confirmación antes de iniciar la siguiente tarea.
