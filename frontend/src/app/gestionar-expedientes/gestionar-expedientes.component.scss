@@ -19,3 +19,31 @@
   max-height: 90vh;
   overflow-y: auto;
 }
+
+// Estilos de accesibilidad y foco (CA4 y CA5)
+.kanban-card-mat:focus {
+  outline: 2px solid #6E9DDC;
+  outline-offset: 2px;
+}
+
+.card-transiciones button:focus {
+  outline: 2px solid #151846;
+  outline-offset: 1px;
+}
+
+// Ajustes responsivos móviles (~375px)
+@media (max-width: 576px) {
+  .btn-group {
+    width: 100%;
+    display: flex;
+    button {
+      flex: 1;
+    }
+  }
+
+  .modal-dialog-custom {
+    padding: 10px;
+    max-height: 95vh;
+  }
+}
+

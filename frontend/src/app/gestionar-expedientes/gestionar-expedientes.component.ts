@@ -10,18 +10,36 @@ import { Subscription } from 'rxjs';
 })
 export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
-  vistaActual: 'kanban' | 'tabla' = 'tabla';
-  filtroTexto = '';
+  vistaActual: 'kanban' | 'tabla' = 'kanban';
+
+  // Filtros explícitos (CA2)
+  filtroSocio: string = '';
+  filtroEstado: string = '';
+  filtroFechaDesde: string = '';
+  filtroFechaHasta: string = '';
+
+  // Ordenamiento de tabla
   columnaOrden = 'numero';
   ordenAscendente = true;
 
-  // Estados canónicos consolidados
+  // Exactamente 6 estados canónicos (CA1)
   columnasKanban: { estado: EstadoExpediente; titulo: string; icon: string }[] = [
     { estado: 'creado', titulo: 'Expediente Creado', icon: 'file_copy' },
     { estado: 'justificando', titulo: 'En período de justificaciones', icon: 'schedule' },
-    { estado: 'revision_resolucion', titulo: 'En revisión y resolución', icon: 'gavel' },
-    { estado: 'pendiente_firma', titulo: 'Pendiente de firma y envío', icon: 'history_edu' },
+    { estado: 'revision_resolucion', titulo: 'Justificaciones en revisión', icon: 'gavel' },
+    { estado: 'espera_resolucion', titulo: 'Espera de resolución', icon: 'hourglass_empty' },
+    { estado: 'pendiente_correos', titulo: 'Pendiente de correos', icon: 'mail_outline' },
     { estado: 'emitido', titulo: 'Expedientes ya emitidos', icon: 'verified' }
+  ];
+
+  estadosDisponibles: { key: string; label: string }[] = [
+    { key: '', label: 'Todos los estados' },
+    { key: 'creado', label: 'Expediente Creado' },
+    { key: 'justificando', label: 'En período de justificaciones' },
+    { key: 'revision_resolucion', label: 'Justificaciones en revisión' },
+    { key: 'espera_resolucion', label: 'Espera de resolución' },
+    { key: 'pendiente_correos', label: 'Pendiente de correos' },
+    { key: 'emitido', label: 'Expedientes ya emitidos' }
   ];
 
   // Modales
@@ -47,6 +65,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ];
 
   mensajeExito = '';
+  cargando = false;
 
   private subs: Subscription[] = [];
 
@@ -64,23 +83,42 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       this.expedientes = list;
     });
     this.subs.push(sub);
+
+    this.cargarDatosTablero();
   }
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
   }
 
+  cargarDatosTablero(): void {
+    this.cargando = true;
+    const filtros: any = {};
+    if (this.filtroSocio.trim()) filtros.socio = this.filtroSocio.trim();
+    if (this.filtroEstado.trim()) filtros.estado = this.filtroEstado.trim();
+    if (this.filtroFechaDesde) filtros.fecha_desde = this.filtroFechaDesde;
+    if (this.filtroFechaHasta) filtros.fecha_hasta = this.filtroFechaHasta;
+
+    this.dataService.obtenerTablero(filtros).subscribe({
+      next: () => {
+        this.cargando = false;
+      },
+      error: () => {
+        this.cargando = false;
+      }
+    });
+  }
+
+  limpiarFiltros(): void {
+    this.filtroSocio = '';
+    this.filtroEstado = '';
+    this.filtroFechaDesde = '';
+    this.filtroFechaHasta = '';
+    this.cargarDatosTablero();
+  }
+
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
-    if (this.filtroTexto.trim()) {
-      const q = this.filtroTexto.toLowerCase();
-      result = result.filter(e => 
-        e.numero.toLowerCase().includes(q) ||
-        e.socio.toLowerCase().includes(q) ||
-        e.subcomision.toLowerCase().includes(q) ||
-        e.motivo.toLowerCase().includes(q)
-      );
-    }
 
     result.sort((a, b) => {
       let valA = (a as any)[this.columnaOrden];
@@ -107,6 +145,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       this.columnaOrden = col;
       this.ordenAscendente = true;
     }
+  }
+
+  // Transición accesible mediante botón con teclado (CA3 y CA4)
+  transicionarEstado(exp: Expediente, nuevoEstado: EstadoExpediente, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const labelDestino = this.getEstadoLabel(nuevoEstado);
+    this.dataService.transicionarExpediente(exp.id, nuevoEstado).subscribe({
+      next: () => {
+        this.mostrarNotificacion(`Expediente ${exp.numero} transicionado a "${labelDestino}".`);
+        this.cargarDatosTablero();
+      },
+      error: (err) => {
+        const errorMsg = err?.error?.to_status || err?.error?.detail || 'No se pudo realizar la transición.';
+        this.mostrarNotificacion(`Error: ${errorMsg}`);
+      }
+    });
   }
 
   abrirDetalle(exp: Expediente): void {
@@ -138,7 +194,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       this.votosJueces,
       this.considerandosTexto
     );
-    this.mostrarNotificacion('Dictamen votado. Se alcanzó mayoría calificada (>= 2/3). Expediente pasa a Pendiente de firma.');
+    this.mostrarNotificacion('Dictamen votado. Se alcanzó mayoría calificada (>= 2/3). Expediente pasa a Pendiente de correos.');
     this.cerrarModales();
   }
 
@@ -162,8 +218,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     switch (estado) {
       case 'creado': return 'Expediente Creado';
       case 'justificando': return 'En período de justificaciones';
-      case 'revision_resolucion': return 'En revisión y resolución';
-      case 'pendiente_firma': return 'Pendiente de firma y envío';
+      case 'revision_resolucion': return 'Justificaciones en revisión';
+      case 'espera_resolucion': return 'Espera de resolución';
+      case 'pendiente_correos': return 'Pendiente de correos';
       case 'emitido': return 'Expedientes ya emitidos';
       default: return estado;
     }
@@ -174,7 +231,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'creado': return 'badge-mat-primary';
       case 'justificando': return 'badge-mat-warning';
       case 'revision_resolucion': return 'badge-mat-info';
-      case 'pendiente_firma': return 'badge-mat-rose';
+      case 'espera_resolucion': return 'badge-mat-info';
+      case 'pendiente_correos': return 'badge-mat-rose';
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }

@@ -2,57 +2,103 @@
   <div class="container-fluid">
 
     <!-- Notificación de Acción Exitosa -->
-    <div *ngIf="mensajeExito" class="alert alert-success alert-with-icon">
+    <div *ngIf="mensajeExito" class="alert alert-success alert-with-icon" role="alert">
       <i class="material-icons" data-notify="icon">check_circle</i>
-      <button mat-button type="button" class="close" (click)="mensajeExito = ''">
+      <button mat-button type="button" class="close" (click)="mensajeExito = ''" aria-label="Cerrar notificación">
         <i class="material-icons">close</i>
       </button>
       <span>{{mensajeExito}}</span>
     </div>
 
-    <!-- Barra de Herramientas y Filtros -->
+    <!-- Barra de Herramientas y Filtros Explícitos (CA2) -->
     <div class="card mb-4">
-      <div class="card-body p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div class="d-flex align-items-center gap-3">
-          <div class="btn-group">
-            <button mat-raised-button 
-                    [color]="vistaActual === 'tabla' ? 'primary' : 'default'" 
-                    class="btn btn-sm" 
-                    [ngClass]="vistaActual === 'tabla' ? 'btn-primary' : 'btn-white'"
-                    (click)="vistaActual = 'tabla'">
-              <i class="material-icons" style="font-size: 16px;">view_list</i> Detalles
-            </button>
-            <button mat-raised-button 
-                    [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
-                    class="btn btn-sm" 
-                    [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
-                    (click)="vistaActual = 'kanban'">
-              <i class="material-icons" style="font-size: 16px;">view_kanban</i> Estados
-            </button>
+      <div class="card-body p-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom">
+          <div class="d-flex align-items-center gap-3">
+            <div class="btn-group" role="group" aria-label="Selector de Vista">
+              <button mat-raised-button 
+                      [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
+                      class="btn btn-sm" 
+                      [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
+                      (click)="vistaActual = 'kanban'"
+                      aria-label="Ver tablero de estados Kanban">
+                <i class="material-icons" style="font-size: 16px;">view_kanban</i> Tablero de Estados
+              </button>
+              <button mat-raised-button 
+                      [color]="vistaActual === 'tabla' ? 'primary' : 'default'" 
+                      class="btn btn-sm" 
+                      [ngClass]="vistaActual === 'tabla' ? 'btn-primary' : 'btn-white'"
+                      (click)="vistaActual = 'tabla'"
+                      aria-label="Ver listado en tabla de expedientes">
+                <i class="material-icons" style="font-size: 16px;">view_list</i> Lista en Tabla
+              </button>
+            </div>
+            <span class="text-muted small ml-2">Total expedientes: <strong>{{expedientes.length}}</strong></span>
+            <span *ngIf="cargando" class="badge badge-info ml-2">Actualizando datos...</span>
           </div>
-          <span class="text-muted small ml-2">Total expedientes en sistema: <strong>{{expedientes.length}}</strong></span>
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-          <div class="input-group no-border" style="width: 280px; margin: 0;">
-            <input type="text" class="form-control" placeholder="Buscar por socio, N° o motivo..." [(ngModel)]="filtroTexto">
-            <button mat-button class="btn btn-white btn-round btn-just-icon m-0">
-              <i class="material-icons">search</i>
+        <!-- Fila de Filtros Explícitos (CA2): Socio, Estado, Fecha Desde, Fecha Hasta -->
+        <div class="row pt-3 align-items-end">
+          <div class="col-lg-3 col-md-6 col-12 mb-2">
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-socio">Socio (Legajo / Nombre):</label>
+            <div class="input-group no-border m-0">
+              <input id="filtro-socio" 
+                     type="text" 
+                     class="form-control" 
+                     placeholder="Buscar por legajo o nombre..." 
+                     [(ngModel)]="filtroSocio" 
+                     (keyup.enter)="cargarDatosTablero()">
+            </div>
+          </div>
+
+          <div class="col-lg-3 col-md-6 col-12 mb-2">
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-estado">Estado Reglamentario:</label>
+            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado" (change)="cargarDatosTablero()">
+              <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
+            </select>
+          </div>
+
+          <div class="col-lg-2 col-md-6 col-12 mb-2">
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-desde">Fecha Desde:</label>
+            <input id="filtro-desde" type="date" class="form-control" [(ngModel)]="filtroFechaDesde" (change)="cargarDatosTablero()">
+          </div>
+
+          <div class="col-lg-2 col-md-6 col-12 mb-2">
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-hasta">Fecha Hasta:</label>
+            <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta" (change)="cargarDatosTablero()">
+          </div>
+
+          <div class="col-lg-2 col-md-12 col-12 mb-2 d-flex gap-2">
+            <button mat-raised-button 
+                    class="btn btn-primary btn-sm flex-fill m-0" 
+                    (click)="cargarDatosTablero()"
+                    aria-label="Aplicar filtros de búsqueda">
+              <i class="material-icons" style="font-size: 14px;">filter_list</i> Filtrar
+            </button>
+            <button mat-button 
+                    class="btn btn-white btn-sm m-0" 
+                    (click)="limpiarFiltros()"
+                    title="Limpiar filtros"
+                    aria-label="Limpiar filtros">
+              <i class="material-icons" style="font-size: 14px;">clear</i>
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- VISTA 1: TABLERO KANBAN (5 Fases Canónicas) -->
-    <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat">
-      <div *ngFor="let col of columnasKanban" class="kanban-col-mat">
+    <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (6 Fases Canónicas - CA1 y CA4) -->
+    <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de seis estados">
+      <div *ngFor="let col of columnasKanban" class="kanban-col-mat" [attr.aria-label]="col.titulo">
         <div class="kanban-col-header">
           <div class="d-flex align-items-center gap-2">
-            <i class="material-icons text-muted" style="font-size: 18px;">{{col.icon}}</i>
+            <i class="material-icons text-muted" style="font-size: 18px;" aria-hidden="true">{{col.icon}}</i>
             <h4>{{col.titulo}}</h4>
           </div>
-          <span class="col-count">{{getExpedientesPorEstado(col.estado).length}}</span>
+          <span class="col-count" [attr.aria-label]="getExpedientesPorEstado(col.estado).length + ' expedientes'">
+            {{getExpedientesPorEstado(col.estado).length}}
+          </span>
         </div>
 
         <div *ngIf="getExpedientesPorEstado(col.estado).length === 0" class="text-center py-4 text-muted small">
@@ -61,7 +107,11 @@
 
         <div *ngFor="let exp of getExpedientesPorEstado(col.estado)" 
              class="kanban-card-mat" 
-             (click)="abrirDetalle(exp)">
+             tabindex="0"
+             role="article"
+             [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
+             (click)="abrirDetalle(exp)"
+             (keyup.enter)="abrirDetalle(exp)">
           <div class="card-top">
             <span class="font-weight-bold text-dark">{{exp.numero}}</span>
             <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
@@ -74,27 +124,44 @@
           
           <div class="card-bottom">
             <div *ngIf="exp.estado === 'justificando'" class="timer-badge" style="font-size: 10px;">
-              <i class="material-icons" style="font-size: 12px;">schedule</i> {{exp.horasRestantes}}h
+              <i class="material-icons" style="font-size: 12px;" aria-hidden="true">schedule</i> {{exp.horasRestantes}}h
             </div>
             <div *ngIf="exp.estado !== 'justificando'" class="text-muted small">
               {{exp.fechaCreacion}}
             </div>
 
-            <!-- Botones de Acción de Estado -->
+            <!-- Botones de Acción de Estado y Modales -->
             <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
               <button *ngIf="exp.estado === 'revision_resolucion'" 
                       mat-button 
                       class="btn btn-info btn-link btn-sm p-1"
                       title="Votar Dictamen Colegiado"
+                      aria-label="Votar Dictamen Colegiado"
                       (click)="abrirVotacion(exp)">
                 <i class="material-icons">how_to_vote</i>
               </button>
-              <button *ngIf="exp.estado === 'pendiente_firma'" 
+              <button *ngIf="exp.estado === 'pendiente_correos'" 
                       mat-button 
                       class="btn btn-success btn-link btn-sm p-1"
                       title="Firmar Resolución"
+                      aria-label="Firmar Resolución"
                       (click)="abrirFirma(exp)">
                 <i class="material-icons">draw</i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Acciones de Transición Accesibles por Teclado y Pantalla Táctil (CA3 y CA4) -->
+          <div class="card-transiciones mt-2 pt-2 border-top" *ngIf="exp.transicionesPermitidas && exp.transicionesPermitidas.length > 0">
+            <div *ngFor="let proxEstado of exp.transicionesPermitidas">
+              <button mat-stroked-button 
+                      type="button"
+                      class="btn btn-outline-primary btn-sm btn-block text-truncate py-1 px-2 mb-1"
+                      style="font-size: 11px; height: auto; line-height: 1.4;"
+                      [attr.aria-label]="'Avanzar expediente ' + exp.numero + ' a ' + getEstadoLabel(proxEstado)"
+                      (click)="transicionarEstado(exp, proxEstado, $event)">
+                <i class="material-icons" style="font-size: 13px; vertical-align: middle;">arrow_forward</i>
+                Avanzar a {{getEstadoLabel(proxEstado)}}
               </button>
             </div>
           </div>
@@ -112,12 +179,12 @@
         <div class="table-responsive explorer-table-container">
           <table class="table table-hover table-mat">
             <thead>
-              <th (click)="cambiarOrden('numero')">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('socio')">Socio / N° de Socio <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('subcomision')">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('motivo')">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('puntos')">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('estado')">Estado Procesal <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('numero')" style="cursor: pointer;">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('socio')" style="cursor: pointer;">Socio / N° de Socio <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('subcomision')" style="cursor: pointer;">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('motivo')" style="cursor: pointer;">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado Reglamentario <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th class="text-right">Acciones</th>
             </thead>
             <tbody>
@@ -142,21 +209,23 @@
                   </span>
                 </td>
                 <td class="text-right" (click)="$event.stopPropagation()">
-                  <button mat-button class="btn btn-info btn-link btn-just-icon" (click)="abrirDetalle(exp)" title="Ver Detalle de Expediente">
+                  <button mat-button class="btn btn-info btn-link btn-just-icon" (click)="abrirDetalle(exp)" title="Ver Detalle de Expediente" aria-label="Ver Detalle">
                     <i class="material-icons">visibility</i>
                   </button>
                   <button *ngIf="puedeVotarOFirmar && exp.estado === 'revision_resolucion'" 
                           mat-button 
                           class="btn btn-warning btn-link btn-just-icon" 
                           (click)="abrirVotacion(exp)" 
-                          title="Votar Dictamen">
+                          title="Votar Dictamen"
+                          aria-label="Votar Dictamen">
                     <i class="material-icons">how_to_vote</i>
                   </button>
-                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'pendiente_firma'" 
+                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'pendiente_correos'" 
                           mat-button 
                           class="btn btn-success btn-link btn-just-icon" 
                           (click)="abrirFirma(exp)" 
-                          title="Firmar Resolución">
+                          title="Firmar Resolución"
+                          aria-label="Firmar Resolución">
                     <i class="material-icons">draw</i>
                   </button>
                 </td>
@@ -195,6 +264,20 @@
           <div class="col-md-12 mb-3">
             <label class="text-muted small">Motivo de la Causa Reglamentaria:</label>
             <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.motivo}}</div>
+          </div>
+        </div>
+
+        <!-- Transición rápida desde el modal si corresponde -->
+        <div *ngIf="expedienteSeleccionado.transicionesPermitidas && expedienteSeleccionado.transicionesPermitidas.length > 0" class="mt-3 p-3 bg-light rounded border">
+          <label class="text-muted small font-weight-bold mb-2">Transición Autorizada:</label>
+          <div class="d-flex gap-2">
+            <button *ngFor="let prox of expedienteSeleccionado.transicionesPermitidas"
+                    mat-raised-button
+                    class="btn btn-primary btn-sm"
+                    (click)="transicionarEstado(expedienteSeleccionado, prox); cerrarModales()">
+              <i class="material-icons" style="font-size: 14px;">arrow_forward</i>
+              Transicionar a {{getEstadoLabel(prox)}}
+            </button>
           </div>
         </div>
 
