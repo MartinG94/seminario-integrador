@@ -26,8 +26,8 @@ class EstadoExpedienteEnum(models.TextChoices):
     CREADO = "creado", "Expediente Creado"
     JUSTIFICANDO = "justificando", "En período de justificaciones"
     REVISION_RESOLUCION = "revision_resolucion", "Justificaciones en revisión"
-    ESPERA_RESOLUCION = "espera_resolucion", "Espera de resolución"
-    PENDIENTE_CORREOS = "pendiente_correos", "Pendiente de correos"
+    ESPERA_RESOLUCION = "espera_resolucion", "En espera de resolución"
+    PENDIENTE_CORREOS = "pendiente_correos", "Pendiente de firma y envío"
     EMITIDO = "emitido", "Expedientes ya emitidos"
 
 
@@ -36,6 +36,33 @@ class TipoDescargoEnum(models.TextChoices):
 
     T02_CERTIFICADO = "T02_CERTIFICADO", "Formulario T02 - Causal con Certificado"
     T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
+
+
+class ExpedienteNumberSequence(models.Model):
+    """Contador correlativo de expedientes (CA1/CA4).
+
+    Una única fila bloqueada con SELECT ... FOR UPDATE serializa la asignación:
+    a diferencia del AUTO_INCREMENT de InnoDB, un rollback devuelve el número y
+    la secuencia no deja huecos.
+    """
+
+    last_value = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "expedientes_numero_secuencia"
+
+    @classmethod
+    def next_value(cls) -> int:
+        """Reserva el próximo número. Debe invocarse dentro de una transacción.
+
+        La fila la siembra la migración 0002; `get_or_create` sólo cubre bases vaciadas y
+        no es seguro bajo concurrencia (dos inserciones simultáneas pueden interbloquearse).
+        """
+        cls.objects.get_or_create(pk=1)
+        sequence = cls.objects.select_for_update().get(pk=1)
+        sequence.last_value += 1
+        sequence.save(update_fields=["last_value"])
+        return sequence.last_value
 
 
 class Expediente(models.Model):
@@ -47,6 +74,11 @@ class Expediente(models.Model):
         on_delete=models.PROTECT,
         related_name="expedientes",
         db_index=True,
+    )
+    socios = models.ManyToManyField(
+        "socios.Socio",
+        related_name="expedientes_implicados",
+        blank=True,
     )
     motivo = models.TextField()
     puntos = models.DecimalField(max_digits=5, decimal_places=2, default=-1.0)
@@ -116,19 +148,19 @@ class Expediente(models.Model):
             holiday_provider=provider,
         )
 
-        estado_anterior = self.estado
         self.plazo_inicio_at = fecha_hora_inicio
         self.plazo_limite_at = limite
-        self.estado = EstadoExpedienteEnum.JUSTIFICANDO
-        self.save(update_fields=["plazo_inicio_at", "plazo_limite_at", "estado", "updated_at"])
+        self.save(update_fields=["plazo_inicio_at", "plazo_limite_at", "updated_at"])
 
-        CambioEstadoExpediente.objects.create(
-            expediente=self,
-            estado_anterior=estado_anterior,
+        from expedientes.services.workflow_service import ExpedienteWorkflowService
+
+        ExpedienteWorkflowService.transition(
+            expediente_id=self.pk,
             estado_nuevo=EstadoExpedienteEnum.JUSTIFICANDO,
             actor=actor,
             motivo=f"Apertura de plazo perentorio de {dias_habiles} días hábiles (Art. 12 Inc. 2).",
         )
+        self.estado = EstadoExpedienteEnum.JUSTIFICANDO
         return limite
 
     def esta_en_plazo(self, ahora: datetime | None = None) -> bool:
@@ -171,3 +203,32 @@ class CambioEstadoExpediente(models.Model):
             f"[{self.fecha_hora}] {self.expediente.numero}: "
             f"{self.estado_anterior} -> {self.estado_nuevo} ({self.actor})"
         )
+
+
+class DescargoExpediente(models.Model):
+    """Descargo individual de un socio implicado en un expediente compartido."""
+
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.CASCADE,
+        related_name="descargos",
+    )
+    socio = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.PROTECT,
+        related_name="descargos_expedientes",
+    )
+    tipo = models.CharField(max_length=30, choices=TipoDescargoEnum.choices)
+    causal = models.CharField(max_length=255, blank=True)
+    archivo = models.CharField(max_length=255, blank=True)
+    texto = models.TextField(blank=True)
+    presentado_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_descargo"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "socio"],
+                name="unique_descargo_per_expediente_socio",
+            )
+        ]

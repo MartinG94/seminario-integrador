@@ -13,11 +13,8 @@ from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
 
-from expedientes.models import (
-    CambioEstadoExpediente,
-    EstadoExpedienteEnum,
-    Expediente,
-)
+from expedientes.models import EstadoExpedienteEnum, Expediente
+from expedientes.services.workflow_service import ExpedienteWorkflowService
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +69,8 @@ class DeadlineEnforcementService:
                     ):
                         continue
 
-                    estado_anterior = expediente.estado
-                    expediente.estado = EstadoExpedienteEnum.REVISION_RESOLUCION
-                    expediente.save(update_fields=["estado", "updated_at"])
-
-                    CambioEstadoExpediente.objects.create(
-                        expediente=expediente,
-                        estado_anterior=estado_anterior,
+                    ExpedienteWorkflowService.transition(
+                        expediente_id=expediente.pk,
                         estado_nuevo=EstadoExpedienteEnum.REVISION_RESOLUCION,
                         actor=self.ACTOR_CRON,
                         motivo=self.MOTIVO_EXPIRACION,
@@ -87,7 +79,7 @@ class DeadlineEnforcementService:
                     logger.info(
                         "Expediente %s cerrado por vencimiento de plazo. Estado: %s -> %s",
                         expediente.numero,
-                        estado_anterior,
+                        EstadoExpedienteEnum.JUSTIFICANDO,
                         EstadoExpedienteEnum.REVISION_RESOLUCION,
                     )
                 except Exception as exc:
