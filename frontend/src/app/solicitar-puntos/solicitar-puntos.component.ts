@@ -7,7 +7,7 @@ import { PadronApiService, PadronSocio } from '../services/padron-api.service';
 @Component({ selector: 'app-solicitar-puntos', templateUrl: './solicitar-puntos.component.html', styleUrls: ['./solicitar-puntos.component.scss'] })
 export class SolicitarPuntosComponent implements OnInit {
   socios: PadronSocio[] = [];
-  socioSeleccionado: number | null = null;
+  sociosSeleccionados: PadronSocio[] = [];
   socioBusqueda = new FormControl('');
   sociosFiltrados: PadronSocio[] = [];
   tipoAccion: TipoAccionT01 = 'SANCTION';
@@ -22,6 +22,7 @@ export class SolicitarPuntosComponent implements OnInit {
   anexoLugar = '';
   anexoTestigos = '';
   anexoRelato = '';
+  anexoExpandido = false;
   borradorId: string | null = null;
   estado: 'DRAFT' | 'ISSUED' | null = null;
   numeroExpediente: string | null = null;
@@ -42,7 +43,12 @@ export class SolicitarPuntosComponent implements OnInit {
 
   ngOnInit(): void {
     this.padronApi.listarSocios().subscribe({
-      next: socios => this.socios = socios,
+      next: socios => {
+        this.socios = socios;
+        if (this.borradorId && this.sociosSeleccionados.length === 0) {
+          // Re-sincronizar si ya había datos cargados
+        }
+      },
       error: error => this.mostrarError(error)
     });
     this.socioBusqueda.valueChanges.subscribe(value => this.filtrarSocios(value || ''));
@@ -58,15 +64,35 @@ export class SolicitarPuntosComponent implements OnInit {
       this.sociosFiltrados = [];
       return;
     }
+    const idsYaSeleccionados = new Set(this.sociosSeleccionados.map(s => s.socio_id));
     this.sociosFiltrados = this.socios.filter(socio =>
+      !idsYaSeleccionados.has(socio.socio_id) &&
       [socio.legajo, socio.first_name, socio.last_name]
         .some(valor => valor && valor.toLowerCase().includes(texto))
     );
   }
 
   seleccionarSocio(socio: PadronSocio): void {
-    this.socioSeleccionado = socio.socio_id;
-    this.socioBusqueda.setValue(this.nombreSocio(socio), { emitEvent: false });
+    this.agregarSocio(socio);
+  }
+
+  agregarSocio(socio: PadronSocio): void {
+    if (this.estado === 'ISSUED') {
+      return;
+    }
+    const yaExiste = this.sociosSeleccionados.some(s => s.socio_id === socio.socio_id);
+    if (!yaExiste) {
+      this.sociosSeleccionados.push(socio);
+    }
+    this.socioBusqueda.setValue('', { emitEvent: false });
+    this.sociosFiltrados = [];
+  }
+
+  eliminarSocio(socioId: number): void {
+    if (this.estado === 'ISSUED') {
+      return;
+    }
+    this.sociosSeleccionados = this.sociosSeleccionados.filter(s => s.socio_id !== socioId);
   }
 
   nombreSocio(socio: PadronSocio): string {
@@ -111,14 +137,45 @@ export class SolicitarPuntosComponent implements OnInit {
   }
 
   private payload(): SolicitudT01Payload {
-    return { destinatario_socio_id: this.socioSeleccionado, tipo_accion: this.tipoAccion, titulo: this.titulo, causal: this.causal, puntos: this.puntosSeleccionados, motivo: this.razon, razon: this.razon, reglamentos_respaldantes: this.reglamentosSeleccionados, anexo_fecha: this.anexoFecha || null, anexo_lugar: this.anexoLugar, anexo_relato: this.anexoRelato, anexo_testigos: this.anexoTestigos };
+    const ids = this.sociosSeleccionados.map(s => s.socio_id);
+    return {
+      destinatario_socio_id: ids.length > 0 ? ids[0] : null,
+      destinatarios_socios_ids: ids,
+      tipo_accion: this.tipoAccion,
+      titulo: this.titulo,
+      causal: this.causal,
+      puntos: this.puntosSeleccionados,
+      motivo: this.razon,
+      razon: this.razon,
+      reglamentos_respaldantes: this.reglamentosSeleccionados,
+      anexo_fecha: this.anexoFecha || null,
+      anexo_lugar: this.anexoLugar,
+      anexo_relato: this.anexoRelato,
+      anexo_testigos: this.anexoTestigos
+    };
   }
 
   private validarEmision(): boolean {
-    if (this.socioSeleccionado === null) { this.errorMensaje = 'Selecciona al socio destinatario.'; return false; }
-    if (!this.razon.trim()) { this.errorMensaje = 'Describe la razón de la solicitud.'; return false; }
-    if (this.puntosSeleccionados === null || this.puntosSeleccionados === undefined) { this.errorMensaje = 'Indica los puntos antes de emitir.'; return false; }
-    if ((this.tipoAccion === 'SANCTION' && this.puntosSeleccionados >= 0) || (this.tipoAccion === 'MERIT' && this.puntosSeleccionados <= 0)) { this.errorMensaje = 'Los puntos no son coherentes con el tipo de acción.'; return false; }
+    if (!this.titulo.trim()) {
+      this.errorMensaje = 'Indica el título de la solicitud.';
+      return false;
+    }
+    if (this.sociosSeleccionados.length === 0) {
+      this.errorMensaje = 'Selecciona al menos un socio involucrado.';
+      return false;
+    }
+    if (!this.razon.trim()) {
+      this.errorMensaje = 'Describe la razón de la solicitud.';
+      return false;
+    }
+    if (this.puntosSeleccionados === null || this.puntosSeleccionados === undefined) {
+      this.errorMensaje = 'Indica los puntos antes de emitir.';
+      return false;
+    }
+    if ((this.tipoAccion === 'SANCTION' && this.puntosSeleccionados >= 0) || (this.tipoAccion === 'MERIT' && this.puntosSeleccionados <= 0)) {
+      this.errorMensaje = 'Los puntos no son coherentes con el tipo de acción.';
+      return false;
+    }
     return true;
   }
 
@@ -126,6 +183,24 @@ export class SolicitarPuntosComponent implements OnInit {
     this.borradorId = solicitud.id;
     this.estado = solicitud.estado;
     this.numeroExpediente = solicitud.numero_expediente;
+    this.titulo = solicitud.titulo ?? this.titulo;
+    this.causal = solicitud.causal ?? this.causal;
+    this.tipoAccion = solicitud.tipo_accion ?? this.tipoAccion;
+    this.puntosSeleccionados = solicitud.puntos ?? this.puntosSeleccionados;
+    this.razon = solicitud.razon || solicitud.motivo || this.razon;
+    this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ?? this.reglamentosSeleccionados;
+    this.anexoFecha = solicitud.anexo_fecha ?? this.anexoFecha;
+    this.anexoLugar = solicitud.anexo_lugar ?? this.anexoLugar;
+    this.anexoTestigos = solicitud.anexo_testigos ?? this.anexoTestigos;
+    this.anexoRelato = solicitud.anexo_relato ?? this.anexoRelato;
+
+    const ids = (solicitud.destinatarios_socios_ids && solicitud.destinatarios_socios_ids.length > 0)
+      ? solicitud.destinatarios_socios_ids
+      : (solicitud.destinatario_socio_id ? [solicitud.destinatario_socio_id] : []);
+
+    if (ids.length > 0 && this.socios.length > 0) {
+      this.sociosSeleccionados = this.socios.filter(s => ids.includes(s.socio_id));
+    }
     this.sincronizarEstadoSocio();
   }
 
