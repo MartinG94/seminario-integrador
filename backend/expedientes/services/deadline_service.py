@@ -13,11 +13,8 @@ from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
 
-from expedientes.models import (
-    CambioEstadoExpediente,
-    EstadoExpedienteEnum,
-    Expediente,
-)
+from expedientes.models import EstadoExpedienteEnum, Expediente
+from expedientes.services.workflow_service import ExpedienteWorkflowService
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +41,6 @@ class DeadlineEnforcementService:
         candidate_ids = list(
             Expediente.objects.filter(
                 estado=EstadoExpedienteEnum.JUSTIFICANDO,
-                descargo_presentado=False,
                 plazo_limite_at__isnull=False,
                 plazo_limite_at__lt=momento,
             ).values_list("id", flat=True)
@@ -66,28 +62,23 @@ class DeadlineEnforcementService:
                     # Doble verificación bajo lock pesimista (Double-Checked Locking Pattern)
                     if (
                         expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO
-                        or expediente.descargo_presentado
                         or not expediente.plazo_limite_at
                         or expediente.plazo_limite_at >= momento
                     ):
                         continue
 
-                    estado_anterior = expediente.estado
-                    expediente.estado = EstadoExpedienteEnum.REVISION_RESOLUCION
-                    expediente.save(update_fields=["estado", "updated_at"])
-
-                    CambioEstadoExpediente.objects.create(
-                        expediente=expediente,
-                        estado_anterior=estado_anterior,
+                    ExpedienteWorkflowService.transition(
+                        expediente_id=expediente.pk,
                         estado_nuevo=EstadoExpedienteEnum.REVISION_RESOLUCION,
                         actor=self.ACTOR_CRON,
                         motivo=self.MOTIVO_EXPIRACION,
+                        ahora=momento,
                     )
                     closed_count += 1
                     logger.info(
                         "Expediente %s cerrado por vencimiento de plazo. Estado: %s -> %s",
                         expediente.numero,
-                        estado_anterior,
+                        EstadoExpedienteEnum.JUSTIFICANDO,
                         EstadoExpedienteEnum.REVISION_RESOLUCION,
                     )
                 except Exception as exc:
