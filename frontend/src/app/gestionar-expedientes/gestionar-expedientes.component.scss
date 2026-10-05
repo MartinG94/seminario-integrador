@@ -26,6 +26,12 @@
   outline-offset: 2px;
 }
 
+table.table-mat tbody tr:focus {
+  outline: 2px solid #6E9DDC;
+  outline-offset: -2px;
+  background-color: rgba(110, 157, 220, 0.12) !important;
+}
+
 .card-transiciones button:focus {
   outline: 2px solid #151846;
   outline-offset: 1px;

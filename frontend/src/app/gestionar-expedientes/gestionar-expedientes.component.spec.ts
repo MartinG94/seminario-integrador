@@ -123,4 +123,76 @@ describe('GestionarExpedientesComponent', () => {
     expect(dataService.transicionarExpediente).toHaveBeenCalledWith('1', 'justificando');
     expect(component.cargarDatosTablero).toHaveBeenCalled();
   });
+
+  it('onTableKeyDown debe navegar entre filas con ArrowDown y ArrowUp sin hacer scroll', () => {
+    const expMock = {
+      id: '1',
+      numero: 'EXP-001',
+      socio: 'Lucas G',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Falta',
+      fechaCreacion: '2026-03-01',
+      estado: 'creado' as const,
+      horasRestantes: 0,
+      tipo: 'falta' as const,
+      puntos: -1
+    };
+
+    const dummyNextTr = document.createElement('tr');
+    spyOn(dummyNextTr, 'focus');
+
+    const dummyCurrentTr = document.createElement('tr');
+    const parentTable = document.createElement('table');
+    const tbody = document.createElement('tbody');
+    tbody.appendChild(dummyCurrentTr);
+    tbody.appendChild(dummyNextTr);
+    parentTable.appendChild(tbody);
+
+    const eventDown = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+    spyOn(eventDown, 'preventDefault');
+
+    // Simular event target
+    Object.defineProperty(eventDown, 'target', { value: dummyCurrentTr });
+
+    component.onTableKeyDown(eventDown, expMock);
+
+    expect(eventDown.preventDefault).toHaveBeenCalled();
+    expect(dummyNextTr.focus).toHaveBeenCalled();
+  });
+
+  it('onKanbanCardKeyDown debe navegar con ArrowDown y ArrowRight en el tablero kanban', () => {
+    const expMock = {
+      id: '1',
+      numero: 'EXP-001',
+      socio: 'Lucas G',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Falta',
+      fechaCreacion: '2026-03-01',
+      estado: 'creado' as const,
+      horasRestantes: 0,
+      tipo: 'falta' as const,
+      puntos: -1
+    };
+
+    const col1 = document.createElement('div');
+    col1.className = 'kanban-col-mat';
+    const card1 = document.createElement('div');
+    card1.className = 'kanban-card-mat';
+    const card2 = document.createElement('div');
+    card2.className = 'kanban-card-mat';
+    col1.appendChild(card1);
+    col1.appendChild(card2);
+    spyOn(card2, 'focus');
+
+    const eventDown = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+    spyOn(eventDown, 'preventDefault');
+    Object.defineProperty(eventDown, 'target', { value: card1 });
+
+    component.onKanbanCardKeyDown(eventDown, expMock);
+
+    expect(eventDown.preventDefault).toHaveBeenCalled();
+    expect(card2.focus).toHaveBeenCalled();
+  });
 });

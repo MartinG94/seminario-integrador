@@ -165,6 +165,110 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Navegación por teclado accesible con flechas (WCAG 2.2 AA)
+  onTableKeyDown(event: KeyboardEvent, exp: Expediente): void {
+    if (!event) return;
+
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.abrirDetalle(exp);
+      return;
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'Down') {
+      event.preventDefault();
+      const currentTr = (event.target as HTMLElement)?.closest('tr');
+      const nextTr = currentTr?.nextElementSibling as HTMLElement | null;
+      if (nextTr && typeof nextTr.focus === 'function') {
+        nextTr.focus();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp' || event.key === 'Up') {
+      event.preventDefault();
+      const currentTr = (event.target as HTMLElement)?.closest('tr');
+      const prevTr = currentTr?.previousElementSibling as HTMLElement | null;
+      if (prevTr && typeof prevTr.focus === 'function') {
+        prevTr.focus();
+      }
+      return;
+    }
+  }
+
+  onKanbanCardKeyDown(event: KeyboardEvent, exp: Expediente): void {
+    if (!event) return;
+
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      // Si el foco está en un botón interno de la tarjeta, dejamos que actúe el botón
+      if ((event.target as HTMLElement)?.tagName === 'BUTTON') {
+        return;
+      }
+      event.preventDefault();
+      this.abrirDetalle(exp);
+      return;
+    }
+
+    const currentCard = (event.target as HTMLElement)?.closest('.kanban-card-mat') as HTMLElement | null;
+    if (!currentCard) return;
+
+    if (event.key === 'ArrowDown' || event.key === 'Down') {
+      event.preventDefault();
+      let nextCard = currentCard.nextElementSibling as HTMLElement | null;
+      while (nextCard && !nextCard.classList.contains('kanban-card-mat')) {
+        nextCard = nextCard.nextElementSibling as HTMLElement | null;
+      }
+      if (nextCard && typeof nextCard.focus === 'function') {
+        nextCard.focus();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp' || event.key === 'Up') {
+      event.preventDefault();
+      let prevCard = currentCard.previousElementSibling as HTMLElement | null;
+      while (prevCard && !prevCard.classList.contains('kanban-card-mat')) {
+        prevCard = prevCard.previousElementSibling as HTMLElement | null;
+      }
+      if (prevCard && typeof prevCard.focus === 'function') {
+        prevCard.focus();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowRight' || event.key === 'Right') {
+      event.preventDefault();
+      const currentCol = currentCard.closest('.kanban-col-mat') as HTMLElement | null;
+      let nextCol = currentCol?.nextElementSibling as HTMLElement | null;
+      while (nextCol && !nextCol.classList.contains('kanban-col-mat')) {
+        nextCol = nextCol.nextElementSibling as HTMLElement | null;
+      }
+      if (nextCol) {
+        const firstCardInNextCol = nextCol.querySelector('.kanban-card-mat') as HTMLElement | null;
+        if (firstCardInNextCol && typeof firstCardInNextCol.focus === 'function') {
+          firstCardInNextCol.focus();
+        }
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'Left') {
+      event.preventDefault();
+      const currentCol = currentCard.closest('.kanban-col-mat') as HTMLElement | null;
+      let prevCol = currentCol?.previousElementSibling as HTMLElement | null;
+      while (prevCol && !prevCol.classList.contains('kanban-col-mat')) {
+        prevCol = prevCol.previousElementSibling as HTMLElement | null;
+      }
+      if (prevCol) {
+        const firstCardInPrevCol = prevCol.querySelector('.kanban-card-mat') as HTMLElement | null;
+        if (firstCardInPrevCol && typeof firstCardInPrevCol.focus === 'function') {
+          firstCardInPrevCol.focus();
+        }
+      }
+      return;
+    }
+  }
+
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.modalDetalleAbierto = true;

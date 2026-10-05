@@ -111,7 +111,7 @@
              role="article"
              [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
              (click)="abrirDetalle(exp)"
-             (keyup.enter)="abrirDetalle(exp)">
+             (keydown)="onKanbanCardKeyDown($event, exp)">
           <div class="card-top">
             <span class="font-weight-bold text-dark">{{exp.numero}}</span>
             <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
@@ -188,7 +188,13 @@
               <th class="text-right">Acciones</th>
             </thead>
             <tbody>
-              <tr *ngFor="let exp of expedientesFiltrados" (click)="abrirDetalle(exp)" style="cursor: pointer;">
+              <tr *ngFor="let exp of expedientesFiltrados" 
+                  tabindex="0"
+                  role="row"
+                  [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
+                  (click)="abrirDetalle(exp)" 
+                  (keydown)="onTableKeyDown($event, exp)"
+                  style="cursor: pointer;">
                 <td class="font-weight-bold text-dark">{{exp.numero}}</td>
                 <td>
                   <div>{{exp.socio}}</div>
