@@ -12,6 +12,7 @@ export interface SolicitudT01 {
   estado: EstadoT01;
   solicitante: number;
   destinatario_socio_id: number | null;
+  destinatarios_socios_ids: number[];
   tipo_accion: TipoAccionT01;
   titulo: string;
   causal: string;
@@ -24,6 +25,7 @@ export interface SolicitudT01 {
   anexo_relato: string;
   anexo_testigos: string;
   snapshot_destinatario: unknown;
+  snapshots_destinatarios: unknown[];
   snapshot_emitido: unknown;
   numero_expediente: string | null;
   created_at: string;
@@ -33,6 +35,7 @@ export interface SolicitudT01 {
 
 export interface SolicitudT01Payload {
   destinatario_socio_id?: number | null;
+  destinatarios_socios_ids?: number[];
   tipo_accion: TipoAccionT01;
   titulo?: string;
   causal?: string;

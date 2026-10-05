@@ -26,8 +26,26 @@ def padron_socio():
 
 
 @pytest.fixture
-def padron_repo(monkeypatch, padron_socio):
-    repo = SimpleNamespace(get_by_id=lambda socio_id: padron_socio if socio_id == 9001 else None)
+def padron_socio_2():
+    return SimpleNamespace(
+        socio_id=9002,
+        legajo="9002",
+        dni="20987654",
+        first_name="Carlos",
+        last_name="Docente",
+        email="carlos@example.test",
+        subcomision=None,
+        social_year=5,
+        category=SimpleNamespace(value="ACTIVE"),
+        is_active=True,
+        membership_status=SimpleNamespace(value="ENABLED"),
+    )
+
+
+@pytest.fixture
+def padron_repo(monkeypatch, padron_socio, padron_socio_2):
+    socios = {9001: padron_socio, 9002: padron_socio_2}
+    repo = SimpleNamespace(get_by_id=lambda socio_id: socios.get(socio_id))
     monkeypatch.setattr("expedientes.serializers.get_padron_repository", lambda: repo)
     return repo
 
@@ -110,6 +128,7 @@ def test_snapshot_emitido_conserva_todos_los_campos(padron_repo, expediente_clie
         "razon": "",
         "reglamentos_respaldantes": [],
         "destinatario": response.data["snapshot_destinatario"],
+        "destinatarios": [response.data["snapshot_destinatario"]],
         "anexo_fecha": "2026-09-30",
         "anexo_lugar": "Sede central",
         "anexo_relato": "Relato completo",
@@ -304,3 +323,112 @@ def test_emitida_no_se_puede_borrar(padron_repo, expediente_client):
     solicitud = SolicitudT01.objects.get(pk=data["id"])
     with pytest.raises(ValidationError, match="inmutable"):
         solicitud.delete()
+
+
+@pytest.mark.django_db
+def test_crear_borrador_con_multiples_socios(expediente_client):
+    response = expediente_client.post(
+        "/api/v1/expedientes/",
+        {
+            "tipo_accion": "SANCTION",
+            "puntos": "-1.50",
+            "motivo": "Falta colectiva",
+            "destinatarios_socios_ids": [9001, 9002],
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.data["destinatarios_socios_ids"] == [9001, 9002]
+    solicitud = SolicitudT01.objects.get(pk=response.data["id"])
+    assert solicitud.destinatarios_socios_ids == [9001, 9002]
+
+
+@pytest.mark.django_db
+def test_emitir_con_multiples_socios_congela_snapshots(padron_repo, expediente_client):
+    data = create_draft(expediente_client, destinatarios_socios_ids=[9001, 9002]).data
+    response = expediente_client.post(
+        f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
+    )
+    assert response.status_code == 200, response.data
+    assert len(response.data["snapshots_destinatarios"]) == 2
+    assert response.data["snapshots_destinatarios"][0]["socio_id"] == 9001
+    assert response.data["snapshots_destinatarios"][1]["socio_id"] == 9002
+    assert response.data["snapshots_destinatarios"][1]["subcomision"] is None
+    solicitud = SolicitudT01.objects.get(pk=data["id"])
+    assert solicitud.estado == SolicitudT01.Estado.ISSUED
+    assert len(solicitud.snapshot_emitido["destinatarios"]) == 2
+
+
+@pytest.mark.django_db
+def test_emitir_con_algun_socio_inexistente_en_lista_falla(padron_repo, expediente_client):
+    data = create_draft(expediente_client, destinatarios_socios_ids=[9001, 9999]).data
+    response = expediente_client.post(
+        f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_emitir_con_algun_socio_inactivo_en_lista_falla(
+    monkeypatch, padron_socio, expediente_client
+):
+    inactive = SimpleNamespace(**{**vars(padron_socio), "socio_id": 9002, "is_active": False})
+    repo = SimpleNamespace(
+        get_by_id=lambda s_id: padron_socio if s_id == 9001 else inactive if s_id == 9002 else None
+    )
+    monkeypatch.setattr("expedientes.serializers.get_padron_repository", lambda: repo)
+    data = create_draft(expediente_client, destinatarios_socios_ids=[9001, 9002]).data
+    response = expediente_client.post(
+        f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_crear_borrador_con_socios_duplicados_falla(expediente_client):
+    response = expediente_client.post(
+        "/api/v1/expedientes/",
+        {
+            "tipo_accion": "SANCTION",
+            "puntos": "-1.00",
+            "motivo": "Motivo",
+            "destinatarios_socios_ids": [9001, 9001],
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_emitir_con_motivo_vacio_falla(padron_repo, expediente_client):
+    data = create_draft(expediente_client, destinatarios_socios_ids=[9001], motivo="   ").data
+    response = expediente_client.post(
+        f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_solicitud_emitida_inmutable_a_nivel_orm(padron_repo, expediente_client):
+    data = create_draft(expediente_client, destinatarios_socios_ids=[9001]).data
+    response = expediente_client.post(
+        f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
+    )
+    assert response.status_code == 200
+    solicitud = SolicitudT01.objects.get(pk=data["id"])
+    solicitud.motivo = "Intento de alteración directa"
+    with pytest.raises(ValidationError, match="inmutable"):
+        solicitud.save()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("rol_autorizado", [Role.FISCALIZADORA, Role.TD])
+def test_roles_autorizados_pueden_crear_t01(rol_autorizado, make_socio, authenticate):
+    socio = make_socio(legajo=f"50{rol_autorizado}", role=rol_autorizado)
+    client = authenticate(socio)
+    response = client.post(
+        "/api/v1/expedientes/",
+        {"tipo_accion": "MERIT", "puntos": "1.00", "motivo": "Reconocimiento institucional"},
+        format="json",
+    )
+    assert response.status_code == 201

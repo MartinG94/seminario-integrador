@@ -90,6 +90,7 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
             "estado",
             "solicitante",
             "snapshot_destinatario",
+            "snapshots_destinatarios",
             "snapshot_emitido",
             "numero_expediente",
             "created_at",
@@ -100,6 +101,20 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
     def validate_tipo_accion(self, value):
         if value not in SolicitudT01.TipoAccion.values:
             raise serializers.ValidationError("Tipo de acción inválido.")
+        return value
+
+    def validate_destinatarios_socios_ids(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Debe ser una lista de identificadores de socios.")
+        vistos = set()
+        for sid in value:
+            if not isinstance(sid, int) or sid <= 0:
+                raise serializers.ValidationError(
+                    "Cada identificador de socio debe ser un entero positivo."
+                )
+            if sid in vistos:
+                raise serializers.ValidationError(f"El socio {sid} está duplicado en la lista.")
+            vistos.add(sid)
         return value
 
     def validate(self, attrs):
@@ -139,27 +154,49 @@ class EmitirT01Serializer(serializers.Serializer):
         solicitud = self.context["solicitud"]
         if solicitud.estado == SolicitudT01.Estado.ISSUED:
             return attrs
-        if solicitud.destinatario_socio_id is None:
-            raise serializers.ValidationError({"destinatario_socio_id": "Es requerido al emitir."})
+        socios_ids = solicitud.destinatarios_socios_ids or (
+            [solicitud.destinatario_socio_id] if solicitud.destinatario_socio_id else []
+        )
+        if not socios_ids:
+            raise serializers.ValidationError(
+                {"destinatarios_socios_ids": "Es requerido al menos un socio al emitir."}
+            )
         if solicitud.puntos is None:
             raise serializers.ValidationError({"puntos": "Los puntos son requeridos al emitir."})
-        if not solicitud.motivo.strip():
+        if not (solicitud.motivo and solicitud.motivo.strip()):
             raise serializers.ValidationError({"motivo": "Es requerido al emitir."})
-        socio = get_padron_repository().get_by_id(solicitud.destinatario_socio_id)
-        if socio is None:
-            raise serializers.ValidationError(
-                {"destinatario_socio_id": "El socio no existe en el padrón."}
-            )
-        if not socio.is_active:
-            raise serializers.ValidationError({"destinatario_socio_id": "El socio no está activo."})
+
+        padron_repo = get_padron_repository()
+        for sid in socios_ids:
+            socio = padron_repo.get_by_id(sid)
+            if socio is None:
+                raise serializers.ValidationError(
+                    {"destinatarios_socios_ids": f"El socio ID {sid} no existe en el padrón."}
+                )
+            if not socio.is_active:
+                raise serializers.ValidationError(
+                    {"destinatarios_socios_ids": f"El socio ID {sid} no está activo."}
+                )
         return attrs
 
     def save(self):
         solicitud = self.context["solicitud"]
         if solicitud.estado == SolicitudT01.Estado.ISSUED:
             return solicitud
-        socio = get_padron_repository().get_by_id(solicitud.destinatario_socio_id)
-        solicitud.snapshot_destinatario = _snapshot(socio)
+        padron_repo = get_padron_repository()
+        socios_ids = solicitud.destinatarios_socios_ids or (
+            [solicitud.destinatario_socio_id] if solicitud.destinatario_socio_id else []
+        )
+        snapshots = []
+        for sid in socios_ids:
+            s = padron_repo.get_by_id(sid)
+            if s:
+                snapshots.append(_snapshot(s))
+        solicitud.snapshots_destinatarios = snapshots
+        solicitud.snapshot_destinatario = snapshots[0] if snapshots else None
+        solicitud.destinatarios_socios_ids = socios_ids
+        solicitud.destinatario_socio_id = socios_ids[0] if socios_ids else None
+
         solicitud.snapshot_emitido = {
             "id": str(solicitud.id),
             "tipo_accion": solicitud.tipo_accion,
@@ -170,6 +207,7 @@ class EmitirT01Serializer(serializers.Serializer):
             "razon": solicitud.razon,
             "reglamentos_respaldantes": solicitud.reglamentos_respaldantes,
             "destinatario": solicitud.snapshot_destinatario,
+            "destinatarios": solicitud.snapshots_destinatarios,
             "anexo_fecha": solicitud.anexo_fecha.isoformat() if solicitud.anexo_fecha else None,
             "anexo_lugar": solicitud.anexo_lugar,
             "anexo_relato": solicitud.anexo_relato,
