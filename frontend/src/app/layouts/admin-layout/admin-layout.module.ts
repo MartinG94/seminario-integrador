@@ -23,7 +23,10 @@ import {MatRippleModule} from '@angular/material/core';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatSelectModule} from '@angular/material/select';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 
@@ -38,8 +41,11 @@ import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarro
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatAutocompleteModule,
     MatTooltipModule,
     MatDialogModule,
+    MatExpansionModule,
+    MatIconModule,
   ],
   declarations: [
     MisExpedientesComponent,

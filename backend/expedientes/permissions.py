@@ -3,15 +3,22 @@
 Implementa:
 - CA4: Enlace seguro con autenticación forzada y autorización por objeto (IsImputadoOrTribunal).
 - Reexportación de IsTribunalOrDirectiva para acciones exclusivas de gestión del TD.
+- CanCreateT01: Autoridades procesales habilitadas para crear y tramitar T01.
 """
 
 from rest_framework.permissions import BasePermission
 
 from accounts import audit
-from accounts.permissions import IsTribunalOrDirectiva
+from accounts.permissions import HasAnyRole, IsTribunalOrDirectiva
 from socios.models import Role
 
-__all__ = ["IsImputadoOrTribunal", "IsTribunalOrDirectiva"]
+__all__ = ["CanCreateT01", "IsImputadoOrTribunal", "IsTribunalOrDirectiva"]
+
+
+class CanCreateT01(HasAnyRole):
+    """Autoridades procesales habilitadas para crear y tramitar T01."""
+
+    allowed_roles = (Role.FISCALIZADORA, Role.CD, Role.TD)
 
 
 class IsImputadoOrTribunal(BasePermission):

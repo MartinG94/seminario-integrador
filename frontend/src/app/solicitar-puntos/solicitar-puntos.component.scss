@@ -1,4 +1,54 @@
-// Solicitar Puntos SCSS
-.form-control-file {
-  padding: 8px 0;
+// Tokens de DESIGN.md: AVEIT Design System 2026
+$primary: #151846;
+$accent: #6E9DDC;
+$surface-card: #FFFFFF;
+$border-main: #D1D5DB;
+$text-primary: #151846;
+$text-secondary: #334155;
+
+.section-card {
+  border: 1px solid $border-main;
+  border-radius: 6px;
+  background-color: #FAFAFA;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
 }
+
+.section-label {
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.border-subtle {
+  border: 1px solid $border-main !important;
+  border-radius: 6px !important;
+}
+
+.table {
+  th {
+    color: $text-secondary;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-top: none;
+  }
+  td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+    color: $text-primary;
+  }
+}
+
+.mat-expansion-panel {
+  box-shadow: none !important;
+  background: #FAFAFA;
+
+  .mat-expansion-panel-header-title {
+    color: $text-primary;
+    font-weight: 600;
+  }
+}
+
