@@ -75,3 +75,57 @@ class PresentarDescargoSerializer(serializers.Serializer):
                     {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
                 )
         return attrs
+
+
+class DispatchNotificationResponseSerializer(serializers.Serializer):
+    """Payload de respuesta tras el despacho formal de la notificación de apertura."""
+
+    expediente_id = serializers.IntegerField()
+    numero = serializers.CharField()
+    estado = serializers.CharField()
+    plazo_inicio_at = serializers.DateTimeField()
+    plazo_limite_at = serializers.DateTimeField()
+    outbox_id = serializers.UUIDField()
+    outbox_status = serializers.CharField()
+    idempotency_key = serializers.CharField()
+    mensaje = serializers.CharField(
+        required=False, default="Notificación de apertura despachada correctamente."
+    )
+
+
+# Backward-compatible alias for existing imports
+DespachoNotificacionResponseSerializer = DispatchNotificationResponseSerializer
+
+
+class CaseNotificationAuditSerializer(serializers.ModelSerializer):
+    """Serializador de auditoría y bitácora de entrega para operadores del TD."""
+
+    destinatario = serializers.JSONField(source="to")
+    asunto = serializers.CharField(source="subject")
+    estado = serializers.CharField(source="status")
+    reintentos = serializers.IntegerField(source="retry_count")
+    max_reintentos = serializers.IntegerField(source="max_retries")
+    proximo_reintento_at = serializers.DateTimeField(source="next_retry_at")
+    ultimo_error = serializers.CharField(source="last_error", allow_null=True)
+    despachado_at = serializers.DateTimeField(source="sent_at", allow_null=True)
+
+    class Meta:
+        from notifications.models import EmailOutbox
+
+        model = EmailOutbox
+        fields = [
+            "id",
+            "destinatario",
+            "asunto",
+            "estado",
+            "reintentos",
+            "max_reintentos",
+            "proximo_reintento_at",
+            "ultimo_error",
+            "despachado_at",
+            "created_at",
+        ]
+
+
+# Backward-compatible alias for existing imports
+ExpedienteNotificationAuditSerializer = CaseNotificationAuditSerializer
