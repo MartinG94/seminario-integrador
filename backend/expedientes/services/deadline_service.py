@@ -41,7 +41,6 @@ class DeadlineEnforcementService:
         candidate_ids = list(
             Expediente.objects.filter(
                 estado=EstadoExpedienteEnum.JUSTIFICANDO,
-                descargo_presentado=False,
                 plazo_limite_at__isnull=False,
                 plazo_limite_at__lt=momento,
             ).values_list("id", flat=True)
@@ -63,7 +62,6 @@ class DeadlineEnforcementService:
                     # Doble verificación bajo lock pesimista (Double-Checked Locking Pattern)
                     if (
                         expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO
-                        or expediente.descargo_presentado
                         or not expediente.plazo_limite_at
                         or expediente.plazo_limite_at >= momento
                     ):
@@ -74,6 +72,7 @@ class DeadlineEnforcementService:
                         estado_nuevo=EstadoExpedienteEnum.REVISION_RESOLUCION,
                         actor=self.ACTOR_CRON,
                         motivo=self.MOTIVO_EXPIRACION,
+                        ahora=momento,
                     )
                     closed_count += 1
                     logger.info(

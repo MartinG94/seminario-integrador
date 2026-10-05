@@ -1,5 +1,7 @@
 """Servicios transaccionales para apertura y transiciones de expedientes."""
 
+from datetime import datetime
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -27,8 +29,8 @@ class ExpedienteWorkflowService:
     }
 
     @staticmethod
-    def format_numero(value: int) -> str:
-        return f"EXP-{value:06d}"
+    def format_numero(value: int, year: int) -> str:
+        return f"EXP-{value:04d}/{year}"
 
     @classmethod
     @transaction.atomic
@@ -40,8 +42,9 @@ class ExpedienteWorkflowService:
         if Socio.objects.filter(pk__in=socio_ids).count() != len(set(socio_ids)):
             raise ValidationError({"socios": "Uno o más socios no existen."})
 
+        year = timezone.localdate().year
         expediente = Expediente.objects.create(
-            numero=cls.format_numero(ExpedienteNumberSequence.next_value()),
+            numero=cls.format_numero(ExpedienteNumberSequence.next_value(year), year),
             socio_id=socio_ids[0],
             motivo=motivo.strip(),
             estado=EstadoExpedienteEnum.CREADO,
@@ -65,6 +68,7 @@ class ExpedienteWorkflowService:
         estado_nuevo: str,
         actor: str,
         motivo: str,
+        ahora: datetime | None = None,
     ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de transición es obligatorio."})
@@ -77,12 +81,24 @@ class ExpedienteWorkflowService:
             raise ValidationError(
                 {"estado": "La transición debe avanzar exactamente al siguiente estado."}
             )
+        momento = ahora or timezone.now()
+        if expediente.estado == EstadoExpedienteEnum.JUSTIFICANDO and (
+            not expediente.plazo_limite_at or momento < expediente.plazo_limite_at
+        ):
+            raise ValidationError(
+                {
+                    "estado": (
+                        "El expediente permanece en período de justificaciones hasta que "
+                        "venza el plazo de 5 días hábiles."
+                    )
+                }
+            )
 
         estado_anterior = expediente.estado
         expediente.estado = estado_nuevo
         fields_to_update = ["estado", "updated_at"]
         if estado_nuevo == EstadoExpedienteEnum.JUSTIFICANDO and not expediente.plazo_limite_at:
-            start_at = timezone.now()
+            start_at = momento
             expediente.plazo_inicio_at = start_at
             expediente.plazo_limite_at = compute_business_deadline(
                 start_at=start_at,

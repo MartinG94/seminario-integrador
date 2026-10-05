@@ -4,7 +4,7 @@ Cubre:
 1. Transición de expediente vencido sin descargo a REVISION_RESOLUCION (Art. 12).
 2. Idempotencia: ejecuciones repetidas no duplican transiciones ni auditorías.
 3. No transición de expedientes en plazo.
-4. No transición de expedientes con descargo ya presentado.
+4. Transición de expedientes vencidos aunque tengan descargo presentado.
 5. Ejecución del management command close_expired_deadlines.
 6. Simulación de concurrencia y bloqueo pesimista select_for_update.
 """
@@ -109,8 +109,8 @@ class TestDeadlineEnforcementService:
         # Verifica que sólo existe 1 registro de cambio de estado
         assert CambioEstadoExpediente.objects.filter(expediente=exp).count() == 1
 
-    def test_no_cierra_expediente_con_descargo_presentado(self, socio_fixture: Socio) -> None:
-        """Si el socio presentó su descargo, el vencimiento del plazo no altera el expediente."""
+    def test_cierra_expediente_vencido_aunque_tenga_descargo(self, socio_fixture: Socio) -> None:
+        """Al vencer el plazo, el expediente pasa a revisión haya o no descargo."""
         inicio = datetime(2026, 3, 2, 10, 0, 0, tzinfo=BA_TZ)
         limite = datetime(2026, 3, 9, 10, 0, 0, tzinfo=BA_TZ)
 
@@ -127,11 +127,12 @@ class TestDeadlineEnforcementService:
 
         ahora = datetime(2026, 3, 10, 10, 0, 0, tzinfo=BA_TZ)
         service = DeadlineEnforcementService()
-        assert service.close_expired_deadlines(ahora=ahora) == 0
+        assert service.close_expired_deadlines(ahora=ahora) == 1
 
         exp.refresh_from_db()
-        assert exp.estado == EstadoExpedienteEnum.JUSTIFICANDO
-        assert CambioEstadoExpediente.objects.filter(expediente=exp).count() == 0
+        assert exp.estado == EstadoExpedienteEnum.REVISION_RESOLUCION
+        assert exp.descargo_texto == "Descargo oportuno"
+        assert CambioEstadoExpediente.objects.filter(expediente=exp).count() == 1
 
     def test_no_cierra_expediente_en_curso_dentro_del_plazo(self, socio_fixture: Socio) -> None:
         """No cierra expedientes cuyo plazo todavía no venció."""

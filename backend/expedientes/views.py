@@ -3,6 +3,8 @@
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -16,12 +18,15 @@ from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    SolicitudT01,
 )
-from expedientes.permissions import CanOpenExpedientes, CanTransitionExpedientes
+from expedientes.permissions import CanCreateT01, CanOpenExpedientes, CanTransitionExpedientes
 from expedientes.serializers import (
     AperturaExpedienteSerializer,
+    EmitirT01Serializer,
     ExpedienteListSerializer,
     PresentarDescargoSerializer,
+    SolicitudT01Serializer,
     TransicionExpedienteSerializer,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
@@ -119,6 +124,8 @@ class PresentarDescargoView(APIView):
     - Evaluación de plazo en el servidor con select_for_update().
     - Acepta si now <= plazo_limite_at (inclusivo).
     - Rechaza con 409 Conflict si now > plazo_limite_at.
+    - Mientras el plazo siga abierto, un nuevo envío corrige el descargo ya presentado
+      (Notas del PO, ítem 31) y responde 200 OK en lugar de 201 Created.
     - Valida titularidad del socio sobre el expediente.
     """
 
@@ -151,15 +158,6 @@ class PresentarDescargoView(APIView):
                     "No tiene autorización para presentar descargo en este expediente."
                 )
 
-            # Si ya presentó descargo
-            if DescargoExpediente.objects.filter(expediente=expediente, socio=socio).exists() or (
-                expediente.descargo_presentado and expediente.socio_id == socio.id
-            ):
-                return Response(
-                    {"detail": "Ya existe un descargo formal registrado para este expediente."},
-                    status=status.HTTP_409_CONFLICT,
-                )
-
             # Si no está en estado 'justificando'
             if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
                 msg = (
@@ -179,15 +177,21 @@ class PresentarDescargoView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
 
-            # Registro exitoso del descargo
+            # Registro o corrección del descargo dentro del plazo
             validated_data = serializer.validated_data
-            DescargoExpediente.objects.create(
+            es_correccion = DescargoExpediente.objects.filter(
+                expediente=expediente, socio=socio
+            ).exists() or (expediente.descargo_presentado and expediente.socio_id == socio.id)
+            DescargoExpediente.objects.update_or_create(
                 expediente=expediente,
                 socio=socio,
-                tipo=validated_data["tipo"],
-                causal=validated_data.get("causal", ""),
-                archivo=validated_data.get("archivo", ""),
-                texto=validated_data.get("texto", ""),
+                defaults={
+                    "tipo": validated_data["tipo"],
+                    "causal": validated_data.get("causal", ""),
+                    "archivo": validated_data.get("archivo", ""),
+                    "texto": validated_data.get("texto", ""),
+                    "presentado_at": now,
+                },
             )
             expediente.descargo_presentado = (
                 expediente.descargos.count() >= expediente.socios.count()
@@ -215,14 +219,81 @@ class PresentarDescargoView(APIView):
                 estado_anterior=expediente.estado,
                 estado_nuevo=expediente.estado,
                 actor=f"SOCIO_{socio.legajo}",
-                motivo=f"Presentación formal de descargo {validated_data['tipo']}.",
+                motivo=(
+                    f"Corrección de descargo {validated_data['tipo']} dentro del plazo."
+                    if es_correccion
+                    else f"Presentación formal de descargo {validated_data['tipo']}."
+                ),
             )
 
             return Response(
                 {
-                    "detail": "Descargo registrado dentro de los términos reglamentarios.",
+                    "detail": (
+                        "Descargo actualizado dentro de los términos reglamentarios."
+                        if es_correccion
+                        else "Descargo registrado dentro de los términos reglamentarios."
+                    ),
                     "expediente_id": expediente.id,
                     "descargo_presentado_at": now,
                 },
-                status=status.HTTP_201_CREATED,
+                status=status.HTTP_200_OK if es_correccion else status.HTTP_201_CREATED,
             )
+
+
+REGLAMENTOS_VIGENTES = (
+    "Estatuto AVEIT Reforma 2026",
+    "Reglamento Procesal Disciplinario 2026",
+    "Reglamento Interno de Disciplina",
+)
+
+
+class ReglamentosVigentesView(APIView):
+    """Lista de reglamentos institucionales vigentes para respaldar un T01."""
+
+    permission_classes = (CanCreateT01,)
+
+    def get(self, request):
+        return Response({"reglamentos": list(REGLAMENTOS_VIGENTES)})
+
+
+class SolicitudT01CreateView(APIView):
+    permission_classes = (CanCreateT01,)
+
+    def post(self, request):
+        serializer = SolicitudT01Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        solicitud = serializer.save(solicitante=request.user.socio)
+        return Response(SolicitudT01Serializer(solicitud).data, status=status.HTTP_201_CREATED)
+
+
+class SolicitudT01DetailView(APIView):
+    permission_classes = (CanCreateT01,)
+
+    def get_object(self, request, pk):
+        solicitud = get_object_or_404(SolicitudT01, pk=pk)
+        if solicitud.solicitante_id != request.user.socio.pk:
+            raise Http404
+        return solicitud
+
+    def get(self, request, pk):
+        return Response(SolicitudT01Serializer(self.get_object(request, pk)).data)
+
+    def patch(self, request, pk):
+        solicitud = self.get_object(request, pk)
+        serializer = SolicitudT01Serializer(solicitud, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(SolicitudT01Serializer(serializer.save()).data)
+
+
+class SolicitudT01EmitView(APIView):
+    permission_classes = (CanCreateT01,)
+
+    @transaction.atomic
+    def post(self, request, pk):
+        solicitud = get_object_or_404(SolicitudT01.objects.select_for_update(), pk=pk)
+        if solicitud.solicitante_id != request.user.socio.pk:
+            raise Http404
+        serializer = EmitirT01Serializer(data=request.data, context={"solicitud": solicitud})
+        serializer.is_valid(raise_exception=True)
+        solicitud = serializer.save()
+        return Response(SolicitudT01Serializer(solicitud).data)

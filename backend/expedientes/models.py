@@ -7,10 +7,12 @@ Implementa:
 - Integración transaccional con libro mayor.
 """
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from django.db import models, transaction
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
@@ -39,30 +41,39 @@ class TipoDescargoEnum(models.TextChoices):
 
 
 class ExpedienteNumberSequence(models.Model):
-    """Contador correlativo de expedientes (CA1/CA4).
+    """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
 
-    Una única fila bloqueada con SELECT ... FOR UPDATE serializa la asignación:
+    Una fila por año bloqueada con SELECT ... FOR UPDATE serializa la asignación:
     a diferencia del AUTO_INCREMENT de InnoDB, un rollback devuelve el número y
-    la secuencia no deja huecos.
+    la secuencia no deja huecos. El contador se reinicia con cada año calendario.
     """
 
+    year = models.PositiveSmallIntegerField(unique=True)
     last_value = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "expedientes_numero_secuencia"
 
     @classmethod
-    def next_value(cls) -> int:
-        """Reserva el próximo número. Debe invocarse dentro de una transacción.
+    def next_value(cls, year: int) -> int:
+        """Reserva el próximo número del año. Debe invocarse dentro de una transacción.
 
-        La fila la siembra la migración 0002; `get_or_create` sólo cubre bases vaciadas y
-        no es seguro bajo concurrencia (dos inserciones simultáneas pueden interbloquearse).
+        La migración 0005 siembra la fila del año en curso; la primera apertura de cada
+        año nuevo crea la suya. Ante una creación simultánea, la restricción única de
+        `year` hace que sólo una inserción prospere y el resto relea la fila bloqueada.
         """
-        cls.objects.get_or_create(pk=1)
-        sequence = cls.objects.select_for_update().get(pk=1)
-        sequence.last_value += 1
-        sequence.save(update_fields=["last_value"])
-        return sequence.last_value
+        with transaction.atomic():
+            sequence = cls.objects.select_for_update().filter(year=year).first()
+            if sequence is None:
+                try:
+                    with transaction.atomic():
+                        cls.objects.create(year=year)
+                except IntegrityError:
+                    pass
+                sequence = cls.objects.select_for_update().get(year=year)
+            sequence.last_value += 1
+            sequence.save(update_fields=["last_value"])
+            return sequence.last_value
 
 
 class Expediente(models.Model):
@@ -232,3 +243,77 @@ class DescargoExpediente(models.Model):
                 name="unique_descargo_per_expediente_socio",
             )
         ]
+
+
+class SolicitudT01(models.Model):
+    class Estado(models.TextChoices):
+        DRAFT = "DRAFT", "Borrador"
+        ISSUED = "ISSUED", "Emitido"
+
+    class TipoAccion(models.TextChoices):
+        SANCTION = "SANCTION", "Sanción"
+        MERIT = "MERIT", "Mérito"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.DRAFT)
+    solicitante = models.ForeignKey("socios.Socio", on_delete=models.PROTECT)
+    destinatario_socio_id = models.PositiveBigIntegerField(null=True, blank=True)
+    destinatarios_socios_ids = models.JSONField(default=list, blank=True)
+    tipo_accion = models.CharField(max_length=10, choices=TipoAccion.choices)
+    titulo = models.CharField(max_length=255, blank=True, default="")
+    causal = models.CharField(max_length=255, blank=True)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    motivo = models.TextField(blank=True)
+    razon = models.TextField(blank=True, default="")
+    reglamentos_respaldantes = models.JSONField(default=list, blank=True)
+    anexo_fecha = models.DateField(null=True, blank=True)
+    anexo_lugar = models.CharField(max_length=255, blank=True)
+    anexo_relato = models.TextField(blank=True)
+    anexo_testigos = models.TextField(blank=True)
+    snapshot_destinatario = models.JSONField(null=True, blank=True)
+    snapshots_destinatarios = models.JSONField(default=list, blank=True)
+    snapshot_emitido = models.JSONField(null=True, blank=True)
+    numero_expediente = models.CharField(max_length=40, null=True, blank=True, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    issued_at = models.DateTimeField(null=True, blank=True)
+
+    def clean(self):
+        if self.estado == self.Estado.ISSUED:
+            if self.puntos is None:
+                raise ValidationError({"puntos": "Los puntos son obligatorios al emitir."})
+            if not self.destinatarios_socios_ids and not self.destinatario_socio_id:
+                raise ValidationError(
+                    {
+                        "destinatarios_socios_ids": (
+                            "Debe incluir al menos un socio destinatario al emitir."
+                        )
+                    }
+                )
+        if self.puntos is not None and self.tipo_accion:
+            if self.tipo_accion == self.TipoAccion.SANCTION and self.puntos >= 0:
+                raise ValidationError({"puntos": "Una sanción debe tener puntos negativos."})
+            if self.tipo_accion == self.TipoAccion.MERIT and self.puntos <= 0:
+                raise ValidationError({"puntos": "Un mérito debe tener puntos positivos."})
+
+    def delete(self, *args, **kwargs):
+        if self.estado == self.Estado.ISSUED:
+            raise ValidationError("Una solicitud emitida es inmutable y no puede eliminarse.")
+        return super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        if self.pk and not self._state.adding:
+            previous = type(self).objects.filter(pk=self.pk).values("estado").first()
+            if previous and previous["estado"] == self.Estado.ISSUED:
+                raise ValidationError("Una solicitud emitida es inmutable.")
+        # Sincronización bidireccional retrocompatible
+        if self.destinatarios_socios_ids and not self.destinatario_socio_id:
+            self.destinatario_socio_id = self.destinatarios_socios_ids[0]
+        elif self.destinatario_socio_id and not self.destinatarios_socios_ids:
+            self.destinatarios_socios_ids = [self.destinatario_socio_id]
+        if self.snapshots_destinatarios and not self.snapshot_destinatario:
+            self.snapshot_destinatario = self.snapshots_destinatarios[0]
+        elif self.snapshot_destinatario and not self.snapshots_destinatarios:
+            self.snapshots_destinatarios = [self.snapshot_destinatario]
+        self.full_clean()
+        return super().save(*args, **kwargs)

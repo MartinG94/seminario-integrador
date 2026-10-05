@@ -4,7 +4,9 @@ from django.db import migrations, models
 import django.db.models.deletion
 import re
 
-NUMERO_PATTERN = re.compile(r"^EXP-(\d+)$")
+from django.utils import timezone
+
+NUMERO_PATTERN = re.compile(r"^EXP-(\d+)/(\d{4})$")
 
 
 def link_existing_socios(apps, schema_editor):
@@ -15,25 +17,26 @@ def link_existing_socios(apps, schema_editor):
 
 
 def seed_number_sequence(apps, schema_editor):
-    """Arranca el contador después del mayor número `EXP-NNNNNN` ya emitido."""
+    """Arranca cada contador anual después del mayor `EXP-NNNN/YYYY` ya emitido en ese año."""
     Expediente = apps.get_model("expedientes", "Expediente")
     ExpedienteNumberSequence = apps.get_model("expedientes", "ExpedienteNumberSequence")
-    last_value = max(
-        (
-            int(match.group(1))
-            for numero in Expediente.objects.values_list("numero", flat=True)
-            if (match := NUMERO_PATTERN.match(numero))
-        ),
-        default=0,
-    )
-    ExpedienteNumberSequence.objects.update_or_create(pk=1, defaults={"last_value": last_value})
+    last_by_year: dict[int, int] = {}
+    for numero in Expediente.objects.values_list("numero", flat=True):
+        if match := NUMERO_PATTERN.match(numero):
+            value, year = int(match.group(1)), int(match.group(2))
+            last_by_year[year] = max(last_by_year.get(year, 0), value)
+    last_by_year.setdefault(timezone.localdate().year, 0)
+    for year, last_value in last_by_year.items():
+        ExpedienteNumberSequence.objects.update_or_create(
+            year=year, defaults={"last_value": last_value}
+        )
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ('socios', '0001_initial'),
-        ('expedientes', '0001_initial'),
+        ('expedientes', '0004_solicitudt01_destinatarios_socios_ids_and_more'),
     ]
 
     operations = [
@@ -41,6 +44,7 @@ class Migration(migrations.Migration):
             name='ExpedienteNumberSequence',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('year', models.PositiveSmallIntegerField(unique=True)),
                 ('last_value', models.PositiveIntegerField(default=0)),
             ],
             options={

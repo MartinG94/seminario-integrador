@@ -1,11 +1,14 @@
 """Pruebas de apertura y trazabilidad del ciclo de vida de expedientes."""
 
+import re
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from threading import Barrier
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import connection, connections
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -19,9 +22,20 @@ from expedientes.models import (
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from socios.models import Role
 
+NUMERO_PATTERN = re.compile(r"^EXP-(\d{4})/(\d{4})$")
+
 
 def _sequence_of(numero: str) -> int:
-    return int(numero.removeprefix("EXP-"))
+    match = NUMERO_PATTERN.match(numero)
+    assert match, f"Formato de número inválido: {numero}"
+    return int(match.group(1))
+
+
+def _expire_deadline(expediente_id: int) -> None:
+    """Simula el vencimiento del plazo de 5 días hábiles."""
+    Expediente.objects.filter(pk=expediente_id).update(
+        plazo_limite_at=timezone.now() - timedelta(seconds=1)
+    )
 
 
 @pytest.mark.django_db
@@ -74,6 +88,53 @@ class TestArt12States:
                 motivo="   ",
             )
 
+    def test_cannot_move_to_review_before_deadline_expires(self, make_socio) -> None:
+        member = make_socio(legajo="72003")
+        expediente = ExpedienteWorkflowService.open_expediente(
+            motivo="Anticipo", socio_ids=[member.id], actor="72000"
+        )
+        ExpedienteWorkflowService.transition(
+            expediente_id=expediente.pk,
+            estado_nuevo=EstadoExpedienteEnum.JUSTIFICANDO,
+            actor="72000",
+            motivo="Avisos enviados",
+        )
+
+        with pytest.raises(ValidationError):
+            ExpedienteWorkflowService.transition(
+                expediente_id=expediente.pk,
+                estado_nuevo=EstadoExpedienteEnum.REVISION_RESOLUCION,
+                actor="72000",
+                motivo="Anticipo de revisión",
+            )
+
+        expediente.refresh_from_db()
+        assert expediente.estado == EstadoExpedienteEnum.JUSTIFICANDO
+        assert expediente.cambios_estado.count() == 2
+
+    def test_moves_to_review_once_deadline_expired(self, make_socio) -> None:
+        member = make_socio(legajo="72004")
+        expediente = ExpedienteWorkflowService.open_expediente(
+            motivo="Vencido", socio_ids=[member.id], actor="72000"
+        )
+        ExpedienteWorkflowService.transition(
+            expediente_id=expediente.pk,
+            estado_nuevo=EstadoExpedienteEnum.JUSTIFICANDO,
+            actor="72000",
+            motivo="Avisos enviados",
+        )
+        _expire_deadline(expediente.pk)
+
+        ExpedienteWorkflowService.transition(
+            expediente_id=expediente.pk,
+            estado_nuevo=EstadoExpedienteEnum.REVISION_RESOLUCION,
+            actor="72000",
+            motivo="Plazo vencido",
+        )
+
+        expediente.refresh_from_db()
+        assert expediente.estado == EstadoExpedienteEnum.REVISION_RESOLUCION
+
 
 @pytest.mark.django_db
 class TestExpedienteNumbering:
@@ -93,6 +154,25 @@ class TestExpedienteNumbering:
         )
         assert _sequence_of(second.numero) == _sequence_of(first.numero) + 1
 
+    def test_number_uses_annual_format_with_current_year(self, make_socio) -> None:
+        member = make_socio(legajo="73002")
+        expediente = ExpedienteWorkflowService.open_expediente(
+            motivo="Formato", socio_ids=[member.id], actor="73000"
+        )
+
+        match = NUMERO_PATTERN.match(expediente.numero)
+        assert match
+        assert int(match.group(2)) == timezone.localdate().year
+
+    def test_format_numero_pads_to_four_digits_with_year(self) -> None:
+        assert ExpedienteWorkflowService.format_numero(1, 2026) == "EXP-0001/2026"
+
+    def test_counter_restarts_every_year(self) -> None:
+        assert ExpedienteNumberSequence.next_value(2030) == 1
+        assert ExpedienteNumberSequence.next_value(2030) == 2
+        assert ExpedienteNumberSequence.next_value(2031) == 1
+        assert ExpedienteNumberSequence.next_value(2030) == 3
+
 
 @pytest.mark.skipif(
     connection.vendor != "mysql",
@@ -100,8 +180,8 @@ class TestExpedienteNumbering:
 )
 @pytest.mark.django_db(transaction=True)
 def test_concurrent_openings_never_duplicate_numbers(make_socio) -> None:
-    # Estado que deja la migración 0002; el flush de los tests transaccionales lo borra.
-    ExpedienteNumberSequence.objects.get_or_create(pk=1)
+    # Estado que deja la migración 0005; el flush de los tests transaccionales lo borra.
+    ExpedienteNumberSequence.objects.get_or_create(year=timezone.localdate().year)
     member = make_socio(legajo="74001")
     workers = 8
     barrier = Barrier(workers)
@@ -135,7 +215,7 @@ class TestExpedienteWorkflow:
         api_client.force_authenticate(user=authority.user)
 
         response = api_client.post(
-            "/api/v1/expedientes/",
+            "/api/v1/expedientes/gestion/",
             {
                 "motivo": "Inasistencia a reunión obligatoria",
                 "socios": [first_member.id, second_member.id],
@@ -165,7 +245,7 @@ class TestExpedienteWorkflow:
         payload = {"motivo": "Motivo", "socios": [member.id]}
 
         numbers = [
-            api_client.post("/api/v1/expedientes/", payload, format="json").json()["numero"]
+            api_client.post("/api/v1/expedientes/gestion/", payload, format="json").json()["numero"]
             for _ in range(2)
         ]
 
@@ -178,13 +258,13 @@ class TestExpedienteWorkflow:
         api_client.force_authenticate(user=authority.user)
 
         response = api_client.post(
-            "/api/v1/expedientes/",
-            {"numero": "EXP-999999", "motivo": "Motivo", "socios": [member.id]},
+            "/api/v1/expedientes/gestion/",
+            {"numero": "EXP-9999/2026", "motivo": "Motivo", "socios": [member.id]},
             format="json",
         )
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json()["numero"] != "EXP-999999"
+        assert response.json()["numero"] != "EXP-9999/2026"
 
     @pytest.mark.parametrize(
         ("role", "is_enabled"),
@@ -202,7 +282,7 @@ class TestExpedienteWorkflow:
         api_client.force_authenticate(user=requester.user)
 
         response = api_client.post(
-            "/api/v1/expedientes/",
+            "/api/v1/expedientes/gestion/",
             {"motivo": "No autorizado", "socios": [member.id]},
             format="json",
         )
@@ -235,7 +315,7 @@ class TestExpedienteWorkflow:
         member = make_socio(legajo="71008")
         api_client.force_authenticate(user=tribunal.user)
         created = api_client.post(
-            "/api/v1/expedientes/",
+            "/api/v1/expedientes/gestion/",
             {"motivo": "Prueba", "socios": [member.id]},
             format="json",
         ).json()
@@ -256,7 +336,7 @@ class TestExpedienteWorkflow:
         member = make_socio(legajo="71010")
         api_client.force_authenticate(user=tribunal.user)
         created = api_client.post(
-            "/api/v1/expedientes/",
+            "/api/v1/expedientes/gestion/",
             {"motivo": "Apertura", "socios": [member.id]},
             format="json",
         ).json()
@@ -285,7 +365,7 @@ class TestExpedienteWorkflow:
         member = make_socio(legajo="71015")
         api_client.force_authenticate(user=tribunal.user)
         created = api_client.post(
-            "/api/v1/expedientes/",
+            "/api/v1/expedientes/gestion/",
             {"motivo": "Recorrido", "socios": [member.id]},
             format="json",
         ).json()
@@ -304,6 +384,8 @@ class TestExpedienteWorkflow:
                 format="json",
             )
             assert response.status_code == status.HTTP_200_OK
+            if state == EstadoExpedienteEnum.JUSTIFICANDO:
+                _expire_deadline(created["id"])
 
         response = api_client.post(
             f"/api/v1/expedientes/{created['id']}/estado/",
@@ -321,7 +403,7 @@ class TestExpedienteWorkflow:
         second_member = make_socio(legajo="71013")
         api_client.force_authenticate(user=authority.user)
         created = api_client.post(
-            "/api/v1/expedientes/",
+            "/api/v1/expedientes/gestion/",
             {"motivo": "Causa compartida", "socios": [first_member.id, second_member.id]},
             format="json",
         ).json()
@@ -362,7 +444,7 @@ def test_listing_uses_constant_queries(api_client: APIClient, make_socio) -> Non
 
     def count_queries() -> int:
         with CaptureQueriesContext(connection) as context:
-            response = api_client.get("/api/v1/expedientes/")
+            response = api_client.get("/api/v1/expedientes/gestion/")
         assert response.status_code == status.HTTP_200_OK
         return len(context)
 

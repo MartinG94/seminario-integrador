@@ -7,7 +7,7 @@ Cubre:
 4. Buzzer-beater / condición de carrera con bloqueo pesimista en servidor.
 5. Control de acceso RBAC: socio titular vs otros socios (403 Forbidden).
 6. Rechazo si el expediente no está en estado 'justificando' (409 Conflict).
-7. Rechazo si ya se presentó un descargo previamente (409 Conflict).
+7. Edición del descargo ya presentado mientras el plazo siga abierto (notasPO, ítem 31).
 8. Endpoint de consulta de expedientes del socio (/api/v1/expedientes/mis-expedientes/).
 """
 
@@ -21,6 +21,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from expedientes.models import (
+    DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
     TipoDescargoEnum,
@@ -201,16 +202,58 @@ class TestDescargoEndpoint:
         assert item["plazo_limite_at"] is not None
         assert "esta_en_plazo" in item
 
-    def test_rechaza_descargo_si_ya_fue_presentado(
+    def test_edita_descargo_ya_presentado_dentro_del_plazo(
         self, api_client: APIClient, socio_titular: Socio
     ) -> None:
-        """Si ya existe un descargo formal registrado, rechaza con HTTP 409 Conflict."""
+        """Con la ventana abierta, un nuevo envío corrige el descargo existente (ítem 31)."""
         api_client.force_authenticate(user=socio_titular.user)
 
         exp = Expediente.objects.create(
             numero="EXP-205/2026",
             socio=socio_titular,
-            motivo="Doble presentación",
+            motivo="Corrección de descargo",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now() - timedelta(days=1),
+            plazo_limite_at=timezone.now() + timedelta(days=3),
+        )
+        exp.socios.add(socio_titular)
+        url = f"/api/v1/expedientes/{exp.id}/descargo/"
+
+        first = api_client.post(
+            url,
+            {"tipo": TipoDescargoEnum.T03_EXTRAORDINARIO, "texto": "Primer descargo."},
+            format="json",
+        )
+        assert first.status_code == status.HTTP_201_CREATED
+
+        response = api_client.post(
+            url,
+            {"tipo": TipoDescargoEnum.T02_CERTIFICADO, "archivo": "certificado.pdf"},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        descargos = DescargoExpediente.objects.filter(expediente=exp, socio=socio_titular)
+        assert descargos.count() == 1
+        descargo = descargos.get()
+        assert descargo.tipo == TipoDescargoEnum.T02_CERTIFICADO
+        assert descargo.archivo == "certificado.pdf"
+        assert descargo.texto == ""
+        exp.refresh_from_db()
+        assert exp.descargo_presentado is True
+        assert exp.descargo_tipo == TipoDescargoEnum.T02_CERTIFICADO
+        assert exp.descargo_texto == ""
+
+    def test_edita_descargo_legado_sin_registro_individual(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Un descargo guardado sólo en el expediente también es editable dentro del plazo."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exp = Expediente.objects.create(
+            numero="EXP-208/2026",
+            socio=socio_titular,
+            motivo="Descargo previo",
             estado=EstadoExpedienteEnum.JUSTIFICANDO,
             plazo_inicio_at=timezone.now() - timedelta(days=1),
             plazo_limite_at=timezone.now() + timedelta(days=3),
@@ -218,17 +261,46 @@ class TestDescargoEndpoint:
             descargo_texto="Primer descargo válido",
         )
 
-        payload = {
-            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
-            "texto": "Segundo descargo redundante.",
-        }
+        response = api_client.post(
+            f"/api/v1/expedientes/{exp.id}/descargo/",
+            {"tipo": TipoDescargoEnum.T03_EXTRAORDINARIO, "texto": "Descargo corregido."},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        exp.refresh_from_db()
+        assert exp.descargo_texto == "Descargo corregido."
+
+    def test_rechaza_editar_descargo_con_plazo_vencido(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Vencida la ventana de 5 días hábiles, el descargo queda firme."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exp = Expediente.objects.create(
+            numero="EXP-209/2026",
+            socio=socio_titular,
+            motivo="Descargo firme",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now() - timedelta(days=8),
+            plazo_limite_at=timezone.now() - timedelta(minutes=1),
+        )
+        exp.socios.add(socio_titular)
+        DescargoExpediente.objects.create(
+            expediente=exp,
+            socio=socio_titular,
+            tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
+            texto="Descargo original.",
+        )
 
         response = api_client.post(
-            f"/api/v1/expedientes/{exp.id}/descargo/", payload, format="json"
+            f"/api/v1/expedientes/{exp.id}/descargo/",
+            {"tipo": TipoDescargoEnum.T03_EXTRAORDINARIO, "texto": "Corrección tardía."},
+            format="json",
         )
+
         assert response.status_code == status.HTTP_409_CONFLICT
-        data = response.json()
-        assert "ya existe un descargo" in data.get("detail", "").lower()
+        assert DescargoExpediente.objects.get(expediente=exp).texto == "Descargo original."
 
     def test_rechaza_descargo_si_no_esta_en_estado_justificando(
         self, api_client: APIClient, socio_titular: Socio
