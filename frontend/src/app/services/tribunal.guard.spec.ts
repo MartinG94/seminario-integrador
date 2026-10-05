@@ -37,4 +37,11 @@ describe('TribunalGuard', () => {
     expect(guard.canActivate({} as any, {} as any)).toBeFalse();
     expect(router.navigate).toHaveBeenCalledWith(['/mis-expedientes']);
   });
+
+  it('usa los roles declarados por la ruta cuando están presentes', () => {
+    auth.tieneRol.and.returnValue(true);
+    const route = { data: { roles: ['FISCALIZADORA', 'CD', 'TD'] } } as any;
+    expect(guard.canActivate(route, {} as any)).toBeTrue();
+    expect(auth.tieneRol).toHaveBeenCalledWith('FISCALIZADORA', 'CD', 'TD');
+  });
 });
