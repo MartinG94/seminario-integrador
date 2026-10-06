@@ -457,4 +457,3 @@ class TransicionarExpedienteSerializer(serializers.Serializer):
                 f"a '{EstadoExpedienteEnum(value).label}'."
             )
         return value
-

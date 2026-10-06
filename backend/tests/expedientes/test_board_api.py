@@ -46,7 +46,9 @@ class TestBoardExpedientesView:
         response = client.get("/api/v1/expedientes/board/")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_td_puede_ver_board_con_seis_columnas(self, api_client, authenticate, td_user, expediente_creado):
+    def test_td_puede_ver_board_con_seis_columnas(
+        self, api_client, authenticate, td_user, expediente_creado
+    ):
         client = authenticate(td_user)
         response = client.get("/api/v1/expedientes/board/")
         assert response.status_code == status.HTTP_200_OK
@@ -78,7 +80,9 @@ class TestBoardExpedientesView:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["columns"]) == 6
 
-    def test_filtro_por_socio_legajo(self, api_client, authenticate, td_user, expediente_creado, make_socio):
+    def test_filtro_por_socio_legajo(
+        self, api_client, authenticate, td_user, expediente_creado, make_socio
+    ):
         otro_socio = make_socio(legajo="99999", role=Role.SOCIO)
         Expediente.objects.create(
             numero="EXP-2026-002",
@@ -97,32 +101,40 @@ class TestBoardExpedientesView:
 
     def test_filtro_por_estado(self, api_client, authenticate, td_user, expediente_creado):
         client = authenticate(td_user)
-        response = client.get(f"/api/v1/expedientes/board/?estado={EstadoExpedienteEnum.JUSTIFICANDO}")
+        response = client.get(
+            f"/api/v1/expedientes/board/?estado={EstadoExpedienteEnum.JUSTIFICANDO}"
+        )
         assert response.status_code == status.HTTP_200_OK
-        # Todas las columnas deben estar presentes (estructura de 6), pero CREADO no tendrá casos en el qs
+        # Todas las 6 columnas están presentes, pero CREADO no tendrá casos en el qs
         col_creado = response.data["columns"][0]
         assert len(col_creado["cases"]) == 0
 
     def test_filtro_por_rango_fechas(self, api_client, authenticate, td_user, expediente_creado):
         from django.utils import timezone
-        today = timezone.localdate().isoformat()
+
         yesterday = (timezone.localdate() - timezone.timedelta(days=1)).isoformat()
         tomorrow = (timezone.localdate() + timezone.timedelta(days=1)).isoformat()
 
         client = authenticate(td_user)
         # Rango que incluye hoy: debe devolver el expediente
-        response = client.get(f"/api/v1/expedientes/board/?fecha_desde={yesterday}&fecha_hasta={tomorrow}")
+        response = client.get(
+            f"/api/v1/expedientes/board/?fecha_desde={yesterday}&fecha_hasta={tomorrow}"
+        )
         assert response.status_code == status.HTTP_200_OK
         col_creado = response.data["columns"][0]
         assert len(col_creado["cases"]) == 1
 
         # Rango en el pasado que excluye hoy: no debe devolver el expediente
-        response_excl = client.get(f"/api/v1/expedientes/board/?fecha_desde={yesterday}&fecha_hasta={yesterday}")
+        response_excl = client.get(
+            f"/api/v1/expedientes/board/?fecha_desde={yesterday}&fecha_hasta={yesterday}"
+        )
         assert response_excl.status_code == status.HTTP_200_OK
         col_excl = response_excl.data["columns"][0]
         assert len(col_excl["cases"]) == 0
 
-    def test_filtro_por_socio_implicado_m2m(self, api_client, authenticate, td_user, socio_user, make_socio):
+    def test_filtro_por_socio_implicado_m2m(
+        self, api_client, authenticate, td_user, socio_user, make_socio
+    ):
         socio_secundario = make_socio(legajo="55555", role=Role.SOCIO)
         exp = Expediente.objects.create(
             numero="EXP-2026-055",
@@ -153,7 +165,9 @@ class TestTransicionarExpedienteView:
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_socio_ordinario_no_puede_transicionar(self, api_client, authenticate, socio_user, expediente_creado):
+    def test_socio_ordinario_no_puede_transicionar(
+        self, api_client, authenticate, socio_user, expediente_creado
+    ):
         client = authenticate(socio_user)
         response = client.post(
             f"/api/v1/expedientes/{expediente_creado.id}/transicionar/",
@@ -161,7 +175,9 @@ class TestTransicionarExpedienteView:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_transicion_valida_creado_a_justificando(self, api_client, authenticate, td_user, expediente_creado):
+    def test_transicion_valida_creado_a_justificando(
+        self, api_client, authenticate, td_user, expediente_creado
+    ):
         client = authenticate(td_user)
         response = client.post(
             f"/api/v1/expedientes/{expediente_creado.id}/transicionar/",
@@ -183,7 +199,9 @@ class TestTransicionarExpedienteView:
         assert audit.actor == td_user.user.username
         assert audit.motivo == "Apertura formal de justificaciones"
 
-    def test_transicion_invalida_salto_de_estado_rechazada(self, api_client, authenticate, td_user, expediente_creado):
+    def test_transicion_invalida_salto_de_estado_rechazada(
+        self, api_client, authenticate, td_user, expediente_creado
+    ):
         client = authenticate(td_user)
         # Salto de creado a emitido no permitido
         response = client.post(
@@ -191,12 +209,16 @@ class TestTransicionarExpedienteView:
             {"to_status": EstadoExpedienteEnum.EMITIDO},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "estado" in response.data or "to_status" in response.data or "detail" in response.data
+        assert (
+            "estado" in response.data or "to_status" in response.data or "detail" in response.data
+        )
 
         expediente_creado.refresh_from_db()
         assert expediente_creado.estado == EstadoExpedienteEnum.CREADO
 
-    def test_transicion_estado_final_emitido_no_permite_mas_transiciones(self, api_client, authenticate, td_user, socio_user):
+    def test_transicion_estado_final_emitido_no_permite_mas_transiciones(
+        self, api_client, authenticate, td_user, socio_user
+    ):
         expediente_emitido = Expediente.objects.create(
             numero="EXP-2026-999",
             socio=socio_user,

@@ -18,9 +18,7 @@ def build_board_payload(qs: QuerySet) -> dict:
     """
     board: dict[str, list] = {s.value: [] for s in EstadoExpedienteEnum}
     for expediente in qs:
-        board[expediente.estado].append(
-            BoardExpedienteSerializer(expediente).data
-        )
+        board[expediente.estado].append(BoardExpedienteSerializer(expediente).data)
     return {
         "columns": [
             {

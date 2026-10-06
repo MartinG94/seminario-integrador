@@ -12,8 +12,8 @@ from expedientes.views import (
     SolicitudT01CreateView,
     SolicitudT01DetailView,
     SolicitudT01EmitView,
-    TransicionExpedienteView,
     TransicionarExpedienteView,
+    TransicionExpedienteView,
 )
 
 app_name = "expedientes"
