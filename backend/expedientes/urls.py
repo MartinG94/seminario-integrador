@@ -6,6 +6,7 @@ from expedientes.views import (
     ExpedienteCollectionView,
     ExpedienteDetailView,
     MisExpedientesView,
+    MisSolicitudesT01View,
     PresentarDescargoView,
     ReglamentosVigentesView,
     SolicitudT01CreateView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path("", SolicitudT01CreateView.as_view(), name="solicitud-create"),
     path("gestion/", ExpedienteCollectionView.as_view(), name="expedientes"),
     path("mis-expedientes/", MisExpedientesView.as_view(), name="mis-expedientes"),
+    path("mis-solicitudes/", MisSolicitudesT01View.as_view(), name="mis-solicitudes"),
     path("<int:pk>/estado/", TransicionExpedienteView.as_view(), name="transicionar-expediente"),
     path("<int:pk>/descargo/", PresentarDescargoView.as_view(), name="presentar-descargo"),
     path(

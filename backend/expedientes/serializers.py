@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from expedientes.models import (
     DescargoExpediente,
+    EstadoExpedienteEnum,
     Expediente,
     SolicitudT01,
     TipoDescargoEnum,
@@ -260,6 +261,7 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
             "snapshots_destinatarios",
             "snapshot_emitido",
             "numero_expediente",
+            "expediente",
             "created_at",
             "updated_at",
             "issued_at",
@@ -385,5 +387,144 @@ class EmitirT01Serializer(serializers.Serializer):
         solicitud.numero_expediente = (
             f"T01-{solicitud.issued_at:%Y}-{solicitud.id.hex[:12].upper()}"
         )
+
+        # Apertura atómica y vinculación formal con Expediente
+        # si hay socios registrados en tabla Socio
+        existing_socios = list(Socio.objects.filter(pk__in=socios_ids).values_list("pk", flat=True))
+        if existing_socios and not solicitud.expediente:
+            from expedientes.services.workflow_service import ExpedienteWorkflowService
+
+            actor_name = getattr(solicitud.solicitante, "legajo", str(solicitud.solicitante_id))
+            try:
+                motivo_apertura = (
+                    solicitud.motivo or solicitud.titulo or "Apertura formal por Formulario T01"
+                )
+                expediente = ExpedienteWorkflowService.open_expediente(
+                    motivo=motivo_apertura,
+                    socio_ids=existing_socios,
+                    actor=f"SOLICITANTE_{actor_name}",
+                )
+                solicitud.expediente = expediente
+            except Exception:
+                pass
+
         solicitud.save()
         return solicitud
+
+
+class MisSolicitudesT01Serializer(serializers.ModelSerializer):
+    """Serializador sanitizado para monitoreo de solicitudes T01 (CA2 y CA3)."""
+
+    numero = serializers.SerializerMethodField()
+    fecha = serializers.SerializerMethodField()
+    estado_procesal = serializers.SerializerMethodField()
+    estado_procesal_display = serializers.SerializerMethodField()
+    involucrados = serializers.SerializerMethodField()
+    resolucion_final = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SolicitudT01
+        fields = [
+            "id",
+            "numero",
+            "numero_expediente",
+            "fecha",
+            "estado",
+            "tipo_accion",
+            "puntos",
+            "titulo",
+            "motivo",
+            "causal",
+            "razon",
+            "reglamentos_respaldantes",
+            "anexo_fecha",
+            "anexo_lugar",
+            "anexo_relato",
+            "anexo_testigos",
+            "destinatarios_socios_ids",
+            "estado_procesal",
+            "estado_procesal_display",
+            "involucrados",
+            "resolucion_final",
+            "created_at",
+            "issued_at",
+        ]
+
+    def get_numero(self, obj: SolicitudT01) -> str:
+        if obj.expediente:
+            return obj.expediente.numero
+        return obj.numero_expediente or "Borrador sin número"
+
+    def get_fecha(self, obj: SolicitudT01):
+        return obj.issued_at or obj.created_at
+
+    def get_estado_procesal(self, obj: SolicitudT01) -> str:
+        if obj.estado == SolicitudT01.Estado.DRAFT:
+            return "borrador"
+        if obj.expediente:
+            return obj.expediente.estado
+        return "creado"
+
+    def get_estado_procesal_display(self, obj: SolicitudT01) -> str:
+        if obj.estado == SolicitudT01.Estado.DRAFT:
+            return "Borrador"
+        if obj.expediente:
+            return obj.expediente.get_estado_display()
+        return "Expediente Creado"
+
+    def get_involucrados(self, obj: SolicitudT01) -> list[dict]:
+        if obj.snapshots_destinatarios:
+            return [
+                {
+                    "socio_id": s.get("socio_id"),
+                    "legajo": s.get("legajo", "S/D"),
+                    "first_name": s.get("first_name", ""),
+                    "last_name": s.get("last_name", ""),
+                    "subcomision": (
+                        s.get("subcomision", {}).get("name")
+                        if isinstance(s.get("subcomision"), dict)
+                        else (s.get("subcomision") or "Sin subcomisión")
+                    ),
+                }
+                for s in obj.snapshots_destinatarios
+            ]
+        if obj.snapshot_destinatario:
+            s = obj.snapshot_destinatario
+            return [
+                {
+                    "socio_id": s.get("socio_id"),
+                    "legajo": s.get("legajo", "S/D"),
+                    "first_name": s.get("first_name", ""),
+                    "last_name": s.get("last_name", ""),
+                    "subcomision": (
+                        s.get("subcomision", {}).get("name")
+                        if isinstance(s.get("subcomision"), dict)
+                        else (s.get("subcomision") or "Sin subcomisión")
+                    ),
+                }
+            ]
+        socios_ids = obj.destinatarios_socios_ids or (
+            [obj.destinatario_socio_id] if obj.destinatario_socio_id else []
+        )
+        if not socios_ids:
+            return []
+        socios = Socio.objects.filter(pk__in=socios_ids).select_related("subcomision")
+        return [
+            {
+                "socio_id": s.id,
+                "legajo": s.legajo,
+                "first_name": s.first_name,
+                "last_name": s.last_name,
+                "subcomision": s.subcomision.name if s.subcomision else "Sin subcomisión",
+            }
+            for s in socios
+        ]
+
+    def get_resolucion_final(self, obj: SolicitudT01):
+        if obj.expediente and obj.expediente.estado == EstadoExpedienteEnum.EMITIDO:
+            return {
+                "emitido": True,
+                "fecha": obj.expediente.updated_at,
+                "dictamen": f"Resolución firme emitida para causa {obj.expediente.numero}.",
+            }
+        return None

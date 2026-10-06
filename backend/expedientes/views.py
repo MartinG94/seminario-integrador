@@ -33,6 +33,7 @@ from expedientes.serializers import (
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     ExpedienteListSerializer,
+    MisSolicitudesT01Serializer,
     PresentarDescargoSerializer,
     SolicitudT01Serializer,
     TransicionExpedienteSerializer,
@@ -402,6 +403,16 @@ class SolicitudT01DetailView(APIView):
         serializer.is_valid(raise_exception=True)
         return Response(SolicitudT01Serializer(serializer.save()).data)
 
+    def delete(self, request, pk):
+        solicitud = self.get_object(request, pk)
+        if solicitud.estado == SolicitudT01.Estado.ISSUED:
+            return Response(
+                {"detail": "Una solicitud emitida no puede eliminarse."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        solicitud.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SolicitudT01EmitView(APIView):
     permission_classes = (CanCreateT01,)
@@ -415,3 +426,45 @@ class SolicitudT01EmitView(APIView):
         serializer.is_valid(raise_exception=True)
         solicitud = serializer.save()
         return Response(SolicitudT01Serializer(solicitud).data)
+
+
+class MisSolicitudesT01View(APIView):
+    """Consulta de expedientes y solicitudes iniciadas por la autoridad autenticada (CA1, CA4)."""
+
+    permission_classes = (permissions.IsAuthenticated, CanCreateT01)
+
+    def get(self, request: Request) -> Response:
+        socio = getattr(request.user, "socio", None)
+        if not socio:
+            return Response([], status=status.HTTP_200_OK)
+
+        queryset = (
+            SolicitudT01.objects.filter(solicitante=socio)
+            .select_related("expediente", "solicitante")
+            .order_by("-created_at")
+        )
+
+        # Filtro por estado
+        estado = request.query_params.get("estado", "").strip()
+        if estado:
+            if estado.upper() == "DRAFT":
+                queryset = queryset.filter(estado=SolicitudT01.Estado.DRAFT)
+            elif estado.upper() == "ISSUED":
+                queryset = queryset.filter(estado=SolicitudT01.Estado.ISSUED)
+            else:
+                queryset = queryset.filter(expediente__estado=estado)
+
+        # Búsqueda por texto (título, motivo, causal, número o socios involucrados)
+        search = request.query_params.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(titulo__icontains=search)
+                | Q(motivo__icontains=search)
+                | Q(causal__icontains=search)
+                | Q(numero_expediente__icontains=search)
+                | Q(expediente__numero__icontains=search)
+                | Q(snapshots_destinatarios__icontains=search)
+            )
+
+        serializer = MisSolicitudesT01Serializer(queryset, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
