@@ -20,14 +20,28 @@ from expedientes.models import (
     Expediente,
     SolicitudT01,
 )
-from expedientes.permissions import CanCreateT01, CanOpenExpedientes, CanTransitionExpedientes
+from expedientes.permissions import (
+    CanCreateT01,
+    CanOpenExpedientes,
+    CanTransitionExpedientes,
+    IsImputadoOrTribunal,
+    IsTribunalOrDirectiva,
+)
 from expedientes.serializers import (
     AperturaExpedienteSerializer,
+    CaseNotificationAuditSerializer,
+    DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     ExpedienteListSerializer,
     PresentarDescargoSerializer,
     SolicitudT01Serializer,
     TransicionExpedienteSerializer,
+)
+from expedientes.services.opening_notification_service import (
+    CaseNotificationQueryService,
+    InvalidCaseStatusError,
+    MissingSocioEmailError,
+    OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 
@@ -117,8 +131,7 @@ class MisExpedientesView(APIView):
 
 
 class PresentarDescargoView(APIView):
-    """
-    Endpoint para presentación de descargo reglamentario (CA2 y buzzer-beater CA5).
+    """Endpoint para presentación de descargo reglamentario (CA2 y buzzer-beater CA5).
 
     Regla:
     - Evaluación de plazo en el servidor con select_for_update().
@@ -238,6 +251,111 @@ class PresentarDescargoView(APIView):
                 },
                 status=status.HTTP_200_OK if es_correccion else status.HTTP_201_CREATED,
             )
+
+
+class DispatchCaseOpeningView(APIView):
+    """Endpoint para que el Tribunal de Disciplina despache la notificación formal (CA1, CA3).
+
+    - Protegido con IsAuthenticated e IsTribunalOrDirectiva.
+    - Transiciona atómicamente a Estado 2 ('justificando').
+    - Congela plazo_inicio_at y plazo_limite_at.
+    - Encola en EmailOutbox con idempotency_key e intenta envío SMTP no bloqueante.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def post(self, request: Request, pk: int) -> Response:
+        if not Expediente.objects.filter(pk=pk).exists():
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        actor = getattr(getattr(request.user, "socio", None), "legajo", request.user.username)
+
+        try:
+            expediente, outbox = OpeningNotificationService.dispatch_opening(
+                expediente_id=pk,
+                actor=f"TD_{actor}",
+            )
+        except InvalidCaseStatusError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except MissingSocioEmailError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        response_data = {
+            "expediente_id": expediente.id,
+            "numero": expediente.numero,
+            "estado": expediente.estado,
+            "plazo_inicio_at": expediente.plazo_inicio_at,
+            "plazo_limite_at": expediente.plazo_limite_at,
+            "outbox_id": outbox.id,
+            "outbox_status": outbox.status,
+            "idempotency_key": outbox.idempotency_key,
+            "mensaje": "Notificación de apertura despachada correctamente.",
+        }
+        serializer = DispatchNotificationResponseSerializer(response_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Backward-compatible alias for existing imports
+DespacharNotificacionAperturaView = DispatchCaseOpeningView
+
+
+class CaseNotificationAuditView(APIView):
+    """Endpoint para que operadores del Tribunal consulten la bitácora outbox (CA3).
+
+    - Protegido con IsAuthenticated e IsTribunalOrDirectiva.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def get(self, request: Request, pk: int) -> Response:
+        if not Expediente.objects.filter(pk=pk).exists():
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        notifications = CaseNotificationQueryService.get_case_notifications(expediente_id=pk)
+        serializer = CaseNotificationAuditSerializer(notifications, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Backward-compatible alias for existing imports
+ExpedienteNotificacionesView = CaseNotificationAuditView
+
+
+class ExpedienteDetailView(APIView):
+    """Endpoint seguro de detalle de causa para el enlace provisto en la notificación (CA4).
+
+    - Protegido con IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto).
+    - 401 si es anónimo.
+    - 403 si es un socio ajeno a la causa.
+    - 200 si es el socio imputado o integra TD/CD/Admin.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsImputadoOrTribunal]
+
+    def get(self, request: Request, pk: int) -> Response:
+        expediente = (
+            Expediente.objects.filter(pk=pk).select_related("socio", "socio__subcomision").first()
+        )
+        if not expediente:
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        self.check_object_permissions(request, expediente)
+        serializer = ExpedienteListSerializer(expediente)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 REGLAMENTOS_VIGENTES = (

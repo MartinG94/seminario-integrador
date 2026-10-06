@@ -1,1 +1,1 @@
-"""Servicios de aplicación para el ciclo de vida de expedientes."""
+"""Servicios de aplicación para el módulo de expedientes."""
