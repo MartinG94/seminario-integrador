@@ -53,7 +53,7 @@
           </div>
 
           <div class="col-lg-3 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-estado">Estado Reglamentario:</label>
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-estado">Estado:</label>
             <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado" (change)="cargarDatosTablero()">
               <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
             </select>
@@ -119,7 +119,12 @@
             </span>
           </div>
           <h5 class="card-title-text">{{exp.socio}}</h5>
-          <div class="card-subcomm">{{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}</div>
+          <div class="card-subcomm">
+            {{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}
+            <span *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" class="badge badge-light text-muted ml-1" title="Expediente con múltiples imputados">
+              <i class="material-icons" style="font-size: 11px; vertical-align: middle;">group</i> {{exp.cantidadSocios}} imputados
+            </span>
+          </div>
           <p class="text-muted small text-truncate mb-2" title="{{exp.motivo}}">{{exp.motivo}}</p>
           
           <div class="card-bottom">
@@ -156,11 +161,10 @@
             <div *ngFor="let proxEstado of exp.transicionesPermitidas">
               <button mat-stroked-button 
                       type="button"
-                      class="btn btn-outline-primary btn-sm btn-block text-truncate py-1 px-2 mb-1"
-                      style="font-size: 11px; height: auto; line-height: 1.4;"
+                      class="btn btn-outline-primary btn-sm btn-block text-truncate py-1 px-2 mb-1 btn-transicion"
                       [attr.aria-label]="'Avanzar expediente ' + exp.numero + ' a ' + getEstadoLabel(proxEstado)"
                       (click)="transicionarEstado(exp, proxEstado, $event)">
-                <i class="material-icons" style="font-size: 13px; vertical-align: middle;">arrow_forward</i>
+                <i class="material-icons">arrow_forward</i>
                 Avanzar a {{getEstadoLabel(proxEstado)}}
               </button>
             </div>
@@ -184,7 +188,7 @@
               <th (click)="cambiarOrden('subcomision')" style="cursor: pointer;">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('motivo')" style="cursor: pointer;">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado Reglamentario <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th class="text-right">Acciones</th>
             </thead>
             <tbody>

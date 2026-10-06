@@ -27,6 +27,7 @@ export interface BoardCaseDTO {
   created_at: string;
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
+  cantidad_socios?: number;
 }
 
 export interface BoardColumnDTO {
@@ -64,6 +65,7 @@ export interface Expediente {
   horasRestantes: number;
   tipo: 'falta' | 'merito';
   puntos: number;
+  cantidadSocios?: number;
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
   descargoPresentado?: boolean;
@@ -398,6 +400,7 @@ export class TribunalDataService {
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',
       puntos: Number(c.puntos),
+      cantidadSocios: c.cantidad_socios || 1,
       plazoLimiteAt: c.plazo_limite_at || undefined
     };
   }

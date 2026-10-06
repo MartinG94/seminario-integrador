@@ -36,4 +36,7 @@ class ExpedienteFilter(django_filters.FilterSet):
             Q(socio__legajo__icontains=val)
             | Q(socio__first_name__icontains=val)
             | Q(socio__last_name__icontains=val)
-        )
+            | Q(socios__legajo__icontains=val)
+            | Q(socios__first_name__icontains=val)
+            | Q(socios__last_name__icontains=val)
+        ).distinct()

@@ -5,18 +5,15 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 
-<<<<<<< HEAD
 from expedientes.models import (
     DescargoExpediente,
+    EstadoExpedienteEnum,
     Expediente,
     SolicitudT01,
     TipoDescargoEnum,
 )
 from padron.factory import get_padron_repository
 from socios.models import Socio
-=======
-from expedientes.models import EstadoExpedienteEnum, Expediente, TipoDescargoEnum
->>>>>>> ea6e49a (feat(expedientes): implementar API de tablero y transiciones S2-05)
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
@@ -198,7 +195,6 @@ class PresentarDescargoSerializer(serializers.Serializer):
         return attrs
 
 
-<<<<<<< HEAD
 class DispatchNotificationResponseSerializer(serializers.Serializer):
     """Payload de respuesta tras el despacho formal de la notificación de apertura."""
 
@@ -414,6 +410,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     transiciones_permitidas = serializers.SerializerMethodField()
+    cantidad_socios = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -431,10 +428,15 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "created_at",
             "plazo_limite_at",
             "transiciones_permitidas",
+            "cantidad_socios",
         ]
 
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
+
+    def get_cantidad_socios(self, obj: Expediente) -> int:
+        count = obj.socios.count()
+        return count if count > 0 else 1
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])

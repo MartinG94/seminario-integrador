@@ -1,3 +1,5 @@
+@import '../../assets/scss/core/aveit-tribunal';
+
 .modal-backdrop-custom {
   position: fixed;
   top: 0;
@@ -22,18 +24,18 @@
 
 // Estilos de accesibilidad y foco (CA4 y CA5)
 .kanban-card-mat:focus {
-  outline: 2px solid #6E9DDC;
+  outline: 2px solid var(--color-border-focus, #{$aveit-cyan});
   outline-offset: 2px;
 }
 
 table.table-mat tbody tr:focus {
-  outline: 2px solid #6E9DDC;
+  outline: 2px solid var(--color-border-focus, #{$aveit-cyan});
   outline-offset: -2px;
   background-color: rgba(110, 157, 220, 0.12) !important;
 }
 
 .card-transiciones button:focus {
-  outline: 2px solid #151846;
+  outline: 2px solid var(--color-primary, #{$aveit-navy});
   outline-offset: 1px;
 }
 
@@ -53,3 +55,13 @@ table.table-mat tbody tr:focus {
   }
 }
 
+.btn-transicion {
+  font-size: 11px;
+  height: auto;
+  line-height: 1.4;
+
+  .material-icons {
+    font-size: 13px;
+    vertical-align: middle;
+  }
+}
