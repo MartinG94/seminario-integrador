@@ -4,6 +4,8 @@ Implementa:
 - CA4: Enlace seguro con autenticación forzada y autorización por objeto (IsImputadoOrTribunal).
 - Reexportación de IsTribunalOrDirectiva para acciones exclusivas de gestión del TD.
 - CanCreateT01: Autoridades procesales habilitadas para crear y tramitar T01.
+- CanOpenExpedientes y CanTransitionExpedientes: Roles para apertura y
+  transiciones manuales (PR #43).
 """
 
 from rest_framework.permissions import BasePermission
@@ -12,7 +14,25 @@ from accounts import audit
 from accounts.permissions import HasAnyRole, IsTribunalOrDirectiva
 from socios.models import Role
 
-__all__ = ["CanCreateT01", "IsImputadoOrTribunal", "IsTribunalOrDirectiva"]
+__all__ = [
+    "CanCreateT01",
+    "CanOpenExpedientes",
+    "CanTransitionExpedientes",
+    "IsImputadoOrTribunal",
+    "IsTribunalOrDirectiva",
+]
+
+
+class CanOpenExpedientes(HasAnyRole):
+    """Autoridades habilitadas para abrir expedientes: TD, CD y autoridades (Notas del PO)."""
+
+    allowed_roles = (Role.TD, Role.CD, Role.FISCALIZADORA)
+
+
+class CanTransitionExpedientes(HasAnyRole):
+    """Sólo el Tribunal puede hacer transiciones manuales."""
+
+    allowed_roles = (Role.TD,)
 
 
 class CanCreateT01(HasAnyRole):
