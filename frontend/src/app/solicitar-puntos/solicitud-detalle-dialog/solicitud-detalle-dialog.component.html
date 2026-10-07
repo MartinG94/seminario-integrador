@@ -1,0 +1,133 @@
+<div class="modal-header d-flex justify-content-between align-items-center pb-2 border-bottom">
+  <div>
+    <h4 class="modal-title font-weight-bold text-dark mb-0">
+      <mat-icon class="align-middle mr-1 text-primary">assignment</mat-icon>
+      Solicitud {{ solicitud.numero }}
+    </h4>
+    <small class="text-muted">Fecha: {{ solicitud.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
+  </div>
+  <div>
+    <span class="badge-mat" [ngClass]="obtenerClaseEstado(solicitud.estado_procesal)">
+      {{ solicitud.estado_procesal_display }}
+    </span>
+    <button mat-icon-button (click)="cerrar()" title="Cerrar ventana" class="ml-2">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<div mat-dialog-content class="pt-3 pb-3">
+  <!-- Datos Principales -->
+  <div class="card bg-light border-0 p-3 mb-3">
+    <div class="row">
+      <div class="col-md-6 mb-2">
+        <label class="text-secondary small font-weight-bold mb-0">Título:</label>
+        <div class="font-weight-bold text-dark">{{ solicitud.titulo || 'Sin título especificado' }}</div>
+      </div>
+      <div class="col-md-3 mb-2">
+        <label class="text-secondary small font-weight-bold mb-0">Tipo de Acción:</label>
+        <div>
+          <span class="badge-mat" [ngClass]="solicitud.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
+            {{ solicitud.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
+          </span>
+        </div>
+      </div>
+      <div class="col-md-3 mb-2">
+        <label class="text-secondary small font-weight-bold mb-0">Puntos solicitados:</label>
+        <div class="font-weight-bold" [ngClass]="solicitud.puntos < 0 ? 'text-danger' : 'text-success'">
+          {{ solicitud.puntos !== null ? (solicitud.puntos > 0 ? '+' : '') + solicitud.puntos + ' pts' : 'S/D' }}
+        </div>
+      </div>
+    </div>
+    <div class="row mt-1" *ngIf="solicitud.causal">
+      <div class="col-12">
+        <label class="text-secondary small font-weight-bold mb-0">Causal reglamentaria:</label>
+        <div class="text-dark">{{ solicitud.causal }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socios involucrados -->
+  <div class="mb-3">
+    <h6 class="font-weight-bold text-dark mb-2">
+      <mat-icon class="align-middle mr-1 small text-info">people</mat-icon>
+      Socios involucrados ({{ solicitud.involucrados.length }})
+    </h6>
+    <div class="table-responsive border rounded" *ngIf="solicitud.involucrados.length > 0">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th style="width: 110px;">Legajo</th>
+            <th>Apellido y Nombre</th>
+            <th>Subcomisión</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of solicitud.involucrados">
+            <td><span class="badge-mat badge-mat-info">{{ s.legajo || 'S/D' }}</span></td>
+            <td class="font-weight-bold">{{ s.last_name }}, {{ s.first_name }}</td>
+            <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="alert alert-secondary py-2 px-3 mb-0" *ngIf="solicitud.involucrados.length === 0">
+      <small>No se registraron socios vinculados formalmente en esta solicitud.</small>
+    </div>
+  </div>
+
+  <!-- Exposición fáctica -->
+  <div class="mb-3" *ngIf="solicitud.razon || solicitud.motivo">
+    <h6 class="font-weight-bold text-dark mb-2">Fundamentos y Razón de la Solicitud:</h6>
+    <div class="p-3 bg-white border rounded text-dark" style="white-space: pre-wrap; font-size: 0.92rem;">
+      {{ solicitud.razon || solicitud.motivo }}
+    </div>
+  </div>
+
+  <!-- Anexo Circunstanciado (si tiene) -->
+  <div class="mb-3" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar || solicitud.anexo_testigos || solicitud.anexo_relato">
+    <h6 class="font-weight-bold text-dark mb-2">Hoja de Anexo Circunstanciada:</h6>
+    <div class="p-3 bg-light border rounded">
+      <div class="row" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar">
+        <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_fecha">
+          <small class="text-muted d-block">Fecha del hecho:</small>
+          <strong>{{ solicitud.anexo_fecha }}</strong>
+        </div>
+        <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_lugar">
+          <small class="text-muted d-block">Lugar del hecho:</small>
+          <strong>{{ solicitud.anexo_lugar }}</strong>
+        </div>
+      </div>
+      <div class="mb-2" *ngIf="solicitud.anexo_testigos">
+        <small class="text-muted d-block">Testigos presenciales:</small>
+        <span>{{ solicitud.anexo_testigos }}</span>
+      </div>
+      <div *ngIf="solicitud.anexo_relato">
+        <small class="text-muted d-block">Relato circunstanciado:</small>
+        <div class="text-dark" style="white-space: pre-wrap;">{{ solicitud.anexo_relato }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolución Final (si está emitida) -->
+  <div class="card border-success mt-3" *ngIf="solicitud.resolucion_final">
+    <div class="card-header bg-success text-white py-2">
+      <mat-icon class="align-middle mr-1">verified</mat-icon>
+      Resolución Firme Emitida por el Tribunal de Disciplina
+    </div>
+    <div class="card-body p-3">
+      <div *ngIf="solicitud.resolucion_final.fecha" class="small text-muted mb-1">
+        Fecha de emisión: {{ solicitud.resolucion_final.fecha | date:'dd/MM/yyyy HH:mm' }}
+      </div>
+      <p class="mb-0 text-dark font-weight-bold">
+        {{ solicitud.resolucion_final.dictamen }}
+      </p>
+    </div>
+  </div>
+</div>
+
+<div mat-dialog-actions class="d-flex justify-content-end p-2 border-top">
+  <button mat-raised-button class="btn btn-default" (click)="cerrar()">
+    Cerrar
+  </button>
+</div>

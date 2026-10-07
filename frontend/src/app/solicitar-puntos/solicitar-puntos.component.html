@@ -122,7 +122,7 @@
                   5. Hoja de Anexo Circunstanciada
                 </mat-panel-title>
                 <mat-panel-description>
-                  <span class="badge badge-secondary ml-2">Opcional (Art. 16 bis)</span>
+                  <span class="badge badge-secondary ml-2">Opcional</span>
                 </mat-panel-description>
               </mat-expansion-panel-header>
 
@@ -156,6 +156,116 @@
             <button mat-button class="btn btn-default" routerLink="/gestionar-expedientes">Cancelar</button>
             <button mat-raised-button class="btn btn-secondary" (click)="guardarBorrador()" [disabled]="cargando || estado === 'ISSUED'">Guardar borrador</button>
             <button mat-raised-button color="primary" class="btn btn-primary" (click)="emitirT01()" [disabled]="cargando || estado === 'ISSUED'">Emitir T01</button>
+          </div>
+        </div>
+
+        <!-- Panel Inferior: Mis Solicitudes y Trámites T01 (SCRUM-75 / PB-04) -->
+        <div class="card mt-4">
+          <div class="card-header card-header-info">
+            <h4 class="card-title text-white">Mis Solicitudes y Trámites T01</h4>
+            <p class="card-category text-white-50">Monitoreo de causas iniciadas y seguimiento de expedientes procesales.</p>
+          </div>
+          <div class="card-body">
+            <div *ngIf="errorSolicitudes" class="alert alert-danger">{{ errorSolicitudes }}</div>
+
+            <!-- Filtros: Buscador + Selector de Estado -->
+            <div class="row align-items-center mb-3">
+              <div class="col-md-7 mb-2 mb-md-0">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Buscar por causa, causal, expediente o socio...</mat-label>
+                  <input matInput [formControl]="busquedaControl" placeholder="Escriba para filtrar en tiempo real...">
+                  <mat-icon matSuffix>search</mat-icon>
+                </mat-form-field>
+              </div>
+              <div class="col-md-5">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Filtrar por estado</mat-label>
+                  <mat-select [formControl]="estadoFiltro">
+                    <mat-option value="">Todos los estados</mat-option>
+                    <mat-option value="DRAFT">Borradores</mat-option>
+                    <mat-option value="ISSUED">Emitidos (Todos)</mat-option>
+                    <mat-option value="creado">Iniciados (Apertura)</mat-option>
+                    <mat-option value="en_descargo">En Descargo</mat-option>
+                    <mat-option value="espera_resolucion">En Evaluación</mat-option>
+                    <mat-option value="emitido">Resueltos con Dictamen</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <!-- Indicador de carga -->
+            <div *ngIf="cargandoSolicitudes" class="text-center py-4 text-muted">
+              <p class="mb-0">Cargando solicitudes...</p>
+            </div>
+
+            <!-- Tabla densa estilo explorador (.table-mat) -->
+            <div class="explorer-table-container" *ngIf="!cargandoSolicitudes && misSolicitudes.length > 0">
+              <table class="table-mat">
+                <thead>
+                  <tr>
+                    <th style="width: 105px;">Fecha</th>
+                    <th>Causa / Solicitud</th>
+                    <th>Socios Involucrados</th>
+                    <th style="width: 115px;">Acción / Pts</th>
+                    <th style="width: 130px;">Estado</th>
+                    <th class="text-right" style="width: 190px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let s of misSolicitudes">
+                    <td class="text-muted small">
+                      {{ s.fecha | date:'dd/MM/yyyy' }}
+                    </td>
+                    <td>
+                      <div class="font-weight-bold text-dark">{{ s.titulo || 'Sin título' }}</div>
+                      <small class="text-muted">
+                        {{ s.numero }}
+                        <ng-container *ngIf="s.numero_expediente"> &bull; Exp: {{ s.numero_expediente }}</ng-container>
+                      </small>
+                    </td>
+                    <td>
+                      <span class="text-dark">{{ obtenerTextoInvolucrados(s) }}</span>
+                    </td>
+                    <td>
+                      <div>
+                        <span class="badge-mat" [ngClass]="s.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
+                          {{ s.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
+                        </span>
+                      </div>
+                      <small class="font-weight-bold" [ngClass]="s.puntos && s.puntos < 0 ? 'text-danger' : 'text-success'" *ngIf="s.puntos !== null">
+                        {{ s.puntos > 0 ? '+' : '' }}{{ s.puntos }} pts
+                      </small>
+                    </td>
+                    <td>
+                      <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
+                        {{ obtenerTextoEstado(s) }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <ng-container *ngIf="s.estado === 'DRAFT'">
+                        <button mat-button class="btn btn-sm btn-info px-2 mr-1" (click)="continuarEdicion(s)" title="Continuar edición">
+                          Continuar edición
+                        </button>
+                        <button mat-button class="btn btn-sm btn-danger px-2" (click)="eliminarBorrador(s)" title="Eliminar borrador">
+                          Eliminar
+                        </button>
+                      </ng-container>
+                      <ng-container *ngIf="s.estado === 'ISSUED'">
+                        <button mat-button class="btn btn-sm btn-primary px-2" (click)="abrirDetalle(s)" title="Ver Detalle del trámite">
+                          Ver Detalle
+                        </button>
+                      </ng-container>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Estado Vacío -->
+            <div *ngIf="!cargandoSolicitudes && misSolicitudes.length === 0" class="text-center py-4 text-muted">
+              <mat-icon style="font-size: 36px; height: 36px; width: 36px;" class="text-secondary mb-2">folder_open</mat-icon>
+              <p class="mb-0">No se encontraron solicitudes o trámites con los criterios seleccionados.</p>
+            </div>
           </div>
         </div>
       </div>

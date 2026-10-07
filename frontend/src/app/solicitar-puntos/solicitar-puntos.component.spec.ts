@@ -1,17 +1,20 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
-import { ExpedienteApiService, SolicitudT01 } from '../services/expediente-api.service';
+import { ExpedienteApiService, SolicitudMonitoreo, SolicitudT01 } from '../services/expediente-api.service';
 import { PadronApiService } from '../services/padron-api.service';
+import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { SolicitarPuntosComponent } from './solicitar-puntos.component';
 
 describe('SolicitarPuntosComponent', () => {
@@ -19,6 +22,8 @@ describe('SolicitarPuntosComponent', () => {
   let fixture: ComponentFixture<SolicitarPuntosComponent>;
   let expediente: jasmine.SpyObj<ExpedienteApiService>;
   let padron: jasmine.SpyObj<PadronApiService>;
+  let dialog: jasmine.SpyObj<MatDialog>;
+
   const draft: SolicitudT01 = {
     id: 'draft-1',
     estado: 'DRAFT',
@@ -45,6 +50,62 @@ describe('SolicitarPuntosComponent', () => {
     issued_at: null,
   };
 
+  const mockSolicitudes: SolicitudMonitoreo[] = [
+    {
+      id: 'draft-1',
+      numero: 'T01-001',
+      numero_expediente: null,
+      fecha: '2026-03-01T10:00:00Z',
+      estado: 'DRAFT',
+      tipo_accion: 'SANCTION',
+      puntos: -1,
+      titulo: 'Borrador 1',
+      motivo: 'Motivo borrador',
+      causal: 'Causal borrador',
+      razon: 'Razón borrador',
+      reglamentos_respaldantes: ['Estatuto AVEIT'],
+      anexo_fecha: '2026-03-01',
+      anexo_lugar: 'Sede AVEIT',
+      anexo_relato: 'Relato anexo',
+      anexo_testigos: 'Testigo 1',
+      destinatarios_socios_ids: [7],
+      estado_procesal: 'borrador',
+      estado_procesal_display: 'Borrador',
+      involucrados: [{ socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba' }],
+      resolucion_final: null,
+      created_at: '2026-03-01T10:00:00Z',
+      issued_at: null,
+    },
+    {
+      id: 'issued-2',
+      numero: 'T01-002',
+      numero_expediente: 'EXP-002',
+      fecha: '2026-03-02T12:00:00Z',
+      estado: 'ISSUED',
+      tipo_accion: 'MERIT',
+      puntos: 2,
+      titulo: 'Mérito 2',
+      motivo: 'Motivo emitido',
+      causal: 'Causal emitido',
+      razon: 'Razón emitida',
+      reglamentos_respaldantes: [],
+      anexo_fecha: null,
+      anexo_lugar: '',
+      anexo_relato: '',
+      anexo_testigos: '',
+      destinatarios_socios_ids: [7, 8],
+      estado_procesal: 'en_descargo',
+      estado_procesal_display: 'En Descargo',
+      involucrados: [
+        { socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba' },
+        { socio_id: 8, legajo: '888', first_name: 'Bruno', last_name: 'García' },
+      ],
+      resolucion_final: null,
+      created_at: '2026-03-02T12:00:00Z',
+      issued_at: '2026-03-02T12:30:00Z',
+    },
+  ];
+
   beforeEach(() => {
     expediente = jasmine.createSpyObj('ExpedienteApiService', [
       'crearBorrador',
@@ -52,8 +113,12 @@ describe('SolicitarPuntosComponent', () => {
       'emitir',
       'obtener',
       'listarReglamentos',
+      'listarMisSolicitudes',
+      'eliminarBorrador',
     ]);
     padron = jasmine.createSpyObj('PadronApiService', ['listarSocios']);
+    dialog = jasmine.createSpyObj('MatDialog', ['open']);
+
     padron.listarSocios.and.returnValue(
       of([
         {
@@ -80,6 +145,8 @@ describe('SolicitarPuntosComponent', () => {
       of({ ...draft, estado: 'ISSUED', numero_expediente: 'T01-2026-1', issued_at: '2026-01-01' })
     );
     expediente.listarReglamentos.and.returnValue(of({ reglamentos: ['Estatuto AVEIT Reforma 2026'] }));
+    expediente.listarMisSolicitudes.and.returnValue(of(mockSolicitudes));
+    expediente.eliminarBorrador.and.returnValue(of(undefined as unknown as void));
 
     TestBed.configureTestingModule({
       imports: [
@@ -89,6 +156,8 @@ describe('SolicitarPuntosComponent', () => {
         MatButtonModule,
         MatFormFieldModule,
         MatInputModule,
+        MatSelectModule,
+        MatDialogModule,
         MatExpansionModule,
         MatIconModule,
         NoopAnimationsModule,
@@ -98,6 +167,7 @@ describe('SolicitarPuntosComponent', () => {
       providers: [
         { provide: ExpedienteApiService, useValue: expediente },
         { provide: PadronApiService, useValue: padron },
+        { provide: MatDialog, useValue: dialog },
       ],
     });
     fixture = TestBed.createComponent(SolicitarPuntosComponent);
@@ -192,5 +262,114 @@ describe('SolicitarPuntosComponent', () => {
     component.guardarBorrador();
     expect(component.errorMensaje).toBe('No se pudo completar la operación.');
     expect(component.errorMensaje).not.toContain('<html>');
+  });
+
+  // ==========================================
+  // Pruebas TS-75.5: Panel Mis Solicitudes T01
+  // ==========================================
+
+  it('carga la lista de solicitudes al inicializar el componente', () => {
+    expect(expediente.listarMisSolicitudes).toHaveBeenCalledWith({ search: undefined, estado: undefined });
+    expect(component.misSolicitudes.length).toBe(2);
+    expect(component.misSolicitudes[0].id).toBe('draft-1');
+  });
+
+  it('filtra solicitudes con debounce al escribir en el buscador', fakeAsync(() => {
+    expediente.listarMisSolicitudes.calls.reset();
+    component.busquedaControl.setValue('inconducta');
+    tick(100);
+    expect(expediente.listarMisSolicitudes).not.toHaveBeenCalled();
+
+    tick(250); // Completa el debounceTime(300)
+    expect(expediente.listarMisSolicitudes).toHaveBeenCalledWith({ search: 'inconducta', estado: undefined });
+  }));
+
+  it('filtra solicitudes inmediatamente al cambiar el estado', () => {
+    expediente.listarMisSolicitudes.calls.reset();
+    component.estadoFiltro.setValue('DRAFT');
+    expect(expediente.listarMisSolicitudes).toHaveBeenCalledWith({ search: undefined, estado: 'DRAFT' });
+  });
+
+  it('carga el borrador en el formulario al presionar continuarEdicion y desplaza hacia arriba', () => {
+    spyOn(window, 'scrollTo').and.callFake(() => {});
+    const borrador = mockSolicitudes[0];
+
+    component.continuarEdicion(borrador);
+
+    expect(component.borradorId).toBe('draft-1');
+    expect(component.titulo).toBe('Borrador 1');
+    expect(component.causal).toBe('Causal borrador');
+    expect(component.tipoAccion).toBe('SANCTION');
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.razon).toBe('Razón borrador');
+    expect(component.anexoFecha).toBe('2026-03-01');
+    expect(component.anexoLugar).toBe('Sede AVEIT');
+    expect(component.anexoExpandido).toBeTrue();
+    expect(component.sociosSeleccionados.length).toBe(1);
+    expect(component.sociosSeleccionados[0].socio_id).toBe(7);
+    expect(component.exitoMensaje).toContain('cargado en el formulario');
+    expect(window.scrollTo).toHaveBeenCalled();
+  });
+
+  it('no ejecuta continuarEdicion si la solicitud ya está en estado ISSUED', () => {
+    const emitida = mockSolicitudes[1];
+    component.borradorId = null;
+    component.continuarEdicion(emitida);
+    expect(component.borradorId).toBeNull();
+  });
+
+  it('cancela la eliminación de borrador si el usuario rechaza la confirmación', () => {
+    spyOn(window, 'confirm').and.returnValue(false);
+    component.eliminarBorrador(mockSolicitudes[0]);
+    expect(expediente.eliminarBorrador).not.toHaveBeenCalled();
+  });
+
+  it('elimina el borrador, limpia el formulario si coincidía y recarga la lista cuando el usuario confirma', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    expediente.listarMisSolicitudes.calls.reset();
+    component.borradorId = 'draft-1';
+    component.titulo = 'Borrador 1';
+
+    component.eliminarBorrador(mockSolicitudes[0]);
+
+    expect(expediente.eliminarBorrador).toHaveBeenCalledWith('draft-1');
+    expect(component.exitoMensaje).toContain('eliminado correctamente');
+    expect(component.borradorId).toBeNull();
+    expect(component.titulo).toBe('');
+    expect(expediente.listarMisSolicitudes).toHaveBeenCalled();
+  });
+
+  it('abre el diálogo de detalle al presionar abrirDetalle sobre una solicitud emitida', () => {
+    const emitida = mockSolicitudes[1];
+    component.abrirDetalle(emitida);
+
+    expect(dialog.open).toHaveBeenCalledWith(SolicitudDetalleDialogComponent, {
+      width: '100%',
+      maxWidth: '750px',
+      data: emitida,
+    });
+  });
+
+  it('retorna clases semánticas de badge conformes a DESIGN.md', () => {
+    expect(component.obtenerClaseBadge(mockSolicitudes[0])).toBe('badge-mat-rose'); // DRAFT
+    expect(component.obtenerClaseBadge(mockSolicitudes[1])).toBe('badge-mat-warning'); // en_descargo
+
+    const solCreada = { ...mockSolicitudes[1], estado_procesal: 'creado' };
+    expect(component.obtenerClaseBadge(solCreada)).toBe('badge-mat-info');
+
+    const solEval = { ...mockSolicitudes[1], estado_procesal: 'espera_resolucion' };
+    expect(component.obtenerClaseBadge(solEval)).toBe('badge-mat-primary');
+
+    const solEmitida = { ...mockSolicitudes[1], estado_procesal: 'emitido' };
+    expect(component.obtenerClaseBadge(solEmitida)).toBe('badge-mat-success');
+
+    const solRechazada = { ...mockSolicitudes[1], estado_procesal: 'rechazado' };
+    expect(component.obtenerClaseBadge(solRechazada)).toBe('badge-mat-danger');
+  });
+
+  it('formatea correctamente el texto de socios involucrados', () => {
+    expect(component.obtenerTextoInvolucrados({ ...mockSolicitudes[0], involucrados: [] })).toBe('Sin socios asignados');
+    expect(component.obtenerTextoInvolucrados(mockSolicitudes[0])).toBe('Prueba, Ana');
+    expect(component.obtenerTextoInvolucrados(mockSolicitudes[1])).toBe('Prueba, Ana (+1)');
   });
 });

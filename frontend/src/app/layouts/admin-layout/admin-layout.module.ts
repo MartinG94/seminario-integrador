@@ -28,6 +28,7 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
+import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 
 @NgModule({
@@ -55,6 +56,7 @@ import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarro
     RankingSociosComponent,
     SocioLegajoDialogComponent,
     SolicitarPuntosComponent,
+    SolicitudDetalleDialogComponent,
     EventosAsistenciaComponent,
     DashboardComponent,
     TableListComponent,
