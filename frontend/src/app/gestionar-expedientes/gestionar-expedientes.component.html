@@ -88,88 +88,108 @@
       </div>
     </div>
 
-    <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (6 Fases Canónicas - CA1 y CA4) -->
-    <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de seis estados">
-      <div *ngFor="let col of columnasKanban" class="kanban-col-mat" [attr.aria-label]="col.titulo">
-        <div class="kanban-col-header">
-          <div class="d-flex align-items-center gap-2">
-            <i class="material-icons text-muted" style="font-size: 18px;" aria-hidden="true">{{col.icon}}</i>
-            <h4>{{col.titulo}}</h4>
-          </div>
-          <span class="col-count" [attr.aria-label]="getExpedientesPorEstado(col.estado).length + ' expedientes'">
+    <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (Ciclo de Vida Canónico S2-05) -->
+    <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de estados">
+      <div *ngFor="let col of columnasKanbanVisibles" 
+           class="kanban-col-mat" 
+           [class.colapsada]="isColumnaColapsada(col.estado)"
+           [attr.aria-label]="col.titulo">
+        
+        <!-- Vista de Columna Colapsada (tira vertical estrecha) -->
+        <div *ngIf="isColumnaColapsada(col.estado)" class="kanban-col-collapsed" (click)="toggleColapsar(col.estado)">
+          <button mat-icon-button 
+                  type="button" 
+                  class="btn btn-link btn-just-icon btn-sm text-muted mb-2" 
+                  [attr.aria-label]="'Expandir columna ' + col.titulo"
+                  (click)="toggleColapsar(col.estado, $event)"
+                  title="Expandir columna">
+            <i class="material-icons">chevron_right</i>
+          </button>
+          <i class="material-icons text-muted col-icon-collapsed" aria-hidden="true">{{col.icon}}</i>
+          <span class="col-title-vertical">{{col.titulo}}</span>
+          <span class="col-count mt-2" [attr.aria-label]="getExpedientesPorEstado(col.estado).length + ' expedientes'">
             {{getExpedientesPorEstado(col.estado).length}}
           </span>
         </div>
 
-        <div *ngIf="getExpedientesPorEstado(col.estado).length === 0" class="text-center py-4 text-muted small">
-          Sin expedientes en esta etapa
-        </div>
-
-        <div *ngFor="let exp of getExpedientesPorEstado(col.estado)" 
-             class="kanban-card-mat" 
-             tabindex="0"
-             role="article"
-             [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
-             (click)="abrirDetalle(exp)"
-             (keydown)="onKanbanCardKeyDown($event, exp)">
-          <div class="card-top">
-            <span class="font-weight-bold text-dark">{{exp.numero}}</span>
-            <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
-              {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
-            </span>
-          </div>
-          <h5 class="card-title-text">{{exp.socio}}</h5>
-          <div class="card-subcomm">
-            {{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}
-            <span *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" class="badge badge-light text-muted ml-1" title="Expediente con múltiples imputados">
-              <i class="material-icons" style="font-size: 11px; vertical-align: middle;">group</i> {{exp.cantidadSocios}} imputados
-            </span>
-          </div>
-          <p class="text-muted small text-truncate mb-2" title="{{exp.motivo}}">{{exp.motivo}}</p>
-          
-          <div class="card-bottom">
-            <div *ngIf="exp.estado === 'justificando'" class="timer-badge" style="font-size: 10px;">
-              <i class="material-icons" style="font-size: 12px;" aria-hidden="true">schedule</i> {{exp.horasRestantes}}h
+        <!-- Vista de Columna Expandida Normal -->
+        <ng-container *ngIf="!isColumnaColapsada(col.estado)">
+          <div class="kanban-col-header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="material-icons text-muted" style="font-size: 18px;" aria-hidden="true">{{col.icon}}</i>
+              <h4>{{col.titulo}}</h4>
             </div>
-            <div *ngIf="exp.estado !== 'justificando'" class="text-muted small">
-              {{exp.fechaCreacion}}
-            </div>
-
-            <!-- Botones de Acción de Estado y Modales -->
-            <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
-              <button *ngIf="exp.estado === 'revision_resolucion'" 
-                      mat-button 
-                      class="btn btn-info btn-link btn-sm p-1"
-                      title="Votar Dictamen Colegiado"
-                      aria-label="Votar Dictamen Colegiado"
-                      (click)="abrirVotacion(exp)">
-                <i class="material-icons">how_to_vote</i>
-              </button>
-              <button *ngIf="exp.estado === 'pendiente_correos'" 
-                      mat-button 
-                      class="btn btn-success btn-link btn-sm p-1"
-                      title="Firmar Resolución"
-                      aria-label="Firmar Resolución"
-                      (click)="abrirFirma(exp)">
-                <i class="material-icons">draw</i>
+            <div class="d-flex align-items-center gap-1">
+              <span class="col-count" [attr.aria-label]="getExpedientesPorEstado(col.estado).length + ' expedientes'">
+                {{getExpedientesPorEstado(col.estado).length}}
+              </span>
+              <button mat-icon-button 
+                      type="button" 
+                      class="btn btn-link btn-just-icon btn-sm text-muted p-0 m-0 btn-colapsar" 
+                      [attr.aria-label]="'Colapsar columna ' + col.titulo"
+                      (click)="toggleColapsar(col.estado, $event)"
+                      title="Colapsar columna">
+                <i class="material-icons" style="font-size: 18px;">chevron_left</i>
               </button>
             </div>
           </div>
 
-          <!-- Acciones de Transición Accesibles por Teclado y Pantalla Táctil (CA3 y CA4) -->
-          <div class="card-transiciones mt-2 pt-2 border-top" *ngIf="exp.transicionesPermitidas && exp.transicionesPermitidas.length > 0">
-            <div *ngFor="let proxEstado of exp.transicionesPermitidas">
-              <button mat-stroked-button 
-                      type="button"
-                      class="btn btn-outline-primary btn-sm btn-block text-truncate py-1 px-2 mb-1 btn-transicion"
-                      [attr.aria-label]="'Avanzar expediente ' + exp.numero + ' a ' + getEstadoLabel(proxEstado)"
-                      (click)="transicionarEstado(exp, proxEstado, $event)">
-                <i class="material-icons">arrow_forward</i>
-                Avanzar a {{getEstadoLabel(proxEstado)}}
-              </button>
+          <div *ngIf="getExpedientesPorEstado(col.estado).length === 0" class="text-center py-4 text-muted small">
+            Sin expedientes en esta etapa
+          </div>
+
+          <div *ngFor="let exp of getExpedientesPorEstado(col.estado)" 
+               class="kanban-card-mat" 
+               tabindex="0"
+               role="article"
+               [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
+               (click)="abrirDetalle(exp)"
+               (keydown)="onKanbanCardKeyDown($event, exp)">
+            <div class="card-top">
+              <span class="font-weight-bold text-dark">{{exp.numero}}</span>
+              <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
+                {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
+              </span>
+            </div>
+            <h5 class="card-title-text">{{exp.socio}}</h5>
+            <div class="card-subcomm">
+              {{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}
+              <span *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" class="badge badge-light text-muted ml-1" title="Expediente con múltiples imputados">
+                <i class="material-icons" style="font-size: 11px; vertical-align: middle;">group</i> {{exp.cantidadSocios}} imputados
+              </span>
+            </div>
+            <p class="text-muted small text-truncate mb-2" title="{{exp.motivo}}">{{exp.motivo}}</p>
+            
+            <div class="card-bottom">
+              <div *ngIf="exp.estado === 'justificando'" class="timer-badge" style="font-size: 10px;">
+                <i class="material-icons" style="font-size: 12px;" aria-hidden="true">schedule</i> {{exp.horasRestantes}}h
+              </div>
+              <div *ngIf="exp.estado !== 'justificando'" class="text-muted small">
+                {{exp.fechaCreacion}}
+              </div>
+
+              <!-- Acciones específicas de etapa según rol TD (votación o firma) -->
+              <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
+                <button *ngIf="exp.estado === 'revision_resolucion'" 
+                        mat-button 
+                        class="btn btn-info btn-link btn-sm p-1"
+                        title="Votar Dictamen Colegiado"
+                        aria-label="Votar Dictamen Colegiado"
+                        (click)="abrirVotacion(exp)">
+                  <i class="material-icons">how_to_vote</i>
+                </button>
+                <button *ngIf="exp.estado === 'pendiente_correos'" 
+                        mat-button 
+                        class="btn btn-success btn-link btn-sm p-1"
+                        title="Firmar Resolución"
+                        aria-label="Firmar Resolución"
+                        (click)="abrirFirma(exp)">
+                  <i class="material-icons">draw</i>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ng-container>
       </div>
     </div>
 
@@ -277,19 +297,6 @@
           </div>
         </div>
 
-        <!-- Transición rápida desde el modal si corresponde -->
-        <div *ngIf="expedienteSeleccionado.transicionesPermitidas && expedienteSeleccionado.transicionesPermitidas.length > 0" class="mt-3 p-3 bg-light rounded border">
-          <label class="text-muted small font-weight-bold mb-2">Transición Autorizada:</label>
-          <div class="d-flex gap-2">
-            <button *ngFor="let prox of expedienteSeleccionado.transicionesPermitidas"
-                    mat-raised-button
-                    class="btn btn-primary btn-sm"
-                    (click)="transicionarEstado(expedienteSeleccionado, prox); cerrarModales()">
-              <i class="material-icons" style="font-size: 14px;">arrow_forward</i>
-              Transicionar a {{getEstadoLabel(prox)}}
-            </button>
-          </div>
-        </div>
 
         <!-- Descargo si existe -->
         <div *ngIf="expedienteSeleccionado.descargo" class="mt-3 p-3 bg-light rounded border">

@@ -22,25 +22,29 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   columnaOrden = 'numero';
   ordenAscendente = true;
 
-  // Exactamente 6 estados canónicos (CA1)
-  columnasKanban: { estado: EstadoExpediente; titulo: string; icon: string }[] = [
-    { estado: 'creado', titulo: 'Expediente Creado', icon: 'file_copy' },
-    { estado: 'justificando', titulo: 'En período de justificaciones', icon: 'schedule' },
-    { estado: 'revision_resolucion', titulo: 'Justificaciones en revisión', icon: 'gavel' },
-    { estado: 'espera_resolucion', titulo: 'Espera de resolución', icon: 'hourglass_empty' },
-    { estado: 'pendiente_correos', titulo: 'Pendiente de correos', icon: 'mail_outline' },
-    { estado: 'emitido', titulo: 'Expedientes ya emitidos', icon: 'verified' }
+  // Estados canónicos del Kanban ordenados según ciclo de vida (S2-05)
+  // creado y pendiente_correos son estados transitorios
+  columnasKanban: { estado: EstadoExpediente; titulo: string; icon: string; transitoria?: boolean }[] = [
+    { estado: 'creado', titulo: 'Creados', icon: 'file_copy', transitoria: true },
+    { estado: 'justificando', titulo: 'Justificando', icon: 'schedule' },
+    { estado: 'revision_resolucion', titulo: 'En Revisión', icon: 'gavel' },
+    { estado: 'emitido', titulo: 'Emitidos', icon: 'verified' },
+    { estado: 'pendiente_correos', titulo: 'Pendiente de firma y envío', icon: 'mail_outline', transitoria: true }
   ];
 
   estadosDisponibles: { key: string; label: string }[] = [
     { key: '', label: 'Todos los estados' },
-    { key: 'creado', label: 'Expediente Creado' },
-    { key: 'justificando', label: 'En período de justificaciones' },
-    { key: 'revision_resolucion', label: 'Justificaciones en revisión' },
-    { key: 'espera_resolucion', label: 'Espera de resolución' },
-    { key: 'pendiente_correos', label: 'Pendiente de correos' },
-    { key: 'emitido', label: 'Expedientes ya emitidos' }
+    { key: 'creado', label: 'Creados' },
+    { key: 'justificando', label: 'Justificando' },
+    { key: 'revision_resolucion', label: 'En Revisión' },
+    { key: 'emitido', label: 'Emitidos' },
+    { key: 'pendiente_correos', label: 'Pendiente de firma y envío' }
   ];
+
+  // Estado de colapso de columnas
+  columnasColapsadas: { [estado: string]: boolean } = {
+    emitido: false
+  };
 
   // Modales
   modalDetalleAbierto = false;
@@ -91,6 +95,35 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
   }
 
+  toggleColapsar(estado: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.columnasColapsadas[estado] = !this.columnasColapsadas[estado];
+  }
+
+  isColumnaColapsada(estado: string): boolean {
+    return !!this.columnasColapsadas[estado];
+  }
+
+  // Columnas visibles del tablero Kanban según filtro y si son transitorias vacías
+  get columnasKanbanVisibles(): { estado: EstadoExpediente; titulo: string; icon: string; transitoria?: boolean }[] {
+    if (this.filtroEstado.trim()) {
+      const estadoFiltro = this.filtroEstado.trim();
+      // Si el filtro es revision_resolucion o espera_resolucion, apuntar a revision_resolucion
+      const estadoBuscado = (estadoFiltro === 'espera_resolucion') ? 'revision_resolucion' : estadoFiltro;
+      return this.columnasKanban.filter(col => col.estado === estadoBuscado);
+    }
+
+    // Sin filtro de estado activo: ocultar columnas transitorias si están vacías
+    return this.columnasKanban.filter(col => {
+      if (col.transitoria) {
+        return this.getExpedientesPorEstado(col.estado).length > 0;
+      }
+      return true;
+    });
+  }
+
   cargarDatosTablero(): void {
     this.cargando = true;
     const filtros: any = {};
@@ -104,6 +137,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.cargando = false;
       },
       error: () => {
+        // En caso de error o backend no disponible, se mantiene la colección local
         this.cargando = false;
       }
     });
@@ -120,6 +154,34 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
+    // Filtro por socio en memoria (fallback / reactivo)
+    if (this.filtroSocio.trim()) {
+      const q = this.filtroSocio.trim().toLowerCase();
+      result = result.filter(e =>
+        (e.socio && e.socio.toLowerCase().includes(q)) ||
+        (e.legajo && e.legajo.toLowerCase().includes(q)) ||
+        (e.numero && e.numero.toLowerCase().includes(q))
+      );
+    }
+
+    // Filtro por estado en memoria
+    if (this.filtroEstado.trim()) {
+      const est = this.filtroEstado.trim();
+      if (est === 'revision_resolucion') {
+        result = result.filter(e => e.estado === 'revision_resolucion' || e.estado === 'espera_resolucion');
+      } else {
+        result = result.filter(e => e.estado === est);
+      }
+    }
+
+    // Filtro por rango de fechas
+    if (this.filtroFechaDesde) {
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion >= this.filtroFechaDesde);
+    }
+    if (this.filtroFechaHasta) {
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion <= this.filtroFechaHasta);
+    }
+
     result.sort((a, b) => {
       let valA = (a as any)[this.columnaOrden];
       let valB = (b as any)[this.columnaOrden];
@@ -135,6 +197,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getExpedientesPorEstado(estado: EstadoExpediente): Expediente[] {
+    if (estado === 'revision_resolucion') {
+      return this.expedientesFiltrados.filter(e => e.estado === 'revision_resolucion' || e.estado === 'espera_resolucion');
+    }
     return this.expedientesFiltrados.filter(e => e.estado === estado);
   }
 
@@ -320,12 +385,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   getEstadoLabel(estado: string): string {
     switch (estado) {
-      case 'creado': return 'Expediente Creado';
-      case 'justificando': return 'En período de justificaciones';
-      case 'revision_resolucion': return 'Justificaciones en revisión';
-      case 'espera_resolucion': return 'Espera de resolución';
-      case 'pendiente_correos': return 'Pendiente de correos';
-      case 'emitido': return 'Expedientes ya emitidos';
+      case 'creado': return 'Creados';
+      case 'justificando': return 'Justificando';
+      case 'revision_resolucion': return 'En Revisión';
+      case 'espera_resolucion': return 'En Revisión';
+      case 'pendiente_correos': return 'Pendiente de firma y envío';
+      case 'emitido': return 'Emitidos';
       default: return estado;
     }
   }

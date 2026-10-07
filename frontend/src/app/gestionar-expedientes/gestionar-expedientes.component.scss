@@ -65,3 +65,60 @@ table.table-mat tbody tr:focus {
     vertical-align: middle;
   }
 }
+
+// Estilos de columnas colapsables del Kanban
+.kanban-col-mat {
+  transition: all 0.25s ease-in-out;
+
+  &.colapsada {
+    min-width: 54px !important;
+    max-width: 54px !important;
+    width: 54px !important;
+    padding: 12px 6px;
+    background: #F1F5F9;
+    border: 1px dashed #CBD5E1;
+    cursor: pointer;
+
+    &:hover {
+      background: #E2E8F0;
+    }
+  }
+
+  .btn-colapsar {
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    &:hover {
+      color: var(--color-primary, #{$aveit-navy}) !important;
+    }
+  }
+}
+
+.kanban-col-collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding-top: 4px;
+  user-select: none;
+
+  .col-icon-collapsed {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .col-title-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #475569;
+    white-space: nowrap;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+}
+

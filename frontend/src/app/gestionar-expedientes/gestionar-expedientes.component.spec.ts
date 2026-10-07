@@ -60,17 +60,30 @@ describe('GestionarExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('debe configurar exactamente seis columnas en el tablero kanban (CA1)', () => {
-    expect(component.columnasKanban.length).toBe(6);
+  it('debe configurar las cinco columnas canónicas del ciclo de vida ordenadas correctamente', () => {
+    expect(component.columnasKanban.length).toBe(5);
     const estados = component.columnasKanban.map(c => c.estado);
     expect(estados).toEqual([
       'creado',
       'justificando',
       'revision_resolucion',
-      'espera_resolucion',
-      'pendiente_correos',
-      'emitido'
+      'emitido',
+      'pendiente_correos'
     ]);
+  });
+
+  it('debe permitir colapsar y expandir columnas en el tablero Kanban', () => {
+    expect(component.isColumnaColapsada('emitido')).toBeFalse();
+    component.toggleColapsar('emitido');
+    expect(component.isColumnaColapsada('emitido')).toBeTrue();
+    component.toggleColapsar('emitido');
+    expect(component.isColumnaColapsada('emitido')).toBeFalse();
+  });
+
+  it('columnasKanbanVisibles debe mostrar únicamente la columna filtrada si filtroEstado está activo', () => {
+    component.filtroEstado = 'justificando';
+    expect(component.columnasKanbanVisibles.length).toBe(1);
+    expect(component.columnasKanbanVisibles[0].estado).toBe('justificando');
   });
 
   it('puedeVotarOFirmar debe ser true para miembros del Tribunal (TD) o ADMIN', () => {
