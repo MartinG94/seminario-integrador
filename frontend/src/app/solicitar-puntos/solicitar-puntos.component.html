@@ -208,7 +208,7 @@
                     <th>Socios Involucrados</th>
                     <th style="width: 115px;">Acción / Pts</th>
                     <th style="width: 130px;">Estado</th>
-                    <th class="text-right" style="width: 190px;">Acciones</th>
+                    <th class="text-right" style="width: 110px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,20 +241,37 @@
                         {{ obtenerTextoEstado(s) }}
                       </span>
                     </td>
-                    <td class="text-right">
-                      <ng-container *ngIf="s.estado === 'DRAFT'">
-                        <button mat-button class="btn btn-sm btn-info px-2 mr-1" (click)="continuarEdicion(s)" title="Continuar edición">
-                          Continuar edición
-                        </button>
-                        <button mat-button class="btn btn-sm btn-danger px-2" (click)="eliminarBorrador(s)" title="Eliminar borrador">
-                          Eliminar
-                        </button>
-                      </ng-container>
-                      <ng-container *ngIf="s.estado === 'ISSUED'">
-                        <button mat-button class="btn btn-sm btn-primary px-2" (click)="abrirDetalle(s)" title="Ver Detalle del trámite">
-                          Ver Detalle
-                        </button>
-                      </ng-container>
+                    <td class="td-actions text-right text-nowrap">
+                      <div class="d-inline-flex align-items-center justify-content-end">
+                        <ng-container *ngIf="s.estado === 'DRAFT'">
+                          <button mat-button 
+                                  type="button" 
+                                  class="btn btn-info btn-link btn-just-icon" 
+                                  (click)="continuarEdicion(s)" 
+                                  title="Continuar edición" 
+                                  matTooltip="Continuar edición">
+                            <i class="material-icons">edit</i>
+                          </button>
+                          <button mat-button 
+                                  type="button" 
+                                  class="btn btn-danger btn-link btn-just-icon ml-1" 
+                                  (click)="eliminarBorrador(s)" 
+                                  title="Eliminar borrador" 
+                                  matTooltip="Eliminar borrador">
+                            <i class="material-icons">delete</i>
+                          </button>
+                        </ng-container>
+                        <ng-container *ngIf="s.estado === 'ISSUED'">
+                          <button mat-button 
+                                  type="button" 
+                                  class="btn btn-info btn-link btn-just-icon" 
+                                  (click)="abrirDetalle(s)" 
+                                  title="Ver Detalle" 
+                                  matTooltip="Ver detalle en modal">
+                            <i class="material-icons">visibility</i>
+                          </button>
+                        </ng-container>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
