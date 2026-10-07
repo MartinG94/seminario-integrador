@@ -1,0 +1,14 @@
+:host {
+  display: block;
+  min-width: 320px;
+  max-width: 750px;
+}
+
+.modal-header {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.mat-dialog-content {
+  max-height: 75vh;
+  overflow-y: auto;
+}

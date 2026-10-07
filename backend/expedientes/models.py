@@ -274,6 +274,13 @@ class SolicitudT01(models.Model):
     snapshots_destinatarios = models.JSONField(default=list, blank=True)
     snapshot_emitido = models.JSONField(null=True, blank=True)
     numero_expediente = models.CharField(max_length=40, null=True, blank=True, unique=True)
+    expediente = models.OneToOneField(
+        "Expediente",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="solicitud_t01",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     issued_at = models.DateTimeField(null=True, blank=True)
