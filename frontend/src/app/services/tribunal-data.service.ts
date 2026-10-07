@@ -1,13 +1,45 @@
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
 export type EstadoExpediente = 
   | 'creado' 
   | 'justificando' 
   | 'revision_resolucion' 
-  | 'pendiente_firma' 
+  | 'espera_resolucion'
+  | 'pendiente_firma'
+  | 'pendiente_correos' 
   | 'emitido';
+
+export interface BoardCaseDTO {
+  id: number;
+  numero: string;
+  socio: number;
+  socio_nombre: string;
+  socio_legajo: string;
+  subcomision: string;
+  estado: EstadoExpediente;
+  estado_display: string;
+  puntos: number;
+  motivo: string;
+  created_at: string;
+  plazo_limite_at: string | null;
+  transiciones_permitidas: EstadoExpediente[];
+  cantidad_socios?: number;
+}
+
+export interface BoardColumnDTO {
+  key: EstadoExpediente;
+  label: string;
+  cases: BoardCaseDTO[];
+}
+
+export interface BoardResponseDTO {
+  columns: BoardColumnDTO[];
+}
 
 export type RolUsuario = 'socio' | 'tribunal' | 'presidente_cd';
 
@@ -29,9 +61,12 @@ export interface Expediente {
   motivo: string;
   fechaCreacion: string;
   estado: EstadoExpediente;
+  estadoDisplay?: string;
+  transicionesPermitidas?: EstadoExpediente[];
   horasRestantes: number;
   tipo: 'falta' | 'merito';
   puntos: number;
+  cantidadSocios?: number;
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
   descargoPresentado?: boolean;
@@ -158,7 +193,7 @@ export class TribunalDataService {
       subcomision: 'Cómputos',
       motivo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
       fechaCreacion: '2026-02-28',
-      estado: 'pendiente_firma',
+      estado: 'pendiente_correos',
       horasRestantes: 0,
       tipo: 'merito',
       puntos: 2.0,
@@ -204,6 +239,42 @@ export class TribunalDataService {
       horasRestantes: 120,
       tipo: 'falta',
       puntos: -1.0
+    },
+    {
+      id: 'EXP-2026-006',
+      numero: 'EXP-006/2026',
+      socio: 'Nicolás Rosales',
+      legajo: '408917',
+      subcomision: 'Cómputos',
+      motivo: 'Retraso reiterado en entrega de actas de subcomisión',
+      fechaCreacion: '2026-03-02',
+      estado: 'pendiente_firma',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1.0,
+      firmas: {
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
+        hashCriptografico: '',
+        timestamp: ''
+      }
+    },
+    {
+      id: 'EXP-2026-007',
+      numero: 'EXP-007/2026',
+      socio: 'Axel René Villegas',
+      legajo: '403655',
+      subcomision: 'Cómputos',
+      motivo: 'Incumplimiento de guardia de laboratorio informático',
+      fechaCreacion: '2026-02-28',
+      estado: 'pendiente_correos',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -2.0,
+      firmas: {
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
+        hashCriptografico: 'sha256-abc123789fed456',
+        timestamp: '2026-03-05 11:20:00'
+      }
     }
   ]);
   public expedientes$ = this.expedientesSubject.asObservable();
@@ -247,7 +318,10 @@ export class TribunalDataService {
   ]);
   public eventos$ = this.eventosSubject.asObservable();
 
-  constructor(private auth: AuthService) {
+  constructor(
+    private auth: AuthService,
+    private http: HttpClient
+  ) {
     const savedDark = localStorage.getItem('aveit_dark_mode') === 'true';
     if (savedDark) {
       this.setDarkMode(true);
@@ -287,6 +361,85 @@ export class TribunalDataService {
 
   toggleDarkMode(): void {
     this.setDarkMode(!this.darkModeSubject.value);
+  }
+
+  // --- Integración API Tablero de Seis Estados (S2-05) ---
+
+  obtenerTablero(filtros?: {
+    socio?: string;
+    estado?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
+  }): Observable<BoardResponseDTO> {
+    let params = new HttpParams();
+    if (filtros) {
+      if (filtros.socio && filtros.socio.trim()) {
+        params = params.set('socio', filtros.socio.trim());
+      }
+      if (filtros.estado && filtros.estado.trim()) {
+        params = params.set('estado', filtros.estado.trim());
+      }
+      if (filtros.fecha_desde) {
+        params = params.set('fecha_desde', filtros.fecha_desde);
+      }
+      if (filtros.fecha_hasta) {
+        params = params.set('fecha_hasta', filtros.fecha_hasta);
+      }
+    }
+
+    return this.http.get<BoardResponseDTO>(`${environment.apiUrl}/expedientes/board/`, { params }).pipe(
+      tap(res => {
+        // Mapear los casos de todas las columnas al formato Expediente para mantener expedientesSubject actualizado
+        const todosLosExpedientes: Expediente[] = [];
+        res.columns.forEach(col => {
+          col.cases.forEach(c => {
+            todosLosExpedientes.push(this.mapearBoardCaseAExpediente(c));
+          });
+        });
+        this.expedientesSubject.next(todosLosExpedientes);
+      })
+    );
+  }
+
+  transicionarExpediente(
+    expedienteId: number | string,
+    toStatus: EstadoExpediente,
+    justificacion: string = ''
+  ): Observable<any> {
+    const payload = {
+      to_status: toStatus,
+      justificacion: justificacion || `Transición a ${toStatus}`
+    };
+    return this.http.post<any>(
+      `${environment.apiUrl}/expedientes/${expedienteId}/transicionar/`,
+      payload
+    );
+  }
+
+  private mapearBoardCaseAExpediente(c: BoardCaseDTO): Expediente {
+    let horasRestantes = 0;
+    if (c.plazo_limite_at && c.estado === 'justificando') {
+      const diff = new Date(c.plazo_limite_at).getTime() - Date.now();
+      horasRestantes = Math.max(0, Math.floor(diff / (1000 * 3600)));
+    }
+
+    return {
+      id: String(c.id),
+      numero: c.numero,
+      socio: c.socio_nombre,
+      legajo: c.socio_legajo,
+      subcomision: c.subcomision,
+      motivo: c.motivo,
+      fechaCreacion: c.created_at ? c.created_at.split('T')[0] : '',
+      estado: c.estado,
+      estadoDisplay: c.estado_display,
+      transicionesPermitidas: c.transiciones_permitidas || [],
+      horasRestantes,
+      tipo: c.puntos >= 0 ? 'merito' : 'falta',
+      puntos: Number(c.puntos),
+      cantidadSocios: c.cantidad_socios || 1,
+      plazoLimiteAt: c.plazo_limite_at || undefined
+    };
   }
 
   // --- Operaciones de Dominio de Expedientes ---
@@ -404,7 +557,7 @@ export class TribunalDataService {
     };
 
     if (aprobado) {
-      exp.estado = 'pendiente_firma';
+      exp.estado = 'pendiente_correos';
       exp.firmas = {
         juecesFirmantes: [],
         hashCriptografico: '',

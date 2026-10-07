@@ -1,6 +1,7 @@
 from django.urls import path
 
 from expedientes.views import (
+    BoardExpedientesView,
     CaseNotificationAuditView,
     DispatchCaseOpeningView,
     ExpedienteCollectionView,
@@ -12,6 +13,7 @@ from expedientes.views import (
     SolicitudT01CreateView,
     SolicitudT01DetailView,
     SolicitudT01EmitView,
+    TransicionarExpedienteView,
     TransicionExpedienteView,
 )
 
@@ -38,4 +40,6 @@ urlpatterns = [
     path("<int:pk>/", ExpedienteDetailView.as_view(), name="expediente-detail"),
     path("<uuid:pk>/", SolicitudT01DetailView.as_view(), name="solicitud-detail"),
     path("<uuid:pk>/emitir/", SolicitudT01EmitView.as_view(), name="solicitud-emit"),
+    path("board/", BoardExpedientesView.as_view(), name="board"),
+    path("<int:pk>/transicionar/", TransicionarExpedienteView.as_view(), name="transicionar"),
 ]

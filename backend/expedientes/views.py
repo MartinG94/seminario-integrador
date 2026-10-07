@@ -13,6 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from expedientes.filters import ExpedienteFilter
 from expedientes.models import (
     CambioEstadoExpediente,
     DescargoExpediente,
@@ -38,6 +39,7 @@ from expedientes.serializers import (
     SolicitudT01Serializer,
     TransicionExpedienteSerializer,
 )
+from expedientes.services.board_service import build_board_payload
 from expedientes.services.opening_notification_service import (
     CaseNotificationQueryService,
     InvalidCaseStatusError,
@@ -426,6 +428,77 @@ class SolicitudT01EmitView(APIView):
         serializer.is_valid(raise_exception=True)
         solicitud = serializer.save()
         return Response(SolicitudT01Serializer(solicitud).data)
+
+
+class BoardExpedientesView(APIView):
+    """GET /api/v1/expedientes/board/
+
+    Tablero de 6 columnas del TD con expedientes agrupados por estado (S2-05 CA1).
+    Soporta filtros por estado, socio (legajo/nombre) y rango de fechas (CA2).
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def get(self, request: Request) -> Response:
+        qs = (
+            Expediente.objects.select_related("socio", "socio__subcomision")
+            .prefetch_related("socios")
+            .all()
+        )
+        filterset = ExpedienteFilter(request.query_params, queryset=qs)
+        payload = build_board_payload(filterset.qs)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class TransicionarExpedienteView(APIView):
+    """POST /api/v1/expedientes/<pk>/transicionar/
+
+    Ejecuta una transición de estado autorizada (S2-05 CA3).
+    Delega estrictamente en ExpedienteWorkflowService.transition().
+    """
+
+    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+
+    def post(self, request: Request, pk: int) -> Response:
+        # Aceptar tanto to_status/justificacion como estado/motivo
+        target_status = request.data.get("to_status") or request.data.get("estado")
+        reason = request.data.get("justificacion") or request.data.get("motivo")
+
+        if not target_status:
+            return Response(
+                {"detail": "El estado destino es obligatorio."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        actor = _actor_for_user(request.user)
+        motivo = reason or f"Transición a {target_status}"
+
+        try:
+            expediente = ExpedienteWorkflowService.transition(
+                expediente_id=pk,
+                estado_nuevo=target_status,
+                actor=actor,
+                motivo=motivo,
+            )
+        except Expediente.DoesNotExist:
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ValidationError as exc:
+            return Response(
+                exc.message_dict if hasattr(exc, "message_dict") else {"detail": exc.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "detail": f"Expediente transicionado a '{expediente.get_estado_display()}'.",
+                "expediente_id": expediente.id,
+                "estado_nuevo": expediente.estado,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class MisSolicitudesT01View(APIView):
