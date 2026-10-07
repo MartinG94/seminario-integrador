@@ -10,6 +10,7 @@ export type EstadoExpediente =
   | 'justificando' 
   | 'revision_resolucion' 
   | 'espera_resolucion'
+  | 'pendiente_firma'
   | 'pendiente_correos' 
   | 'emitido';
 
@@ -238,6 +239,42 @@ export class TribunalDataService {
       horasRestantes: 120,
       tipo: 'falta',
       puntos: -1.0
+    },
+    {
+      id: 'EXP-2026-006',
+      numero: 'EXP-006/2026',
+      socio: 'Nicolás Rosales',
+      legajo: '408917',
+      subcomision: 'Cómputos',
+      motivo: 'Retraso reiterado en entrega de actas de subcomisión',
+      fechaCreacion: '2026-03-02',
+      estado: 'pendiente_firma',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1.0,
+      firmas: {
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
+        hashCriptografico: '',
+        timestamp: ''
+      }
+    },
+    {
+      id: 'EXP-2026-007',
+      numero: 'EXP-007/2026',
+      socio: 'Axel René Villegas',
+      legajo: '403655',
+      subcomision: 'Cómputos',
+      motivo: 'Incumplimiento de guardia de laboratorio informático',
+      fechaCreacion: '2026-02-28',
+      estado: 'pendiente_correos',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -2.0,
+      firmas: {
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
+        hashCriptografico: 'sha256-abc123789fed456',
+        timestamp: '2026-03-05 11:20:00'
+      }
     }
   ]);
   public expedientes$ = this.expedientesSubject.asObservable();

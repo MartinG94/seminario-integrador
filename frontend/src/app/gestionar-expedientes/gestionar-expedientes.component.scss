@@ -68,9 +68,12 @@ table.table-mat tbody tr:focus {
 
 // Estilos de columnas colapsables del Kanban
 .kanban-col-mat {
-  transition: all 0.25s ease-in-out;
+  flex: 1 1 260px;
+  min-width: 250px;
+  transition: flex 0.25s ease-in-out, min-width 0.25s ease-in-out, max-width 0.25s ease-in-out, width 0.25s ease-in-out;
 
   &.colapsada {
+    flex: 0 0 54px !important;
     min-width: 54px !important;
     max-width: 54px !important;
     width: 54px !important;

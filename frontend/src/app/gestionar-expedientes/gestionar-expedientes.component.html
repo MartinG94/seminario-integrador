@@ -170,7 +170,7 @@
 
               <!-- Acciones específicas de etapa según rol TD (votación o firma) -->
               <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
-                <button *ngIf="exp.estado === 'revision_resolucion'" 
+                <button *ngIf="exp.estado === 'revision_resolucion' || exp.estado === 'espera_resolucion'" 
                         mat-button 
                         class="btn btn-info btn-link btn-sm p-1"
                         title="Votar Dictamen Colegiado"
@@ -178,7 +178,7 @@
                         (click)="abrirVotacion(exp)">
                   <i class="material-icons">how_to_vote</i>
                 </button>
-                <button *ngIf="exp.estado === 'pendiente_correos'" 
+                <button *ngIf="exp.estado === 'pendiente_firma' || (exp.estado === 'pendiente_correos' && (!exp.firmas || !exp.firmas.juecesFirmantes || exp.firmas.juecesFirmantes.length < 3))" 
                         mat-button 
                         class="btn btn-success btn-link btn-sm p-1"
                         title="Firmar Resolución"

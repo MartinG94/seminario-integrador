@@ -60,15 +60,16 @@ describe('GestionarExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('debe configurar las cinco columnas canónicas del ciclo de vida ordenadas correctamente', () => {
-    expect(component.columnasKanban.length).toBe(5);
+  it('debe configurar las seis columnas canónicas del ciclo de vida ordenadas correctamente', () => {
+    expect(component.columnasKanban.length).toBe(6);
     const estados = component.columnasKanban.map(c => c.estado);
     expect(estados).toEqual([
       'creado',
       'justificando',
       'revision_resolucion',
-      'emitido',
-      'pendiente_correos'
+      'pendiente_firma',
+      'pendiente_correos',
+      'emitido'
     ]);
   });
 
