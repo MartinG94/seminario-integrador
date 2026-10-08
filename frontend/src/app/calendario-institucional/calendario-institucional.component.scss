@@ -1,0 +1,125 @@
+.card-active-version {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+
+  .card-header-primary {
+    background: linear-gradient(135deg, #151846 0%, #242A68 100%);
+    padding: 16px 24px;
+    border-radius: 0;
+  }
+}
+
+.btn-action-new {
+  background: #6E9DDC !important;
+  color: #151846 !important;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 8px 18px;
+  box-shadow: 0 2px 6px rgba(110, 157, 220, 0.4);
+
+  &:hover {
+    background: #B3D3E4 !important;
+  }
+}
+
+.bg-light-surface {
+  background-color: #F8FAFC;
+  padding: 20px 24px;
+}
+
+.version-meta-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.version-meta-value {
+  font-size: 15px;
+  color: #1E293B;
+}
+
+.version-meta-reason {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.card-header-default {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 16px 20px;
+}
+
+.version-dropdown {
+  max-width: 320px;
+  display: inline-block;
+  font-weight: 600;
+  color: #151846;
+  border-color: #CBD5E1;
+}
+
+.card-simulator {
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.05);
+
+  .card-header-simulator {
+    background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+    padding: 16px 20px;
+    border-radius: 12px 12px 0 0;
+  }
+}
+
+.simulator-result {
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+
+  .result-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .result-deadline {
+    font-size: 16px;
+    font-family: 'Montserrat', sans-serif;
+  }
+}
+
+.extra-small {
+  font-size: 11px;
+}
+
+.badge-info {
+  background-color: #0369A1;
+  color: #FFFFFF;
+}
+
+.badge-success {
+  background-color: #15803D;
+  color: #FFFFFF;
+}
+
+.badge-warning {
+  background-color: #B45309;
+  color: #FFFFFF;
+}
+
+.badge-primary {
+  background-color: #151846;
+  color: #FFFFFF;
+}
+
+.badge-secondary {
+  background-color: #64748B;
+  color: #FFFFFF;
+}
+
+.add-holiday-box {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1 !important;
+}

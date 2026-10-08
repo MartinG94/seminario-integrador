@@ -16,6 +16,7 @@ import { NotificationsComponent } from '../../notifications/notifications.compon
 import { UpgradeComponent } from '../../upgrade/upgrade.component';
 import { TribunalGuard } from '../../services/tribunal.guard';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
+import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
@@ -29,6 +30,7 @@ export const AdminLayoutRoutes: Routes = [
       }
     },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
+    { path: 'calendario-institucional', component: CalendarioInstitucionalComponent },
     { 
       path: 'reportes',               
       component: EnDesarrolloComponent,
