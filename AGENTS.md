@@ -80,6 +80,7 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
    - La implementación se hace **una sola tarea a la vez**, con **tests primero (TDD)**.
 5. **Límites de edición e inmutabilidad:**
    - **Inmutabilidad estricta de las Notas del PO:** Queda terminantemente prohibido modificar o editar [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md). Las notas se deberán mantener inalterables en todo momento, salvo cambio por orden explícita y directa del Product Owner (PO).
+   - **Gobernanza y cadencia de Seguimiento de Proyecto:** Queda prohibido modificar [`docs/gestion-proyecto/Seguimiento de Proyecto.md`](docs/gestion-proyecto/Seguimiento%20de%20Proyecto.md) durante el desarrollo de tareas o PRs individuales de código/features. Dicho documento es un artefacto de gobernanza macro de Scrum y **solo se edita en instancias de inicio o cierre de Sprint (Planning, Review o Retrospectiva)** a pedido explícito del Scrum Master/usuario, empleando las plantillas de la sección 2.5. El avance atómico diario (`<30 min`) se gestiona exclusivamente en `specs/<spec>/tasks.md` y `TASK.md`.
    - No toques archivos dentro de `specs/` salvo petición explícita de cambio de requerimiento.
    - No agregues dependencias pesadas a `requirements.txt` o `package.json` sin previa aprobación del Product Owner.
    - Respeta estrictamente los 6 estados del expediente (Art. 12 del Reglamento Procesal 2026).
@@ -91,5 +92,6 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
 1. Ejecuta la suite de pruebas correspondiente (`pytest` o `npm test`).
 2. Confirma en tu respuesta que todos los tests pasan en verde (0 errores).
 3. **Chequeo de consistencia con el PO:** Verifica y corrobora que la solución implementada sea 100% consistente con lo establecido en [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md).
-4. Marca la tarea completada con `[x]` en el `tasks.md` de la spec y en [`TASK.md`](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/TASK.md).
+4. Marca la tarea completada con `[x]` en el `tasks.md` de la spec y en [`TASK.md`](TASK.md) (nunca modifiques `Seguimiento de Proyecto.md` por tareas individuales de implementación).
 5. **PÁRATE** y solicita confirmación antes de iniciar la siguiente tarea.
+
