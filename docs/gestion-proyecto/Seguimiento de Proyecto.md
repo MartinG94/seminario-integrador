@@ -63,10 +63,14 @@
      - 2.4.1. [Planificación y Sprint Backlog](#241-planificación-y-sprint-backlog)
      - 2.4.2. [Resultado Final del Sprint e Incremento](#242-resultado-final-del-sprint-e-incremento)
      - 2.4.3. [Retrospectiva y Mejora Continua](#243-retrospectiva-y-mejora-continua)
-   - 2.5. [Estructura de Seguimiento para Sprints Subsiguientes (Sprints 3 a 6)](#25-estructura-de-seguimiento-para-sprints-subsiguientes-sprints-3-a-6)
-     - 2.5.1. [Plantilla de Planificación y Sprint Backlog](#251-plantilla-de-planificación-y-sprint-backlog)
-     - 2.5.2. [Plantilla de Resultado Final del Sprint](#252-plantilla-de-resultado-final-del-sprint)
-     - 2.5.3. [Plantilla de Retrospectiva](#253-plantilla-de-retrospectiva)
+   - 2.5. [Hito de Alineación con Cómputos, Tribunal de Disciplina y Directivas del PO (07/10/2026)](#25-hito-de-alineación-con-cómputos-tribunal-de-disciplina-y-directivas-del-po-07102026)
+     - 2.5.1. [Síntesis de Acuerdos Técnicos con la Subcomisión de Cómputos](#251-síntesis-de-acuerdos-técnicos-con-la-subcomisión-de-cómputos)
+     - 2.5.2. [Síntesis del Feedback Funcional del TD y PO (`notasPO.md` 07/10/2026)](#252-síntesis-del-feedback-funcional-del-td-y-po-notaspomd-07102026)
+     - 2.5.3. [Impacto en el Backlog del Sprint 3 y Próximas Iteraciones](#253-impacto-en-el-backlog-del-sprint-3-y-próximas-iteraciones)
+   - 2.6. [Estructura de Seguimiento para Sprints Subsiguientes (Sprints 3 a 6)](#26-estructura-de-seguimiento-para-sprints-subsiguientes-sprints-3-a-6)
+     - 2.6.1. [Plantilla de Planificación y Sprint Backlog](#261-plantilla-de-planificación-y-sprint-backlog)
+     - 2.6.2. [Plantilla de Resultado Final del Sprint](#262-plantilla-de-resultado-final-del-sprint)
+     - 2.6.3. [Plantilla de Retrospectiva](#263-plantilla-de-retrospectiva)
 
 ---
 
@@ -548,11 +552,66 @@ El **Sprint 2** consolidó el núcleo procesal y disciplinario de la plataforma.
 
 ---
 
-### 2.5. Estructura de Seguimiento para Sprints Subsiguientes (Sprints 3 a 6)
+### 2.5. Hito de Alineación con Cómputos, Tribunal de Disciplina y Directivas del PO (07/10/2026)
+
+Al cierre del **Sprint 2** y previo al inicio formal del **Sprint 3**, el Product Owner (**Diego Gabriel Sánchez**) encabezó dos reuniones clave de alineación estratégica: con la autoridad técnica de la **Subcomisión de Cómputos** y con miembros representantes del **Tribunal de Disciplina (TD)** de A.V.E.I.T. Las definiciones consensuadas fueron incorporadas formalmente como adenda rectora en [`docs/gestion-proyecto/notasPO.md`](notasPO.md), ajustando requerimientos de infraestructura y diseño funcional del sistema.
+
+---
+
+#### 2.5.1. Síntesis de Acuerdos Técnicos con la Subcomisión de Cómputos
+
+1. **Consumo de Solo Lectura del Padrón Institucional (ADR-001):**
+   - Confirmación de la estrategia de Capa Anticorrupción (ACL): Cómputos facilitará un usuario MySQL con permisos estrictos de `SELECT` sobre el esquema preexistente (`svaveit`) para consultar el padrón de ~515 socios sin duplicar fuentes maestras.
+   - Provisión coordinada de un volcado sanitizado (`mysqldump`) para el entorno de desarrollo local y CI.
+2. **Infraestructura de Despliegue en Producción:**
+   - Despliegue contenerizado vía `docker-compose.yml` (Django 4.2 LTS, Angular 14.2+, MySQL 8.0 y Nginx).
+   - Coordinación de asignación de subdominio institucional y certificados TLS/SSL mediante Let's Encrypt.
+3. **Servicio de Mensajería Institucional (SMTP):**
+   - Canalización de notificaciones transaccionales formales (acuses de apertura, resoluciones definitivas y alertas de puntos) a través de cuenta institucional con contraseña de aplicación o relay de la Asociación.
+4. **Delimitación Operativa de Soporte:**
+   - Formalización del rol `ACT-05 Admin (Cómputos)` para administración de copias de seguridad, visualización de logs de seguridad y variables de entorno, sin injerencia en juzgamiento ni modificación manual de saldos de puntos.
+5. **Estabilidad y Ampliación de Datos de Prueba:**
+   - Corroboración de la operatividad del contenedor de base de datos MySQL y ampliación del conjunto de datos de prueba (`seed_expedientes`) con datos representativos de socios, subcomisiones y antecedentes históricos.
+
+---
+
+#### 2.5.2. Síntesis del Feedback Funcional del TD y PO (`notasPO.md` 07/10/2026)
+
+1. **Gestión y Clasificación de Expedientes:**
+   - **Clasificador de Urgencia:** Incorporación de un atributo de urgencia (`Baja`, `Normal`, `Urgente`) en los expedientes para priorizar causas críticas en el tablero y listados.
+   - **Visualización de Múltiples Socios:** En la tabla de gestión de expedientes, habilitar un botón o acción directa para desplegar la lista completa de imputados cuando una causa involucre a más de un socio.
+   - **Investigación de IA/Clasificación (PO):** Tarea asignada al PO para investigar modelos y herramientas (evaluar herramientas tipo "laya" / LLaMA / modelos locales / clasificadores NLP) orientados a asistir en la sugerencia automática de tipificación y nivel de urgencia.
+2. **Formulario Crear Expediente (T01) y Hoja de Anexo:**
+   - **Grupo Social:** Adición de la columna visible "Grupo" (ej. G57, G58, G59, G60) en la tabla de socios involucrados seleccionados.
+   - **Hoja de Anexo Circunstanciada (Ref. Imagen 1):** Precisiones forenses en los campos de "Lugar o Evento del hecho" y explicitación detallada de *cómo se involucraron los testigos* presenciales.
+3. **Sala del Tribunal y Formato Canónico de Resolución:**
+   - **Detalle de Expediente Unificado (Ref. Imagen 2):** Respeto estricto a los campos y diseño actual del TD (Cabecera, Sanción solicitada, Responsables 1, 2 y 3 con Grupo social, Reglamentos respaldantes y tabla de Involucrados con Estado de Justificación).
+   - **Simplificación de la Votación:** Descarte de flujos complejos de votación nominal paso a paso en el sistema. Se deja un recuadro unificado para redactar el texto formal de la Resolución y fijar el puntaje final neto aplicado por socio.
+   - **Distinción de Año Social en Firmas (Ref. Imagen 3):** Identificación preceptiva del año social / grupo (Gxx) y condición (Titular o Suplente `(Sup.)`) de los tres miembros firmantes del TD al pie de la resolución formal emitida.
+   - **Formato Oficial de Resolución (Ref. Imagen 3):** Membrete y escudo oficial del TD, encabezado formal, estructura jurídica canónica (VISTO, CONSIDERANDO, SE RESUELVE con sanción individualizada por socio, notificación a CD y archivo).
+4. **Pantalla Ranking de Socios:**
+   - **Detalle de Causas:** Despliegue interactivo (modal/expansión) del historial de expedientes asociados a cada socio.
+   - **Columnas Ordenables y Ordenamiento Compuesto:** Eliminación de los botones de filtro rápido ("Más reconocidos", "Mayor sanción"), ordenamiento directo por columna de Saldo y capacidad de ordenamiento múltiple anidado (Grupo Social ➔ Orden Alfabético).
+5. **Gobernanza Institucional y Terminología:**
+   - **Renombrar Fiscalizadora por Revisores (Revisores de Cuentas):** Adecuación terminológica estricta en todo el código y la documentación formal.
+   - **Inmutabilidad de Regla de Puntos 3:1:** Ratificación de que llamados de atención y felicitaciones no aplican fracciones directas; cada 3 acumulados consolidan 1 punto neto.
+
+---
+
+#### 2.5.3. Impacto en el Backlog del Sprint 3 y Próximas Iteraciones
+
+Estas definiciones refinan el alcance de las Historias de Usuario para el **Sprint 3 (07/10 al 20/10)** y sprints posteriores:
+* **Sprint 3 (`SCRUM-45` a `SCRUM-50`):** Enfoque centrado en la recepción de descargos T02/T03, almacenamiento seguro de adjuntos probatorios, cierre automático de plazos de 5 días hábiles y visualización detallada del expediente según el formato oficial de la Imagen 2.
+* **Sprint 4 (`SCRUM-51` a `SCRUM-56`):** Reducción de complejidad técnica al descartar la votación nominal compleja en la sala virtual, concentrando el esfuerzo en el editor unificado de resoluciones, la asignación de puntajes por socio y la generación de la resolución con firmas colegiadas identificadas por grupo (Imagen 3).
+* **Mantenimiento y Calidad:** Tareas técnicas transversales para la actualización terminológica ("Revisores de Cuentas") y la siembra ampliada de datos de prueba (`seed_expedientes`).
+
+---
+
+### 2.6. Estructura de Seguimiento para Sprints Subsiguientes (Sprints 3 a 6)
 
 A continuación se mantiene la estructura estandarizada que el equipo completará iteración tras iteración para documentar la planificación, ejecución y retrospectiva de los Sprints 3 a 6:
 
-#### 2.5.1. Plantilla de Planificación y Sprint Backlog
+#### 2.6.1. Plantilla de Planificación y Sprint Backlog
 *(Se completará al inicio de cada Sprint durante la Sprint Planning)*
 
 * **Sprint Nº:** [3 a 6]
@@ -567,7 +626,7 @@ A continuación se mantiene la estructura estandarizada que el equipo completar�
 | :---: | :---: | :--- | :--- | :--- | :---: | :---: |
 | SCRUM-xx | S3-xx | [Título de la Historia] | 1. [Tarea técnica 1]<br>2. [Tarea técnica 2] | [Nombre del desarrollador] | [x] | To Do |
 
-#### 2.5.2. Plantilla de Resultado Final del Sprint
+#### 2.6.2. Plantilla de Resultado Final del Sprint
 *(Se completará al cierre del Sprint tras la Sprint Review)*
 
 * **Sprint Goal Alcanzado:** [Sí / Parcial / No - Justificación]
@@ -577,7 +636,7 @@ A continuación se mantiene la estructura estandarizada que el equipo completar�
 * **Incremento de Software Demostrado:** [Resumen funcional del incremento desplegado en Staging y validado por el PO]
 * **Enlace a la Demostración / Evidencia Técnica:** [Link a release de GitHub, PRs o entorno de pruebas]
 
-#### 2.5.3. Plantilla de Retrospectiva
+#### 2.6.3. Plantilla de Retrospectiva
 *(Se completará al cierre del Sprint durante la Sprint Retrospective)*
 
 * **Fecha de la Retrospectiva:** [dd/mm/aaaa]
