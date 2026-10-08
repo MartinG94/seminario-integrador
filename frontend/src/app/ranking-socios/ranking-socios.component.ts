@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { Subscription } from 'rxjs';
 import { RankingService } from '../services/ranking.service';
+import { TribunalDataService, Socio } from '../services/tribunal-data.service';
 import { RankingSocio } from './ranking-socio.model';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
 
@@ -9,7 +11,7 @@ import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-d
   templateUrl: './ranking-socios.component.html',
   styleUrls: ['./ranking-socios.component.scss']
 })
-export class RankingSociosComponent implements OnInit {
+export class RankingSociosComponent implements OnInit, OnDestroy {
   socios: RankingSocio[] = [];
   criterioOrden: 'merito' | 'sancion' = 'merito';
   filtroTexto = '';
@@ -20,9 +22,11 @@ export class RankingSociosComponent implements OnInit {
   tamanoPagina = 10;
   cargando = false;
   error: string | null = null;
+  private subs: Subscription[] = [];
 
   constructor(
     public rankingService: RankingService,
+    public dataService: TribunalDataService,
     public dialog: MatDialog
   ) {}
 
@@ -73,19 +77,68 @@ export class RankingSociosComponent implements OnInit {
     this.cargando = true;
     this.error = null;
 
+    // 1. Cargar ranking desde servicio API backend
     this.rankingService.obtenerRanking().subscribe({
       next: (socios) => {
         this.socios = socios;
-        this.subcomisiones = [...new Set(this.socios.map(s => s.subcomision))].sort();
+        this.sincronizarConStoreLocal(this.dataService.getSociosSnapshot());
         this.cargando = false;
       },
       error: () => {
-        this.socios = [];
-        this.subcomisiones = [];
-        this.error = 'No se pudo cargar el ranking. Intentá nuevamente.';
+        // Fallback reactivo directo a TribunalDataService si la API REST no responde
+        this.sincronizarConStoreLocal(this.dataService.getSociosSnapshot(), true);
         this.cargando = false;
       }
     });
+
+    // 2. Suscribirse reactivamente a socios$ para actualizar saldos en vivo al firmarse resoluciones
+    const sub = this.dataService.socios$.subscribe(sociosStore => {
+      this.sincronizarConStoreLocal(sociosStore);
+    });
+    this.subs.push(sub);
+  }
+
+  ngOnDestroy(): void {
+    this.subs.forEach(s => s.unsubscribe());
+  }
+
+  private sincronizarConStoreLocal(sociosStore: Socio[], forzarFallback: boolean = false): void {
+    if (!sociosStore || sociosStore.length === 0) return;
+
+    if (this.socios.length === 0 || forzarFallback) {
+      this.socios = sociosStore.map(s => {
+        const partes = s.nombre.split(' ');
+        const nombre = partes[0] || '';
+        const apellido = partes.slice(1).join(' ') || '';
+        return {
+          id: s.id,
+          legajo: s.legajo,
+          nombre,
+          apellido,
+          categoria: (s.estado === 'CESE_ESTATUTARIO' ? 'PASIVO' : 'ACTIVO') as 'ACTIVO' | 'PASIVO',
+          subcomision: s.subcomision,
+          saldo: s.saldo
+        };
+      });
+      this.error = null;
+    } else {
+      this.socios = this.socios.map(socioRanking => {
+        const matching = sociosStore.find(s => 
+          s.legajo === socioRanking.legajo || 
+          s.nombre.toLowerCase() === `${socioRanking.nombre} ${socioRanking.apellido}`.trim().toLowerCase()
+        );
+        if (matching) {
+          return {
+            ...socioRanking,
+            saldo: matching.saldo,
+            categoria: (matching.estado === 'CESE_ESTATUTARIO' ? 'PASIVO' : socioRanking.categoria) as 'ACTIVO' | 'PASIVO'
+          };
+        }
+        return socioRanking;
+      });
+    }
+
+    this.subcomisiones = [...new Set(this.socios.map(s => s.subcomision))].sort();
   }
 
   onFiltroChange(texto: string): void {

@@ -3,7 +3,7 @@ import { ROUTES } from '../sidebar/sidebar.component';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { TribunalDataService } from '../../services/tribunal-data.service';
-import { AuthService, PerfilSocio } from '../../services/auth.service';
+import { AuthService, PerfilSocio, RolRbac } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -18,8 +18,44 @@ export class NavbarComponent implements OnInit {
     private sidebarVisible: boolean;
 
     isDarkMode = false;
-
     perfil: PerfilSocio | null = null;
+
+    demoRoles = [
+      {
+        id: 'socio' as const,
+        label: 'Lucas Gastiaburu (Socio - Legajo 408917)',
+        shortLabel: 'Lucas Gastiaburu (Socio)',
+        role: 'SOCIO' as RolRbac,
+        user: {
+          legajo: '408917',
+          first_name: 'Lucas',
+          last_name: 'Gastiaburu',
+          email: '408917@aveit.test',
+          role: 'SOCIO' as RolRbac,
+          category: 'ACTIVE' as const,
+          category_display: 'Socio Activo',
+          subcomision: 'Cómputos'
+        },
+        route: '/mis-expedientes'
+      },
+      {
+        id: 'tribunal' as const,
+        label: 'Nicolás Rosales (Tribunal de Disciplina - Legajo 391024)',
+        shortLabel: 'Nicolás Rosales (Tribunal)',
+        role: 'TD' as RolRbac,
+        user: {
+          legajo: '391024',
+          first_name: 'Nicolás',
+          last_name: 'Rosales',
+          email: '391024@aveit.test',
+          role: 'TD' as RolRbac,
+          category: 'ACTIVE' as const,
+          category_display: 'Tribunal de Disciplina',
+          subcomision: 'Cómputos'
+        },
+        route: '/gestionar-expedientes'
+      }
+    ];
 
     constructor(
       location: Location,
@@ -35,6 +71,23 @@ export class NavbarComponent implements OnInit {
     cerrarSesion(): void {
       this.auth.logout();
       this.router.navigate(['/login']);
+    }
+
+    esRolActivo(roleId: 'socio' | 'tribunal'): boolean {
+      if (!this.perfil) return roleId === 'socio';
+      if (roleId === 'socio') {
+        return this.perfil.role === 'SOCIO';
+      } else {
+        return this.perfil.role === 'TD' || this.perfil.role === 'ADMIN' || this.perfil.role === 'CD';
+      }
+    }
+
+    seleccionarRolDemo(roleId: 'socio' | 'tribunal'): void {
+      const demo = this.demoRoles.find(r => r.id === roleId);
+      if (!demo) return;
+      this.auth.setSession(demo.user);
+      this.dataService.setRole(roleId === 'tribunal' ? 'tribunal' : 'socio');
+      this.router.navigateByUrl(demo.route);
     }
 
     ngOnInit(){

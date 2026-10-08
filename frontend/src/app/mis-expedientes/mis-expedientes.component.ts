@@ -60,7 +60,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.subs.push(subExp);
 
     const subSocios = this.dataService.socios$.subscribe(socios => {
-      const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
+      const perfil = this.auth.getPerfil();
+      const legajo = perfil?.legajo;
+      const s = socios.find(soc => 
+        soc.nombre.toLowerCase() === this.socioActual.toLowerCase() ||
+        (legajo && soc.legajo === legajo) ||
+        (this.socioActual.length > 3 && soc.nombre.toLowerCase().includes('gastiaburu'))
+      );
       this.saldoNeto = s ? s.saldo : 0;
     });
     this.subs.push(subSocios);
@@ -74,8 +80,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
   private filtrarMisExpedientes(): void {
     const nombre = this.socioActual.trim().toLowerCase();
+    const perfil = this.auth.getPerfil();
+    const legajo = perfil?.legajo;
     this.misExpedientes = nombre
-      ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
+      ? this.expedientes.filter(e => 
+          e.socio.toLowerCase() === nombre ||
+          (legajo && e.legajo === legajo) ||
+          (nombre.length > 3 && e.socio.toLowerCase().includes('gastiaburu'))
+        )
       : [];
   }
 

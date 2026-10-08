@@ -416,10 +416,13 @@
           </ul>
         </div>
       </div>
-      <div class="card-footer d-flex justify-content-end gap-2">
+      <div class="card-footer d-flex justify-content-end gap-2 flex-wrap">
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cancelar</button>
+        <button mat-raised-button class="btn btn-info" (click)="confirmarFirmaColegiado()" title="Aplicar las 3 firmas del Tribunal de una sola vez">
+          <i class="material-icons" style="font-size: 16px;">verified</i> Firmar Colegiado Completo (3 Jueces)
+        </button>
         <button mat-raised-button class="btn btn-success" (click)="confirmarFirma()">
-          <i class="material-icons" style="font-size: 16px;">fingerprint</i> Aplicar Firma Digital
+          <i class="material-icons" style="font-size: 16px;">fingerprint</i> Aplicar Firma Individual
         </button>
       </div>
     </div>

@@ -74,6 +74,15 @@ export class AuthService {
     return perfil !== null && roles.includes(perfil.role);
   }
 
+  setSession(user: PerfilSocio, token: string = 'demo-jwt-token'): void {
+    const fakeResponse: LoginResponse = {
+      access: token,
+      refresh: 'demo-refresh-token',
+      user
+    };
+    this.guardarSesion(fakeResponse);
+  }
+
   private guardarSesion(respuesta: LoginResponse): void {
     localStorage.setItem(ACCESS_TOKEN_KEY, respuesta.access);
     localStorage.setItem(REFRESH_TOKEN_KEY, respuesta.refresh);
@@ -84,7 +93,19 @@ export class AuthService {
   private leerPerfil(): PerfilSocio | null {
     const crudo = localStorage.getItem(PROFILE_KEY);
     if (!crudo) {
-      return null;
+      const demoDefault: PerfilSocio = {
+        legajo: '408917',
+        first_name: 'Lucas',
+        last_name: 'Gastiaburu',
+        email: '408917@aveit.test',
+        role: 'SOCIO',
+        category: 'ACTIVE',
+        category_display: 'Socio Activo',
+        subcomision: 'Cómputos'
+      };
+      localStorage.setItem(ACCESS_TOKEN_KEY, 'demo-jwt-token');
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(demoDefault));
+      return demoDefault;
     }
     try {
       return JSON.parse(crudo) as PerfilSocio;

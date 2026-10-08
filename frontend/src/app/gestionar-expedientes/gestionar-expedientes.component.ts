@@ -383,6 +383,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.cerrarModales();
   }
 
+  confirmarFirmaColegiado(): void {
+    if (!this.expedienteSeleccionado) return;
+    this.juecesDisponibles.forEach(juez => {
+      this.dataService.firmarResolucion(this.expedienteSeleccionado!.id, juez);
+    });
+    this.mostrarNotificacion('Resolución perfeccionada con las 3 firmas del Tribunal colegiado e impacto en saldo del socio.');
+    this.cerrarModales();
+  }
+
   mostrarNotificacion(msg: string): void {
     this.mensajeExito = msg;
     setTimeout(() => { this.mensajeExito = ''; }, 4500);

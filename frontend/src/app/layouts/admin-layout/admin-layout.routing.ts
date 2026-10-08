@@ -31,7 +31,7 @@ export const AdminLayoutRoutes: Routes = [
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
     { 
       path: 'reportes',               
-      component: EnDesarrolloComponent,
+      component: ReportesComponent,
       data: {
         titulo: 'Reportes & Balance',
         descripcion: 'Emisión de balances cuatrimestrales, métricas de sanciones y reconocimientos por subcomisión.',
@@ -47,7 +47,7 @@ export const AdminLayoutRoutes: Routes = [
     },
     { 
       path: 'eventos-asistencia',     
-      component: EnDesarrolloComponent,
+      component: EventosAsistenciaComponent,
       data: {
         titulo: 'Eventos & Asistencia',
         descripcion: 'Programación de actividades institucionales obligatorias con registro digital de asistencia.',

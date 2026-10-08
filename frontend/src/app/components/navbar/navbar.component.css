@@ -1,0 +1,89 @@
+/* Estilos del Selector de Rol para Demo Interactiva (DESIGN.md Tokens) */
+
+.demo-role-container {
+  background: rgba(27, 50, 95, 0.07);
+  border: 1px solid rgba(65, 103, 136, 0.28);
+  border-radius: 24px;
+  padding: 3px 6px;
+  transition: all 0.25s ease-in-out;
+}
+
+.demo-indicator-badge {
+  background-color: #1b325f;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 4px 7px;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(27, 50, 95, 0.3);
+}
+
+.demo-pill-group {
+  box-shadow: none;
+  background: transparent;
+}
+
+.demo-role-btn {
+  margin: 0 2px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  padding: 4px 10px !important;
+  border-radius: 14px !important;
+  color: #1b325f !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.demo-role-btn i {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.demo-role-btn.active {
+  background-color: #1b325f !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(27, 50, 95, 0.35) !important;
+}
+
+.demo-role-btn:hover:not(.active) {
+  background-color: rgba(65, 103, 136, 0.15) !important;
+  color: #1b325f !important;
+}
+
+/* Soporte para Modo Oscuro (Dark Edition) */
+:host-context(body.dark-edition) .demo-role-container,
+body.dark-edition .demo-role-container {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(110, 157, 220, 0.35);
+}
+
+:host-context(body.dark-edition) .demo-indicator-badge,
+body.dark-edition .demo-indicator-badge {
+  background-color: #416788;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-edition) .demo-role-btn,
+body.dark-edition .demo-role-btn {
+  color: #94a3b8 !important;
+}
+
+:host-context(body.dark-edition) .demo-role-btn.active,
+body.dark-edition .demo-role-btn.active {
+  background-color: #416788 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(65, 103, 136, 0.45) !important;
+}
+
+:host-context(body.dark-edition) .demo-role-btn:hover:not(.active),
+body.dark-edition .demo-role-btn:hover:not(.active) {
+  background-color: rgba(110, 157, 220, 0.2) !important;
+  color: #f8fafc !important;
+}

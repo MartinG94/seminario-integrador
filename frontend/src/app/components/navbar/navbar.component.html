@@ -26,6 +26,31 @@
         </div>
       </form>
 
+      <!-- Selector de Rol para Demo Interactiva (Milestone 3) -->
+      <div class="demo-role-container d-flex align-items-center mr-lg-3">
+        <span class="badge demo-indicator-badge mr-2">DEMO</span>
+        <div class="btn-group demo-pill-group" role="group" aria-label="Selector de rol demo">
+          <button type="button"
+                  class="btn btn-sm demo-role-btn"
+                  [class.active]="esRolActivo('socio')"
+                  (click)="seleccionarRolDemo('socio')"
+                  title="Lucas Gastiaburu (Socio - Legajo 408917)">
+            <i class="material-icons mr-1">person</i>
+            <span class="d-none d-md-inline">Lucas G. (Socio)</span>
+            <span class="d-md-none">Socio</span>
+          </button>
+          <button type="button"
+                  class="btn btn-sm demo-role-btn"
+                  [class.active]="esRolActivo('tribunal')"
+                  (click)="seleccionarRolDemo('tribunal')"
+                  title="Nicolás Rosales (Tribunal de Disciplina - Legajo 391024)">
+            <i class="material-icons mr-1">gavel</i>
+            <span class="d-none d-md-inline">Nicolás R. (Tribunal)</span>
+            <span class="d-md-none">Tribunal</span>
+          </button>
+        </div>
+      </div>
+
       <ul class="navbar-nav align-items-center">
         
         <!-- Botón de Alternancia Modo Oscuro / Claro -->
