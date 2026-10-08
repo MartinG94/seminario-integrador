@@ -142,7 +142,9 @@ Dejo asentadas las definiciones y acuerdos alcanzados en las reuniones mantenida
   - En la vista de gestión de expedientes (tabla y tablero), cuando un expediente cuente con más de un socio involucrado, se debe incorporar un **botón o acción visible** para desplegar el modal/listado de los socios vinculados a la causa sin necesidad de navegar a pantallas externas.
 
 * **Tarea de I+D para Diego (PO):**
-  - Investigar herramientas y modelos de clasificación de texto / lenguaje natural (evaluar herramientas tipo "laya" / LLaMA / modelos locales o clasificadores heurísticos) para asistir en la clasificación y tipificación automática de las solicitudes y su grado de urgencia.
+  - Investigar **Laya** (alternativa local y open source a TypeSafe Jev): modelo "System 1" no generativo (~150–400M parámetros) que devuelve decisiones tipadas con probabilidades (`choice`, `score`, `noul`), corre en CPU para inferencia y se ajusta (fine-tuning) en una GPU de escritorio.
+  - Alcance: asistir con **sugerencias no vinculantes** de grado de urgencia (`score`) y de artículo del Reglamento a invocar (`choice`) a partir del Motivo y la Hoja de Anexo. La decisión final sigue siendo del Tribunal.
+  - Prerrequisito: relevar expedientes y resoluciones históricas del TD con su urgencia y artículo reales para armar el dataset de fine-tuning.
 
 ---
 

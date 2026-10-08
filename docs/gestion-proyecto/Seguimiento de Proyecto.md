@@ -580,7 +580,7 @@ Al cierre del **Sprint 2** y previo al inicio formal del **Sprint 3**, el Produc
 1. **Gestión y Clasificación de Expedientes:**
    - **Clasificador de Urgencia:** Incorporación de un atributo de urgencia (`Baja`, `Normal`, `Urgente`) en los expedientes para priorizar causas críticas en el tablero y listados.
    - **Visualización de Múltiples Socios:** En la tabla de gestión de expedientes, habilitar un botón o acción directa para desplegar la lista completa de imputados cuando una causa involucre a más de un socio.
-   - **Investigación de IA/Clasificación (PO):** Tarea asignada al PO para investigar modelos y herramientas (evaluar herramientas tipo "laya" / LLaMA / modelos locales / clasificadores NLP) orientados a asistir en la sugerencia automática de tipificación y nivel de urgencia.
+   - **Investigación de IA/Clasificación (PO):** Tarea asignada al PO para investigar **Laya** (alternativa local y open source a TypeSafe Jev; modelo no generativo con primitivas `choice`, `score` y `noul`, inferencia en CPU y fine-tuning en GPU de escritorio) orientado a sugerencias no vinculantes de nivel de urgencia y artículo reglamentario, entrenadas con el histórico de expedientes del TD.
 2. **Formulario Crear Expediente (T01) y Hoja de Anexo:**
    - **Grupo Social:** Adición de la columna visible "Grupo" (ej. G57, G58, G59, G60) en la tabla de socios involucrados seleccionados.
    - **Hoja de Anexo Circunstanciada (Ref. Imagen 1):** Precisiones forenses en los campos de "Lugar o Evento del hecho" y explicitación detallada de *cómo se involucraron los testigos* presenciales.
