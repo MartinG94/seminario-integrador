@@ -66,3 +66,32 @@ class Argentina2026HolidayProvider(HolidayProviderPort):
 
     def is_holiday(self, target_date: date) -> bool:
         return target_date in self._holidays
+
+
+class DbHolidayProvider(HolidayProviderPort):
+    """Proveedor que consulta feriados y excepciones desde la base de datos para una versión."""
+
+    def __init__(
+        self,
+        version=None,
+        holidays: set[date] | None = None,
+    ) -> None:
+        if holidays is not None:
+            self._holidays = holidays
+        elif version is not None:
+            self._holidays = set(
+                version.feriados.filter(es_laborable=False).values_list("fecha", flat=True)
+            )
+        else:
+            from expedientes.models import CalendarioVersion
+
+            activa = CalendarioVersion.objects.filter(activa=True).order_by("-version").first()
+            if activa:
+                self._holidays = set(
+                    activa.feriados.filter(es_laborable=False).values_list("fecha", flat=True)
+                )
+            else:
+                self._holidays = set(Argentina2026HolidayProvider.OFFICIAL_2026_HOLIDAYS)
+
+    def is_holiday(self, target_date: date) -> bool:
+        return target_date in self._holidays

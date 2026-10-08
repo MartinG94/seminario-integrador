@@ -6,11 +6,14 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from expedientes.models import (
+    CalendarioVersion,
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    FeriadoExcepcion,
     SolicitudT01,
     TipoDescargoEnum,
+    TipoFeriadoEnum,
 )
 from padron.factory import get_padron_repository
 from socios.models import Socio
@@ -597,3 +600,106 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
                 "dictamen": f"Resolución firme emitida para causa {obj.expediente.numero}.",
             }
         return None
+
+
+class FeriadoExcepcionSerializer(serializers.ModelSerializer):
+    """Serializador para feriados y excepciones del calendario institucional."""
+
+    tipo_display = serializers.CharField(source="get_tipo_display", read_only=True)
+
+    class Meta:
+        model = FeriadoExcepcion
+        fields = [
+            "id",
+            "calendario_version",
+            "fecha",
+            "descripcion",
+            "tipo",
+            "tipo_display",
+            "es_laborable",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "calendario_version", "created_at", "updated_at"]
+
+
+class CalendarioVersionSerializer(serializers.ModelSerializer):
+    """Serializador para lista de versiones del calendario institucional (CA2)."""
+
+    creado_por_nombre = serializers.SerializerMethodField()
+    feriados_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CalendarioVersion
+        fields = [
+            "id",
+            "version",
+            "nombre",
+            "vigencia_desde",
+            "vigencia_hasta",
+            "activa",
+            "motivo_cambio",
+            "creado_por",
+            "creado_por_nombre",
+            "feriados_count",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "version", "created_at", "updated_at"]
+
+    def get_creado_por_nombre(self, obj: CalendarioVersion) -> str:
+        if obj.creado_por:
+            first = getattr(obj.creado_por, "first_name", "")
+            last = getattr(obj.creado_por, "last_name", "")
+            full = f"{first} {last}".strip()
+            return full or obj.creado_por.username
+        return "Sistema / Carga Inicial"
+
+    def get_feriados_count(self, obj: CalendarioVersion) -> int:
+        return obj.feriados.count()
+
+
+class CalendarioVersionDetailSerializer(CalendarioVersionSerializer):
+    """Serializador detallado con el listado completo de feriados y excepciones."""
+
+    feriados = FeriadoExcepcionSerializer(many=True, read_only=True)
+
+    class Meta(CalendarioVersionSerializer.Meta):
+        fields = CalendarioVersionSerializer.Meta.fields + ["feriados"]
+
+
+class FeriadoInputSerializer(serializers.Serializer):
+    """Validador de entrada para feriados al crear una versión o agregar una excepción."""
+
+    fecha = serializers.DateField()
+    descripcion = serializers.CharField(max_length=200)
+    tipo = serializers.ChoiceField(
+        choices=TipoFeriadoEnum.choices, default=TipoFeriadoEnum.NACIONAL
+    )
+    es_laborable = serializers.BooleanField(default=False)
+
+
+class CreateCalendarioVersionSerializer(serializers.Serializer):
+    """Validador para la creación de una nueva versión auditada de calendario (CA2)."""
+
+    nombre = serializers.CharField(max_length=150)
+    vigencia_desde = serializers.DateField()
+    vigencia_hasta = serializers.DateField(required=False, allow_null=True, default=None)
+    activa = serializers.BooleanField(default=True)
+    motivo_cambio = serializers.CharField(min_length=5)
+    clonar_de_version_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+    feriados = FeriadoInputSerializer(many=True, required=False, default=list)
+
+    def validate_nombre(self, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("El nombre de la versión no puede estar vacío.")
+        return cleaned
+
+
+class CalcularPlazoSerializer(serializers.Serializer):
+    """Validador y ejecutor para cálculo estimativo o de simulación de plazos (CA1/CA4)."""
+
+    start_at = serializers.DateTimeField()
+    business_days = serializers.IntegerField(min_value=1, default=5)
+    version_id = serializers.IntegerField(required=False, allow_null=True, default=None)
