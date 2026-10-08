@@ -412,6 +412,75 @@ class EmitirT01Serializer(serializers.Serializer):
         return solicitud
 
 
+# ── Transiciones autorizadas (Art. 12 Reglamento Procesal 2026) ──────────
+
+ALLOWED_TRANSITIONS: dict[str, list[str]] = {
+    EstadoExpedienteEnum.CREADO: [EstadoExpedienteEnum.JUSTIFICANDO],
+    EstadoExpedienteEnum.JUSTIFICANDO: [EstadoExpedienteEnum.REVISION_RESOLUCION],
+    EstadoExpedienteEnum.REVISION_RESOLUCION: [EstadoExpedienteEnum.ESPERA_RESOLUCION],
+    EstadoExpedienteEnum.ESPERA_RESOLUCION: [EstadoExpedienteEnum.PENDIENTE_CORREOS],
+    EstadoExpedienteEnum.PENDIENTE_CORREOS: [EstadoExpedienteEnum.EMITIDO],
+    EstadoExpedienteEnum.EMITIDO: [],
+}
+
+
+class BoardExpedienteSerializer(serializers.ModelSerializer):
+    """Tarjeta compacta de expediente para el tablero Kanban del TD (S2-05 CA1)."""
+
+    estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+    socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
+    subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
+    transiciones_permitidas = serializers.SerializerMethodField()
+    cantidad_socios = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Expediente
+        fields = [
+            "id",
+            "numero",
+            "socio",
+            "socio_nombre",
+            "socio_legajo",
+            "subcomision",
+            "estado",
+            "estado_display",
+            "puntos",
+            "motivo",
+            "created_at",
+            "plazo_limite_at",
+            "transiciones_permitidas",
+            "cantidad_socios",
+        ]
+
+    def get_socio_nombre(self, obj: Expediente) -> str:
+        return f"{obj.socio.first_name} {obj.socio.last_name}"
+
+    def get_cantidad_socios(self, obj: Expediente) -> int:
+        count = obj.socios.count()
+        return count if count > 0 else 1
+
+    def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
+        return ALLOWED_TRANSITIONS.get(obj.estado, [])
+
+
+class TransicionarExpedienteSerializer(serializers.Serializer):
+    """Valida y ejecuta una transición de estado autorizada (S2-05 CA3)."""
+
+    to_status = serializers.ChoiceField(choices=EstadoExpedienteEnum.choices)
+    justificacion = serializers.CharField(required=False, default="", allow_blank=True)
+
+    def validate_to_status(self, value: str) -> str:
+        expediente: Expediente = self.context["expediente"]
+        allowed = ALLOWED_TRANSITIONS.get(expediente.estado, [])
+        if value not in allowed:
+            raise serializers.ValidationError(
+                f"Transición no permitida de '{expediente.get_estado_display()}' "
+                f"a '{EstadoExpedienteEnum(value).label}'."
+            )
+        return value
+
+
 class MisSolicitudesT01Serializer(serializers.ModelSerializer):
     """Serializador sanitizado para monitoreo de solicitudes T01 (CA2 y CA3)."""
 

@@ -392,14 +392,18 @@ body.dark-edition {
 // 5. Tablero Kanban para Gestión de Expedientes
 // ==========================================
 .kanban-board-mat {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(260px, 1fr));
+  display: flex;
   gap: 16px;
+  width: 100%;
   overflow-x: auto;
   padding-bottom: 20px;
+  align-items: stretch;
+  -webkit-overflow-scrolling: touch;
 }
 
 .kanban-col-mat {
+  flex: 1 1 260px;
+  min-width: 250px;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
   border-radius: 6px;
@@ -407,6 +411,7 @@ body.dark-edition {
   display: flex;
   flex-direction: column;
   min-height: 520px;
+  transition: flex 0.25s ease-in-out, min-width 0.25s ease-in-out, max-width 0.25s ease-in-out, width 0.25s ease-in-out;
 
   .kanban-col-header {
     display: flex;
@@ -423,6 +428,9 @@ body.dark-edition {
       letter-spacing: 0.5px;
       margin: 0;
       color: #334155;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .col-count {
       background: #E2E8F0;
