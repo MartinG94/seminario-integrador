@@ -125,3 +125,35 @@ table.table-mat tbody tr:focus {
   }
 }
 
+// Estilos de clasificador de urgencia (SCRUM-78 / S3-07)
+.kanban-card-urgente {
+  border-left: 4px solid var(--color-danger, #B91C1C) !important;
+  background: linear-gradient(90deg, rgba(185, 28, 28, 0.05) 0%, rgba(255, 255, 255, 1) 14%);
+
+  &:hover {
+    border-left-color: #991B1B !important;
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.16) !important;
+  }
+}
+
+.badge-urgencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+
+  .material-icons {
+    font-size: 12px;
+    line-height: 1;
+    display: inline-flex;
+    vertical-align: middle;
+  }
+}
+
+

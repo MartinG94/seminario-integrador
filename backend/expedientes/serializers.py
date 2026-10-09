@@ -11,6 +11,7 @@ from expedientes.models import (
     Expediente,
     SolicitudT01,
     TipoDescargoEnum,
+    UrgenciaExpedienteEnum,
 )
 from padron.factory import get_padron_repository
 from socios.models import Socio
@@ -22,6 +23,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
+    urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
     descargo_presentado = serializers.SerializerMethodField()
     descargo_tipo = serializers.SerializerMethodField()
     descargo_causal = serializers.SerializerMethodField()
@@ -41,6 +43,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "motivo",
             "puntos",
             "estado",
+            "urgencia",
+            "urgencia_display",
             "socio_nombre",
             "socio_legajo",
             "socios",
@@ -152,6 +156,11 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 class AperturaExpedienteSerializer(serializers.Serializer):
     motivo = serializers.CharField(max_length=5000)
     socios = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=False)
+    urgencia = serializers.ChoiceField(
+        choices=UrgenciaExpedienteEnum.choices,
+        required=False,
+        default=UrgenciaExpedienteEnum.NORMAL,
+    )
 
     def validate_socios(self, value: list[int]) -> list[int]:
         if len(set(value)) != len(value):
@@ -425,9 +434,10 @@ ALLOWED_TRANSITIONS: dict[str, list[str]] = {
 
 
 class BoardExpedienteSerializer(serializers.ModelSerializer):
-    """Tarjeta compacta de expediente para el tablero Kanban del TD (S2-05 CA1)."""
+    """Tarjeta compacta de expediente para el tablero Kanban del TD (S2-05 CA1 / S3-07)."""
 
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
@@ -445,6 +455,8 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "subcomision",
             "estado",
             "estado_display",
+            "urgencia",
+            "urgencia_display",
             "puntos",
             "motivo",
             "created_at",
@@ -462,6 +474,12 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])
+
+
+class UpdateUrgenciaExpedienteSerializer(serializers.Serializer):
+    """Payload para actualizar el nivel de urgencia de un expediente."""
+
+    urgencia = serializers.ChoiceField(choices=UrgenciaExpedienteEnum.choices)
 
 
 class TransicionarExpedienteSerializer(serializers.Serializer):

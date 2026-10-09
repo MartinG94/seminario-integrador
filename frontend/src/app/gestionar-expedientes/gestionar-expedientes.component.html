@@ -38,7 +38,7 @@
           </div>
         </div>
 
-        <!-- Fila de Filtros Explícitos (CA2): Socio, Estado, Fecha Desde, Fecha Hasta -->
+        <!-- Fila de Filtros Explícitos (CA2 / S3-07): Socio, Estado, Urgencia, Fecha Desde, Fecha Hasta -->
         <div class="row pt-3 align-items-end">
           <div class="col-lg-3 col-md-6 col-12 mb-2">
             <label class="text-muted small font-weight-bold mb-1" for="filtro-socio">Socio (Legajo / Nombre):</label>
@@ -52,10 +52,17 @@
             </div>
           </div>
 
-          <div class="col-lg-3 col-md-6 col-12 mb-2">
+          <div class="col-lg-2 col-md-6 col-12 mb-2">
             <label class="text-muted small font-weight-bold mb-1" for="filtro-estado">Estado:</label>
             <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado" (change)="cargarDatosTablero()">
               <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
+            </select>
+          </div>
+
+          <div class="col-lg-2 col-md-6 col-12 mb-2">
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-urgencia">Urgencia:</label>
+            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia" (change)="cargarDatosTablero()">
+              <option *ngFor="let urg of urgenciasDisponibles" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
 
@@ -69,12 +76,13 @@
             <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta" (change)="cargarDatosTablero()">
           </div>
 
-          <div class="col-lg-2 col-md-12 col-12 mb-2 d-flex gap-2">
+          <div class="col-lg-1 col-md-12 col-12 mb-2 d-flex gap-2">
             <button mat-raised-button 
                     class="btn btn-primary btn-sm flex-fill m-0" 
                     (click)="cargarDatosTablero()"
-                    aria-label="Aplicar filtros de búsqueda">
-              <i class="material-icons" style="font-size: 14px;">filter_list</i> Filtrar
+                    aria-label="Aplicar filtros de búsqueda"
+                    title="Filtrar">
+              <i class="material-icons" style="font-size: 14px;">filter_list</i>
             </button>
             <button mat-button 
                     class="btn btn-white btn-sm m-0" 
@@ -140,16 +148,22 @@
 
           <div *ngFor="let exp of getExpedientesPorEstado(col.estado)" 
                class="kanban-card-mat" 
+               [class.kanban-card-urgente]="exp.urgencia === 'urgente'"
                tabindex="0"
                role="article"
-               [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
+               [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio + ', Urgencia ' + getUrgenciaLabel(exp.urgencia)"
                (click)="abrirDetalle(exp)"
                (keydown)="onKanbanCardKeyDown($event, exp)">
             <div class="card-top">
               <span class="font-weight-bold text-dark">{{exp.numero}}</span>
-              <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
-                {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
-              </span>
+              <div class="d-flex align-items-center gap-1">
+                <span class="badge-mat badge-urgencia" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)" [title]="'Urgencia: ' + getUrgenciaLabel(exp.urgencia)">
+                  <i class="material-icons urgencia-icon">{{getUrgenciaIcon(exp.urgencia)}}</i> {{getUrgenciaLabel(exp.urgencia)}}
+                </span>
+                <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
+                  {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
+                </span>
+              </div>
             </div>
             <h5 class="card-title-text">{{exp.socio}}</h5>
             <div class="card-subcomm">
@@ -208,6 +222,7 @@
               <th (click)="cambiarOrden('subcomision')" style="cursor: pointer;">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('motivo')" style="cursor: pointer;">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('urgencia')" style="cursor: pointer;">Urgencia <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th class="text-right">Acciones</th>
             </thead>
@@ -231,6 +246,11 @@
                 <td>
                   <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
                     {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)">
+                    <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(exp.urgencia)}}</i> {{getUrgenciaLabel(exp.urgencia)}}
                   </span>
                 </td>
                 <td>
@@ -289,6 +309,34 @@
               <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteSeleccionado.estado)">
                 {{getEstadoLabel(expedienteSeleccionado.estado)}}
               </span>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">Nivel de Urgencia:</label>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(expedienteSeleccionado.urgencia)">
+                <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i> {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
+              </span>
+              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2" role="group" aria-label="Cambiar Urgencia">
+                <button type="button" 
+                        class="btn btn-sm py-0 px-2"
+                        [ngClass]="expedienteSeleccionado.urgencia === 'baja' ? 'btn-success' : 'btn-outline-secondary'"
+                        (click)="cambiarUrgenciaExpediente('baja')">Baja</button>
+                <button type="button" 
+                        class="btn btn-sm py-0 px-2"
+                        [ngClass]="(!expedienteSeleccionado.urgencia || expedienteSeleccionado.urgencia === 'normal') ? 'btn-info' : 'btn-outline-secondary'"
+                        (click)="cambiarUrgenciaExpediente('normal')">Normal</button>
+                <button type="button" 
+                        class="btn btn-sm py-0 px-2"
+                        [ngClass]="expedienteSeleccionado.urgencia === 'urgente' ? 'btn-danger' : 'btn-outline-secondary'"
+                        (click)="cambiarUrgenciaExpediente('urgente')">Urgente</button>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">Puntaje Comprometido:</label>
+            <div class="font-weight-bold" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
+              {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts
             </div>
           </div>
           <div class="col-md-12 mb-3">

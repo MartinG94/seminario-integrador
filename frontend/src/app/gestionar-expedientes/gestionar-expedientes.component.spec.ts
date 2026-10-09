@@ -209,4 +209,58 @@ describe('GestionarExpedientesComponent', () => {
     expect(eventDown.preventDefault).toHaveBeenCalled();
     expect(card2.focus).toHaveBeenCalled();
   });
+
+  describe('Clasificador e indicador visual de urgencia (SCRUM-78)', () => {
+    it('debe mapear correctamente etiquetas, clases e iconos de urgencia', () => {
+      expect(component.getUrgenciaLabel('baja')).toBe('Baja');
+      expect(component.getUrgenciaLabel('normal')).toBe('Normal');
+      expect(component.getUrgenciaLabel('urgente')).toBe('Urgente');
+      expect(component.getUrgenciaLabel(undefined)).toBe('Normal');
+
+      expect(component.getUrgenciaBadgeClass('urgente')).toBe('badge-mat-danger');
+
+      expect(component.getUrgenciaBadgeClass('normal')).toBe('badge-mat-info');
+      expect(component.getUrgenciaBadgeClass('baja')).toBe('badge-mat-success');
+
+      expect(component.getUrgenciaIcon('urgente')).toBe('priority_high');
+      expect(component.getUrgenciaIcon('normal')).toBe('horizontal_rule');
+      expect(component.getUrgenciaIcon('baja')).toBe('arrow_downward');
+    });
+
+    it('cargarDatosTablero debe incluir el filtro de urgencia si está seleccionado', () => {
+      component.filtroUrgencia = 'urgente';
+      component.cargarDatosTablero();
+
+      expect(dataService.obtenerTablero).toHaveBeenCalledWith(jasmine.objectContaining({
+        urgencia: 'urgente'
+      }));
+    });
+
+    it('cambiarUrgenciaExpediente debe actualizar la urgencia vía TribunalDataService', () => {
+      const expMock: any = {
+        id: '1',
+        numero: 'EXP-001',
+        socio: 'Lucas G',
+        legajo: '74907',
+        subcomision: 'Cómputos',
+        motivo: 'Falta',
+        fechaCreacion: '2026-03-01',
+        estado: 'creado',
+        horasRestantes: 0,
+        tipo: 'falta',
+        puntos: -1,
+        urgencia: 'normal'
+      };
+
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(of({ id: 1, urgencia: 'urgente', urgencia_display: 'Urgente' } as any));
+
+      component.expedienteSeleccionado = expMock;
+      component.cambiarUrgenciaExpediente('urgente');
+
+      expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
+      expect(expMock.urgencia).toBe('urgente');
+    });
+  });
 });
+
+

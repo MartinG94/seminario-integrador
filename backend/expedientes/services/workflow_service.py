@@ -13,6 +13,7 @@ from expedientes.models import (
     EstadoExpedienteEnum,
     Expediente,
     ExpedienteNumberSequence,
+    UrgenciaExpedienteEnum,
 )
 from socios.models import Socio
 
@@ -34,7 +35,14 @@ class ExpedienteWorkflowService:
 
     @classmethod
     @transaction.atomic
-    def open_expediente(cls, *, motivo: str, socio_ids: list[int], actor: str) -> Expediente:
+    def open_expediente(
+        cls,
+        *,
+        motivo: str,
+        socio_ids: list[int],
+        actor: str,
+        urgencia: str = UrgenciaExpedienteEnum.NORMAL,
+    ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de apertura es obligatorio."})
         if not socio_ids:
@@ -48,6 +56,7 @@ class ExpedienteWorkflowService:
             socio_id=socio_ids[0],
             motivo=motivo.strip(),
             estado=EstadoExpedienteEnum.CREADO,
+            urgencia=urgencia,
         )
         expediente.socios.set(socio_ids)
         CambioEstadoExpediente.objects.create(
