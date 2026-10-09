@@ -1,5 +1,4 @@
-"""Serializadores para el módulo de expedientes y descargos."""
-
+import logging
 from decimal import Decimal
 
 from django.utils import timezone
@@ -14,7 +13,9 @@ from expedientes.models import (
     UrgenciaExpedienteEnum,
 )
 from padron.factory import get_padron_repository
-from socios.models import Socio
+from socios.models import Role, Socio, Subcomision
+
+logger = logging.getLogger(__name__)
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
@@ -398,9 +399,47 @@ class EmitirT01Serializer(serializers.Serializer):
         )
 
         # Apertura atómica y vinculación formal con Expediente
-        # si hay socios registrados en tabla Socio
-        existing_socios = list(Socio.objects.filter(pk__in=socios_ids).values_list("pk", flat=True))
-        if existing_socios and not solicitud.expediente:
+        # Resolver socios (ya sea por PK local de Socio o por padrón institucional)
+        resolved_socio_ids = []
+        for sid in socios_ids:
+            local_socio = Socio.objects.filter(pk=sid).first()
+            if not local_socio:
+                s_dto = padron_repo.get_by_id(sid)
+                if s_dto:
+                    if s_dto.legajo:
+                        local_socio = Socio.objects.filter(legajo=s_dto.legajo).first()
+                    if not local_socio and s_dto.email:
+                        local_socio = Socio.objects.filter(email__iexact=s_dto.email).first()
+                    if not local_socio and s_dto.legajo:
+                        from django.contrib.auth import get_user_model
+
+                        UserModel = get_user_model()
+                        username = str(s_dto.legajo)
+                        email = s_dto.email or f"{username}@aveit.utn.edu.ar"
+                        user, _ = UserModel.objects.get_or_create(
+                            username=username,
+                            defaults={"email": email},
+                        )
+                        subcom = None
+                        if s_dto.subcomision:
+                            subcom, _ = Subcomision.objects.get_or_create(
+                                name=s_dto.subcomision.name
+                            )
+                        local_socio = Socio.objects.create(
+                            user=user,
+                            legajo=s_dto.legajo,
+                            first_name=s_dto.first_name,
+                            last_name=s_dto.last_name,
+                            email=email,
+                            subcomision=subcom,
+                            social_year=s_dto.social_year or 1,
+                            role=Role.SOCIO,
+                            is_enabled=s_dto.is_active,
+                        )
+            if local_socio:
+                resolved_socio_ids.append(local_socio.pk)
+
+        if resolved_socio_ids and not solicitud.expediente:
             from expedientes.services.workflow_service import ExpedienteWorkflowService
 
             actor_name = getattr(solicitud.solicitante, "legajo", str(solicitud.solicitante_id))
@@ -410,12 +449,13 @@ class EmitirT01Serializer(serializers.Serializer):
                 )
                 expediente = ExpedienteWorkflowService.open_expediente(
                     motivo=motivo_apertura,
-                    socio_ids=existing_socios,
+                    socio_ids=resolved_socio_ids,
                     actor=f"SOLICITANTE_{actor_name}",
+                    urgencia=solicitud.urgencia,
                 )
                 solicitud.expediente = expediente
             except Exception:
-                pass
+                logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
 
         solicitud.save()
         return solicitud
