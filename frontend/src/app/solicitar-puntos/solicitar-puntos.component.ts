@@ -332,6 +332,31 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     return solicitud.estado_procesal_display || 'En Trámite';
   }
 
+  obtenerClaseUrgencia(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente':
+        return 'badge-mat-danger';
+      case 'baja':
+        return 'badge-mat-success';
+      case 'normal':
+      default:
+        return 'badge-mat-info';
+    }
+  }
+
+  obtenerIconoUrgencia(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente':
+        return 'priority_high';
+      case 'baja':
+        return 'arrow_downward';
+      case 'normal':
+      default:
+        return 'horizontal_rule';
+    }
+  }
+
+
   obtenerTextoInvolucrados(solicitud: SolicitudMonitoreo): string {
     if (!solicitud.involucrados || solicitud.involucrados.length === 0) {
       return 'Sin socios asignados';

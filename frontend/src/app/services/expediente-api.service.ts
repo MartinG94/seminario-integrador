@@ -41,6 +41,8 @@ export interface SolicitudMonitoreo {
   destinatarios_socios_ids: number[];
   estado_procesal: string;
   estado_procesal_display: string;
+  urgencia?: string;
+  urgencia_display?: string;
   involucrados: SocioInvolucrado[];
   resolucion_final: ResolucionFinalInfo | null;
   created_at: string;

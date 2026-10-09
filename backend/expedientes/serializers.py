@@ -548,6 +548,8 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
     estado_procesal_display = serializers.SerializerMethodField()
     involucrados = serializers.SerializerMethodField()
     resolucion_final = serializers.SerializerMethodField()
+    urgencia = serializers.SerializerMethodField()
+    urgencia_display = serializers.SerializerMethodField()
 
     class Meta:
         model = SolicitudT01
@@ -571,11 +573,23 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             "destinatarios_socios_ids",
             "estado_procesal",
             "estado_procesal_display",
+            "urgencia",
+            "urgencia_display",
             "involucrados",
             "resolucion_final",
             "created_at",
             "issued_at",
         ]
+
+    def get_urgencia(self, obj: SolicitudT01) -> str:
+        if obj.expediente:
+            return obj.expediente.urgencia
+        return obj.urgencia or UrgenciaExpedienteEnum.NORMAL
+
+    def get_urgencia_display(self, obj: SolicitudT01) -> str:
+        if obj.expediente:
+            return obj.expediente.get_urgencia_display()
+        return UrgenciaExpedienteEnum(obj.urgencia).label if obj.urgencia else "Normal"
 
     def get_numero(self, obj: SolicitudT01) -> str:
         if obj.expediente:

@@ -6,9 +6,13 @@
     </h4>
     <small class="text-muted">Fecha: {{ solicitud.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
   </div>
-  <div>
+  <div class="d-flex align-items-center">
     <span class="badge-mat" [ngClass]="obtenerClaseEstado(solicitud.estado_procesal)">
       {{ solicitud.estado_procesal_display }}
+    </span>
+    <span class="badge-mat ml-2" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)" *ngIf="solicitud.estado === 'ISSUED' && solicitud.urgencia">
+      <i class="material-icons" style="font-size: 13px; line-height: 1; vertical-align: middle;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
+      {{ solicitud.urgencia_display || solicitud.urgencia }}
     </span>
     <button mat-icon-button (click)="cerrar()" title="Cerrar ventana" class="ml-2">
       <mat-icon>close</mat-icon>
@@ -20,11 +24,11 @@
   <!-- Datos Principales -->
   <div class="card bg-light border-0 p-3 mb-3">
     <div class="row">
-      <div class="col-md-6 mb-2">
+      <div class="col-md-5 mb-2">
         <label class="text-secondary small font-weight-bold mb-0">Título:</label>
         <div class="font-weight-bold text-dark">{{ solicitud.titulo || 'Sin título especificado' }}</div>
       </div>
-      <div class="col-md-3 mb-2">
+      <div class="col-md-2 mb-2">
         <label class="text-secondary small font-weight-bold mb-0">Tipo de Acción:</label>
         <div>
           <span class="badge-mat" [ngClass]="solicitud.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
@@ -32,13 +36,23 @@
           </span>
         </div>
       </div>
-      <div class="col-md-3 mb-2">
+      <div class="col-md-2 mb-2">
         <label class="text-secondary small font-weight-bold mb-0">Puntos solicitados:</label>
         <div class="font-weight-bold" [ngClass]="solicitud.puntos < 0 ? 'text-danger' : 'text-success'">
           {{ solicitud.puntos !== null ? (solicitud.puntos > 0 ? '+' : '') + solicitud.puntos + ' pts' : 'S/D' }}
         </div>
       </div>
+      <div class="col-md-3 mb-2" *ngIf="solicitud.urgencia">
+        <label class="text-secondary small font-weight-bold mb-0">Urgencia:</label>
+        <div>
+          <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)">
+            <i class="material-icons" style="font-size: 12px; line-height: 1; vertical-align: middle;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
+            {{ solicitud.urgencia_display || solicitud.urgencia }}
+          </span>
+        </div>
+      </div>
     </div>
+
     <div class="row mt-1" *ngIf="solicitud.causal">
       <div class="col-12">
         <label class="text-secondary small font-weight-bold mb-0">Causal reglamentaria:</label>

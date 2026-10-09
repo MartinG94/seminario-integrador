@@ -237,10 +237,19 @@
                       </small>
                     </td>
                     <td>
-                      <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
-                        {{ obtenerTextoEstado(s) }}
-                      </span>
+                      <div>
+                        <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
+                          {{ obtenerTextoEstado(s) }}
+                        </span>
+                      </div>
+                      <div class="mt-1" *ngIf="s.estado === 'ISSUED' && s.urgencia">
+                        <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(s.urgencia)">
+                          <i class="material-icons" style="font-size: 11px; vertical-align: middle; line-height: 1;">{{ obtenerIconoUrgencia(s.urgencia) }}</i>
+                          {{ s.urgencia_display || s.urgencia }}
+                        </span>
+                      </div>
                     </td>
+
                     <td class="td-actions text-right text-nowrap">
                       <div class="d-inline-flex align-items-center justify-content-end">
                         <ng-container *ngIf="s.estado === 'DRAFT'">
