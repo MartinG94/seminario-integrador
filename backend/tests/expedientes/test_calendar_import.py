@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.db import connection
 
 from expedientes.models import CalendarioVersion, FeriadoExcepcion, Holiday
@@ -79,3 +80,36 @@ def test_import_without_active_calendar_leaves_operational_calendar_empty() -> N
     import_holidays(apps, SimpleNamespace(connection=connection))
     assert not Holiday.objects.exists()
     assert CalendarioVersion.objects.exists()
+
+
+@pytest.mark.django_db
+def test_import_can_repeat_without_duplicating_or_changing_audit() -> None:
+    Holiday.objects.all().delete()
+    import_holidays(apps, SimpleNamespace(connection=connection))
+    before = list(Holiday.objects.values().order_by("date"))
+
+    import_holidays(apps, SimpleNamespace(connection=connection))
+
+    assert list(Holiday.objects.values().order_by("date")) == before
+
+
+@pytest.mark.django_db
+def test_import_preserves_existing_user_holiday_on_seed_date() -> None:
+    Holiday.objects.all().delete()
+    user = get_user_model().objects.create_user(username="calendar_migration_author")
+    timestamp = datetime(2026, 10, 8, 18, 30, 12, 654321, tzinfo=timezone.utc)
+    holiday = Holiday.objects.create(
+        date=date(2026, 10, 12),
+        description="Denominación operativa registrada por autoridad",
+        created_by=user,
+        created_at=timestamp,
+    )
+
+    import_holidays(apps, SimpleNamespace(connection=connection))
+
+    holiday.refresh_from_db()
+    assert holiday.description == "Denominación operativa registrada por autoridad"
+    assert holiday.created_by_id == user.pk
+    assert holiday.created_at == timestamp
+    assert holiday.origin == Holiday.Origin.USER
+    assert Holiday.objects.count() == 16

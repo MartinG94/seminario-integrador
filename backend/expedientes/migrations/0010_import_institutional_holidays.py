@@ -65,7 +65,16 @@ def import_current_holidays(apps: Apps, schema_editor: BaseDatabaseSchemaEditor)
                 created_at=previous.created_at,
                 origin=origin,
             )
-    holiday_model.objects.using(alias).bulk_create(imported.values())
+    # El reverso conserva Holiday: una reaplicación debe respetar las altas y
+    # la auditoría que ya existen, incluyendo fechas de la carga inicial.
+    existing_dates = set(
+        holiday_model.objects.using(alias)
+        .filter(date__in=imported)
+        .values_list("date", flat=True)
+    )
+    holiday_model.objects.using(alias).bulk_create(
+        [holiday for target_date, holiday in imported.items() if target_date not in existing_dates]
+    )
 
 
 class Migration(migrations.Migration):
