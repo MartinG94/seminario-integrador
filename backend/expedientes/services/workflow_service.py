@@ -1,6 +1,7 @@
 """Servicios transaccionales para apertura y transiciones de expedientes."""
 
 from datetime import datetime
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -42,6 +43,7 @@ class ExpedienteWorkflowService:
         socio_ids: list[int],
         actor: str,
         urgencia: str = UrgenciaExpedienteEnum.NORMAL,
+        points: Decimal = Decimal("-1.0"),
     ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de apertura es obligatorio."})
@@ -57,6 +59,7 @@ class ExpedienteWorkflowService:
             motivo=motivo.strip(),
             estado=EstadoExpedienteEnum.CREADO,
             urgencia=urgencia,
+            puntos=points,
         )
         expediente.socios.set(socio_ids)
         CambioEstadoExpediente.objects.create(

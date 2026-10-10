@@ -283,3 +283,85 @@ $text-secondary: #334155;
     }
   }
 }
+
+// Selección única con casillas y colores semánticos compartidos con el Kanban.
+.urgency-field {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+
+  .form-label-custom {
+    color: var(--color-text-primary);
+  }
+
+  &[disabled] .urgency-choice {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+}
+
+.urgency-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.urgency-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--urgency-choice-color);
+  cursor: pointer;
+
+  &.urgency-choice-low { --urgency-choice-color: var(--color-success); }
+  &.urgency-choice-normal { --urgency-choice-color: var(--color-info); }
+  &.urgency-choice-urgent { --urgency-choice-color: var(--color-danger); }
+
+  &:focus-within {
+    outline: 2px solid var(--color-text-primary);
+    outline-offset: 2px;
+  }
+
+  .urgency-choice-label {
+    color: var(--color-text-inverse);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  input {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border: 2px solid var(--color-text-inverse);
+    border-radius: 4px;
+    background: transparent;
+    cursor: inherit;
+
+    &:focus { outline: none; }
+
+    &:checked::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 5px;
+      width: 6px;
+      height: 10px;
+      border: solid var(--color-text-inverse);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .urgency-choice input { appearance: auto; }
+}

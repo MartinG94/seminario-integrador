@@ -260,6 +260,12 @@ ExpedienteNotificationAuditSerializer = CaseNotificationAuditSerializer
 
 
 class SolicitudT01Serializer(serializers.ModelSerializer):
+    urgencia = serializers.ChoiceField(
+        choices=UrgenciaExpedienteEnum.choices,
+        required=False,
+        default=UrgenciaExpedienteEnum.NORMAL,
+    )
+
     class Meta:
         model = SolicitudT01
         fields = "__all__"
@@ -379,6 +385,7 @@ class EmitirT01Serializer(serializers.Serializer):
         solicitud.snapshot_emitido = {
             "id": str(solicitud.id),
             "tipo_accion": solicitud.tipo_accion,
+            "urgencia": solicitud.urgencia,
             "causal": solicitud.causal,
             "puntos": str(solicitud.puntos),
             "motivo": solicitud.motivo,
@@ -452,6 +459,7 @@ class EmitirT01Serializer(serializers.Serializer):
                     socio_ids=resolved_socio_ids,
                     actor=f"SOLICITANTE_{actor_name}",
                     urgencia=solicitud.urgencia,
+                    points=solicitud.puntos,
                 )
                 solicitud.expediente = expediente
             except Exception:

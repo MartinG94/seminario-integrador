@@ -115,6 +115,33 @@ class TestExpedienteUrgenciaSerializers:
 class TestExpedienteUrgenciaApi:
     """Pruebas de endpoints para filtrado y actualización de urgencia."""
 
+    @pytest.mark.parametrize("urgency", ["baja", "normal", "urgente", None])
+    def test_opening_preserves_selected_urgency(
+        self, td_socio, regular_socio, authenticate, urgency: str | None
+    ) -> None:
+        payload = {"motivo": "Apertura con prioridad", "socios": [regular_socio.pk]}
+        if urgency is not None:
+            payload["urgencia"] = urgency
+        response = authenticate(td_socio).post(
+            "/api/v1/expedientes/gestion/", payload, format="json"
+        )
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        expected = urgency or "normal"
+        assert response.data["urgencia"] == expected
+        assert Expediente.objects.get(pk=response.data["id"]).urgencia == expected
+
+    @pytest.mark.parametrize("urgency", ["", None, "critica"])
+    def test_opening_rejects_invalid_urgency(
+        self, td_socio, regular_socio, authenticate, urgency: str | None
+    ) -> None:
+        response = authenticate(td_socio).post(
+            "/api/v1/expedientes/gestion/",
+            {"motivo": "Apertura", "socios": [regular_socio.pk], "urgencia": urgency},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Expediente.objects.exists()
+
     def test_board_filtering_by_urgencia(self, td_socio, regular_socio, authenticate):
         Expediente.objects.create(
             numero="EXP-301/2026",

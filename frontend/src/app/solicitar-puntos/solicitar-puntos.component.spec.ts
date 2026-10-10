@@ -180,6 +180,141 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.socios[0].socio_id).toBe(7);
   });
 
+  function urgencyOption(value: string): HTMLInputElement {
+    const option = fixture.nativeElement.querySelector(`input[name="urgency"][value="${value}"]`) as HTMLInputElement | null;
+    if (!option) throw new Error(`Falta la opción visible de urgencia ${value}.`);
+    return option;
+  }
+
+  function selectedUrgency(): string {
+    const selected = fixture.nativeElement.querySelector('input[name="urgency"]:checked') as HTMLInputElement | null;
+    if (!selected) throw new Error('Debe haber un nivel de urgencia seleccionado.');
+    return selected.value;
+  }
+
+  function selectUrgency(value: string): void {
+    tick();
+    urgencyOption(value).click();
+    fixture.detectChanges();
+    tick();
+  }
+
+  it('ofrece tres opciones visibles y etiquetadas con Normal seleccionado, sin desplegable', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const options: HTMLInputElement[] = Array.from(fixture.nativeElement.querySelectorAll('input[name="urgency"]'));
+    expect(options.map(option => option.value)).toEqual(['baja', 'normal', 'urgente']);
+    expect(options.map(option => option.closest('label')?.textContent?.trim())).toEqual(['Baja', 'Normal', 'Urgente']);
+    expect(fixture.nativeElement.querySelector('.urgency-field legend').textContent.trim()).toBe('Urgencia');
+    expect(fixture.nativeElement.querySelector('select#urgencia-solicitud')).toBeNull();
+    expect(selectedUrgency()).toBe('normal');
+  });
+
+  it('permite elegir desde la etiqueta y mantiene un único nivel incluso al pulsar el ya elegido', fakeAsync(() => {
+    tick();
+    for (const value of ['urgente', 'baja', 'baja', 'normal']) {
+      urgencyOption(value).closest('label')?.click();
+      fixture.detectChanges();
+      tick();
+      expect(selectedUrgency()).toBe(value);
+      expect(component.urgency).toBe(value);
+      expect(fixture.nativeElement.querySelectorAll('input[name="urgency"]:checked').length).toBe(1);
+    }
+  }));
+
+  it('bloquea los tres niveles durante la carga sin perder la elección y vuelve a habilitarlos', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(selectedUrgency()).toBe('normal');
+    component.cargando = true;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    for (const value of ['baja', 'normal', 'urgente']) {
+      expect(urgencyOption(value).matches(':disabled')).toBeTrue();
+      urgencyOption(value).click();
+    }
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(selectedUrgency()).toBe('normal');
+    component.cargando = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    urgencyOption('urgente').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(selectedUrgency()).toBe('urgente');
+    expect(urgencyOption('urgente').matches(':disabled')).toBeFalse();
+  });
+
+  for (const urgency of ['baja', 'urgente'] as const) {
+    it(`envía y conserva la urgencia ${urgency} al guardar y actualizar un borrador`, fakeAsync(() => {
+      expediente.crearBorrador.and.returnValue(of({ ...draft, urgencia: urgency }));
+      expediente.actualizarBorrador.and.returnValue(of({ ...draft, urgencia: urgency }));
+      selectUrgency(urgency);
+      component.guardarBorrador();
+      fixture.detectChanges();
+      tick();
+      expect(expediente.crearBorrador).toHaveBeenCalledWith(jasmine.objectContaining({ urgencia: urgency }));
+      expect(selectedUrgency()).toBe(urgency);
+      component.guardarBorrador();
+      expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.objectContaining({ urgencia: urgency }));
+    }));
+  }
+
+  it('retoma un borrador urgente y lo emite conservando su urgencia y bloqueando el selector', fakeAsync(() => {
+    spyOn(window, 'scrollTo');
+    expediente.actualizarBorrador.and.returnValue(of({ ...draft, urgencia: 'urgente' as const }));
+    expediente.emitir.and.returnValue(of({ ...draft, urgencia: 'urgente' as const, estado: 'ISSUED', numero_expediente: 'T01-2026-1' }));
+    component.continuarEdicion({ ...mockSolicitudes[0], urgencia: 'urgente' });
+    fixture.detectChanges();
+    tick();
+    expect(selectedUrgency()).toBe('urgente');
+    component.emitirT01();
+    fixture.detectChanges();
+    tick();
+    expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.objectContaining({ urgencia: 'urgente' }));
+    expect(expediente.emitir).toHaveBeenCalledWith('draft-1');
+    expect(selectedUrgency()).toBe('urgente');
+    expect(urgencyOption('urgente').matches(':disabled')).toBeTrue();
+  }));
+
+  it('vuelve a Normal al iniciar otra solicitud o retomar un borrador sin urgencia', fakeAsync(() => {
+    spyOn(window, 'scrollTo');
+    selectUrgency('baja');
+    component.resetearFormulario();
+    fixture.detectChanges();
+    tick();
+    expect(selectedUrgency()).toBe('normal');
+    selectUrgency('urgente');
+    component.continuarEdicion(mockSolicitudes[0]);
+    fixture.detectChanges();
+    tick();
+    expect(selectedUrgency()).toBe('normal');
+  }));
+
+  it('conserva la urgencia seleccionada si falla el guardado', fakeAsync(() => {
+    expediente.crearBorrador.and.returnValue(throwError(() => ({ status: 500 })));
+    selectUrgency('urgente');
+    component.guardarBorrador();
+    fixture.detectChanges();
+    tick();
+    expect(selectedUrgency()).toBe('urgente');
+    expect(urgencyOption('urgente').matches(':disabled')).toBeFalse();
+  }));
+
+  it('conserva la opción de puntos al recibir decimales serializados por Django', async () => {
+    await fixture.whenStable();
+    expediente.crearBorrador.and.returnValue(of({ ...draft, puntos: '-1.00' }));
+    component.guardarBorrador();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const selects: HTMLSelectElement[] = Array.from(fixture.nativeElement.querySelectorAll('select'));
+    const pointsSelect = selects.find(select => Array.from(select.options).some(option => option.textContent?.includes('Falta Media')));
+    expect(pointsSelect?.selectedOptions[0]?.textContent?.trim()).toBe('-1.0 pts: Falta Media');
+    component.guardarBorrador();
+    expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.objectContaining({ puntos: -1 }));
+  });
+
   it('agrega socios seleccionados a la lista', () => {
     component.agregarSocio(component.socios[0]);
     expect(component.sociosSeleccionados.length).toBe(1);

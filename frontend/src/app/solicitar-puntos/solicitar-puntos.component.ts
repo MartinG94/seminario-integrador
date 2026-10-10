@@ -12,6 +12,7 @@ import {
   TipoAccionT01
 } from '../services/expediente-api.service';
 import { PadronApiService, PadronSocio } from '../services/padron-api.service';
+import type { NivelUrgencia } from '../services/tribunal-data.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 
 @Component({
@@ -25,6 +26,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   socioBusqueda = new FormControl('');
   sociosFiltrados: PadronSocio[] = [];
   tipoAccion: TipoAccionT01 = 'SANCTION';
+  urgency: NivelUrgencia = 'normal';
   puntosSeleccionados: number | null = -1;
   causal = '';
   motivoTexto = '';
@@ -224,6 +226,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.titulo = solicitud.titulo ?? '';
     this.causal = solicitud.causal ?? '';
     this.tipoAccion = solicitud.tipo_accion ?? 'SANCTION';
+    this.urgency = solicitud.urgencia ?? 'normal';
     this.puntosSeleccionados = solicitud.puntos ?? (this.tipoAccion === 'SANCTION' ? -1 : 1);
     this.razon = solicitud.razon || solicitud.motivo || '';
     this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ? [...solicitud.reglamentos_respaldantes] : [];
@@ -286,6 +289,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.titulo = '';
     this.causal = '';
     this.tipoAccion = 'SANCTION';
+    this.urgency = 'normal';
     this.puntosSeleccionados = -1;
     this.razon = '';
     this.reglamentosSeleccionados = [];
@@ -383,6 +387,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       destinatario_socio_id: ids.length > 0 ? ids[0] : null,
       destinatarios_socios_ids: ids,
       tipo_accion: this.tipoAccion,
+      urgencia: this.urgency,
       titulo: this.titulo,
       causal: this.causal,
       puntos: this.puntosSeleccionados,
@@ -427,7 +432,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.titulo = solicitud.titulo ?? this.titulo;
     this.causal = solicitud.causal ?? this.causal;
     this.tipoAccion = solicitud.tipo_accion ?? this.tipoAccion;
-    this.puntosSeleccionados = solicitud.puntos ?? this.puntosSeleccionados;
+    this.urgency = solicitud.urgencia ?? 'normal';
+    this.puntosSeleccionados = solicitud.puntos == null ? this.puntosSeleccionados : Number(solicitud.puntos);
     this.razon = solicitud.razon || solicitud.motivo || this.razon;
     this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ?? this.reglamentosSeleccionados;
     this.anexoFecha = solicitud.anexo_fecha ?? this.anexoFecha;

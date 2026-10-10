@@ -100,7 +100,7 @@ class Expediente(models.Model):
         blank=True,
     )
     motivo = models.TextField()
-    puntos = models.DecimalField(max_digits=5, decimal_places=2, default=-1.0)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, default=-1.0)
     estado = models.CharField(
         max_length=30,
         choices=EstadoExpedienteEnum.choices,
