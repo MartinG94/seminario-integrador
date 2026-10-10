@@ -40,6 +40,14 @@ class TipoDescargoEnum(models.TextChoices):
     T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
 
 
+class UrgenciaExpedienteEnum(models.TextChoices):
+    """Niveles de urgencia procesal para expedientes disciplinarios (SCRUM-78)."""
+
+    BAJA = "baja", "Baja"
+    NORMAL = "normal", "Normal"
+    URGENTE = "urgente", "Urgente"
+
+
 class ExpedienteNumberSequence(models.Model):
     """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
 
@@ -92,12 +100,19 @@ class Expediente(models.Model):
         blank=True,
     )
     motivo = models.TextField()
-    puntos = models.DecimalField(max_digits=5, decimal_places=2, default=-1.0)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, default=-1.0)
     estado = models.CharField(
         max_length=30,
         choices=EstadoExpedienteEnum.choices,
         default=EstadoExpedienteEnum.CREADO,
         db_index=True,
+    )
+    urgencia = models.CharField(
+        max_length=20,
+        choices=UrgenciaExpedienteEnum.choices,
+        default=UrgenciaExpedienteEnum.NORMAL,
+        db_index=True,
+        help_text="Nivel de urgencia procesal (Baja, Normal, Urgente).",
     )
     # Plazos procesales perentorios (CA1 y CA2)
     plazo_inicio_at = models.DateTimeField(
@@ -260,6 +275,12 @@ class SolicitudT01(models.Model):
     destinatario_socio_id = models.PositiveBigIntegerField(null=True, blank=True)
     destinatarios_socios_ids = models.JSONField(default=list, blank=True)
     tipo_accion = models.CharField(max_length=10, choices=TipoAccion.choices)
+    urgencia = models.CharField(
+        max_length=20,
+        choices=UrgenciaExpedienteEnum.choices,
+        default=UrgenciaExpedienteEnum.NORMAL,
+        blank=True,
+    )
     titulo = models.CharField(max_length=255, blank=True, default="")
     causal = models.CharField(max_length=255, blank=True)
     puntos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

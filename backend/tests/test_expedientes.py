@@ -4,7 +4,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 
-from expedientes.models import SolicitudT01
+from expedientes.models import Expediente, SolicitudT01
 from socios.models import Role
 
 
@@ -121,6 +121,7 @@ def test_snapshot_emitido_conserva_todos_los_campos(padron_repo, expediente_clie
     assert snapshot == {
         "id": data["id"],
         "tipo_accion": "SANCTION",
+        "urgencia": "normal",
         "titulo": "",
         "causal": "Art. 21",
         "puntos": "-2.00",
@@ -432,3 +433,88 @@ def test_roles_autorizados_pueden_crear_t01(rol_autorizado, make_socio, authenti
         format="json",
     )
     assert response.status_code == 201
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("urgency", "points"),
+    [("baja", "2.00"), ("normal", "99999999.99"), ("urgente", "1000.00"), ("urgente", "-1000.00")],
+)
+def test_t01_issues_with_original_urgency_and_requested_points(
+    padron_repo, expediente_client: APIClient, urgency: str, points: str
+) -> None:
+    data = create_draft(
+        expediente_client,
+        destinatario_socio_id=9001,
+        tipo_accion="SANCTION" if points.startswith("-") else "MERIT",
+        puntos=points,
+        urgencia=urgency,
+    ).data
+    assert data["urgencia"] == urgency
+    assert expediente_client.get(f"/api/v1/expedientes/{data['id']}/").data["urgencia"] == urgency
+
+    first = expediente_client.post(f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json")
+    assert first.status_code == 200, first.data
+    solicitud = SolicitudT01.objects.select_related("expediente").get(pk=data["id"])
+    assert solicitud.expediente is not None
+    assert solicitud.urgencia == urgency
+    assert solicitud.expediente.urgencia == urgency
+    assert solicitud.expediente.puntos == solicitud.puntos
+    assert first.data["snapshot_emitido"]["urgencia"] == urgency
+
+    second = expediente_client.post(f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json")
+    assert second.status_code == 200
+    assert second.data["snapshot_emitido"] == first.data["snapshot_emitido"]
+    assert Expediente.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_t01_draft_updates_urgency_before_issuing(
+    padron_repo, expediente_client: APIClient
+) -> None:
+    data = create_draft(expediente_client, destinatario_socio_id=9001, urgencia="urgente").data
+    updated = expediente_client.patch(
+        f"/api/v1/expedientes/{data['id']}/", {"urgencia": "baja"}, format="json"
+    )
+    assert updated.status_code == 200
+    assert updated.data["urgencia"] == "baja"
+    issued = expediente_client.post(f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json")
+    assert issued.status_code == 200
+    solicitud = SolicitudT01.objects.select_related("expediente").get(pk=data["id"])
+    assert solicitud.expediente.urgencia == "baja"
+    assert solicitud.snapshot_emitido["urgencia"] == "baja"
+    assert solicitud.expediente.puntos == solicitud.puntos
+    rejected = expediente_client.patch(
+        f"/api/v1/expedientes/{data['id']}/", {"urgencia": "normal"}, format="json"
+    )
+    assert rejected.status_code == 400
+    solicitud.refresh_from_db()
+    assert solicitud.urgencia == "baja"
+
+
+@pytest.mark.django_db
+def test_t01_omitted_urgency_defaults_to_normal(expediente_client: APIClient) -> None:
+    data = create_draft(expediente_client).data
+    assert data["urgencia"] == "normal"
+    assert SolicitudT01.objects.get(pk=data["id"]).urgencia == "normal"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("urgency", ["", None, "critica"])
+def test_t01_rejects_invalid_urgency_on_create_and_update(
+    expediente_client: APIClient, urgency: str | None
+) -> None:
+    response = expediente_client.post(
+        "/api/v1/expedientes/", {"tipo_accion": "SANCTION", "urgencia": urgency}, format="json"
+    )
+    assert response.status_code == 400
+    assert "urgencia" in response.data
+    assert not SolicitudT01.objects.exists()
+
+    data = create_draft(expediente_client, urgencia="urgente").data
+    response = expediente_client.patch(
+        f"/api/v1/expedientes/{data['id']}/", {"urgencia": urgency}, format="json"
+    )
+    assert response.status_code == 400
+    assert "urgencia" in response.data
+    assert SolicitudT01.objects.get(pk=data["id"]).urgencia == "urgente"

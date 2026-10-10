@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -7,7 +8,7 @@ import { of } from 'rxjs';
 
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
-import { TribunalDataService, BoardResponseDTO } from '../services/tribunal-data.service';
+import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -30,6 +31,7 @@ describe('GestionarExpedientesComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
+        CommonModule,
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
@@ -209,4 +211,141 @@ describe('GestionarExpedientesComponent', () => {
     expect(eventDown.preventDefault).toHaveBeenCalled();
     expect(card2.focus).toHaveBeenCalled();
   });
+
+  describe('Tarjetas Kanban simplificadas (observaciones PO PR #50)', () => {
+    function renderCase(overrides: Partial<Expediente> = {}): Expediente {
+      const expediente: Expediente = {
+        id: 'case-1', numero: 'EXP-0007/2026', socio: 'Socio secundario',
+        legajo: '74907', subcomision: 'Subcomisión secundaria',
+        motivo: 'Inasistencia a reunión institucional', fechaCreacion: '2026-10-07',
+        estado: 'creado', horasRestantes: 24, tipo: 'falta', puntos: -1,
+        urgencia: 'urgente', cantidadSocios: 3,
+        firmas: { juecesFirmantes: ['Juez 1', 'Juez 2', 'Juez 3'] },
+        ...overrides
+      };
+      component.expedientes = [expediente];
+      fixture.detectChanges();
+      return expediente;
+    }
+
+    it('muestra únicamente ID, urgencia, puntos, motivo y fecha en las seis etapas', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      for (const column of component.columnasKanban) {
+        renderCase({ estado: column.estado });
+        const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.kanban-card-mat'));
+        expect(cards.length).toBe(1);
+        const card = cards[0];
+        expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
+          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026'
+        );
+        expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
+      }
+    });
+
+    it('conserva el número canónico y mantiene ID y puntos sin quiebres', () => {
+      const expediente = renderCase({ numero: 'EXP-1234/2026', puntos: 2, urgencia: 'baja' });
+      const id: HTMLElement | null = fixture.nativeElement.querySelector('.card-id');
+      const points: HTMLElement | null = fixture.nativeElement.querySelector('.card-points');
+      expect(id?.textContent?.trim()).toBe('1234/2026');
+      expect(points?.textContent?.trim()).toBe('+2 pts');
+      if (id && points) {
+        expect(getComputedStyle(id).whiteSpace).toBe('nowrap');
+        expect(getComputedStyle(points).whiteSpace).toBe('nowrap');
+      }
+      expect(expediente.numero).toBe('EXP-1234/2026');
+    });
+
+    it('mantiene el signo de puntos fraccionarios y Normal para registros anteriores', () => {
+      renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
+      const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
+      expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
+        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026'
+      );
+    });
+
+    it('mantiene legible el máximo de puntos sin desbordar ni superponer los datos de cabecera', () => {
+      fixture.nativeElement.style.width = '375px';
+      renderCase({ numero: 'EXP-1234/2026', puntos: 99999999.99 });
+      const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
+      const header: HTMLElement = card.querySelector('.card-top')!;
+      expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+      expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+      expect(card.querySelector('.card-points')?.textContent?.trim()).toBe('+99999999.99 pts');
+      const bounds = Array.from(header.children).map(element => element.getBoundingClientRect());
+      for (let index = 0; index < bounds.length; index++) {
+        for (const other of bounds.slice(index + 1)) {
+          const current = bounds[index];
+          const overlap = Math.min(current.right, other.right) > Math.max(current.left, other.left) &&
+            Math.min(current.bottom, other.bottom) > Math.max(current.top, other.top);
+          expect(overlap).toBeFalse();
+        }
+      }
+    });
+
+    it('permite abrir el detalle mediante clic, Enter y espacio', () => {
+      const expediente = renderCase();
+      const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
+      spyOn(component, 'abrirDetalle');
+      expect(card.tabIndex).toBe(0);
+      card.click();
+      card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      card.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      expect(component.abrirDetalle).toHaveBeenCalledTimes(3);
+      expect(component.abrirDetalle).toHaveBeenCalledWith(expediente);
+    });
+  });
+
+  describe('Clasificador e indicador visual de urgencia (SCRUM-78)', () => {
+    it('debe mapear correctamente etiquetas, clases e iconos de urgencia', () => {
+      expect(component.getUrgenciaLabel('baja')).toBe('Baja');
+      expect(component.getUrgenciaLabel('normal')).toBe('Normal');
+      expect(component.getUrgenciaLabel('urgente')).toBe('Urgente');
+      expect(component.getUrgenciaLabel(undefined)).toBe('Normal');
+
+      expect(component.getUrgenciaBadgeClass('urgente')).toBe('badge-mat-danger');
+
+      expect(component.getUrgenciaBadgeClass('normal')).toBe('badge-mat-info');
+      expect(component.getUrgenciaBadgeClass('baja')).toBe('badge-mat-success');
+
+      expect(component.getUrgenciaIcon('urgente')).toBe('priority_high');
+      expect(component.getUrgenciaIcon('normal')).toBe('horizontal_rule');
+      expect(component.getUrgenciaIcon('baja')).toBe('arrow_downward');
+    });
+
+    it('cargarDatosTablero debe incluir el filtro de urgencia si está seleccionado', () => {
+      component.filtroUrgencia = 'urgente';
+      component.cargarDatosTablero();
+
+      expect(dataService.obtenerTablero).toHaveBeenCalledWith(jasmine.objectContaining({
+        urgencia: 'urgente'
+      }));
+    });
+
+    it('cambiarUrgenciaExpediente debe actualizar la urgencia vía TribunalDataService', () => {
+      const expMock: any = {
+        id: '1',
+        numero: 'EXP-001',
+        socio: 'Lucas G',
+        legajo: '74907',
+        subcomision: 'Cómputos',
+        motivo: 'Falta',
+        fechaCreacion: '2026-03-01',
+        estado: 'creado',
+        horasRestantes: 0,
+        tipo: 'falta',
+        puntos: -1,
+        urgencia: 'normal'
+      };
+
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(of({ id: 1, urgencia: 'urgente', urgencia_display: 'Urgente' } as any));
+
+      component.expedienteSeleccionado = expMock;
+      component.cambiarUrgenciaExpediente('urgente');
+
+      expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
+      expect(expMock.urgencia).toBe('urgente');
+    });
+  });
 });
+
+

@@ -90,7 +90,7 @@ describe('SolicitudDetalleDialogComponent', () => {
 
   it('muestra la hoja de anexo circunstanciada sin citar "Art. 16 bis"', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Hoja de Anexo Circunstanciada');
+    expect(compiled.textContent).toContain('Hoja de anexo');
     expect(compiled.textContent).not.toContain('Art. 16 bis');
     expect(compiled.textContent).toContain('Sede Central AVEIT, Sala de Sesiones');
     expect(compiled.textContent).toContain('Juan Pérez, María López');

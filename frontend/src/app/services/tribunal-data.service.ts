@@ -14,6 +14,8 @@ export type EstadoExpediente =
   | 'pendiente_correos' 
   | 'emitido';
 
+export type NivelUrgencia = 'baja' | 'normal' | 'urgente';
+
 export interface BoardCaseDTO {
   id: number;
   numero: string;
@@ -23,6 +25,8 @@ export interface BoardCaseDTO {
   subcomision: string;
   estado: EstadoExpediente;
   estado_display: string;
+  urgencia?: NivelUrgencia;
+  urgencia_display?: string;
   puntos: number;
   motivo: string;
   created_at: string;
@@ -62,6 +66,8 @@ export interface Expediente {
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;
+  urgencia?: NivelUrgencia;
+  urgenciaDisplay?: string;
   transicionesPermitidas?: EstadoExpediente[];
   horasRestantes: number;
   tipo: 'falta' | 'merito';
@@ -368,6 +374,7 @@ export class TribunalDataService {
   obtenerTablero(filtros?: {
     socio?: string;
     estado?: string;
+    urgencia?: string;
     fecha_desde?: string;
     fecha_hasta?: string;
   }): Observable<BoardResponseDTO> {
@@ -378,6 +385,9 @@ export class TribunalDataService {
       }
       if (filtros.estado && filtros.estado.trim()) {
         params = params.set('estado', filtros.estado.trim());
+      }
+      if (filtros.urgencia && filtros.urgencia.trim()) {
+        params = params.set('urgencia', filtros.urgencia.trim());
       }
       if (filtros.fecha_desde) {
         params = params.set('fecha_desde', filtros.fecha_desde);
@@ -416,12 +426,42 @@ export class TribunalDataService {
     );
   }
 
+  actualizarUrgencia(
+    expedienteId: number | string,
+    urgencia: NivelUrgencia
+  ): Observable<any> {
+    return this.http.patch<any>(
+      `${environment.apiUrl}/expedientes/${expedienteId}/`,
+      { urgencia }
+    ).pipe(
+      tap(() => {
+        const current = this.expedientesSubject.value;
+        const index = current.findIndex(e => String(e.id) === String(expedienteId));
+        if (index !== -1) {
+          const updated = [...current];
+          const display = urgencia === 'urgente' ? 'Urgente' : urgencia === 'baja' ? 'Baja' : 'Normal';
+          updated[index] = {
+            ...updated[index],
+            urgencia,
+            urgenciaDisplay: display
+          };
+          this.expedientesSubject.next(updated);
+        }
+      })
+    );
+  }
+
   private mapearBoardCaseAExpediente(c: BoardCaseDTO): Expediente {
     let horasRestantes = 0;
     if (c.plazo_limite_at && c.estado === 'justificando') {
       const diff = new Date(c.plazo_limite_at).getTime() - Date.now();
       horasRestantes = Math.max(0, Math.floor(diff / (1000 * 3600)));
     }
+
+    const urgencia: NivelUrgencia = c.urgencia || 'normal';
+    const urgenciaDisplay = c.urgencia_display || (
+      urgencia === 'urgente' ? 'Urgente' : urgencia === 'baja' ? 'Baja' : 'Normal'
+    );
 
     return {
       id: String(c.id),
@@ -433,6 +473,8 @@ export class TribunalDataService {
       fechaCreacion: c.created_at ? c.created_at.split('T')[0] : '',
       estado: c.estado,
       estadoDisplay: c.estado_display,
+      urgencia,
+      urgenciaDisplay,
       transicionesPermitidas: c.transiciones_permitidas || [],
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',

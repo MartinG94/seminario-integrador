@@ -6,9 +6,13 @@
     </h4>
     <small class="text-muted">Fecha: {{ solicitud.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
   </div>
-  <div>
+  <div class="d-flex align-items-center">
     <span class="badge-mat" [ngClass]="obtenerClaseEstado(solicitud.estado_procesal)">
       {{ solicitud.estado_procesal_display }}
+    </span>
+    <span class="badge-mat ml-2" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)" *ngIf="solicitud.estado === 'ISSUED' && solicitud.urgencia">
+      <i class="material-icons" style="font-size: 13px; line-height: 1; vertical-align: middle;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
+      {{ solicitud.urgencia_display || solicitud.urgencia }}
     </span>
     <button mat-icon-button (click)="cerrar()" title="Cerrar ventana" class="ml-2">
       <mat-icon>close</mat-icon>
@@ -20,11 +24,11 @@
   <!-- Datos Principales -->
   <div class="card bg-light border-0 p-3 mb-3">
     <div class="row">
-      <div class="col-md-6 mb-2">
+      <div class="col-md-5 mb-2">
         <label class="text-secondary small font-weight-bold mb-0">Título:</label>
         <div class="font-weight-bold text-dark">{{ solicitud.titulo || 'Sin título especificado' }}</div>
       </div>
-      <div class="col-md-3 mb-2">
+      <div class="col-md-2 mb-2">
         <label class="text-secondary small font-weight-bold mb-0">Tipo de Acción:</label>
         <div>
           <span class="badge-mat" [ngClass]="solicitud.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
@@ -32,22 +36,43 @@
           </span>
         </div>
       </div>
-      <div class="col-md-3 mb-2">
+      <div class="col-md-2 mb-2">
         <label class="text-secondary small font-weight-bold mb-0">Puntos solicitados:</label>
         <div class="font-weight-bold" [ngClass]="solicitud.puntos < 0 ? 'text-danger' : 'text-success'">
           {{ solicitud.puntos !== null ? (solicitud.puntos > 0 ? '+' : '') + solicitud.puntos + ' pts' : 'S/D' }}
         </div>
       </div>
+      <div class="col-md-3 mb-2" *ngIf="solicitud.urgencia">
+        <label class="text-secondary small font-weight-bold mb-0">Urgencia:</label>
+        <div>
+          <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)">
+            <i class="material-icons" style="font-size: 12px; line-height: 1; vertical-align: middle;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
+            {{ solicitud.urgencia_display || solicitud.urgencia }}
+          </span>
+        </div>
+      </div>
     </div>
+
     <div class="row mt-1" *ngIf="solicitud.causal">
       <div class="col-12">
         <label class="text-secondary small font-weight-bold mb-0">Causal reglamentaria:</label>
         <div class="text-dark">{{ solicitud.causal }}</div>
       </div>
     </div>
+
+    <div class="row mt-2" *ngIf="solicitud.reglamentos_respaldantes && solicitud.reglamentos_respaldantes.length > 0">
+      <div class="col-12">
+        <label class="text-secondary small font-weight-bold mb-0">Reglamentos respaldantes:</label>
+        <div class="mt-1">
+          <span class="badge badge-light border mr-1 mb-1 text-dark" *ngFor="let reg of solicitud.reglamentos_respaldantes">
+            {{ reg }}
+          </span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Socios involucrados -->
+  <!-- Socios involucrados (1 a Muchos) -->
   <div class="mb-3">
     <h6 class="font-weight-bold text-dark mb-2">
       <mat-icon class="align-middle mr-1 small text-info">people</mat-icon>
@@ -59,7 +84,7 @@
           <tr>
             <th style="width: 110px;">Legajo</th>
             <th>Apellido y Nombre</th>
-            <th>Subcomisión</th>
+            <th>Grupo / Subcomisión</th>
           </tr>
         </thead>
         <tbody>
@@ -76,17 +101,17 @@
     </div>
   </div>
 
-  <!-- Exposición fáctica -->
+  <!-- Razón del T-01 -->
   <div class="mb-3" *ngIf="solicitud.razon || solicitud.motivo">
-    <h6 class="font-weight-bold text-dark mb-2">Fundamentos y Razón de la Solicitud:</h6>
+    <h6 class="font-weight-bold text-dark mb-2">Razón del T-01:</h6>
     <div class="p-3 bg-white border rounded text-dark" style="white-space: pre-wrap; font-size: 0.92rem;">
       {{ solicitud.razon || solicitud.motivo }}
     </div>
   </div>
 
-  <!-- Anexo Circunstanciado (si tiene) -->
+  <!-- Detalles adicionales / Anexo (si tiene) -->
   <div class="mb-3" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar || solicitud.anexo_testigos || solicitud.anexo_relato">
-    <h6 class="font-weight-bold text-dark mb-2">Hoja de Anexo Circunstanciada:</h6>
+    <h6 class="font-weight-bold text-dark mb-2">Detalles adicionales / Hoja de anexo:</h6>
     <div class="p-3 bg-light border rounded">
       <div class="row" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar">
         <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_fecha">
