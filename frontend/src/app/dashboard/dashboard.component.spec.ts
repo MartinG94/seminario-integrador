@@ -1,4 +1,5 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { DashboardComponent } from './dashboard.component';
 
@@ -8,6 +9,7 @@ describe('DashboardComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
+      imports: [MatTooltipModule],
       declarations: [ DashboardComponent ]
     })
     .compileComponents();

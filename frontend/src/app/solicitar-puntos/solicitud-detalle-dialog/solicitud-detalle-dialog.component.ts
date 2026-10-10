@@ -1,6 +1,6 @@
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { SolicitudMonitoreo } from '../../services/expediente-api.service';
+import type { SolicitudMonitoreo } from '../../services/expediente-api.service';
 
 @Component({
   selector: 'app-solicitud-detalle-dialog',
