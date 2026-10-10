@@ -174,7 +174,10 @@ class TestOpeningNotificationService:
 
     @pytest.mark.skipif(
         connection.vendor != "mysql",
-        reason="Concurrencia real requiere bloqueo de filas a nivel motor (MySQL/InnoDB).",
+        reason=(
+            "Concurrencia multihilo con select_for_update requiere bloqueo a nivel de fila "
+            "real (MySQL/InnoDB)."
+        ),
     )
     def test_dispatch_opening_concurrent_calls_guarantee_single_outbox(
         self, expediente_creado, socio_imputado

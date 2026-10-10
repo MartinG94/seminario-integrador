@@ -1,7 +1,7 @@
 # Plan técnico — Spec 002: Apertura y trazabilidad del expediente
 
 ## Diseño
-- Crear expedientes dentro de una transacción. El número (`EXP-NNNNNN`) sale de una tabla contador de una sola fila (`expedientes_numero_secuencia`) bloqueada con `SELECT ... FOR UPDATE`, y queda protegido además por la restricción `UNIQUE` de `numero`. La migración siembra el contador a partir del mayor número existente.
+- Crear expedientes dentro de una transacción. El número (`<numero>/YYYY`) sale de una tabla contador de una sola fila (`expedientes_numero_secuencia`) bloqueada con `SELECT ... FOR UPDATE`, y queda protegido además por la restricción `UNIQUE` de `numero`. La migración siembra el contador a partir del mayor número existente.
 - Alternativa descartada: derivar el número del ID autoincremental. InnoDB no devuelve los valores consumidos por transacciones revertidas, por lo que la secuencia quedaría con huecos y dejaría de ser correlativa (CA1).
 - Centralizar transiciones en un servicio de dominio/aplicación que bloquea la fila, valida el siguiente estado exacto y persiste el cambio y su auditoría en la misma transacción.
 - Mantener los seis valores existentes de `EstadoExpedienteEnum` y alinear sus etiquetas con el texto del Art. 12. Las tareas de vencimiento y apertura del plazo usan el mismo servicio.

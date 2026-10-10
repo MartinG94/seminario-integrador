@@ -63,6 +63,19 @@ describe('ExpedienteApiService', () => {
     req.flush([{ id: 'uuid-2', numero: 'T01-002', estado: 'DRAFT', titulo: 'Inconducta' }]);
   });
 
+  it('normaliza los puntos decimales del monitoreo para retomar borradores sin perder la selección', () => {
+    service.listarMisSolicitudes().subscribe(solicitudes => {
+      expect(solicitudes.map(solicitud => solicitud.puntos)).toEqual([-0.5, 2, 2, null]);
+      expect(solicitudes[0].urgencia).toBe('urgente');
+    });
+    http.expectOne(`${environment.apiUrl}/expedientes/mis-solicitudes/`).flush([
+      { id: 'draft-1', puntos: '-0.50', urgencia: 'urgente' },
+      { id: 'draft-2', puntos: '2.00' },
+      { id: 'draft-3', puntos: 2 },
+      { id: 'draft-4', puntos: null }
+    ]);
+  });
+
   it('elimina un borrador existente mediante DELETE', () => {
     let completed = false;
     service.eliminarBorrador('draft-123').subscribe(() => {

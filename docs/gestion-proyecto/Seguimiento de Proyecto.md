@@ -31,6 +31,7 @@
 | :---: | :---: | :--- | :--- |
 | **1.0.0** | 01/09/2026 | Equipo de Proyecto SGD-AVEIT | Creación inicial del documento, bosquejo de acuerdos de trabajo, estimación horaria inicial y definición preliminar de roles. |
 | **1.1.0** | 02/09/2026 | Equipo de Proyecto SGD-AVEIT | Formalización integral del **Sprint 0** conforme a la Guía de Documentación de la UTN FRC: calendario de sprints (14 días, finalización en diciembre 2026), ceremonias híbridas, acuerdos de trabajo (DoD y DoR), capacidad semanal del equipo (77 hs/sem), catálogo de herramientas, tecnologías y gobernanza de Inteligencia Artificial para pair programming, Product Backlog completo inicial (US-01 a US-19), User Story Map bidimensional, banco de consultas para la reunión de tutoría docente y estructura de seguimiento para Sprints 1 a N. |
+| **1.2.0** | 07/10/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación de la ejecución, métricas, incremento demostrable y retrospectiva del **Sprint 1** (Walking Skeleton e Integración Legada) y del **Sprint 2** (Apertura T01, Ciclo Procesal de 6 Estados, Notificaciones y Monitoreo SCRUM-75). Formalización del hito de revisión intermedia y feedback del Product Owner del 27/09/2026 (`notasPO.md`), documentando sus impactos de diseño y replanificación ágil. |
 
 ---
 
@@ -50,10 +51,26 @@
      - 2.1.5. [Tecnologías para el Desarrollo del Producto y Política de Tratamiento de IA](#215-tecnologías-para-el-desarrollo-del-producto-y-política-de-ia)
      - 2.1.6. [Product Backlog (Completo Inicial)](#216-product-backlog-completo-inicial)
      - 2.1.7. [Story Map (User Story Mapping)](#217-story-map-user-story-mapping)
-   - 2.2. [Estructura de Seguimiento para Sprints 1 a N](#22-estructura-de-seguimiento-para-sprints-1-a-n)
-     - 2.2.1. [Plantilla de Planificación y Sprint Backlog](#221-plantilla-de-planificación-y-sprint-backlog)
-     - 2.2.2. [Plantilla de Resultado Final del Sprint e Incremento](#222-plantilla-de-resultado-final-del-sprint)
-     - 2.2.3. [Plantilla de Retrospectiva y Mejora Continua](#223-plantilla-de-retrospectiva)
+   - 2.2. [Sprint 1 (Walking Skeleton: Integración, Padrón y Ranking)](#22-sprint-1-walking-skeleton-integración-padrón-y-ranking)
+     - 2.2.1. [Planificación y Sprint Backlog](#221-planificación-y-sprint-backlog)
+     - 2.2.2. [Resultado Final del Sprint e Incremento](#222-resultado-final-del-sprint-e-incremento)
+     - 2.2.3. [Retrospectiva y Mejora Continua](#223-retrospectiva-y-mejora-continua)
+   - 2.3. [Hito de Revisión Intermedia con el Product Owner y Refinamiento (27/09/2026)](#23-hito-de-revisión-intermedia-con-el-product-owner-y-refinamiento-27092026)
+     - 2.3.1. [Síntesis del Feedback y Nuevas Consideraciones del PO (`notasPO.md`)](#231-síntesis-del-feedback-y-nuevas-consideraciones-del-po-notaspomd)
+     - 2.3.2. [Impacto en el Modelo de Datos, UI y Arquitectura](#232-impacto-en-el-modelo-de-datos-ui-y-arquitectura)
+     - 2.3.3. [Replanificación Ágil del Backlog y Estrategia de Entrega](#233-replanificación-ágil-del-backlog-y-estrategia-de-entrega)
+   - 2.4. [Sprint 2 (Apertura T01, Ciclo Procesal, Notificaciones y Monitoreo)](#24-sprint-2-apertura-t01-ciclo-procesal-notificaciones-y-monitoreo)
+     - 2.4.1. [Planificación y Sprint Backlog](#241-planificación-y-sprint-backlog)
+     - 2.4.2. [Resultado Final del Sprint e Incremento](#242-resultado-final-del-sprint-e-incremento)
+     - 2.4.3. [Retrospectiva y Mejora Continua](#243-retrospectiva-y-mejora-continua)
+   - 2.5. [Hito de Alineación con Cómputos, Tribunal de Disciplina y Directivas del PO (07/10/2026)](#25-hito-de-alineación-con-cómputos-tribunal-de-disciplina-y-directivas-del-po-07102026)
+     - 2.5.1. [Síntesis de Acuerdos Técnicos con la Subcomisión de Cómputos](#251-síntesis-de-acuerdos-técnicos-con-la-subcomisión-de-cómputos)
+     - 2.5.2. [Síntesis del Feedback Funcional del TD y PO (`notasPO.md` 07/10/2026)](#252-síntesis-del-feedback-funcional-del-td-y-po-notaspomd-07102026)
+     - 2.5.3. [Impacto en el Backlog del Sprint 3 y Próximas Iteraciones](#253-impacto-en-el-backlog-del-sprint-3-y-próximas-iteraciones)
+   - 2.6. [Estructura de Seguimiento para Sprints Subsiguientes (Sprints 3 a 6)](#26-estructura-de-seguimiento-para-sprints-subsiguientes-sprints-3-a-6)
+     - 2.6.1. [Plantilla de Planificación y Sprint Backlog](#261-plantilla-de-planificación-y-sprint-backlog)
+     - 2.6.2. [Plantilla de Resultado Final del Sprint](#262-plantilla-de-resultado-final-del-sprint)
+     - 2.6.3. [Plantilla de Retrospectiva](#263-plantilla-de-retrospectiva)
 
 ---
 
@@ -314,36 +331,312 @@ flowchart LR
 
 ---
 
-### 2.2. Estructura de Seguimiento para Sprints 1 a N
+### 2.2. Sprint 1 (Walking Skeleton: Integración, Padrón y Ranking)
 
-A continuación se define la estructura estandarizada que el equipo completará iteración tras iteración para documentar la ejecución, seguimiento y aprendizaje de cada uno de los Sprints del proyecto:
+El **Sprint 1** se ejecutó como la fase de construcción del *Walking Skeleton* vertical y de integración arquitectónica con la infraestructura preexistente de A.V.E.I.T. El foco principal consistió en implementar una base segura, reproducible y testeable que comunicara el frontend Angular con el backend Django REST Framework y la base de datos MySQL, consumiendo el padrón de socios sin duplicar fuentes maestras.
 
-#### 2.2.1. Plantilla de Planificación y Sprint Backlog
+---
+
+#### 2.2.1. Planificación y Sprint Backlog
+
+* **Sprint Nº:** 1
+* **Fecha de Inicio:** 09/09/2026 — **Fecha de Finalización:** 22/09/2026
+* **Scrum Master del Sprint:** Lucas Martín Guillén
+* **Sprint Goal (Objetivo del Sprint):** Construir el *Walking Skeleton* seguro e integrado con el ecosistema de AVEIT: autenticación JWT compatible con roles institucionales, consumo desacoplado del padrón (~515 socios), cálculo y visualización reconciliada del ranking oficial de puntos y búsqueda con legajo disciplinario en Angular.
+* **Capacidad Disponible en el Sprint:** 154 horas-hombre brutas / ~115.5 horas efectivas de desarrollo (7 integrantes con dedicación de 11 hs/sem y Factor de Enfoque del 75%).
+* **Velocidad Comprometida:** **20 Story Points** (distribuidos en 1 Spike, 1 Task técnica y 4 User Stories prioritarias).
+* **Sprint Backlog Comprometido:**
+
+| ID Jira | ID Backlog | Título de la Historia / Tarea | Tareas Técnicas Asociadas | Responsable(s) Asignado(s) | SP | Estado Inicial |
+| :---: | :---: | :--- | :--- | :--- | :---: | :---: |
+| **SCRUM-34** | S1-01 | **Spike:** Definir contrato de integración y fuente maestra (ADR-001) | 1. Relevar esquema de base de datos MySQL 5.7 legada.<br>2. Documentar ADR-001 sobre consumo de padrón sin duplicación.<br>3. Definir política de acceso read-only a `PuntajeAplicado`. | Diego Sánchez (PO)<br>Lucas Gastiaburu | 2 | To Do |
+| **SCRUM-35** | S1-02 | **Task:** Baseline reproducible, healthchecks y secretos externos | 1. Configurar `docker-compose.yml` para MySQL 8, Django y Angular.<br>2. Implementar endpoint `/api/health/` con verificación de BD.<br>3. Crear `.env.example` y aislar credenciales. | Lucas Martín Guillén (SM)<br>Tomas Quiroz | 2 | To Do |
+| **SCRUM-36** | S1-03 | **Story:** Autenticación y autorización compatibles con roles AVEIT | 1. Configurar SimpleJWT con claims (`legajo`, `role`, `category`).<br>2. Mapear roles legados a permisos DRF (`IsTribunalOrDirectiva`).<br>3. Crear `AuthService` en Angular con interceptor HTTP Bearer token. | Tomas Quiroz<br>Lucas Martín Guillén | 5 | To Do |
+| **SCRUM-37** | S1-04 | **Story:** Consumir el padrón institucional sin duplicar la fuente maestra | 1. Implementar modelo de dominio `Socio` y `Subcomision`.<br>2. Adaptador de sólo lectura contra el padrón institucional.<br>3. Clasificación formal Pasivo (1.º-3.º) y Activo (4.º-6.º).<br>4. Resiliencia HTTP 503 ante caída de base de datos. | Lucas Gastiaburu<br>Diego Sánchez | 3 | To Do |
+| **SCRUM-38** | S1-05 | **Story:** Ranking oficial reconciliado con el libro histórico | 1. Implementar servicio de agregación y endpoint `/api/v1/ranking/`.<br>2. Reconciliar saldos contra `PuntajeAplicado` con decimales.<br>3. Conectar `RankingSociosComponent` en Angular con filtros.<br>4. Validar latencia p95 ≤ 500 ms sobre 515 registros. | Nicolás Rosales<br>Axel Villegas | 5 | To Do |
+| **SCRUM-39** | S1-06 | **Story:** Buscar por nombre, legajo y subcomisión y abrir legajo | 1. Endpoint `/api/v1/socios/` con búsqueda case/accent-insensitive.<br>2. Endpoint y modal de legajo `/api/v1/socios/<id>/legajo/`.<br>3. Componente Angular `SocioLegajoDialogComponent`.<br>4. Verificación responsive en 360 px y accesibilidad WCAG. | Luis Urviola<br>Axel Villegas | 3 | To Do |
+
+---
+
+#### 2.2.2. Resultado Final del Sprint e Incremento
+
+* **Sprint Goal Alcanzado:** **Sí (100%)**. Se completó de extremo a extremo la integración del *Walking Skeleton*, validando la arquitectura desacoplada entre Angular 14, Django REST Framework y MySQL 8, asegurando la lectura transparente del padrón institucional.
+* **Velocidad Real Lograda:** **20 Story Points** completados sobre **20 SP** comprometidos (100% de cumplimiento).
+* **Historias de Usuario Terminadas (cumpliendo 100% DoD):**
+  * `SCRUM-34` (S1-01): Spike formalizado y aprobado mediante [`docs/adr/ADR-001-consumo-padron-institucional.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/adr/ADR-001-consumo-padron-institucional.md).
+  * `SCRUM-35` (S1-02): Orquestación reproducible mediante `docker-compose.yml`, healthcheck y suite de integración continua en verde.
+  * `SCRUM-36` (S1-03): Autenticación JWT con selector rápido de roles para pruebas de homologación y control RBAC en servidor.
+  * `SCRUM-37` (S1-04): Consumo desacoplado del padrón institucional de ~515 socios con normalización de legajos y categorías Pasivo/Activo.
+  * `SCRUM-38` (S1-05): Visualización y ordenamiento reactivo del ranking oficial de puntos con latencia p95 < 500 ms y precisión decimal.
+  * `SCRUM-39` (S1-06): Buscador insensible a acentos/mayúsculas y diálogo modal de legajo individual de socio responsive.
+* **Historias de Usuario No Completadas (Deuda Técnica / Replanificación):** **Ninguna (0 SP)**.
+* **Incremento de Software Demostrado:**
+  1. Login funcional desde Angular contra el backend DRF autenticando usuarios por número de legajo con generación de tokens JWT.
+  2. Tablero de Ranking poblado con los 515 socios del padrón de AVEIT, con ordenamiento dinámico por columnas y filtrado por categoría/subcomisión.
+  3. Modal interactivo de detalle de legajo que expone el historial de antecedentes del socio seleccionado.
+  4. Suite de pruebas unitarias backend (`pytest`) con cobertura superior al 95% en los módulos de padrón y autenticación.
+* **Enlace a la Demostración / Evidencia Técnica:**
+  - Pull Requests integrados: PR #33, PR #34, PR #35, PR #36.
+  - Repositorio: Commits `5544d97` a `a990d45` en rama `main`.
+
+---
+
+#### 2.2.3. Retrospectiva y Mejora Continua
+
+* **Fecha de la Retrospectiva:** 22/09/2026
+* **Técnica Utilizada:** *Barco de Vela (Sailboat Retrospective)*.
+* **¿Qué funcionó bien durante el Sprint? (Viento en las velas / Mantener):**
+  * • Excelente fluidez en sesiones de *pair programming* para integrar backend DRF y Angular.
+  * • La adopción temprana de la arquitectura anticorrupción (ADR-001) evitó corromper la base de datos legada de AVEIT.
+  * • Cobertura de pruebas unitarias robusta y temprana bajo TDD, evitando regresiones en la clasificación de categorías sociales.
+* **¿Qué no funcionó bien o generó fricciones? (Anclas / Detener):**
+  * • Subestimación de las diferencias entre dialectos MySQL 5.7 y MySQL 8.0 en migraciones iniciales.
+  * • Las pantallas prototípicas de Angular contenían textos empresariales y estructuras rígidas que no se ajustaban a la cultura y reglamentos reales de los socios de AVEIT.
+  * • Existencia de credenciales temporales y mocks dispersos en servicios de frontend que demoraron la integración final.
+* **¿Qué riesgos o amenazas detectamos? (Rocas / Anticipar):**
+  * • Se detectó que continuar construyendo los formularios de expedientes (T01) sobre las pantallas prototípicas sin una revisión a fondo del Product Owner generaría retrabajo sustancial.
+* **Plan de Acción de Mejora Continua para el Siguiente Sprint:**
+
+| Acción de Mejora Concreta | Responsable de Seguimiento | Criterio de Éxito / Medición |
+| :--- | :--- | :--- |
+| **A1. Jornada de revisión presencial de pantallas con el PO:** Inspeccionar exhaustivamente cada vista del frontend para capturar el lenguaje institucional real y los flujos estatutarios antes de codificar la lógica del Sprint 2. | Diego Sánchez (PO)<br>Lucas Martín Guillén (SM) | Documento formal de directivas emitido (`notasPO.md`) y presentado al equipo. |
+| **A2. Homogeneización de migraciones Django:** Establecer verificación estricta de orden y dependencias de migraciones en local antes de abrir Pull Requests. | Lucas Gastiaburu | Cero conflictos de ramas en `backend/expedientes/migrations/`. |
+
+---
+
+### 2.3. Hito de Revisión Intermedia con el Product Owner y Refinamiento (27/09/2026)
+
+Conforme a la Acción de Mejora **A1** acordada en la Retrospectiva del Sprint 1, el día **27/09/2026** se llevó a cabo una sesión de inspección profunda de pantallas y diseño funcional entre el Product Owner (**Diego Gabriel Sánchez**) y el equipo de desarrollo. Las directivas emanadas fueron formalizadas en el documento de gobernanza [`docs/gestion-proyecto/notasPO.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/gestion-proyecto/notasPO.md), estableciendo criterios de diseño vinculantes que impactaron de manera inmediata sobre la planificación y ejecución del **Sprint 2**.
+
+---
+
+#### 2.3.1. Síntesis del Feedback y Nuevas Consideraciones del PO (`notasPO.md`)
+
+1. **Lenguaje y Tono de la Interfaz (UI Centrada en el Socio):**
+   * Se instruyó erradicar la terminología corporativa abstracta o burocrática ajena a la vida asociativa de AVEIT.
+   * Simplificación obligatoria de rótulos: *"Estado procesal"* se reduce a *"Estado"*; se eliminan leyendas redundantes como *"Registro formal de causas disciplinarias"*.
+2. **Causa Disciplinaria con Imputados Múltiples:**
+   * Un expediente disciplinario debe admitir **múltiples socios acusados** en la misma causa.
+   * La posterior resolución del Tribunal de Disciplina y el impacto en puntos se **individualiza por socio** (un socio puede resultar absuelto mientras otro es sancionado). El modelo no debía parchearse a posteriori sino nacer con soporte N:M.
+3. **Naturaleza de Llamados de Atención y Felicitaciones:**
+   * No son fracciones directas de puntos (se descarta la ambigüedad de ±0,33 o ±0,5 puntos).
+   * Constituyen una categoría cualitativa especial: **solo cuando se acumulan tres (3) llamados de atención impactan como un (-1) punto de descuento**, y tres felicitaciones acreditan un (+1) punto de mérito.
+4. **Revisión de la Pantalla "Mis Expedientes y Descargos":**
+   * Título canónico: *"Mis Expedientes y Descargos"* (eliminando *"Reglamentarios"*).
+   * Estructura de tabla estricta: `Exp.` · `Título` · `Puntos` · `Creado` (DD/MM/YYYY) · `Estado` · `Acciones`.
+   * **Integración del Plazo Hábil:** Eliminación de la columna aislada de tiempo. El tiempo restante debe integrarse visualmente en el badge de estado cuando esté *"En período de justificaciones"* (ej. *"En plazo · 74h"* o *"Justificando · 3d 4h"*).
+   * Botón de acción con icono de visualización para abrir modal con el detalle completo de la causa.
+   * Botón *"Descargo"* con edición permitida mientras el plazo de 5 días hábiles permanezca abierto.
+   * Widget superior dinámico con la suma consolidada real de puntos del socio.
+5. **Revisión de la Pantalla "Crear Expediente (T01)":**
+   * **Control de Acceso:** Acceso exclusivo para Tribunal de Disciplina (TD), Comisión Directiva (CD) y Autoridades. Prohibido el acceso para socios comunes en menú y enrutamiento Angular.
+   * **Reordenamiento de campos:** 1) Título (antes *"Motivo"*), 2) Relato / Razón de la apertura, 3) Documentos adjuntos (opcionales), 4) Testigos (opcionales).
+   * Eliminación del selector de Subcomisión.
+   * Selector reactivo de múltiples socios involucrados con búsqueda predictiva (Select2/Autocomplete).
+   * Incorporación explícita de nuevas opciones de acción: *Llamado de atención*, *Felicitación* y *Pedido de expulsión*.
+   * Eliminación del bloque de *"Pautas del Régimen Disciplinario"*.
+6. **Revisión de la Pantalla "Ranking / Padrón":**
+   * Columnas canónicas: `Posición` · `Socio` · `N° de Socio` · `Grupo` · `Subcomisión` · `Puntos` · `Acciones` (con ordenamiento habilitado en todas).
+   * Saldo con tipografía de color (+ verde, - rojo) sin badge redundante de *"Habilitado regular"*.
+   * Botón de acción para consultar el legajo histórico del socio en diálogo modal.
+   * Supresión de chips estáticos de umbrales -10 y -7 (serán configurables institucionalmente).
+7. **Definiciones sobre Reglamentos, Reportes y Asistencia:**
+   * *Reglamentos:* ABM protegido por servidor (lectura pública para socios, edición exclusiva TD/CD/Admin).
+   * *Reportes:* Módulo pausado a la espera de definiciones de reportería del TD.
+   * *Eventos y Asistencia:* Acceso restringido a CD y Autoridades. Inasistencia dispara apertura automática de expediente. Carga manual inicial aplicando el **patrón Strategy** para desacoplar el futuro lector biométrico de huellas.
+
+---
+
+#### 2.3.2. Impacto en el Modelo de Datos, UI y Arquitectura
+
+Para dar respuesta inmediata a estas decisiones antes y durante el Sprint 2:
+* **Modelo Relacional en Django:**
+  - Se refactorizó la entidad `Expediente` para reemplazar la relación unívoca con un único socio por una relación de muchos a muchos (`socios = models.ManyToManyField(Socio)`), acompañada de la lista de identificadores `destinatarios_socios_ids` y `SolicitudT01.socios_involucrados`.
+  - Se incorporaron los campos `titulo`, `razon_apertura`, `tipo_accion` e inmutabilidad de numeración correlativa.
+* **Notificaciones Transaccionales:**
+  - Se diseñó el patrón **Transactional Outbox** (`EmailNotificationQueue`) en `backend/notifications/` para garantizar que la apertura de un expediente despache acuses de notificación individuales y seguros a cada uno de los socios imputados con enlace autenticado por objeto.
+* **Componentes UI en Angular:**
+  - Se rediseñó `MisExpedientesComponent` incorporando el modal `ExpedienteDetalleDialogComponent`, el badge dinámico con el cálculo regresivo de horas/días y la sumatoria reactiva de puntos.
+  - Se implementó la vista genérica `EnDesarrolloComponent` para rutear temporalmente los módulos pausados (Reportes, Eventos).
+
+---
+
+#### 2.3.3. Replanificación Ágil del Backlog y Estrategia de Entrega
+
+El análisis de las notas del PO reveló una necesidad funcional insatisfecha: las autoridades institucionales que inician un expediente mediante el Formulario T01 (Comisión Directiva, Fiscalizadora o Subcomisiones) carecían de una vista para **monitorear el avance y estado de las solicitudes que habían promovido**, sin violar por ello el secreto de deliberación interna del Tribunal de Disciplina.
+
+Por este motivo, durante la ejecución del Sprint 2:
+1. Se dio de alta formalmente en Jira la Historia de Usuario **SCRUM-75 / PB-04: Monitorear solicitudes T01 iniciadas ("Mis Solicitudes T01")**, estimada en **5 Story Points** y respaldada por la [`specs/003-monitorear-solicitudes-t01/spec.md`](file:///d:/Proyectos-mg/seminario-integrador/specs/003-monitorear-solicitudes-t01/spec.md).
+2. Se resolvió **adelantar técnicamente la lógica de cálculo de plazos de 5 días hábiles (S3-02)** en el backend y frontend para integrarla directamente en el badge de estado de *Mis Expedientes*, satisfaciendo el requerimiento prioritario del PO.
+3. Se adoptó la sugerencia de asignación de 5 frentes de trabajo en paralelo una vez estabilizado el modelo de expedientes.
+
+---
+
+### 2.4. Sprint 2 (Apertura T01, Ciclo Procesal, Notificaciones y Monitoreo)
+
+El **Sprint 2** consolidó el núcleo procesal y disciplinario de la plataforma. Integró la apertura formal de causas mediante el Formulario T01 multi-socio, la validación de competencias estatutarias de inicio (Arts. 21 a 26), el motor de transiciones auditadas de los 6 estados del Art. 12, el despacho transaccional de notificaciones y la nueva funcionalidad de monitoreo de solicitudes T01 (`SCRUM-75`).
+
+---
+
+#### 2.4.1. Planificación y Sprint Backlog
+
+* **Sprint Nº:** 2
+* **Fecha de Inicio:** 23/09/2026 — **Fecha de Finalización:** 06/10/2026
+* **Scrum Master del Sprint:** Lucas Martín Guillén
+* **Sprint Goal (Objetivo del Sprint):** Implementar el ciclo completo de apertura y trazabilidad del expediente disciplinario con numeración correlativa única, soporte de acusados múltiples, validación de competencias estatutarias, notificaciones transaccionales auditadas, tablero de 6 estados procesales y panel reactivo de monitoreo de solicitudes T01.
+* **Capacidad Disponible en el Sprint:** 154 horas-hombre brutas / ~115.5 horas efectivas de desarrollo.
+* **Velocidad Comprometida Original:** **18 Story Points** (historias base S2-01 a S2-05).
+* **Alcance Emergente Aprobado:** **+5 Story Points** incorporados por el PO (SCRUM-75 / PB-04) + adelanto técnico de temporizador de plazos hábiles (S3-02).
+* **Velocidad Total Comprometida / Replanificada:** **23 Story Points**.
+* **Sprint Backlog Comprometido y Ejecutado:**
+
+| ID Jira | ID Backlog | Título de la Historia / Tarea | Tareas Técnicas Asociadas | Responsable(s) Asignado(s) | SP | Estado Inicial |
+| :---: | :---: | :--- | :--- | :--- | :---: | :---: |
+| **SCRUM-40** | S2-01 | **Story:** Crear expediente con número único e historial de seis estados | 1. Implementar modelo `Expediente` con 6 estados del Art. 12.<br>2. Servicio `ExpedienteWorkflowService` con bloqueo pesimista.<br>3. Generación correlativa `<numero>/YYYY` concurrente.<br>4. Soporte multi-socio y auditoría de cambios de estado. | Lucas Gastiaburu<br>Diego Sánchez (PO) | 3 | To Do |
+| **SCRUM-41** | S2-02 | **Story:** Cargar y validar T01 con anexo opcional y selección múltiple | 1. Formulario T01 reordenado (Título, Relato, Adjuntos, Testigos).<br>2. Autocompletado multi-socio y acciones (Llamado, Felicitación, Expulsión).<br>3. Anexo opcional del Art. 16 bis.<br>4. Serializador y validaciones en DRF. | Diego Sánchez (PO)<br>Tomas Quiroz<br>Nicolás Rosales | 5 | To Do |
+| **SCRUM-42** | S2-03 | **Story:** Validar competencias de inicio de acción (Arts. 21-26) | 1. Implementar motor de políticas `OpeningPolicy`.<br>2. Validar competencias de solicitante según cargo y tipo de falta.<br>3. Manejo de excepciones y motivos fundados auditados.<br>4. Pruebas unitarias de casos límite y rechazo procesal. | Tomas Quiroz<br>Axel Villegas | 3 | To Do |
+| **SCRUM-43** | S2-04 | **Story:** Notificar apertura con entrega y reintentos auditables | 1. Diseñar sanitización de privacidad (cero datos médicos).<br>2. Servicio transaccional Outbox `OpeningNotificationService`.<br>3. Cola de correos `EmailNotificationQueue` con reintentos.<br>4. Enlace seguro con autorización RBAC por objeto (`IsImputadoOrTribunal`). | Lucas Martín Guillén (SM)<br>Axel Villegas | 5 | To Do |
+| **SCRUM-44** | S2-05 | **Story:** Visualizar tablero responsive de seis estados | 1. Tablero interactivo para el TD con 6 columnas oficiales.<br>2. Filtros por número de expediente, socio y rango de fechas.<br>3. Restricción de transiciones permitidas por reglamento.<br>4. Diseño mobile-first con tokens de diseño AVEIT. | Nicolás Rosales<br>Luis Urviola | 2 | To Do |
+| **SCRUM-75** | PB-04 | **Story:** Monitorear solicitudes T01 iniciadas ("Mis Solicitudes T01") | 1. Vinculación transaccional `SolicitudT01` ➔ `Expediente`.<br>2. Endpoint `/api/v1/expedientes/mis-solicitudes/` protegido.<br>3. Panel reactivo en `/solicitar-puntos` con buscador y estados.<br>4. Modal de detalle sanitizado (secreto del TD preservado). | Lucas Martín Guillén (SM)<br>Luis Urviola<br>Axel Villegas | 5 | To Do |
+| *(Técnica)* | S3-02 *(Adelanto)* | **Task:** Cómputo de 5 días hábiles y chip regresivo en estado | 1. Servicio determinista de calendario `compute_business_deadline()`.<br>2. Integrar badge con cuenta regresiva en `MisExpedientesComponent`.<br>3. Modal de detalle con fecha y hora exacta de vencimiento. | Lucas Martín Guillén (SM)<br>Nicolás Rosales | — | To Do |
+
+---
+
+#### 2.4.2. Resultado Final del Sprint e Incremento
+
+* **Sprint Goal Alcanzado:** **Sí (100%)**. Se completó exitosamente la totalidad del flujo de apertura disciplinaria, respetando estrictamente los 6 estados del Art. 12, las directivas de rediseño de pantallas del PO y los requisitos de seguridad e inmutabilidad.
+* **Velocidad Real Lograda:** **23 Story Points** completados sobre **23 SP** comprometidos/replanificados.
+* **Historias de Usuario Terminadas (cumpliendo 100% DoD):**
+  * `SCRUM-40` (S2-01): Modelo y servicio de expediente con numeración correlativa segura, máquina de 6 estados del Art. 12 y auditoría de transiciones.
+  * `SCRUM-41` (S2-02): Creación de solicitudes T01 con anexo opcional, selección reactiva de múltiples socios acusados y clasificación de acciones disciplinarias.
+  * `SCRUM-42` (S2-03): Validación automática de competencias estatutarias de inicio (Arts. 21 a 26) en backend.
+  * `SCRUM-43` (S2-04): Notificación automática por email con Transactional Outbox, reintentos asíncronos y enlace seguro por objeto.
+  * `SCRUM-44` (S2-05): Tablero de control de estados procesales para el Tribunal de Disciplina con diseño adaptativo.
+  * `SCRUM-75` (PB-04): Módulo reactivo de monitoreo de solicitudes T01 para autoridades solicitantes con gestión de borradores y detalle protegido.
+  * Adelanto técnico S3-02: Cuenta regresiva de días hábiles incorporada en el badge de estado de *Mis Expedientes y Descargos* y modal de causas.
+* **Historias de Usuario No Completadas (Deuda Técnica / Replanificación):** **Ninguna (0 SP)**.
+* **Incremento de Software Demostrado:**
+  1. Flujo completo de apertura de expediente T01 por autoridades con selección múltiple de socios, validación de competencias y numeración única `<numero>/YYYY`.
+  2. Despacho transaccional seguro de notificaciones a los socios involucrados mediante cola Outbox resiliente con registro de entrega.
+  3. Panel *"Mis Expedientes y Descargos"* con diseño limpio, tabla reordenada, visualización del plazo hábil regresivo en el chip de estado y modal de detalle completo de la causa.
+  4. Panel *"Mis Solicitudes T01"* en `/solicitar-puntos` permitiendo a las autoridades creadoras monitorear el estado procesal y retomar o eliminar borradores.
+  5. Suite de pruebas unitarias y de integración pasando al 100% en verde: backend (`pytest` con 53 pruebas cubriendo modelos, políticas, servicios y concurrencia) y frontend (`npm test` en Angular con pruebas unitarias para cada componente nuevo).
+* **Enlace a la Demostración / Evidencia Técnica:**
+  - Pull Requests integrados: PR #40, PR #41, PR #42, PR #43, PR #44, PR #45.
+  - Repositorio: Commits `fe52943` a `814bad4` en rama `main`.
+
+---
+
+#### 2.4.3. Retrospectiva y Mejora Continua
+
+* **Fecha de la Retrospectiva:** 06/10/2026
+* **Técnica Utilizada:** *Estrella de Mar (Starfish Retrospective)*.
+* **Continuar haciendo (Keep doing):**
+  * • Práctica de TDD rigurosa: escribir tests de políticas de apertura y concurrencia antes de codificar la vista garantizó cero regresiones.
+  * • Aceptación temprana de cambios solicitados por el PO: haber incorporado de inmediato las consideraciones de `notasPO.md` evitó acumular deuda de usabilidad.
+  * • Uso exhaustivo de Pull Requests con revisión cruzada de código y control estricto de linters (Ruff para backend).
+* **Hacer más (Do more):**
+  * • Coordinar previamente los cambios en esquemas de bases de datos compartidos entre miembros del equipo para evitar colisiones en migraciones secuenciales de Django.
+  * • Incrementar la documentación en el código de los servicios de dominio complejos (como el cálculo de días hábiles y exclusión de feriados).
+* **Empezar a hacer (Start doing):**
+  * • Diseñar de forma anticipada la arquitectura de almacenamiento y sanitización para la carga de adjuntos probatorios (PDF/imágenes) de los Formularios T02/T03 del Sprint 3.
+  * • Automatizar pruebas de integración *End-to-End* (E2E) para el flujo de presentación de descargos en entornos móviles.
+* **Dejar de hacer (Stop doing):**
+  * • Mezclar en un mismo Pull Request ajustes estéticos/CSS con cambios de reglas de negocio o endpoints de backend.
+* **Plan de Acción de Mejora Continua para el Siguiente Sprint (Sprint 3):**
+
+| Acción de Mejora Concreta | Responsable de Seguimiento | Criterio de Éxito / Medición |
+| :--- | :--- | :--- |
+| **A1. Protocolo de subida segura de descargos y comprobantes médicos:** Definir política de almacenamiento para adjuntos de T02/T03 (máx 5 MB, PDF/JPG/PNG, acceso por objeto restringido al TD y socio). | Lucas Gastiaburu<br>Luis Urviola | Endpoint de subida de archivos implementado con sanitización MIME y tests pasando. |
+| **A2. Consolidación de la suite de cierre automático de plazos:** Verificar la ejecución periódica del comando `close_expired_deadlines` y su idempotencia ante fallos de red. | Axel Villegas<br>Tomas Quiroz | Test de estrés y concurrencia de cierre de plazos verificado en CI. |
+
+---
+
+### 2.5. Hito de Alineación con Cómputos, Tribunal de Disciplina y Directivas del PO (07/10/2026)
+
+Al cierre del **Sprint 2** y previo al inicio formal del **Sprint 3**, el Product Owner (**Diego Gabriel Sánchez**) encabezó dos reuniones clave de alineación estratégica: con la autoridad técnica de la **Subcomisión de Cómputos** y con miembros representantes del **Tribunal de Disciplina (TD)** de A.V.E.I.T. Las definiciones consensuadas fueron incorporadas formalmente como adenda rectora en [`docs/gestion-proyecto/notasPO.md`](notasPO.md), ajustando requerimientos de infraestructura y diseño funcional del sistema.
+
+---
+
+#### 2.5.1. Síntesis de Acuerdos Técnicos con la Subcomisión de Cómputos
+
+1. **Consumo de Solo Lectura del Padrón Institucional (ADR-001):**
+   - Confirmación de la estrategia de Capa Anticorrupción (ACL): Cómputos facilitará un usuario MySQL con permisos estrictos de `SELECT` sobre el esquema preexistente (`svaveit`) para consultar el padrón de ~515 socios sin duplicar fuentes maestras.
+   - Provisión coordinada de un volcado sanitizado (`mysqldump`) para el entorno de desarrollo local y CI.
+2. **Infraestructura de Despliegue en Producción:**
+   - Despliegue contenerizado vía `docker-compose.yml` (Django 4.2 LTS, Angular 14.2+, MySQL 8.0 y Nginx).
+   - Coordinación de asignación de subdominio institucional y certificados TLS/SSL mediante Let's Encrypt.
+3. **Servicio de Mensajería Institucional (SMTP):**
+   - Canalización de notificaciones transaccionales formales (acuses de apertura, resoluciones definitivas y alertas de puntos) a través de cuenta institucional con contraseña de aplicación o relay de la Asociación.
+4. **Delimitación Operativa de Soporte:**
+   - Formalización del rol `ACT-05 Admin (Cómputos)` para administración de copias de seguridad, visualización de logs de seguridad y variables de entorno, sin injerencia en juzgamiento ni modificación manual de saldos de puntos.
+5. **Estabilidad y Ampliación de Datos de Prueba:**
+   - Corroboración de la operatividad del contenedor de base de datos MySQL y ampliación del conjunto de datos de prueba (`seed_expedientes`) con datos representativos de socios, subcomisiones y antecedentes históricos.
+
+---
+
+#### 2.5.2. Síntesis del Feedback Funcional del TD y PO (`notasPO.md` 07/10/2026)
+
+1. **Gestión y Clasificación de Expedientes:**
+   - **Clasificador de Urgencia:** Incorporación de un atributo de urgencia (`Baja`, `Normal`, `Urgente`) en los expedientes para priorizar causas críticas en el tablero y listados.
+   - **Visualización de Múltiples Socios:** En la tabla de gestión de expedientes, habilitar un botón o acción directa para desplegar la lista completa de imputados cuando una causa involucre a más de un socio.
+   - **Investigación de IA/Clasificación (PO):** Tarea asignada al PO para investigar **Laya** (alternativa local y open source a TypeSafe Jev; modelo no generativo con primitivas `choice`, `score` y `noul`, inferencia en CPU y fine-tuning en GPU de escritorio) orientado a sugerencias no vinculantes de nivel de urgencia y artículo reglamentario, entrenadas con el histórico de expedientes del TD.
+2. **Formulario Crear Expediente (T01) y Hoja de Anexo:**
+   - **Grupo Social:** Adición de la columna visible "Grupo" (ej. G57, G58, G59, G60) en la tabla de socios involucrados seleccionados.
+   - **Hoja de Anexo Circunstanciada (Ref. Imagen 1):** Precisiones forenses en los campos de "Lugar o Evento del hecho" y explicitación detallada de *cómo se involucraron los testigos* presenciales.
+3. **Sala del Tribunal y Formato Canónico de Resolución:**
+   - **Detalle de Expediente Unificado (Ref. Imagen 2):** Respeto estricto a los campos y diseño actual del TD (Cabecera, Sanción solicitada, Responsables 1, 2 y 3 con Grupo social, Reglamentos respaldantes y tabla de Involucrados con Estado de Justificación).
+   - **Simplificación de la Votación:** Descarte de flujos complejos de votación nominal paso a paso en el sistema. Se deja un recuadro unificado para redactar el texto formal de la Resolución y fijar el puntaje final neto aplicado por socio.
+   - **Distinción de Año Social en Firmas (Ref. Imagen 3):** Identificación preceptiva del año social / grupo (Gxx) y condición (Titular o Suplente `(Sup.)`) de los tres miembros firmantes del TD al pie de la resolución formal emitida.
+   - **Formato Oficial de Resolución (Ref. Imagen 3):** Membrete y escudo oficial del TD, encabezado formal, estructura jurídica canónica (VISTO, CONSIDERANDO, SE RESUELVE con sanción individualizada por socio, notificación a CD y archivo).
+4. **Pantalla Ranking de Socios:**
+   - **Detalle de Causas:** Despliegue interactivo (modal/expansión) del historial de expedientes asociados a cada socio.
+   - **Columnas Ordenables y Ordenamiento Compuesto:** Eliminación de los botones de filtro rápido ("Más reconocidos", "Mayor sanción"), ordenamiento directo por columna de Saldo y capacidad de ordenamiento múltiple anidado (Grupo Social ➔ Orden Alfabético).
+5. **Gobernanza Institucional y Terminología:**
+   - **Renombrar Fiscalizadora por Revisores (Revisores de Cuentas):** Adecuación terminológica estricta en todo el código y la documentación formal.
+   - **Inmutabilidad de Regla de Puntos 3:1:** Ratificación de que llamados de atención y felicitaciones no aplican fracciones directas; cada 3 acumulados consolidan 1 punto neto.
+
+---
+
+#### 2.5.3. Impacto en el Backlog del Sprint 3 y Próximas Iteraciones
+
+Estas definiciones refinan el alcance de las Historias de Usuario para el **Sprint 3 (07/10 al 20/10)** y sprints posteriores:
+* **Sprint 3 (`SCRUM-45` a `SCRUM-50`):** Enfoque centrado en la recepción de descargos T02/T03, almacenamiento seguro de adjuntos probatorios, cierre automático de plazos de 5 días hábiles y visualización detallada del expediente según el formato oficial de la Imagen 2.
+* **Sprint 4 (`SCRUM-51` a `SCRUM-56`):** Reducción de complejidad técnica al descartar la votación nominal compleja en la sala virtual, concentrando el esfuerzo en el editor unificado de resoluciones, la asignación de puntajes por socio y la generación de la resolución con firmas colegiadas identificadas por grupo (Imagen 3).
+* **Mantenimiento y Calidad:** Tareas técnicas transversales para la actualización terminológica ("Revisores de Cuentas") y la siembra ampliada de datos de prueba (`seed_expedientes`).
+
+---
+
+### 2.6. Estructura de Seguimiento para Sprints Subsiguientes (Sprints 3 a 6)
+
+A continuación se mantiene la estructura estandarizada que el equipo completará iteración tras iteración para documentar la planificación, ejecución y retrospectiva de los Sprints 3 a 6:
+
+#### 2.6.1. Plantilla de Planificación y Sprint Backlog
 *(Se completará al inicio de cada Sprint durante la Sprint Planning)*
 
-* **Sprint Nº:** [1 a 6]
+* **Sprint Nº:** [3 a 6]
 * **Fecha de Inicio:** [dd/mm/aaaa] — **Fecha de Finalización:** [dd/mm/aaaa]
 * **Scrum Master del Sprint:** Lucas Martín Guillén
 * **Sprint Goal (Objetivo del Sprint):** [Declaración concisa del valor de negocio a entregar en el incremento]
-* **Capacidad Disponible en el Sprint:** 154 horas-hombre brutas / ~115 horas efectivas.
+* **Capacidad Disponible en el Sprint:** 154 horas-hombre brutas / ~115.5 horas efectivas.
 * **Velocidad Comprometida:** [X] Story Points.
 * **Sprint Backlog Comprometido:**
 
-| ID US | Título de la Historia de Usuario | Tareas Técnicas Asociadas | Responsable(s) Asignado(s) | SP | Estado Inicial |
-| :---: | :--- | :--- | :--- | :---: | :---: |
-| US-xx | [Título] | 1. [Tarea técnica 1]<br>2. [Tarea técnica 2] | [Nombre del desarrollador] | [x] | To Do |
+| ID Jira | ID Backlog | Título de la Historia de Usuario | Tareas Técnicas Asociadas | Responsable(s) Asignado(s) | SP | Estado Inicial |
+| :---: | :---: | :--- | :--- | :--- | :---: | :---: |
+| SCRUM-xx | S3-xx | [Título de la Historia] | 1. [Tarea técnica 1]<br>2. [Tarea técnica 2] | [Nombre del desarrollador] | [x] | To Do |
 
-#### 2.2.2. Plantilla de Resultado Final del Sprint
+#### 2.6.2. Plantilla de Resultado Final del Sprint
 *(Se completará al cierre del Sprint tras la Sprint Review)*
 
 * **Sprint Goal Alcanzado:** [Sí / Parcial / No - Justificación]
 * **Velocidad Real Lograda:** [Y] Story Points completados (vs [X] comprometidos).
-* **Historias de Usuario Terminadas (cumpliendo 100% DoD):** [Listado de US pasadas a Done]
+* **Historias de Usuario Terminadas (cumpliendo 100% DoD):** [Listado de US pasadas a Done con criterios verificados]
 * **Historias de Usuario No Completadas (Deuda Técnica / Replanificación):** [Detalle de US no terminadas y motivo]
 * **Incremento de Software Demostrado:** [Resumen funcional del incremento desplegado en Staging y validado por el PO]
-* **Enlace a la Demostración / Capturas de Pantalla:** [Link a release de GitHub o entorno de pruebas]
+* **Enlace a la Demostración / Evidencia Técnica:** [Link a release de GitHub, PRs o entorno de pruebas]
 
-#### 2.2.3. Plantilla de Retrospectiva
+#### 2.6.3. Plantilla de Retrospectiva
 *(Se completará al cierre del Sprint durante la Sprint Retrospective)*
 
 * **Fecha de la Retrospectiva:** [dd/mm/aaaa]
@@ -366,3 +659,4 @@ A continuación se define la estructura estandarizada que el equipo completará 
 
 ---
 *Documento de Seguimiento de Proyecto elaborado conforme a las directrices de la Cátedra de Seminario Integrador - UTN FRC - Ciclo Lectivo 2026.*
+

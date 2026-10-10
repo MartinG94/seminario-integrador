@@ -1,8 +1,10 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
+import type { NivelUrgencia } from './tribunal-data.service';
 
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
 export type EstadoT01 = 'DRAFT' | 'ISSUED';
@@ -41,6 +43,8 @@ export interface SolicitudMonitoreo {
   destinatarios_socios_ids: number[];
   estado_procesal: string;
   estado_procesal_display: string;
+  urgencia?: NivelUrgencia;
+  urgencia_display?: string;
   involucrados: SocioInvolucrado[];
   resolucion_final: ResolucionFinalInfo | null;
   created_at: string;
@@ -54,9 +58,10 @@ export interface SolicitudT01 {
   destinatario_socio_id: number | null;
   destinatarios_socios_ids: number[];
   tipo_accion: TipoAccionT01;
+  urgencia?: NivelUrgencia;
   titulo: string;
   causal: string;
-  puntos: number | null;
+  puntos: number | string | null;
   motivo: string;
   razon: string;
   reglamentos_respaldantes: string[];
@@ -77,6 +82,7 @@ export interface SolicitudT01Payload {
   destinatario_socio_id?: number | null;
   destinatarios_socios_ids?: number[];
   tipo_accion: TipoAccionT01;
+  urgencia?: NivelUrgencia;
   titulo?: string;
   causal?: string;
   puntos?: number | null;
@@ -88,6 +94,8 @@ export interface SolicitudT01Payload {
   anexo_relato?: string;
   anexo_testigos?: string;
 }
+
+type T01MonitoringResponse = Omit<SolicitudMonitoreo, 'puntos'> & Pick<SolicitudT01, 'puntos'>;
 
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
@@ -123,7 +131,12 @@ export class ExpedienteApiService {
     if (params?.estado) {
       httpParams = httpParams.set('estado', params.estado);
     }
-    return this.http.get<SolicitudMonitoreo[]>(`${this.apiUrl}/mis-solicitudes/`, { params: httpParams });
+    return this.http.get<T01MonitoringResponse[]>(`${this.apiUrl}/mis-solicitudes/`, { params: httpParams }).pipe(
+      map(solicitudes => solicitudes.map(solicitud => ({
+        ...solicitud,
+        puntos: solicitud.puntos == null ? null : Number(solicitud.puntos)
+      })))
+    );
   }
 
   eliminarBorrador(id: string): Observable<void> {

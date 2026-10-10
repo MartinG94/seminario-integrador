@@ -7,9 +7,8 @@ describe('MapsComponent', () => {
   let fixture: ComponentFixture<MapsComponent>;
   let originalGoogle: unknown;
   let mapConstructor: jasmine.Spy;
-  let setMap: jasmine.Spy;
-  const mapInstance = {};
-  const browserWindow = window as Window & { google?: unknown };
+  let attachMarker: jasmine.Spy;
+  const sdkHost = window as unknown as { google?: unknown };
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
@@ -19,14 +18,14 @@ describe('MapsComponent', () => {
   }));
 
   beforeEach(() => {
-    originalGoogle = browserWindow.google;
-    mapConstructor = jasmine.createSpy('Map').and.returnValue(mapInstance);
-    setMap = jasmine.createSpy('setMap');
-    browserWindow.google = {
+    originalGoogle = sdkHost.google;
+    mapConstructor = jasmine.createSpy('Map').and.returnValue({});
+    attachMarker = jasmine.createSpy('setMap');
+    sdkHost.google = {
       maps: {
         LatLng: jasmine.createSpy('LatLng').and.returnValue({}),
         Map: mapConstructor,
-        Marker: jasmine.createSpy('Marker').and.returnValue({ setMap })
+        Marker: jasmine.createSpy('Marker').and.returnValue({ setMap: attachMarker })
       }
     };
     fixture = TestBed.createComponent(MapsComponent);
@@ -35,16 +34,16 @@ describe('MapsComponent', () => {
   });
 
   afterEach(() => {
-    if (originalGoogle === undefined) { delete browserWindow.google; }
-    else { browserWindow.google = originalGoogle; }
+    if (originalGoogle === undefined) delete sdkHost.google;
+    else sdkHost.google = originalGoogle;
   });
 
-  it('should create', () => {
+  it('inicializa el mapa y asocia el marcador usando el SDK externo', () => {
     expect(component).toBeTruthy();
     expect(mapConstructor).toHaveBeenCalledWith(
       fixture.nativeElement.querySelector('#map'),
       jasmine.objectContaining({ zoom: 13, scrollwheel: false })
     );
-    expect(setMap).toHaveBeenCalledWith(mapInstance);
+    expect(attachMarker).toHaveBeenCalledWith(mapConstructor.calls.mostRecent().returnValue);
   });
 });

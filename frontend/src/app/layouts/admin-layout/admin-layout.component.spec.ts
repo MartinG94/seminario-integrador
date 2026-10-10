@@ -1,8 +1,15 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { AdminLayoutComponent } from './admin-layout.component';
+
+@Component({ selector: 'app-sidebar', template: '<div class="sidebar-wrapper"></div>' })
+class SidebarStubComponent {}
+@Component({ selector: 'app-navbar', template: '' })
+class NavbarStubComponent {}
+@Component({ selector: 'app-footer', template: '' })
+class FooterStubComponent {}
 
 describe('AdminLayoutComponent', () => {
   let component: AdminLayoutComponent;
@@ -11,8 +18,7 @@ describe('AdminLayoutComponent', () => {
   beforeEach(async(() => {
     TestBed.configureTestingModule({
       imports: [RouterTestingModule],
-      schemas: [CUSTOM_ELEMENTS_SCHEMA],
-      declarations: [ AdminLayoutComponent ]
+      declarations: [AdminLayoutComponent, SidebarStubComponent, NavbarStubComponent, FooterStubComponent]
     })
     .compileComponents();
   }));

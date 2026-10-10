@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TribunalDataService, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
+import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { Subscription } from 'rxjs';
 
@@ -12,9 +12,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
   vistaActual: 'kanban' | 'tabla' = 'kanban';
 
-  // Filtros explícitos (CA2)
+  // Filtros explícitos (CA2 / S3-07)
   filtroSocio: string = '';
   filtroEstado: string = '';
+  filtroUrgencia: string = '';
   filtroFechaDesde: string = '';
   filtroFechaHasta: string = '';
 
@@ -40,6 +41,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     { key: 'pendiente_firma', label: 'Pendiente de Firma' },
     { key: 'pendiente_correos', label: 'Pendiente de Envío' },
     { key: 'emitido', label: 'Emitidos' }
+  ];
+
+  urgenciasDisponibles: { key: string; label: string }[] = [
+    { key: '', label: 'Todas las urgencias' },
+    { key: 'baja', label: 'Baja' },
+    { key: 'normal', label: 'Normal' },
+    { key: 'urgente', label: 'Urgente' }
   ];
 
   // Estado de colapso de columnas
@@ -124,6 +132,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const filtros: any = {};
     if (this.filtroSocio.trim()) filtros.socio = this.filtroSocio.trim();
     if (this.filtroEstado.trim()) filtros.estado = this.filtroEstado.trim();
+    if (this.filtroUrgencia.trim()) filtros.urgencia = this.filtroUrgencia.trim();
     if (this.filtroFechaDesde) filtros.fecha_desde = this.filtroFechaDesde;
     if (this.filtroFechaHasta) filtros.fecha_hasta = this.filtroFechaHasta;
 
@@ -141,6 +150,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   limpiarFiltros(): void {
     this.filtroSocio = '';
     this.filtroEstado = '';
+    this.filtroUrgencia = '';
     this.filtroFechaDesde = '';
     this.filtroFechaHasta = '';
     this.cargarDatosTablero();
@@ -171,6 +181,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       } else {
         result = result.filter(e => e.estado === est);
       }
+    }
+
+    // Filtro por urgencia en memoria (S3-07)
+    if (this.filtroUrgencia.trim()) {
+      const urg = this.filtroUrgencia.trim();
+      result = result.filter(e => (e.urgencia || 'normal') === urg);
     }
 
     // Filtro por rango de fechas
@@ -412,5 +428,53 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }
+  }
+
+  formatCaseNumber(caseNumber: string): string {
+    const match = /^(?:EXP-)?(\d+)\/(\d{4})$/.exec(caseNumber);
+    return match ? `${Number(match[1]).toString().padStart(3, '0')}/${match[2]}` : caseNumber;
+  }
+
+  getUrgenciaLabel(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente': return 'Urgente';
+      case 'baja': return 'Baja';
+      default: return 'Normal';
+    }
+  }
+
+  getUrgenciaBadgeClass(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente': return 'badge-mat-danger';
+      case 'baja': return 'badge-mat-success';
+      default: return 'badge-mat-info';
+    }
+  }
+
+  getUrgenciaIcon(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente': return 'priority_high';
+      case 'baja': return 'arrow_downward';
+      default: return 'horizontal_rule';
+    }
+  }
+
+  cambiarUrgenciaExpediente(nuevaUrgencia: NivelUrgencia): void {
+    if (!this.expedienteSeleccionado) return;
+    const label = this.getUrgenciaLabel(nuevaUrgencia);
+    this.dataService.actualizarUrgencia(this.expedienteSeleccionado.id, nuevaUrgencia).subscribe({
+      next: () => {
+        if (this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.urgencia = nuevaUrgencia;
+          this.expedienteSeleccionado.urgenciaDisplay = label;
+        }
+        this.mostrarNotificacion(`Urgencia actualizada a "${label}" exitosamente.`);
+        this.cargarDatosTablero();
+      },
+      error: (err) => {
+        const errorMsg = err?.error?.detail || err?.error?.urgencia || 'No se pudo actualizar la urgencia.';
+        this.mostrarNotificacion(`Error: ${errorMsg}`);
+      }
+    });
   }
 }

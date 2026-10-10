@@ -925,7 +925,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
-  | `numeroExpediente` | `String` | Identificador unívoco del expediente (formato: `EXP-YYYY-NNNNN`). | Único, No Nulo. |
+  | `numeroExpediente` | `String` | Identificador unívoco del expediente (formato: `<numero>/YYYY`). | Único, No Nulo. |
   | `fechaHoraCreacion` | `DateTime` | Momento de alta formal en el sistema. | Sellado de tiempo no nulo. |
   | `tipoCausa` | `String` | Clasificación ("Disciplinaria", "Premiacion", "Rectificacion"). | No Nulo. |
   | `fechaHoraVencimientoDescargo`| `DateTime` | Momento exacto en que expira el plazo preclusivo de 5 días hábiles. | Calculado a partir de la notificación (`RN-03`). |

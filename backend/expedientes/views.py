@@ -25,6 +25,7 @@ from expedientes.models import (
     Expediente,
     Holiday,
     SolicitudT01,
+    UrgenciaExpedienteEnum,
 )
 from expedientes.permissions import (
     CanCreateT01,
@@ -47,6 +48,7 @@ from expedientes.serializers import (
     PresentarDescargoSerializer,
     SolicitudT01Serializer,
     TransicionExpedienteSerializer,
+    UpdateUrgenciaExpedienteSerializer,
 )
 from expedientes.services.board_service import build_board_payload
 from expedientes.services.opening_notification_service import (
@@ -81,6 +83,7 @@ class ExpedienteCollectionView(APIView):
                 motivo=serializer.validated_data["motivo"],
                 socio_ids=serializer.validated_data["socios"],
                 actor=_actor_for_user(request.user),
+                urgencia=serializer.validated_data.get("urgencia", UrgenciaExpedienteEnum.NORMAL),
             )
         except IntegrityError as exc:
             raise DRFValidationError("No se pudo asignar el número de expediente.") from exc
@@ -368,6 +371,28 @@ class ExpedienteDetailView(APIView):
         self.check_object_permissions(request, expediente)
         serializer = ExpedienteListSerializer(expediente)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request: Request, pk: int) -> Response:
+        expediente = (
+            Expediente.objects.filter(pk=pk).select_related("socio", "socio__subcomision").first()
+        )
+        if not expediente:
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not IsTribunalOrDirectiva().has_permission(request, self):
+            raise PermissionDenied(
+                "Solo integrantes del Tribunal o Comisión Directiva pueden actualizar la urgencia."
+            )
+
+        serializer = UpdateUrgenciaExpedienteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        expediente.urgencia = serializer.validated_data["urgencia"]
+        expediente.save(update_fields=["urgencia", "updated_at"])
+
+        return Response(ExpedienteListSerializer(expediente).data, status=status.HTTP_200_OK)
 
 
 REGLAMENTOS_VIGENTES = (

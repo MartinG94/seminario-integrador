@@ -16,7 +16,28 @@ C:\Users\Usuario\.codex\worktrees\calendario-pr49\seminario-integrador
 
 La primera tanda tuvo UAT aprobada por el usuario el 10/10/2026 y se entregó en la misma rama mediante el [PR #49](https://github.com/MartinG94/seminario-integrador/pull/49). La segunda review del PM también cuenta con UAT aprobada por el usuario el 10/10/2026 y se entrega en esa rama, con un nuevo comentario por ítems en la PR. La descripción principal se conserva y la PR permanece sin merge. El checkout original conserva sus cambios previos.
 
-## Segunda review del PM — verificación actual
+## Integración con main — resolución de conflictos
+
+El 10/10/2026 se incorporó `main` (`0596c64`, PR #50) en la misma rama del calendario. Se resolvieron ocho archivos en conflicto conservando el calendario aprobado y el clasificador de urgencia, la apertura T01 y la precisión de puntos de `main`. La PR #49 permanece abierta y su descripción principal se conserva.
+
+La migración `0011_merge_calendar_and_urgency` une `0010_import_institutional_holidays` y `0008_expediente_points_precision`, sin operaciones de esquema o datos propias. Las migraciones ya publicadas mantienen sus nombres, dependencias y contenido. Las notas del PO, seguimiento macro y especificaciones de urgencia coinciden con `main`; no se realizaron modificaciones manuales en esos documentos.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Suite completa backend / MySQL 8 | 537 aprobados, 0 errores |
+| Suite completa Angular / ChromeHeadless | 175 aprobados, 0 fallos |
+| Actualización desde cada rama publicada | Dos casos nuevos con MigrationExecutor: entorno con calendario 0010 y entorno con urgencia/precisión 0008. Se conservan expedientes, relaciones de socios, solicitudes emitidas, snapshots, urgencia, puntos, vencimientos y auditoría de feriados |
+| Reaplicación de calendario | Tres casos anteriores de migración siguen en verde; el grafo integrado no tiene conflictos |
+| Actualización de localhost | 0011 aplicada; los 19 feriados, cuatro expedientes y cuatro solicitudes existentes se compararon antes/después y conservaron todos sus campos previos |
+| Lectura real del calendario | HTTP 200 y array con 19 registros para SOCIO, FISCALIZADORA, CD, TD y ADMIN |
+| Compilación de producción y Ruff | Aprobados; 123 archivos con formato correcto |
+| Validación Django | `check` sin incidencias y `makemigrations --check --dry-run` sin cambios pendientes |
+| Auditoría independiente full stack | Resolución comparada contra ambos padres; sin hallazgos pendientes |
+| Disponibilidad local | Frontend 4200 y healthcheck backend 8000 responden HTTP 200 |
+
+Las pruebas de actualización fallaron antes de la migración de unión por las dos hojas incompatibles del grafo y pasan con la resolución. La suite completa backend se repitió después de que el reinicio local interrumpiera su primera ejecución. Los avisos heredados de compilación y la limitación del lint Angular descritos más abajo continúan vigentes.
+
+## Segunda review del PM — verificación previa a la integración
 
 Referencia: [observaciones del PM](https://github.com/MartinG94/seminario-integrador/pull/49#issuecomment-6101450538). UAT aprobada por el usuario el 10/10/2026.
 
