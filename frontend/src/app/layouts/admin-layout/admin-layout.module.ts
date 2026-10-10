@@ -31,7 +31,6 @@ import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-di
 import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
-import { NuevaVersionDialogComponent } from '../../calendario-institucional/nueva-version-dialog/nueva-version-dialog.component';
 
 @NgModule({
   imports: [
@@ -61,7 +60,6 @@ import { NuevaVersionDialogComponent } from '../../calendario-institucional/nuev
     SolicitudDetalleDialogComponent,
     EventosAsistenciaComponent,
     CalendarioInstitucionalComponent,
-    NuevaVersionDialogComponent,
     DashboardComponent,
     TableListComponent,
     TypographyComponent,

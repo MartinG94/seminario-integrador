@@ -2,106 +2,62 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../environments/environment';
-import { CalendarioApiService, CalcularPlazoRequest, CreateCalendarioVersionRequest } from './calendario-api.service';
+import { CalendarioApiService, HolidayDto } from './calendario-api.service';
 
 describe('CalendarioApiService', () => {
   let service: CalendarioApiService;
   let http: HttpTestingController;
+  const base = `${environment.apiUrl}/expedientes/calendario`;
+  const holiday: HolidayDto = {
+    id: 1, fecha: '2026-10-13', descripcion: 'Asueto',
+    creado_por: 7, creado_por_nombre: 'Ana Pérez (ana)',
+    created_at: '2026-10-10T12:30:45-03:00'
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
     service = TestBed.inject(CalendarioApiService);
     http = TestBed.inject(HttpTestingController);
   });
-
   afterEach(() => http.verify());
 
-  it('obtiene la lista de versiones de calendario', () => {
-    service.getVersiones().subscribe(versiones => {
-      expect(versiones.length).toBe(1);
-      expect(versiones[0].version).toBe(1);
-    });
-
-    const req = http.expectOne(`${environment.apiUrl}/expedientes/calendario/versiones/`);
+  it('consulta el calendario directamente sin inicializar versiones', () => {
+    service.getFeriados().subscribe(items => expect(items).toEqual([holiday]));
+    const req = http.expectOne(`${base}/feriados/`);
     expect(req.request.method).toBe('GET');
-    req.flush([{ id: 1, version: 1, nombre: 'Calendario Oficial 2026', activa: true, feriados_count: 16 }]);
+    expect(req.request.params.keys()).toEqual([]);
+    req.flush([holiday]);
   });
 
-  it('obtiene el detalle de una versión con sus feriados', () => {
-    service.getVersionDetail(1).subscribe(version => {
-      expect(version.version).toBe(1);
-      expect(version.feriados?.length).toBe(1);
-    });
-
-    const req = http.expectOne(`${environment.apiUrl}/expedientes/calendario/versiones/1/`);
-    expect(req.request.method).toBe('GET');
-    req.flush({
-      id: 1,
-      version: 1,
-      nombre: 'Calendario Oficial 2026',
-      activa: true,
-      feriados: [{ fecha: '2026-01-01', descripcion: 'Año Nuevo', tipo: 'NACIONAL', es_laborable: false }]
-    });
+  it('envía únicamente filtros Año, Mes y orden Fecha', () => {
+    service.getFeriados(2026, 10, '-fecha').subscribe();
+    const req = http.expectOne(request => request.url === `${base}/feriados/`);
+    expect(req.request.params.keys().sort()).toEqual(['month', 'ordering', 'year']);
+    expect(req.request.params.get('year')).toBe('2026');
+    expect(req.request.params.get('month')).toBe('10');
+    expect(req.request.params.get('ordering')).toBe('-fecha');
+    req.flush([holiday]);
   });
 
-  it('crea una nueva versión auditada de calendario', () => {
-    const payload: CreateCalendarioVersionRequest = {
-      nombre: 'Calendario v2',
-      vigencia_desde: '2026-06-01',
-      motivo_cambio: 'Actualización de invierno',
-      clonar_de_version_id: 1
-    };
-
-    service.createVersion(payload).subscribe(res => {
-      expect(res.version).toBe(2);
-    });
-
-    const req = http.expectOne(`${environment.apiUrl}/expedientes/calendario/versiones/`);
+  it('crea un feriado con fecha y denominación y recibe auditoría del servidor', () => {
+    const payload = { fecha: holiday.fecha, descripcion: holiday.descripcion };
+    service.addFeriado(payload).subscribe(item => expect(item.creado_por_nombre).toContain('Ana Pérez'));
+    const req = http.expectOne(`${base}/feriados/`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(payload);
-    req.flush({ id: 2, version: 2, nombre: 'Calendario v2', activa: true });
+    req.flush(holiday);
   });
 
-  it('obtiene feriados con filtros de query params', () => {
-    service.getFeriados(1, 2026).subscribe(feriados => {
-      expect(feriados.length).toBe(1);
-    });
-
-    const req = http.expectOne(
-      r => r.url === `${environment.apiUrl}/expedientes/calendario/feriados/` &&
-           r.params.get('version_id') === '1' &&
-           r.params.get('year') === '2026'
-    );
-    expect(req.request.method).toBe('GET');
-    req.flush([{ fecha: '2026-10-12', descripcion: 'Diversidad Cultural', tipo: 'NACIONAL', es_laborable: false }]);
-  });
-
-  it('ejecuta el cálculo de plazos en días hábiles', () => {
-    const payload: CalcularPlazoRequest = {
-      start_at: '2026-10-08T10:00:00-03:00',
-      business_days: 5
-    };
-
-    service.calcularPlazo(payload).subscribe(res => {
-      expect(res.deadline).toContain('2026-10-16');
-      expect(res.dias_habiles_computados.length).toBe(5);
-    });
-
-    const req = http.expectOne(`${environment.apiUrl}/expedientes/calendario/calcular-plazo/`);
+  it('simula sin selección de versión', () => {
+    const payload = { start_at: '2026-10-12T14:30:00-03:00', business_days: 1 };
+    service.calcularPlazo(payload).subscribe(result => expect(result.deadline).toBe('2026-10-14T14:30:00-03:00'));
+    const req = http.expectOne(`${base}/calcular-plazo/`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(payload);
     req.flush({
-      start_at: payload.start_at,
-      business_days: 5,
-      deadline: '2026-10-16T10:00:00-03:00',
-      dias_habiles_computados: [
-        { day_number: 1, date: '2026-10-09', weekday: 'Viernes' },
-        { day_number: 2, date: '2026-10-13', weekday: 'Martes' },
-        { day_number: 3, date: '2026-10-14', weekday: 'Miércoles' },
-        { day_number: 4, date: '2026-10-15', weekday: 'Jueves' },
-        { day_number: 5, date: '2026-10-16', weekday: 'Viernes' }
-      ],
-      dias_excluidos: [{ date: '2026-10-10', reason: 'Sábado' }]
+      start_at: payload.start_at, business_days: 1, deadline: '2026-10-14T14:30:00-03:00',
+      dias_habiles_computados: [{ day_number: 1, date: '2026-10-14', weekday: 'Miércoles' }],
+      dias_excluidos: [{ date: '2026-10-13', reason: 'Feriado: Asueto' }]
     });
   });
 });

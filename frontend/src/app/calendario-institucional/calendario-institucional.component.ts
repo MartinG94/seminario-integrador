@@ -1,246 +1,188 @@
-import { Component, OnInit } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import {
-  CalendarioApiService,
-  CalendarioVersionDto,
-  CalcularPlazoRequest,
-  CalcularPlazoResponse,
-  FeriadoExcepcionDto,
-  TipoFeriado
-} from '../services/calendario-api.service';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+import { CalendarioApiService, CalcularPlazoResponse, HolidayDto } from '../services/calendario-api.service';
 import { AuthService } from '../services/auth.service';
-import { NuevaVersionDialogComponent } from './nueva-version-dialog/nueva-version-dialog.component';
 
 @Component({
   selector: 'app-calendario-institucional',
   templateUrl: './calendario-institucional.component.html',
   styleUrls: ['./calendario-institucional.component.scss']
 })
-export class CalendarioInstitucionalComponent implements OnInit {
-  versiones: CalendarioVersionDto[] = [];
-  versionSeleccionadaId: number | null = null;
-  versionDetalle: CalendarioVersionDto | null = null;
-  feriadosFiltrados: FeriadoExcepcionDto[] = [];
+export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
+  holidays: HolidayDto[] = [];
+  filteredHolidays: HolidayDto[] = [];
+  selectedYear: number | null = null;
+  selectedMonth: number | null = null;
+  dateAscending = true;
+  loading = false;
+  errorMessage = '';
+  successMessage = '';
+  showHolidayForm = false;
+  holidayDate = '';
+  holidayDescription = '';
+  savingHoliday = false;
 
-  cargando = false;
-  errorMensaje = '';
-  exitoMensaje = '';
+  simulationStart = '';
+  simulationDays = 5;
+  simulationLoading = false;
+  simulationResult: CalcularPlazoResponse | null = null;
+  simulationError = '';
 
-  // Filtros
-  filtroTipo = 'TODOS';
-  busqueda = '';
+  readonly months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  private readonly destroy$ = new Subject<void>();
+  private readonly cancelSimulation$ = new Subject<void>();
 
-  // Simulador de plazos
-  simuladorFechaInicio = '';
-  simuladorDiasHabiles = 5;
-  simuladorCalculando = false;
-  simuladorResultado: CalcularPlazoResponse | null = null;
-  simuladorError = '';
+  constructor(private calendarApi: CalendarioApiService, public auth: AuthService) {}
 
-  // Formulario rápido de excepción
-  mostrandoFormFeriado = false;
-  nuevoFeriadoFecha = '';
-  nuevoFeriadoDesc = '';
-  nuevoFeriadoTipo: TipoFeriado = 'INSTITUCIONAL';
-  nuevoFeriadoEsLaborable = false;
+  get canManage(): boolean { return this.auth.tieneRol('ADMIN', 'CD', 'TD'); }
 
-  get versionActiva(): CalendarioVersionDto | null {
-    return this.versiones.find(v => v.activa) || null;
+  get today(): string {
+    return this.institutionalDateTime().slice(0, 10);
   }
 
-  get puedeGestionar(): boolean {
-    return this.auth.tieneRol('ADMIN', 'CD', 'TD');
+  get years(): number[] {
+    return Array.from(new Set([
+      Number(this.today.slice(0, 4)),
+      ...this.holidays.map(holiday => Number(holiday.fecha.slice(0, 4)))
+    ])).sort((a, b) => b - a);
   }
 
-  constructor(
-    private calendarioApi: CalendarioApiService,
-    private dialog: MatDialog,
-    public auth: AuthService
-  ) {}
+  get canSaveHoliday(): boolean {
+    return !!this.holidayDate && this.holidayDate >= this.today &&
+      !!this.holidayDescription.trim() && !this.savingHoliday;
+  }
 
   ngOnInit(): void {
-    this.initSimuladorFecha();
-    this.cargarVersiones();
+    this.simulationStart = this.institutionalDateTime();
+    this.loadHolidays();
   }
 
-  private initSimuladorFecha(): void {
-    const now = new Date();
-    // Formato local YYYY-MM-DDTHH:mm
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    this.simuladorFechaInicio = `${year}-${month}-${day}T${hours}:${minutes}`;
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.cancelSimulation$.complete();
   }
 
-  cargarVersiones(): void {
-    this.cargando = true;
-    this.errorMensaje = '';
-    this.calendarioApi.getVersiones().subscribe({
-      next: versiones => {
-        this.versiones = versiones;
-        this.cargando = false;
-        if (versiones.length > 0) {
-          const activa = versiones.find(v => v.activa) || versiones[0];
-          this.seleccionarVersion(activa.id);
+  private institutionalDateTime(): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const value = (key: string): string => parts.find(part => part.type === key)?.value || '';
+    return `${value('year')}-${value('month')}-${value('day')}T${value('hour')}:${value('minute')}`;
+  }
+
+  loadHolidays(): void {
+    this.loading = true;
+    this.errorMessage = '';
+    this.calendarApi.getFeriados().pipe(takeUntil(this.destroy$)).subscribe({
+      next: holidays => {
+        this.holidays = holidays;
+        this.applyFilters();
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'No se pudo cargar el calendario. Intentá nuevamente.';
+      }
+    });
+  }
+
+  applyFilters(): void {
+    this.filteredHolidays = this.holidays.filter(holiday =>
+      (this.selectedYear == null || Number(holiday.fecha.slice(0, 4)) === this.selectedYear) &&
+      (this.selectedMonth == null || Number(holiday.fecha.slice(5, 7)) === this.selectedMonth)
+    ).sort((a, b) => this.dateAscending ? a.fecha.localeCompare(b.fecha) : b.fecha.localeCompare(a.fecha));
+  }
+
+  toggleDateOrder(): void {
+    this.dateAscending = !this.dateAscending;
+    this.applyFilters();
+  }
+
+  formatCalendarDate(value: string): string {
+    const [year, month, day] = value.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  toggleHolidayForm(): void {
+    if (this.savingHoliday) { return; }
+    this.showHolidayForm = !this.showHolidayForm;
+    this.holidayDate = '';
+    this.holidayDescription = '';
+  }
+
+  saveHoliday(): void {
+    if (!this.canManage || this.savingHoliday) { return; }
+    if (!this.holidayDate || !this.holidayDescription.trim()) {
+      this.errorMessage = 'Completá la fecha y la denominación.';
+      return;
+    }
+    if (this.holidayDate < this.today) {
+      this.errorMessage = 'La fecha debe ser hoy o posterior.';
+      return;
+    }
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.savingHoliday = true;
+    this.calendarApi.addFeriado({
+      fecha: this.holidayDate,
+      descripcion: this.holidayDescription.trim()
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: holiday => {
+        this.holidays = [...this.holidays, holiday];
+        this.selectedYear = null;
+        this.selectedMonth = null;
+        this.applyFilters();
+        this.savingHoliday = false;
+        this.showHolidayForm = false;
+        this.holidayDate = '';
+        this.holidayDescription = '';
+        this.successMessage = 'Feriado creado.';
+        if (this.simulationResult || this.simulationLoading) {
+          this.cancelSimulation$.next();
+          this.simulationLoading = false;
+          this.calculateDeadline();
         }
       },
-      error: err => {
-        this.cargando = false;
-        this.errorMensaje = 'Error al cargar las versiones del calendario institucional.';
+      error: (error: { error?: { fecha?: string[]; descripcion?: string[]; detail?: string } }) => {
+        this.savingHoliday = false;
+        this.errorMessage = error.error?.fecha?.[0] || error.error?.descripcion?.[0] ||
+          error.error?.detail || 'No se pudo crear el feriado. Intentá nuevamente.';
       }
     });
   }
 
-  seleccionarVersion(id: number): void {
-    this.versionSeleccionadaId = id;
-    this.cargando = true;
-    this.calendarioApi.getVersionDetail(id).subscribe({
-      next: detalle => {
-        this.versionDetalle = detalle;
-        this.cargando = false;
-        this.aplicarFiltros();
+  calculateDeadline(): void {
+    if (this.simulationLoading) { return; }
+    this.simulationError = '';
+    this.simulationResult = null;
+    if (!this.simulationStart || Number.isNaN(Date.parse(`${this.simulationStart}-03:00`))) {
+      this.simulationError = 'Indicá una fecha y hora de inicio válidas.';
+      return;
+    }
+    if (!Number.isInteger(this.simulationDays) || this.simulationDays < 1) {
+      this.simulationError = 'La cantidad de días hábiles debe ser un entero mayor a cero.';
+      return;
+    }
+    this.simulationLoading = true;
+    this.calendarApi.calcularPlazo({
+      start_at: `${this.simulationStart}-03:00`,
+      business_days: this.simulationDays
+    }).pipe(takeUntil(this.destroy$), takeUntil(this.cancelSimulation$)).subscribe({
+      next: result => {
+        this.simulationLoading = false;
+        this.simulationResult = result;
       },
-      error: err => {
-        this.cargando = false;
-        this.errorMensaje = 'Error al obtener los detalles y feriados de la versión seleccionada.';
-      }
-    });
-  }
-
-  aplicarFiltros(): void {
-    if (!this.versionDetalle || !this.versionDetalle.feriados) {
-      this.feriadosFiltrados = [];
-      return;
-    }
-
-    let items = [...this.versionDetalle.feriados];
-
-    if (this.filtroTipo !== 'TODOS') {
-      items = items.filter(f => f.tipo === this.filtroTipo);
-    }
-
-    if (this.busqueda.trim()) {
-      const q = this.busqueda.trim().toLowerCase();
-      items = items.filter(f =>
-        f.descripcion.toLowerCase().includes(q) ||
-        f.fecha.includes(q) ||
-        (f.tipo_display && f.tipo_display.toLowerCase().includes(q))
-      );
-    }
-
-    this.feriadosFiltrados = items;
-  }
-
-  abrirDialogoNuevaVersion(): void {
-    const ref = this.dialog.open(NuevaVersionDialogComponent, {
-      width: '650px',
-      data: {
-        versionesDisponibles: this.versiones,
-        versionActivaActual: this.versionActiva
-      }
-    });
-
-    ref.afterClosed().subscribe(resultado => {
-      if (resultado) {
-        this.cargando = true;
-        this.errorMensaje = '';
-        this.calendarioApi.createVersion(resultado).subscribe({
-          next: nueva => {
-            this.exitoMensaje = `Versión v${nueva.version} (${nueva.nombre}) publicada con éxito.`;
-            this.cargarVersiones();
-          },
-          error: err => {
-            this.cargando = false;
-            this.errorMensaje = err.error?.detail || 'Error al publicar la nueva versión de calendario.';
-          }
-        });
-      }
-    });
-  }
-
-  toggleFormFeriado(): void {
-    this.mostrandoFormFeriado = !this.mostrandoFormFeriado;
-    this.nuevoFeriadoFecha = '';
-    this.nuevoFeriadoDesc = '';
-  }
-
-  guardarFeriado(): void {
-    if (!this.nuevoFeriadoFecha || !this.nuevoFeriadoDesc.trim() || !this.versionSeleccionadaId) {
-      return;
-    }
-
-    this.errorMensaje = '';
-    this.exitoMensaje = '';
-
-    const payload = {
-      version_id: this.versionSeleccionadaId,
-      fecha: this.nuevoFeriadoFecha,
-      descripcion: this.nuevoFeriadoDesc.trim(),
-      tipo: this.nuevoFeriadoTipo,
-      es_laborable: this.nuevoFeriadoEsLaborable
-    };
-
-    this.calendarioApi.addFeriado(payload).subscribe({
-      next: nuevo => {
-        this.exitoMensaje = `Feriado/Excepción agregado exitosamente: ${nuevo.fecha} (${nuevo.descripcion}).`;
-        this.mostrandoFormFeriado = false;
-        this.nuevoFeriadoFecha = '';
-        this.nuevoFeriadoDesc = '';
-        this.seleccionarVersion(this.versionSeleccionadaId!);
-        this.cargarVersiones();
-      },
-      error: err => {
-        const errObj = err.error;
-        let msg = 'Error al registrar feriado.';
-        if (typeof errObj === 'string') {
-          msg = errObj;
-        } else if (errObj?.detail) {
-          msg = errObj.detail;
-        } else if (errObj) {
-          const firstKey = Object.keys(errObj)[0];
-          const val = errObj[firstKey];
-          msg = Array.isArray(val) ? val[0] : (typeof val === 'string' ? val : msg);
-        }
-        this.errorMensaje = msg;
-      }
-    });
-  }
-
-  calcularPlazoSimulado(): void {
-    this.simuladorError = '';
-    this.simuladorResultado = null;
-
-    if (!this.simuladorFechaInicio) {
-      this.simuladorError = 'Debe indicar la fecha y hora de inicio del plazo.';
-      return;
-    }
-
-    if (!this.simuladorDiasHabiles || this.simuladorDiasHabiles < 1) {
-      this.simuladorError = 'La cantidad de días hábiles debe ser al menos 1.';
-      return;
-    }
-
-    // Convertir fecha-hora local a ISO string con zona horaria
-    const fechaObj = new Date(this.simuladorFechaInicio);
-    const isoString = fechaObj.toISOString();
-
-    const request: CalcularPlazoRequest = {
-      start_at: isoString,
-      business_days: this.simuladorDiasHabiles,
-      version_id: this.versionSeleccionadaId
-    };
-
-    this.simuladorCalculando = true;
-    this.calendarioApi.calcularPlazo(request).subscribe({
-      next: res => {
-        this.simuladorCalculando = false;
-        this.simuladorResultado = res;
-      },
-      error: err => {
-        this.simuladorCalculando = false;
-        this.simuladorError = 'Error al calcular el plazo perentorio con el servidor.';
+      error: () => {
+        this.simulationLoading = false;
+        this.simulationError = 'No se pudo calcular el vencimiento. Intentá nuevamente.';
       }
     });
   }

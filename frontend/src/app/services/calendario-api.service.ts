@@ -4,53 +4,23 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 
-export type TipoFeriado = 'NACIONAL' | 'PROVINCIAL' | 'INSTITUCIONAL' | 'EXCEPCION';
-
-export interface FeriadoExcepcionDto {
-  id?: number;
-  calendario_version?: number;
+export interface HolidayDto {
+  id: number;
   fecha: string;
   descripcion: string;
-  tipo: TipoFeriado;
-  tipo_display?: string;
-  es_laborable: boolean;
-  created_at?: string;
-}
-
-export interface CalendarioVersionDto {
-  id: number;
-  version: number;
-  nombre: string;
-  vigencia_desde: string;
-  vigencia_hasta: string | null;
-  activa: boolean;
-  motivo_cambio: string;
-  creado_por?: number | null;
-  creado_por_nombre?: string;
-  feriados_count: number;
+  creado_por: number | null;
+  creado_por_nombre: string;
   created_at: string;
-  feriados?: FeriadoExcepcionDto[];
 }
 
-export interface CreateCalendarioVersionRequest {
-  nombre: string;
-  vigencia_desde: string;
-  vigencia_hasta?: string | null;
-  activa?: boolean;
-  motivo_cambio: string;
-  clonar_de_version_id?: number | null;
-  feriados?: {
-    fecha: string;
-    descripcion: string;
-    tipo?: TipoFeriado;
-    es_laborable?: boolean;
-  }[];
+export interface CreateHolidayRequest {
+  fecha: string;
+  descripcion: string;
 }
 
 export interface CalcularPlazoRequest {
   start_at: string;
   business_days: number;
-  version_id?: number | null;
 }
 
 export interface DiaExcluido {
@@ -68,49 +38,26 @@ export interface CalcularPlazoResponse {
   start_at: string;
   business_days: number;
   deadline: string;
-  calendario_version: {
-    id: number;
-    version: number;
-    nombre: string;
-    activa?: boolean;
-  } | null;
   dias_habiles_computados: DiaHabilComputado[];
   dias_excluidos: DiaExcluido[];
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class CalendarioApiService {
   private readonly baseUrl = `${environment.apiUrl}/expedientes/calendario`;
 
   constructor(private http: HttpClient) {}
 
-  getVersiones(): Observable<CalendarioVersionDto[]> {
-    return this.http.get<CalendarioVersionDto[]>(`${this.baseUrl}/versiones/`);
-  }
-
-  getVersionDetail(id: number): Observable<CalendarioVersionDto> {
-    return this.http.get<CalendarioVersionDto>(`${this.baseUrl}/versiones/${id}/`);
-  }
-
-  createVersion(payload: CreateCalendarioVersionRequest): Observable<CalendarioVersionDto> {
-    return this.http.post<CalendarioVersionDto>(`${this.baseUrl}/versiones/`, payload);
-  }
-
-  getFeriados(versionId?: number, year?: number): Observable<FeriadoExcepcionDto[]> {
+  getFeriados(year?: number, month?: number, ordering?: 'fecha' | '-fecha'): Observable<HolidayDto[]> {
     let params = new HttpParams();
-    if (versionId != null) {
-      params = params.set('version_id', versionId.toString());
-    }
-    if (year != null) {
-      params = params.set('year', year.toString());
-    }
-    return this.http.get<FeriadoExcepcionDto[]>(`${this.baseUrl}/feriados/`, { params });
+    if (year != null) { params = params.set('year', year.toString()); }
+    if (month != null) { params = params.set('month', month.toString()); }
+    if (ordering != null) { params = params.set('ordering', ordering); }
+    return this.http.get<HolidayDto[]>(`${this.baseUrl}/feriados/`, { params });
   }
 
-  addFeriado(payload: Partial<FeriadoExcepcionDto> & { version_id?: number }): Observable<FeriadoExcepcionDto> {
-    return this.http.post<FeriadoExcepcionDto>(`${this.baseUrl}/feriados/`, payload);
+  addFeriado(payload: CreateHolidayRequest): Observable<HolidayDto> {
+    return this.http.post<HolidayDto>(`${this.baseUrl}/feriados/`, payload);
   }
 
   calcularPlazo(payload: CalcularPlazoRequest): Observable<CalcularPlazoResponse> {

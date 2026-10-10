@@ -1,317 +1,147 @@
-<div class="main-content">
+<div class="main-content calendar-page">
   <div class="container-fluid">
-
-    <!-- Mensajes de estado -->
-    <div *ngIf="exitoMensaje" class="alert alert-success alert-dismissible fade show" role="alert">
-      <span>{{ exitoMensaje }}</span>
-      <button type="button" class="close" (click)="exitoMensaje = ''" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
+    <div *ngIf="successMessage" class="calendar-notice calendar-success" role="status">
+      {{ successMessage }}
+      <button type="button" class="notice-close" (click)="successMessage = ''" aria-label="Cerrar mensaje">×</button>
     </div>
-    <div *ngIf="errorMensaje" class="alert alert-danger alert-dismissible fade show" role="alert">
-      <span>{{ errorMensaje }}</span>
-      <button type="button" class="close" (click)="errorMensaje = ''" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
+    <div *ngIf="errorMessage" class="calendar-notice calendar-error" role="alert">
+      {{ errorMessage }}
+      <button type="button" class="notice-close" (click)="errorMessage = ''" aria-label="Cerrar mensaje">×</button>
     </div>
 
-    <!-- Cabecera y Resumen de Versión Activa -->
-    <div class="row">
-      <div class="col-md-12">
-        <div class="card card-active-version mb-4">
-          <div class="card-header card-header-primary d-flex justify-content-between align-items-center flex-wrap">
-            <div>
-              <h3 class="card-title text-white mb-1">
-                <mat-icon class="align-middle mr-2">calendar_month</mat-icon>
-                Calendario Institucional de Días Hábiles
-              </h3>
-              <p class="card-category text-white-50 mb-0">
-                Gestión formal de feriados, asuetos y cómputo de plazos perentorios (SCRUM-45 / Art. 12 Inc. 2)
-              </p>
-            </div>
-            <div class="mt-2 mt-sm-0" *ngIf="puedeGestionar">
-              <button mat-raised-button class="btn btn-action-new" (click)="abrirDialogoNuevaVersion()">
-                <mat-icon class="mr-1">add_circle</mat-icon> Nueva Versión
-              </button>
-            </div>
-          </div>
-
-          <div class="card-body bg-light-surface" *ngIf="versionActiva">
-            <div class="row align-items-center">
-              <div class="col-lg-3 col-md-6 border-right">
-                <div class="version-meta-label">Versión Activa Vigente</div>
-                <div class="version-meta-value text-primary font-weight-bold">
-                  v{{ versionActiva.version }} — {{ versionActiva.nombre }}
-                </div>
-                <span class="badge badge-success px-2 py-1 mt-1">Activa para nuevos plazos</span>
-              </div>
-              <div class="col-lg-3 col-md-6 border-right">
-                <div class="version-meta-label">Vigencia Oficial</div>
-                <div class="version-meta-value">
-                  Desde: {{ versionActiva.vigencia_desde }}
-                  <span *ngIf="versionActiva.vigencia_hasta"> / Hasta: {{ versionActiva.vigencia_hasta }}</span>
-                  <span *ngIf="!versionActiva.vigencia_hasta" class="text-muted"> (Indefinida)</span>
-                </div>
-                <div class="text-muted small mt-1">
-                  Total feriados registrados: <strong>{{ versionActiva.feriados_count }}</strong>
-                </div>
-              </div>
-              <div class="col-lg-4 col-md-8 border-right">
-                <div class="version-meta-label">Motivo de Auditoría (CA2)</div>
-                <div class="version-meta-reason font-italic text-secondary">
-                  "{{ versionActiva.motivo_cambio }}"
-                </div>
-              </div>
-              <div class="col-lg-2 col-md-4">
-                <div class="version-meta-label">Autoría</div>
-                <div class="small font-weight-bold text-dark">
-                  {{ versionActiva.creado_por_nombre || 'Sistema' }}
-                </div>
-                <div class="text-muted extra-small">
-                  {{ versionActiva.created_at | date:'dd/MM/yyyy HH:mm' }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="card">
+      <div class="card-header card-header-primary calendar-heading">
+        <h3 class="card-title">Calendario institucional</h3>
       </div>
-    </div>
-
-    <!-- Contenido Principal: Feriados a la izquierda, Simulador a la derecha -->
-    <div class="row">
-
-      <!-- Columna Izquierda: Tabla de Feriados y Excepciones -->
-      <div class="col-lg-8 col-md-12">
-        <div class="card">
-          <div class="card-header card-header-default d-flex justify-content-between align-items-center flex-wrap">
-            <h4 class="card-title text-primary mb-0 font-weight-bold">
-              Feriados y Días Inhábiles Registrados
-            </h4>
-            <div class="version-selector-wrap mt-2 mt-sm-0">
-              <label class="mr-2 mb-0 small font-weight-bold text-muted">Consultar Versión:</label>
-              <select
-                class="form-control form-control-sm version-dropdown"
-                [ngModel]="versionSeleccionadaId"
-                (ngModelChange)="seleccionarVersion($event)">
-                <option *ngFor="let v of versiones" [ngValue]="v.id">
-                  v{{ v.version }} - {{ v.nombre }} {{ v.activa ? '(Activa)' : '' }}
-                </option>
+      <div class="card-body">
+        <div class="calendar-toolbar">
+          <div class="calendar-filters">
+            <div class="calendar-field">
+              <label for="calendar-year">Año</label>
+              <select id="calendar-year" class="form-control" [(ngModel)]="selectedYear" (ngModelChange)="applyFilters()">
+                <option [ngValue]="null">Todos los años</option>
+                <option *ngFor="let year of years" [ngValue]="year">{{ year }}</option>
+              </select>
+            </div>
+            <div class="calendar-field">
+              <label for="calendar-month">Mes</label>
+              <select id="calendar-month" class="form-control" [(ngModel)]="selectedMonth" (ngModelChange)="applyFilters()">
+                <option [ngValue]="null">Todos los meses</option>
+                <option *ngFor="let month of months; let index = index" [ngValue]="index + 1">{{ month }}</option>
               </select>
             </div>
           </div>
+          <button *ngIf="canManage" type="button" mat-raised-button class="btn btn-primary"
+            [disabled]="savingHoliday || loading" (click)="toggleHolidayForm()"
+            [attr.aria-expanded]="showHolidayForm" aria-controls="create-holiday-form">
+            {{ showHolidayForm ? 'Cancelar' : 'Crear Feriado' }}
+          </button>
+        </div>
 
-          <div class="card-body">
-            <!-- Barra de Filtros y Acciones -->
-            <div class="row mb-3 align-items-center">
-              <div [ngClass]="puedeGestionar ? 'col-md-5 mb-2 mb-md-0' : 'col-md-7 mb-2 mb-md-0'">
-                <div class="input-group">
-                  <div class="input-group-prepend">
-                    <span class="input-group-text"><mat-icon>search</mat-icon></span>
-                  </div>
-                  <input
-                    type="text"
-                    class="form-control"
-                    placeholder="Buscar por fecha o denominación..."
-                    [(ngModel)]="busqueda"
-                    (input)="aplicarFiltros()">
-                </div>
-              </div>
+        <form *ngIf="showHolidayForm" id="create-holiday-form" class="holiday-form"
+          (ngSubmit)="saveHoliday()" #holidayForm="ngForm">
+          <div class="calendar-field">
+            <label for="holiday-date">Fecha</label>
+            <input id="holiday-date" name="holidayDate" type="date" class="form-control"
+              [(ngModel)]="holidayDate" [min]="today" required [disabled]="savingHoliday"
+              aria-describedby="holiday-date-help">
+            <small id="holiday-date-help">Desde hoy en adelante.</small>
+          </div>
+          <div class="calendar-field holiday-description">
+            <label for="holiday-description">Denominación</label>
+            <input id="holiday-description" name="holidayDescription" type="text" class="form-control"
+              [(ngModel)]="holidayDescription" maxlength="200" required [disabled]="savingHoliday">
+          </div>
+          <button type="submit" mat-raised-button class="btn btn-primary"
+            [disabled]="!canSaveHoliday || holidayForm.invalid">{{ savingHoliday ? 'Guardando…' : 'Guardar' }}</button>
+        </form>
 
-              <div [ngClass]="puedeGestionar ? 'col-md-4 mb-2 mb-md-0' : 'col-md-5 mb-2 mb-md-0'">
-                <select class="form-control" [(ngModel)]="filtroTipo" (change)="aplicarFiltros()">
-                  <option value="TODOS">Todos los tipos de feriado</option>
-                  <option value="NACIONAL">Nacional</option>
-                  <option value="PROVINCIAL">Provincial</option>
-                  <option value="INSTITUCIONAL">Asueto Institucional</option>
-                  <option value="EXCEPCION">Excepción</option>
-                </select>
-              </div>
+        <div *ngIf="loading" class="calendar-state" role="status">Cargando calendario…</div>
+        <button *ngIf="errorMessage && !loading && holidays.length === 0" type="button"
+          mat-stroked-button (click)="loadHolidays()">Reintentar</button>
 
-              <div class="col-md-3 text-right" *ngIf="puedeGestionar">
-                <button
-                  mat-stroked-button
-                  class="btn btn-outline-primary btn-sm btn-block"
-                  (click)="toggleFormFeriado()">
-                  <mat-icon class="mr-1">{{ mostrandoFormFeriado ? 'close' : 'add' }}</mat-icon>
-                  {{ mostrandoFormFeriado ? 'Cerrar' : '+ Excepción' }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Formulario Desplegable para Agregar Feriado a esta Versión -->
-            <div *ngIf="mostrandoFormFeriado" class="add-holiday-box p-3 mb-4 rounded border">
-              <h6 class="font-weight-bold text-primary mb-3">Agregar Feriado o Asueto Institucional</h6>
-              <div class="row">
-                <div class="col-md-3 form-group">
-                  <label class="small font-weight-bold">Fecha *</label>
-                  <input type="date" class="form-control" [(ngModel)]="nuevoFeriadoFecha">
-                </div>
-                <div class="col-md-4 form-group">
-                  <label class="small font-weight-bold">Denominación *</label>
-                  <input type="text" class="form-control" placeholder="Ej. Asueto Aniversario" [(ngModel)]="nuevoFeriadoDesc">
-                </div>
-                <div class="col-md-3 form-group">
-                  <label class="small font-weight-bold">Tipo</label>
-                  <select class="form-control" [(ngModel)]="nuevoFeriadoTipo">
-                    <option value="NACIONAL">Nacional</option>
-                    <option value="PROVINCIAL">Provincial</option>
-                    <option value="INSTITUCIONAL">Institucional</option>
-                    <option value="EXCEPCION">Excepción</option>
-                  </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end form-group">
-                  <button mat-raised-button class="btn btn-primary btn-block" (click)="guardarFeriado()">
-                    Guardar
+        <div class="table-responsive calendar-table" tabindex="0" role="region"
+          aria-label="Feriados del calendario institucional" [attr.aria-busy]="loading">
+          <table class="table table-hover">
+            <caption class="sr-only">Feriados con autoría y fecha de creación. Horarios de Buenos Aires.</caption>
+            <thead>
+              <tr>
+                <th scope="col" [attr.aria-sort]="dateAscending ? 'ascending' : 'descending'">
+                  <button type="button" class="date-sort" (click)="toggleDateOrder()"
+                    [attr.aria-label]="dateAscending ? 'Ordenar Fecha de más reciente a más antigua' : 'Ordenar Fecha de más antigua a más reciente'">
+                    Fecha <span aria-hidden="true">{{ dateAscending ? '▲' : '▼' }}</span>
                   </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tabla de Feriados -->
-            <div class="table-responsive">
-              <table class="table table-hover table-striped">
-                <thead class="text-primary font-weight-bold">
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Denominación</th>
-                    <th>Tipo</th>
-                    <th class="text-center">Condición</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let feriado of feriadosFiltrados">
-                    <td class="font-weight-bold text-dark">
-                      {{ feriado.fecha | date:'dd/MM/yyyy' }}
-                    </td>
-                    <td>{{ feriado.descripcion }}</td>
-                    <td>
-                      <span
-                        class="badge"
-                        [ngClass]="{
-                          'badge-info': feriado.tipo === 'NACIONAL',
-                          'badge-warning': feriado.tipo === 'PROVINCIAL',
-                          'badge-primary': feriado.tipo === 'INSTITUCIONAL',
-                          'badge-secondary': feriado.tipo === 'EXCEPCION'
-                        }">
-                        {{ feriado.tipo_display || feriado.tipo }}
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <span *ngIf="!feriado.es_laborable" class="text-danger small font-weight-bold">
-                        <mat-icon class="align-middle" style="font-size: 16px;">block</mat-icon> Inhábil
-                      </span>
-                      <span *ngIf="feriado.es_laborable" class="text-success small font-weight-bold">
-                        <mat-icon class="align-middle" style="font-size: 16px;">check_circle</mat-icon> Laborable
-                      </span>
-                    </td>
-                  </tr>
-                  <tr *ngIf="feriadosFiltrados.length === 0">
-                    <td colspan="4" class="text-center text-muted py-4">
-                      No se encontraron feriados registrados para los criterios seleccionados.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-          </div>
+                </th>
+                <th scope="col">Denominación</th>
+                <th scope="col">Creado por</th>
+                <th scope="col">Creado el</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let holiday of filteredHolidays">
+                <td class="holiday-date">{{ formatCalendarDate(holiday.fecha) }}</td>
+                <td>{{ holiday.descripcion }}</td>
+                <td>{{ holiday.creado_por_nombre }}</td>
+                <td class="holiday-audit">
+                  <time [attr.datetime]="holiday.created_at">{{ holiday.created_at | date:'dd/MM/yyyy HH:mm:ss':'-0300' }}</time>
+                </td>
+              </tr>
+              <tr *ngIf="!loading && !errorMessage && filteredHolidays.length === 0">
+                <td colspan="4" class="calendar-state">
+                  {{ holidays.length ? 'No hay feriados para el año y mes seleccionados.' : 'No hay feriados registrados.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <!-- Columna Derecha: Simulador de Plazos Perentorios -->
-      <div class="col-lg-4 col-md-12">
-        <div class="card card-simulator">
-          <div class="card-header card-header-simulator">
-            <h4 class="card-title text-white mb-0 font-weight-bold">
-              <mat-icon class="align-middle mr-1">timer</mat-icon>
-              Simulador de Plazos Hábiles
-            </h4>
-            <p class="card-category text-white-50 mb-0 small">
-              Cómputo reproducible y exacto bajo America/Argentina/Buenos_Aires (CA1, CA4)
-            </p>
-          </div>
-
-          <div class="card-body">
-            <div *ngIf="simuladorError" class="alert alert-danger py-2 px-3 small">
-              {{ simuladorError }}
-            </div>
-
-            <div class="form-group mb-3">
-              <label class="small font-weight-bold text-dark">Fecha y Hora de Inicio (Acuse / Despacho):</label>
-              <input
-                type="datetime-local"
-                class="form-control"
-                [(ngModel)]="simuladorFechaInicio">
-              <small class="form-text text-muted extra-small">
-                Zona horaria oficial: America/Argentina/Buenos_Aires (UTC-3).
-              </small>
-            </div>
-
-            <div class="form-group mb-3">
-              <label class="small font-weight-bold text-dark">Días Hábiles Procesales:</label>
-              <input
-                type="number"
-                min="1"
-                max="30"
-                class="form-control font-weight-bold text-primary"
-                [(ngModel)]="simuladorDiasHabiles">
-              <small class="form-text text-muted extra-small">
-                Plazo perentorio de descargo: 5 días hábiles (Art. 12 Inc. 2).
-              </small>
-            </div>
-
-            <button
-              mat-raised-button
-              class="btn btn-primary btn-block mb-3"
-              [disabled]="simuladorCalculando"
-              (click)="calcularPlazoSimulado()">
-              <mat-icon class="mr-1">play_circle_filled</mat-icon>
-              {{ simuladorCalculando ? 'Computando...' : 'Calcular Vencimiento' }}
-            </button>
-
-            <!-- Resultado del Cálculo -->
-            <div *ngIf="simuladorResultado" class="simulator-result p-3 rounded">
-              <div class="result-title text-muted extra-small uppercase">Vencimiento Calculado Exacto:</div>
-              <div class="result-deadline text-primary font-weight-bold my-1">
-                {{ simuladorResultado.deadline | date:'EEEE dd/MM/yyyy - HH:mm' }} hs
-              </div>
-              <div class="badge badge-info small mb-3">
-                Versión aplicada: v{{ simuladorResultado.calendario_version?.version }}
-              </div>
-
-              <!-- Días Hábiles Computados -->
-              <div class="mb-3">
-                <div class="small font-weight-bold text-success mb-1">
-                  <mat-icon style="font-size: 14px; vertical-align: middle;">check</mat-icon>
-                  Días Hábiles Computados ({{ simuladorResultado.dias_habiles_computados.length }}):
-                </div>
-                <ul class="list-unstyled mb-0 extra-small pl-3">
-                  <li *ngFor="let dh of simuladorResultado.dias_habiles_computados" class="py-1 border-bottom">
-                    <strong>Día {{ dh.day_number }}:</strong> {{ dh.weekday }} {{ dh.date | date:'dd/MM/yyyy' }}
-                  </li>
-                </ul>
-              </div>
-
-              <!-- Días Inhábiles Excluidos -->
-              <div *ngIf="simuladorResultado.dias_excluidos.length > 0">
-                <div class="small font-weight-bold text-danger mb-1">
-                  <mat-icon style="font-size: 14px; vertical-align: middle;">event_busy</mat-icon>
-                  Días Inhábiles Excluidos ({{ simuladorResultado.dias_excluidos.length }}):
-                </div>
-                <ul class="list-unstyled mb-0 extra-small pl-3">
-                  <li *ngFor="let de of simuladorResultado.dias_excluidos" class="py-1 border-bottom text-muted">
-                    {{ de.date | date:'dd/MM/yyyy' }} — {{ de.reason }}
-                  </li>
-                </ul>
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      </div>
-
     </div>
 
+    <div class="card calendar-simulator">
+      <div class="card-header card-header-primary calendar-heading">
+        <h4 class="card-title">Simular plazo</h4>
+      </div>
+      <div class="card-body">
+        <div *ngIf="simulationError" class="calendar-notice calendar-error" role="alert">{{ simulationError }}</div>
+        <form class="simulation-form" (ngSubmit)="calculateDeadline()" #simulationForm="ngForm">
+          <div class="calendar-field">
+            <label for="simulation-start">Fecha y hora de inicio</label>
+            <input id="simulation-start" name="simulationStart" type="datetime-local" class="form-control"
+              [(ngModel)]="simulationStart" required aria-describedby="simulation-zone">
+            <small id="simulation-zone">Hora de Buenos Aires (UTC−3).</small>
+          </div>
+          <div class="calendar-field">
+            <label for="simulation-days">Días hábiles</label>
+            <input id="simulation-days" name="simulationDays" type="number" min="1" step="1"
+              class="form-control" [(ngModel)]="simulationDays" required>
+          </div>
+          <button type="submit" mat-raised-button class="btn btn-primary"
+            [disabled]="simulationLoading || simulationForm.invalid">{{ simulationLoading ? 'Calculando…' : 'Calcular vencimiento' }}</button>
+        </form>
+
+        <div *ngIf="simulationResult" class="simulation-result" role="status">
+          <p class="deadline-label">Vencimiento</p>
+          <p class="deadline-value">{{ simulationResult.deadline | date:'dd/MM/yyyy HH:mm:ss':'-0300' }} hs</p>
+          <div class="simulation-days">
+            <div>
+              <h5>Días hábiles ({{ simulationResult.dias_habiles_computados.length }})</h5>
+              <ol>
+                <li *ngFor="let day of simulationResult.dias_habiles_computados">
+                  {{ day.weekday }} {{ formatCalendarDate(day.date) }}
+                </li>
+              </ol>
+            </div>
+            <div *ngIf="simulationResult.dias_excluidos.length">
+              <h5>Días excluidos ({{ simulationResult.dias_excluidos.length }})</h5>
+              <ul>
+                <li *ngFor="let day of simulationResult.dias_excluidos">
+                  {{ formatCalendarDate(day.date) }} · {{ day.reason }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
