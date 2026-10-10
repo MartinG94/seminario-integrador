@@ -8,6 +8,8 @@ Las migraciones 0009 y 0010 crean la tabla e importan los inhábiles del último
 
 La importación corrige Güemes (17/06 → 15/06) y Soberanía (20/11 → 23/11) exclusivamente en esa carga reconocida. Ante colisión se conserva el registro que ya tenía la fecha correcta. Los registros personalizados posteriores no se trasladan. No se modifican las migraciones aplicadas 0007/0008.
 
+La importación 0010 inserta únicamente fechas ausentes en `Holiday`. Su reverso conserva los datos; una reaplicación no reemplaza registros operativos ni su autoría/timestamp. Validar con `MigrationExecutor` sobre MySQL aislado los recorridos 0008→0010 y 0010→0009→0010, incluyendo carga inicial, calendario vacío y calendario previo personalizado.
+
 ## Cálculo y plazos persistidos
 
 `DbHolidayProvider` consulta exclusivamente `Holiday`. El cálculo puro `compute_business_deadline` mantiene su puerto `HolidayProviderPort` y proveedores aislados de prueba.
@@ -29,6 +31,8 @@ Retirar DTOs y diálogo de versiones. Cargar directamente feriados, filtrar loca
 El formulario restringe el mínimo al día institucional y envía solo fecha/denominación. Al guardar agrega el registro y su auditoría a la tabla. Si hay una simulación visible o pendiente, cancela el cálculo anterior y solicita uno nuevo para impedir resultados obsoletos. Las suscripciones se cancelan al destruir la pantalla.
 
 Usar únicamente tokens canónicos. Mensajes con texto primario y borde semántico para preservar contraste en ambos temas; controles con etiquetas, foco visible, estado de orden accesible y tabla desplazable en móvil.
+
+Los formularios usan un grid con filas compartidas para etiquetas, controles y ayudas, de manera que las ayudas no desplacen botones ni inputs. El alta consume la superficie de tarjeta, radio de 8 px y sombra suave. Los botones conservan `btn-primary` con iconos decorativos. El fallo de lectura tiene su propio estado centrado y reintento, separado de errores de alta; un calendario vacío ofrece un mensaje amigable y permite crear un feriado a los roles habilitados. Mientras la carga está pendiente o fallida se bloquea el alta hasta recuperar la lista completa, para impedir un éxito que oculte la nueva fila o presente datos parciales como el calendario completo.
 
 ## Verificación y entorno
 

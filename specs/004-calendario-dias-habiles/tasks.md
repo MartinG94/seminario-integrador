@@ -8,6 +8,12 @@
 - [x] **R4. Regresión, auditoría de par y entorno UAT:** Backend 505/505, frontend 153/153, dominio 99%, build y Ruff en verde; migraciones sin drift. Auditoría cerrada, chequeo PO y localhost disponible. Lint Angular limitado por builder TSLint ausente, documentado en la guía UAT.
 - [x] **R5. Ajustes visuales de UAT:** Mantener Año y Mes en la misma fila y alinear las etiquetas e inputs del simulador en escritorio. Verificar 320/393 px, suite frontend 153/153, compilación y revisión de par sin hallazgos. UAT aprobada por el usuario el 10/10/2026.
 
+## Segunda review del PM — PR #49
+
+- [x] **R6. Actualización y reaplicación segura (TDD):** Ocho casos de importación/migración en MySQL aislado; recorridos 0008→0010 y rollback/reaplicación, auditoría intacta y GET sembrado/vacío. HTTP real 200 para los cinco roles; migraciones históricas conservadas.
+- [x] **R7. Presentación y recuperación (TDD):** Alta blanca con radio de 8 px, controles y botones alineados con estilo institucional, estados centrados fuera del scroll de tabla y reintento real. Bloquear altas mientras la carga está pendiente/fallida para evitar mostrar un calendario parcial.
+- [x] **R8. Regresión y auditoría final:** Backend 510/510, frontend 156/156, build/Ruff y migraciones en verde; DESIGN.md lint con 0 errores. Auditoría sin hallazgos, viewports 1306/768/393/320 px y recuperación por Reintentar verificados. Localhost activo; UAT aprobada por el usuario el 10/10/2026.
+
 ## Implementación original (antecedente)
 
 - [x] **T1. Modelos ORM y Dominio de Calendario:** Implementar los modelos `CalendarioVersion` y `FeriadoExcepcion` en `backend/expedientes/models.py` con sus enums, restricciones de unicidad y auditoría (CA2). Vincular `Expediente.calendario_version` con ForeignKey protegida (CA3).

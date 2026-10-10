@@ -14,9 +14,38 @@ La implementación y los comandos se ejecutaron en el worktree:
 C:\Users\Usuario\.codex\worktrees\calendario-pr49\seminario-integrador
 ```
 
-UAT aprobada por el usuario el 10/10/2026. La entrega se realiza en la misma rama mediante el [PR #49](https://github.com/MartinG94/seminario-integrador/pull/49), que permanece abierto para revisión, sin merge. El checkout original conserva sus cambios previos.
+La primera tanda tuvo UAT aprobada por el usuario el 10/10/2026 y se entregó en la misma rama mediante el [PR #49](https://github.com/MartinG94/seminario-integrador/pull/49). La segunda review del PM también cuenta con UAT aprobada por el usuario el 10/10/2026 y se entrega en esa rama, con un nuevo comentario por ítems en la PR. La descripción principal se conserva y la PR permanece sin merge. El checkout original conserva sus cambios previos.
 
-## Comprobaciones realizadas
+## Segunda review del PM — verificación actual
+
+Referencia: [observaciones del PM](https://github.com/MartinG94/seminario-integrador/pull/49#issuecomment-6101450538). UAT aprobada por el usuario el 10/10/2026.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Suite completa backend / MySQL 8 | 510 aprobados, 0 errores |
+| Suite completa Angular / ChromeHeadless | 156 aprobados, 0 fallos |
+| Actualización y reaplicación de migraciones | Ocho casos de importación/migración; esquema 0008→0010 y rollback 0010→0009→0010 en base aislada; calendario sembrado, vacío y personalizado |
+| API real tras reiniciar backend | HTTP 200 y array para SOCIO, FISCALIZADORA, CD, TD y ADMIN; 18 registros existentes preservados |
+| Arranque y esquema local | 0009/0010 aplicadas; no hay migraciones nuevas que generar |
+| Compilación de producción y Ruff | Aprobados |
+| `designmd lint DESIGN.md` | 0 errores de referencias/contraste; 10 advertencias previas sobre tokens de gradiente sin referencias |
+| Auditoría independiente full stack | Cerrada sin hallazgos pendientes; dos P2 detectados y corregidos |
+| Escritorio 1306 px | Año/Mes/Cancelar, Fecha/Denominación/Guardar e inicio/días/calcular comparten altura y coordenada vertical; controles de 40 px |
+| Intermedio 768 px | Dos campos alineados; acción en la siguiente fila de la grilla, sin desbordamiento de página |
+| Móvil 320/393 px | Año/Mes en una fila; formulario y simulador apilados, mensaje vacío/error completo y centrado; desplazamiento horizontal limitado a tablas con datos |
+| Interrupción controlada de backend | Error dentro de la tarjeta con Reintentar centrado y alta bloqueada. Tras restaurar el servicio, Reintentar devuelve 18 filas, elimina el error y reactiva el alta |
+| Teclado | Tab desde Denominación enfoca Guardar con contorno visible; Enter en Cancelar cierra el formulario y conserva foco en Crear Feriado |
+| Simulación desde móvil | Inicio 20/11/2026 14:30 + 5 hábiles → 30/11/2026 14:30; excluye el 23/11 |
+
+El error 500/403 del PM no se reprodujo con el esquema vigente y usuarios autenticados. Se encontró y reprodujo un defecto concreto: reaplicar 0010 después de revertirla a 0009 fallaba con MySQL 1062 por fechas duplicadas. Ahora la importación inserta solo fechas ausentes y preserva las altas y la auditoría existentes, sin ocultar otros errores de integridad.
+
+La auditoría detectó además que un alta podía confirmarse después de un GET fallido mientras la tabla seguía oculta por el error. La pantalla ahora exige recuperar la carga completa antes de permitir un alta. La regresión se comprobó primero en rojo y luego en verde.
+
+Para la nueva UAT, revisar la tarjeta blanca de alta con radio de 8 px, Guardar azul institucional con icono, alineación de filtros y acciones, estado vacío seleccionando Septiembre y alineación del simulador. No se agregaron feriados de prueba a la base local durante estas comprobaciones.
+
+La implementación mantiene los criterios del PO, roles habilitados y vencimientos existentes. `notasPO.md`, seguimiento macro, dependencias y las migraciones 0007/0008 permanecen intactos. Los avisos heredados de compilación y la limitación del lint Angular detallada abajo siguen vigentes.
+
+## Comprobaciones de la primera revisión (antecedente)
 
 | Comprobación | Resultado |
 | --- | --- |
