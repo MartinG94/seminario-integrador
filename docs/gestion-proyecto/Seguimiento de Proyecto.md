@@ -492,7 +492,7 @@ El **Sprint 2** consolidó el núcleo procesal y disciplinario de la plataforma.
 
 | ID Jira | ID Backlog | Título de la Historia / Tarea | Tareas Técnicas Asociadas | Responsable(s) Asignado(s) | SP | Estado Inicial |
 | :---: | :---: | :--- | :--- | :--- | :---: | :---: |
-| **SCRUM-40** | S2-01 | **Story:** Crear expediente con número único e historial de seis estados | 1. Implementar modelo `Expediente` con 6 estados del Art. 12.<br>2. Servicio `ExpedienteWorkflowService` con bloqueo pesimista.<br>3. Generación correlativa `EXP-YYYY-XXXX` concurrente.<br>4. Soporte multi-socio y auditoría de cambios de estado. | Lucas Gastiaburu<br>Diego Sánchez (PO) | 3 | To Do |
+| **SCRUM-40** | S2-01 | **Story:** Crear expediente con número único e historial de seis estados | 1. Implementar modelo `Expediente` con 6 estados del Art. 12.<br>2. Servicio `ExpedienteWorkflowService` con bloqueo pesimista.<br>3. Generación correlativa `<numero>/YYYY` concurrente.<br>4. Soporte multi-socio y auditoría de cambios de estado. | Lucas Gastiaburu<br>Diego Sánchez (PO) | 3 | To Do |
 | **SCRUM-41** | S2-02 | **Story:** Cargar y validar T01 con anexo opcional y selección múltiple | 1. Formulario T01 reordenado (Título, Relato, Adjuntos, Testigos).<br>2. Autocompletado multi-socio y acciones (Llamado, Felicitación, Expulsión).<br>3. Anexo opcional del Art. 16 bis.<br>4. Serializador y validaciones en DRF. | Diego Sánchez (PO)<br>Tomas Quiroz<br>Nicolás Rosales | 5 | To Do |
 | **SCRUM-42** | S2-03 | **Story:** Validar competencias de inicio de acción (Arts. 21-26) | 1. Implementar motor de políticas `OpeningPolicy`.<br>2. Validar competencias de solicitante según cargo y tipo de falta.<br>3. Manejo de excepciones y motivos fundados auditados.<br>4. Pruebas unitarias de casos límite y rechazo procesal. | Tomas Quiroz<br>Axel Villegas | 3 | To Do |
 | **SCRUM-43** | S2-04 | **Story:** Notificar apertura con entrega y reintentos auditables | 1. Diseñar sanitización de privacidad (cero datos médicos).<br>2. Servicio transaccional Outbox `OpeningNotificationService`.<br>3. Cola de correos `EmailNotificationQueue` con reintentos.<br>4. Enlace seguro con autorización RBAC por objeto (`IsImputadoOrTribunal`). | Lucas Martín Guillén (SM)<br>Axel Villegas | 5 | To Do |
@@ -516,7 +516,7 @@ El **Sprint 2** consolidó el núcleo procesal y disciplinario de la plataforma.
   * Adelanto técnico S3-02: Cuenta regresiva de días hábiles incorporada en el badge de estado de *Mis Expedientes y Descargos* y modal de causas.
 * **Historias de Usuario No Completadas (Deuda Técnica / Replanificación):** **Ninguna (0 SP)**.
 * **Incremento de Software Demostrado:**
-  1. Flujo completo de apertura de expediente T01 por autoridades con selección múltiple de socios, validación de competencias y numeración única `EXP-YYYY-XXXX`.
+  1. Flujo completo de apertura de expediente T01 por autoridades con selección múltiple de socios, validación de competencias y numeración única `<numero>/YYYY`.
   2. Despacho transaccional seguro de notificaciones a los socios involucrados mediante cola Outbox resiliente con registro de entrega.
   3. Panel *"Mis Expedientes y Descargos"* con diseño limpio, tabla reordenada, visualización del plazo hábil regresivo en el chip de estado y modal de detalle completo de la causa.
   4. Panel *"Mis Solicitudes T01"* en `/solicitar-puntos` permitiendo a las autoridades creadoras monitorear el estado procesal y retomar o eliminar borradores.
