@@ -32,14 +32,15 @@
             </div>
           </div>
           <button *ngIf="canManage" type="button" mat-raised-button class="btn btn-primary"
-            [disabled]="savingHoliday || loading" (click)="toggleHolidayForm()"
+            [disabled]="savingHoliday || loading || !!loadError" (click)="toggleHolidayForm()"
             [attr.aria-expanded]="showHolidayForm" aria-controls="create-holiday-form">
+            <span class="material-icons" aria-hidden="true">{{ showHolidayForm ? 'close' : 'add' }}</span>
             {{ showHolidayForm ? 'Cancelar' : 'Crear Feriado' }}
           </button>
         </div>
 
         <form *ngIf="showHolidayForm" id="create-holiday-form" class="holiday-form"
-          (ngSubmit)="saveHoliday()" #holidayForm="ngForm">
+          (ngSubmit)="saveHoliday()" #holidayForm="ngForm" aria-label="Crear feriado">
           <div class="calendar-field">
             <label for="holiday-date">Fecha</label>
             <input id="holiday-date" name="holidayDate" type="date" class="form-control"
@@ -53,15 +54,35 @@
               [(ngModel)]="holidayDescription" maxlength="200" required [disabled]="savingHoliday">
           </div>
           <button type="submit" mat-raised-button class="btn btn-primary"
-            [disabled]="!canSaveHoliday || holidayForm.invalid">{{ savingHoliday ? 'Guardando…' : 'Guardar' }}</button>
+            [disabled]="!canSaveHoliday || holidayForm.invalid">
+            <span class="material-icons" aria-hidden="true">save</span>
+            {{ savingHoliday ? 'Guardando…' : 'Guardar' }}
+          </button>
         </form>
 
-        <div *ngIf="loading" class="calendar-state" role="status">Cargando calendario…</div>
-        <button *ngIf="errorMessage && !loading && holidays.length === 0" type="button"
-          mat-stroked-button (click)="loadHolidays()">Reintentar</button>
+        <div *ngIf="loading || loadError || filteredHolidays.length === 0" class="calendar-state"
+          [attr.role]="loadError ? 'alert' : 'status'">
+          <span class="material-icons calendar-state-icon" aria-hidden="true">
+            {{ loading ? 'hourglass_empty' : (loadError ? 'event_busy' : 'event_note') }}
+          </span>
+          <p *ngIf="loading">Cargando calendario…</p>
+          <ng-container *ngIf="!loading">
+            <p *ngIf="loadError">{{ loadError }}</p>
+            <button *ngIf="loadError" type="button" mat-raised-button class="btn btn-primary"
+              (click)="loadHolidays()">
+              <span class="material-icons" aria-hidden="true">refresh</span>
+              Reintentar
+            </button>
+            <ng-container *ngIf="!loadError">
+              <p>{{ holidays.length ? 'No hay feriados para el año y mes seleccionados.' : 'No hay feriados registrados.' }}</p>
+              <p class="calendar-state-help" *ngIf="holidays.length">Podés cambiar los filtros para consultar otras fechas.</p>
+              <p class="calendar-state-help" *ngIf="!holidays.length && canManage">Podés registrar el primer feriado con Crear Feriado.</p>
+            </ng-container>
+          </ng-container>
+        </div>
 
-        <div class="table-responsive calendar-table" tabindex="0" role="region"
-          aria-label="Feriados del calendario institucional" [attr.aria-busy]="loading">
+        <div *ngIf="!loading && !loadError && filteredHolidays.length" class="table-responsive calendar-table"
+          tabindex="0" role="region" aria-label="Feriados del calendario institucional">
           <table class="table table-hover">
             <caption class="sr-only">Feriados con autoría y fecha de creación. Horarios de Buenos Aires.</caption>
             <thead>
@@ -84,11 +105,6 @@
                 <td>{{ holiday.creado_por_nombre }}</td>
                 <td class="holiday-audit">
                   <time [attr.datetime]="holiday.created_at">{{ holiday.created_at | date:'dd/MM/yyyy HH:mm:ss':'-0300' }}</time>
-                </td>
-              </tr>
-              <tr *ngIf="!loading && !errorMessage && filteredHolidays.length === 0">
-                <td colspan="4" class="calendar-state">
-                  {{ holidays.length ? 'No hay feriados para el año y mes seleccionados.' : 'No hay feriados registrados.' }}
                 </td>
               </tr>
             </tbody>
@@ -116,7 +132,10 @@
               class="form-control" [(ngModel)]="simulationDays" required>
           </div>
           <button type="submit" mat-raised-button class="btn btn-primary"
-            [disabled]="simulationLoading || simulationForm.invalid">{{ simulationLoading ? 'Calculando…' : 'Calcular vencimiento' }}</button>
+            [disabled]="simulationLoading || simulationForm.invalid">
+            <span class="material-icons" aria-hidden="true">calculate</span>
+            {{ simulationLoading ? 'Calculando…' : 'Calcular vencimiento' }}
+          </button>
         </form>
 
         <div *ngIf="simulationResult" class="simulation-result" role="status">

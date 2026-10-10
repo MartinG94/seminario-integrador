@@ -21,7 +21,7 @@
     }
   }
 
-  .calendar-toolbar, .holiday-form, .simulation-form {
+  .calendar-toolbar {
     display: flex;
     align-items: flex-end;
     flex-wrap: wrap;
@@ -41,18 +41,11 @@
     min-width: 0;
   }
 
-  .simulation-form {
-    align-items: flex-start;
-
-    .form-control { height: 2.5rem; }
-    .btn { align-self: center; }
-  }
-
   .calendar-field {
     flex: 1 1 10rem;
     min-width: 0;
 
-    label { display: block; font-weight: 600; color: var(--color-text-primary); }
+    label { display: block; font-weight: 600; color: var(--color-text-primary); margin-bottom: 0.5rem; }
     small { display: block; color: var(--color-text-secondary); }
   }
 
@@ -61,16 +54,33 @@
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-main);
     padding: 0.5rem;
-    height: auto;
+    height: 2.5rem;
+    border-radius: 4px;
+  }
+
+  .holiday-form, .simulation-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) max-content;
+    align-items: start;
+    gap: 0.5rem 1.25rem;
+
+    .calendar-field { display: contents; }
+    .calendar-field:first-child > * { grid-column: 1; }
+    .calendar-field:nth-child(2) > * { grid-column: 2; }
+    label { grid-row: 1; margin: 0; }
+    .form-control { grid-row: 2; }
+    small { grid-row: 3; }
+    > .btn { grid-column: 3; grid-row: 2; }
   }
 
   .holiday-form {
-    background: var(--color-surface);
+    grid-template-columns: minmax(10rem, 1fr) minmax(0, 3fr) max-content;
+    background: var(--color-surface-card);
     border: 1px solid var(--color-border-main);
-    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px var(--color-border-main);
+    padding: 1.25rem;
     margin-bottom: 1.5rem;
-
-    .holiday-description { flex: 3 1 16rem; }
   }
 
   .calendar-table { margin-top: 1rem; }
@@ -80,8 +90,16 @@
     border-color: var(--color-primary);
     color: var(--color-text-inverse);
     box-shadow: 0 2px 4px var(--color-border-main);
+    margin: 0;
+    min-height: 2.5rem;
+    padding: 0.5rem 1rem;
+    line-height: 1.25rem;
+    border-radius: 4px;
 
-    &:hover, &:focus { background-color: var(--grad-primary-end); }
+    &:hover:not(:disabled), &:focus:not(:disabled) { background-color: var(--grad-primary-end); }
+    &:disabled { opacity: 1; box-shadow: none; cursor: not-allowed; }
+
+    .material-icons { color: inherit; font-size: 1.125rem; margin-right: 0.375rem; }
   }
 
   table {
@@ -111,7 +129,19 @@
     outline-offset: 3px;
   }
 
-  .calendar-state { text-align: center; padding: 1.5rem; color: var(--color-text-secondary); }
+  .calendar-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--color-text-primary);
+
+    p { margin: 0; max-width: 30rem; }
+    .calendar-state-icon { font-size: 2rem; }
+    .calendar-state-help { color: var(--color-text-secondary); }
+  }
 
   .calendar-notice {
     border: 1px solid currentColor;
@@ -146,15 +176,36 @@
   .simulation-days li { margin-bottom: 0.5rem; }
   .simulation-days h5 { font-weight: 600; }
 
+  @media (max-width: 900px) {
+    .holiday-form, .simulation-form {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      > .btn { grid-column: 1 / -1; grid-row: 4; justify-self: start; margin-top: 0.5rem; }
+    }
+  }
+
   @media (max-width: 600px) {
+    > .container-fluid { padding: 0; }
+    .card-body, .holiday-form { padding: 1rem; }
     .calendar-toolbar, .holiday-form, .simulation-form {
       flex-direction: column;
       align-items: stretch;
       width: 100%;
     }
-    .calendar-filters { flex-basis: auto; width: 100%; }
-    .calendar-field, .holiday-form .holiday-description { flex: 1 1 auto; }
-    .simulation-form .btn { align-self: stretch; }
+    .calendar-filters {
+      flex-basis: auto;
+      width: 100%;
+      gap: 0.5rem;
+      .form-control { padding-inline: 0.25rem; }
+    }
+    .holiday-form, .simulation-form {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.25rem;
+
+      .calendar-field { display: block; grid-column: 1; }
+      label { margin-bottom: 0.5rem; }
+      small { margin-top: 0.5rem; }
+      > .btn { grid-column: 1; grid-row: auto; justify-self: stretch; margin-top: 0; }
+    }
     .simulation-days { display: block; }
     .btn { white-space: normal; }
   }

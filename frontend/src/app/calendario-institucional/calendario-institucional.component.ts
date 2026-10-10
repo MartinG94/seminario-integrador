@@ -17,6 +17,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   selectedMonth: number | null = null;
   dateAscending = true;
   loading = false;
+  loadError = '';
   errorMessage = '';
   successMessage = '';
   showHolidayForm = false;
@@ -54,7 +55,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
 
   get canSaveHoliday(): boolean {
     return !!this.holidayDate && this.holidayDate >= this.today &&
-      !!this.holidayDescription.trim() && !this.savingHoliday;
+      !!this.holidayDescription.trim() && !this.savingHoliday && !this.loading && !this.loadError;
   }
 
   ngOnInit(): void {
@@ -80,7 +81,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
 
   loadHolidays(): void {
     this.loading = true;
-    this.errorMessage = '';
+    this.loadError = '';
     this.calendarApi.getFeriados().pipe(takeUntil(this.destroy$)).subscribe({
       next: holidays => {
         this.holidays = holidays;
@@ -89,7 +90,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
-        this.errorMessage = 'No se pudo cargar el calendario. Intentá nuevamente.';
+        this.loadError = 'No se pudo cargar el calendario. Intentá nuevamente.';
       }
     });
   }
@@ -112,14 +113,14 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   }
 
   toggleHolidayForm(): void {
-    if (this.savingHoliday) { return; }
+    if (this.savingHoliday || this.loading || this.loadError) { return; }
     this.showHolidayForm = !this.showHolidayForm;
     this.holidayDate = '';
     this.holidayDescription = '';
   }
 
   saveHoliday(): void {
-    if (!this.canManage || this.savingHoliday) { return; }
+    if (!this.canManage || this.savingHoliday || this.loading || this.loadError) { return; }
     if (!this.holidayDate || !this.holidayDescription.trim()) {
       this.errorMessage = 'Completá la fecha y la denominación.';
       return;

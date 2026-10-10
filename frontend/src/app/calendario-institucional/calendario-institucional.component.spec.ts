@@ -93,19 +93,79 @@ describe('CalendarioInstitucionalComponent', () => {
     component.loadHolidays();
     fixture.detectChanges();
     expect(component.errorMessage).toBe('');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No hay feriados registrados.');
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('.calendar-state[role="status"]')?.textContent).toContain('No hay feriados registrados.');
+    expect(root.querySelector('[role="alert"]')).toBeNull();
+    expect(root.textContent).toContain('Podés registrar el primer feriado con Crear Feriado.');
   });
 
-  it('permite reintentar cuando falla la carga', () => {
+  it('recupera la carga con Reintentar dentro del estado de error de la tabla', () => {
     api.getFeriados.and.returnValue(throwError(() => ({ status: 500 })));
     component.loadHolidays();
     fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
     expect(component.loading).toBeFalse();
-    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')).toBeTruthy();
-    api.getFeriados.and.returnValue(of(holidays));
-    component.loadHolidays();
-    expect(component.errorMessage).toBe('');
+    const state = root.querySelector('.calendar-state[role="alert"]');
+    expect(state?.textContent).toContain('No se pudo cargar el calendario. Intentá nuevamente.');
+    expect(root.querySelectorAll('.holiday-date').length).toBe(0);
+    const retry = state?.querySelector('button') as HTMLButtonElement;
+    expect(retry?.textContent).toContain('Reintentar');
+    const pending = new Subject<HolidayDto[]>();
+    api.getFeriados.and.returnValue(pending);
+    retry.click();
+    fixture.detectChanges();
+    expect(root.querySelector('[role="alert"]')).toBeNull();
+    expect(root.querySelector('.calendar-state[role="status"]')?.textContent).toContain('Cargando calendario');
+    pending.next(holidays);
+    fixture.detectChanges();
     expect(component.holidays.length).toBe(2);
+    expect(root.querySelector('.calendar-state')).toBeNull();
+    expect(root.querySelectorAll('.holiday-date').length).toBe(2);
+  });
+
+  it('no presenta un error de alta como un fallo de carga ni oculta la tabla', () => {
+    api.addFeriado.and.returnValue(throwError(() => ({ error: { fecha: ['Ya existe un feriado para esa fecha.'] } })));
+    component.holidayDate = '2099-10-13';
+    component.holidayDescription = 'Asueto';
+    component.saveHoliday();
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('.calendar-notice[role="alert"]')?.textContent).toContain('Ya existe');
+    expect(root.querySelector('.calendar-state[role="alert"]')).toBeNull();
+    expect(root.querySelectorAll('.holiday-date').length).toBe(2);
+  });
+
+  it('requiere recuperar la carga antes de permitir un alta sobre un calendario incompleto', () => {
+    api.getFeriados.and.returnValue(throwError(() => ({ status: 500 })));
+    component.loadHolidays();
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    const create = root.querySelector('[aria-controls="create-holiday-form"]') as HTMLButtonElement;
+    expect(create.disabled).toBeTrue();
+    component.toggleHolidayForm();
+    expect(component.showHolidayForm).toBeFalse();
+    component.holidayDate = '2099-10-13';
+    component.holidayDescription = 'Asueto';
+    component.saveHoliday();
+    expect(api.addFeriado).not.toHaveBeenCalled();
+    api.getFeriados.and.returnValue(of(holidays));
+    (root.querySelector('.calendar-state button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(create.disabled).toBeFalse();
+    create.click();
+    fixture.detectChanges();
+    expect(root.querySelector('#create-holiday-form')).not.toBeNull();
+    expect(root.querySelectorAll('.holiday-date').length).toBe(2);
+  });
+
+  it('no ofrece crear el primer feriado a un usuario sin permiso de alta', () => {
+    auth.tieneRol.and.returnValue(false);
+    api.getFeriados.and.returnValue(of([]));
+    component.loadHolidays();
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('.calendar-state')?.textContent).toContain('No hay feriados registrados.');
+    expect(root.textContent).not.toContain('Podés registrar el primer feriado');
   });
 
   it('bloquea fechas pasadas y muestra el mínimo institucional en el input', () => {
