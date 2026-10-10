@@ -430,6 +430,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatCaseNumber(caseNumber: string): string {
+    const match = /^(?:EXP-)?(\d+)\/(\d{4})$/.exec(caseNumber);
+    return match ? `${Number(match[1]).toString().padStart(3, '0')}/${match[2]}` : caseNumber;
+  }
+
   getUrgenciaLabel(urgencia?: string): string {
     switch (urgencia) {
       case 'urgente': return 'Urgente';

@@ -151,56 +151,20 @@
                [class.kanban-card-urgente]="exp.urgencia === 'urgente'"
                tabindex="0"
                role="article"
-               [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio + ', Urgencia ' + getUrgenciaLabel(exp.urgencia)"
+               [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ', Urgencia ' + getUrgenciaLabel(exp.urgencia)"
                (click)="abrirDetalle(exp)"
                (keydown)="onKanbanCardKeyDown($event, exp)">
             <div class="card-top">
-              <span class="font-weight-bold text-dark">{{exp.numero}}</span>
-              <div class="d-flex align-items-center gap-1">
-                <span class="badge-mat badge-urgencia" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)" [title]="'Urgencia: ' + getUrgenciaLabel(exp.urgencia)">
-                  <i class="material-icons urgencia-icon">{{getUrgenciaIcon(exp.urgencia)}}</i> {{getUrgenciaLabel(exp.urgencia)}}
-                </span>
-                <span class="badge-mat" [ngClass]="exp.puntos > 0 ? 'badge-mat-success' : 'badge-mat-danger'">
-                  {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
-                </span>
-              </div>
-            </div>
-            <h5 class="card-title-text">{{exp.socio}}</h5>
-            <div class="card-subcomm">
-              {{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}
-              <span *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" class="badge badge-light text-muted ml-1" title="Expediente con múltiples imputados">
-                <i class="material-icons" style="font-size: 11px; vertical-align: middle;">group</i> {{exp.cantidadSocios}} imputados
+              <span class="card-id">{{ formatCaseNumber(exp.numero) }}</span>
+              <span class="badge-mat badge-urgencia" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)" [title]="'Urgencia: ' + getUrgenciaLabel(exp.urgencia)">
+                {{ getUrgenciaLabel(exp.urgencia) }}
               </span>
+              <span class="card-points">{{ exp.puntos > 0 ? '+' : '' }}{{ exp.puntos }} pts</span>
             </div>
-            <p class="text-muted small text-truncate mb-2" title="{{exp.motivo}}">{{exp.motivo}}</p>
+            <h5 class="card-title-text" [title]="exp.motivo">{{ exp.motivo }}</h5>
             
             <div class="card-bottom">
-              <div *ngIf="exp.estado === 'justificando'" class="timer-badge" style="font-size: 10px;">
-                <i class="material-icons" style="font-size: 12px;" aria-hidden="true">schedule</i> {{exp.horasRestantes}}h
-              </div>
-              <div *ngIf="exp.estado !== 'justificando'" class="text-muted small">
-                {{exp.fechaCreacion}}
-              </div>
-
-              <!-- Acciones específicas de etapa según rol TD (votación o firma) -->
-              <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
-                <button *ngIf="exp.estado === 'revision_resolucion' || exp.estado === 'espera_resolucion'" 
-                        mat-button 
-                        class="btn btn-info btn-link btn-sm p-1"
-                        title="Votar Dictamen Colegiado"
-                        aria-label="Votar Dictamen Colegiado"
-                        (click)="abrirVotacion(exp)">
-                  <i class="material-icons">how_to_vote</i>
-                </button>
-                <button *ngIf="exp.estado === 'pendiente_firma' || (exp.estado === 'pendiente_correos' && (!exp.firmas || !exp.firmas.juecesFirmantes || exp.firmas.juecesFirmantes.length < 3))" 
-                        mat-button 
-                        class="btn btn-success btn-link btn-sm p-1"
-                        title="Firmar Resolución"
-                        aria-label="Firmar Resolución"
-                        (click)="abrirFirma(exp)">
-                  <i class="material-icons">draw</i>
-                </button>
-              </div>
+              <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
             </div>
           </div>
         </ng-container>
