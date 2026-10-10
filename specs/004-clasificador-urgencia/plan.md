@@ -1,5 +1,17 @@
 # Plan Técnico — Clasificador e Indicador Visual de Urgencia en Expedientes (SCRUM-78 / S3-07)
 
+## Revisión del PO — PR #50 (10/10/2026)
+
+- Reutilizar `SolicitarPuntosComponent`, que sirve al menú **Crear Expediente** y al formulario **Solicitud T01**, incorporando un grupo nativo de selección única (`fieldset`/`legend` e inputs radio), presentado como tres casillas coloreadas con los tokens `success`, `info` y `danger`. Mantener la navegación nativa por teclado, foco visible y bloqueo al cargar o emitir, sin un select desplegable. Tipar la urgencia en los DTOs con `NivelUrgencia`, enviar el valor en POST/PATCH y restaurarlo al retomar el borrador; resetear a `normal` al iniciar otro formulario.
+- Conservar el contrato existente de apertura directa y de herencia T01 → Expediente. Agregar `urgencia` a `snapshot_emitido` para mantener evidencia de la elección original aun si el TD modifica después la urgencia del expediente.
+- Al abrir desde T01, pasar también los puntos solicitados al servicio de apertura para que la nueva tarjeta refleje la cantidad y signo originales. Este dato de la causa no modifica saldos ni genera asientos del libro mayor.
+- Admitir el formato decimal de DRF (`number | string | null`) en la respuesta T01 y convertirlo a número al restaurar el formulario. Normalizar también los puntos del monitoreo en el servicio HTTP para mantener la selección visible al retomar borradores.
+- Ampliar la precisión de `Expediente.puntos` a los diez dígitos que ya acepta `SolicitudT01.puntos` mediante una migración de esquema, conservando valores existentes y sin introducir topes nuevos. Cubrir valores válidos positivos y negativos mayores a tres dígitos.
+- Simplificar exclusivamente la tarjeta Kanban: cabecera con número sin prefijo de presentación `EXP-`, urgencia y puntos; motivo central; fecha con `DatePipe` en formato `dd/MM/yyyy`. Conservar la numeración almacenada y la apertura del detalle mediante teclado/clic.
+- Usar variables CSS canónicas para colores, superficies y foco. Reducir la densidad de los badges dentro de la tarjeta sin cambiar el resto de las vistas.
+- Validar primero regresiones de formularios y contenido renderizado, apertura API, herencia y snapshot de T01; luego ejecutar las suites backend/MySQL y frontend/Karma, compilación y auditoría de par. Dejar localhost activo para UAT.
+- Alinear el arranque Karma y su configuración TypeScript con Angular 14 instalado. Corregir las pruebas heredadas que exigían el título inicial eliminado, una etiqueta anterior o un SDK externo real; conservar sus verificaciones con módulos y dobles explícitos, sin alterar pantallas ajenas a esta revisión.
+
 ## 1. Arquitectura de la Solución
 
 El incremento incorpora el atributo e indicador visual de urgencia a lo largo de las capas de dominio, persistencia, API REST e interfaz de usuario de SGD-AVEIT.
@@ -102,10 +114,10 @@ El incremento incorpora el atributo e indicador visual de urgencia a lo largo de
   - Sincronizar en `cargarDatosTablero()` enviando `filtros.urgencia = this.filtroUrgencia`.
   - Fallback en memoria en `expedientesFiltrados`: filtrar por `e.urgencia === this.filtroUrgencia`.
 - **Kanban Cards:**
-  - Renderizar badge de urgencia en la cabecera de la tarjeta:
+  - Renderizar badge compacto de urgencia con etiqueta visible en la cabecera de la tarjeta; el icono es opcional en Kanban:
     ```html
     <span class="badge-mat badge-urgencia" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)">
-      <i class="material-icons urgencia-icon">{{getUrgenciaIcon(exp.urgencia)}}</i> {{getUrgenciaLabel(exp.urgencia)}}
+      {{getUrgenciaLabel(exp.urgencia)}}
     </span>
     ```
   - Añadir clase condicional `kanban-card-urgente` cuando `exp.urgencia === 'urgente'` para destacar visualmente con borde sutil según `DESIGN.md`.
@@ -119,6 +131,5 @@ El incremento incorpora el atributo e indicador visual de urgencia a lo largo de
 ---
 
 ## 4. Alineación con Tokens de Diseño (`DESIGN.md`)
-- `urgente`: Rojo semántico `{colors.danger}: #B91C1C`, fondo claro `rgba(244, 67, 54, 0.12)`, borde `1px solid rgba(244, 67, 54, 0.3)`.
-- `normal`: Azul informativo `{colors.info}: #0369A1`, fondo claro `rgba(0, 188, 212, 0.12)`.
-- `baja`: Verde atenuado `{colors.success}: #15803D`, fondo claro `rgba(76, 175, 80, 0.12)`.
+- Badges Kanban: fondo semántico `var(--color-danger)`, `var(--color-info)` o `var(--color-success)` según nivel, y texto `var(--color-text-inverse)`; sin colores arbitrarios ni gradientes propios.
+- Tarjeta: superficie `var(--color-surface-card)`, texto `var(--color-text-primary)`, fecha `var(--color-text-secondary)` y borde `var(--color-border-main)`. Las urgentes agregan un borde lateral con `var(--color-danger)`; el foco consume `var(--color-border-focus)`.

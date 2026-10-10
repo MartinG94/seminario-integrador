@@ -25,8 +25,8 @@ Permitir que el Tribunal de Disciplina (TD) y las autoridades clasifiquen y visu
 
 2. **Event-driven (Visualización en Tarjetas Kanban):**  
    CUANDO el usuario consulte el tablero Kanban de estados procesales,  
-   el sistema *debe* renderizar en cada tarjeta un indicador visual (badge semántico) con el nivel de urgencia y su respectivo icono accesible:
-   - `urgente`: Badge rojo de peligro (`badge-mat-danger` con token `{colors.danger}`, icono `priority_high` o `bolt`).
+   el sistema *debe* renderizar en cada tarjeta un indicador visual compacto (badge semántico) con el nivel de urgencia escrito y accesible. El icono es opcional en Kanban para respetar la simplificación solicitada en PR #50:
+   - `urgente`: Badge rojo de peligro (`badge-mat-danger` con token `{colors.danger}`).
    - `normal`: Badge azul/informativo (`badge-mat-info` con token `{colors.info}`).
    - `baja`: Badge verde/atenuado (`badge-mat-success` con token `{colors.success}`).
 
@@ -46,6 +46,14 @@ Permitir que el Tribunal de Disciplina (TD) y las autoridades clasifiquen y visu
    MIENTRAS una causa se encuentre clasificada como `urgente`,  
    su tarjeta Kanban *debe* contar con un destacado visual perceptible (borde o acento de advertencia) para facilitar el escaneo visual rápido en el tablero colegiado.
 
+7. **Event-driven (Urgencia en Origen — revisión del PO en PR #50):**
+   CUANDO una autoridad habilitada abra una causa o complete la Solicitud T01,
+   el sistema *debe* permitir seleccionar `Baja`, `Normal` o `Urgente` antes de crear el expediente, con `Normal` por defecto. Los tres niveles se presentan simultáneamente como opciones de selección única con casillas y los colores semánticos del Kanban (Baja verde, Normal azul, Urgente rojo), sin desplegable. La urgencia seleccionada debe conservarse al guardar, actualizar y retomar un borrador T01, incluirse en su versión emitida y heredarse al expediente formal. Si se omite en una solicitud compatible anterior, el valor debe ser `normal`. Una solicitud emitida conserva su inmutabilidad.
+
+8. **Event-driven (Tarjeta Kanban Simplificada — revisión del PO en PR #50):**
+   CUANDO se renderice una tarjeta en cualquiera de las seis columnas del Kanban,
+   el sistema *debe* mostrar exclusivamente el número de expediente en formato `NNN/YYYY` sin quiebres, un badge compacto de urgencia, puntos con signo alineados en la cabecera, el título o motivo como contenido principal y la fecha de creación `DD/MM/YYYY` en el pie. Subcomisión, número de socio, contadores de involucrados, temporizadores y acciones de etapa quedan fuera de la tarjeta; el detalle sigue disponible mediante clic o teclado.
+
 ---
 
 ## Criterios de Aceptación (DoD)
@@ -56,3 +64,7 @@ Permitir que el Tribunal de Disciplina (TD) y las autoridades clasifiquen y visu
 - [x] **CA4 (Indicadores Visuales en Kanban y Tabla):** Badges semánticos según tokens de `DESIGN.md` renderizados en las tarjetas del Kanban y en la grilla tabular con ordenamiento por columna.
 - [x] **CA5 (Modal de Detalle y Edición TD):** El modal de detalle del expediente exhibe la urgencia y permite a los integrantes del TD actualizarla directamente con feedback visual inmediato.
 - [x] **CA6 (Tests Automatizados en Verde):** Tests unitarios y de integración de backend (`pytest`) y tests unitarios de frontend (`Karma`) pasando al 100% con 0 errores.
+- [x] **CA7 (Urgencia en Origen):** El formulario compartido Crear Expediente / Solicitud T01 ofrece los tres niveles, conserva la selección durante todo el ciclo de borrador y la hereda al expediente emitido. La apertura directa por API también conserva la urgencia y rechaza valores inválidos.
+- [x] **CA8 (Kanban Limpio):** Cada tarjeta muestra solo los cinco datos requeridos, mantiene el ID en una línea y presenta fecha de creación en todos los estados; se comprueba legibilidad en escritorio y móvil.
+
+- [x] **CA9 (Selección Visual de Urgencia):** Crear Expediente / T01 muestra las tres opciones coloreadas con casillas, permite seleccionar exactamente un nivel por clic o teclado, conserva Normal por defecto y bloquea cambios durante la carga o cuando la solicitud está emitida.

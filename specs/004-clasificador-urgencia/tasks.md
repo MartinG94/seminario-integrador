@@ -25,7 +25,7 @@ Tareas atómicas estimadas en `<30 minutos` bajo metodología SDD y TDD.
 - [x] **TS3-07.5 Indicadores Visuales y Filtro en Tablero Kanban y Tabla (Frontend):**  
   En `gestionar-expedientes`:  
   - Agregar selector de filtro por urgencia en la barra de herramientas.  
-  - Renderizar badge semántico con icono en las tarjetas Kanban y destacar tarjetas con urgencia "Urgente".  
+  - Renderizar badge semántico compacto (icono opcional) en las tarjetas Kanban y destacar tarjetas con urgencia "Urgente".
   - Incorporar columna "Urgencia" con ordenamiento en la tabla explorer.  
   - Incorporar selector de urgencia en el modal de detalle para integrantes del TD.  
   *Hecho cuando:* Pruebas unitarias de `gestionar-expedientes.component.spec.ts` validan ordenamiento, filtrado y renderizado de badges.
@@ -33,3 +33,11 @@ Tareas atómicas estimadas en `<30 minutos` bajo metodología SDD y TDD.
 - [x] **TS3-07.6 Verificación Integral, Cobertura y Consistencia con PO:**  
   Ejecutar suite completa de backend (`pytest`) y frontend (`Karma`). Validar consistencia con `notasPO.md` (07/10/2026), `DESIGN.md` y verificar ejecución en local.
 
+## Corrección de Observaciones del PO — PR #50
+
+- [x] **TS3-07.7 Urgencia en origen (TDD):** Selector en Crear Expediente / Solicitud T01, DTOs tipados, preservación al guardar/retomar/resetear, herencia y snapshot de emisión; regresiones de apertura directa y validación API. Verificado: 57 pruebas backend y 30 del formulario Angular en verde.
+- [x] **TS3-07.8 Tarjeta Kanban simplificada (TDD):** Solo ID, urgencia, puntos, título/motivo y fecha; ID sin quiebres, badges compactos y tokens canónicos, conservando acceso al detalle. Verificado: 18 pruebas del componente Angular en verde, incluidas las seis etapas y acceso por teclado.
+- [x] **TS3-07.9 Verificación y UAT:** 490 pruebas backend/MySQL y 151 frontend/Karma en verde (0 errores), compilación de producción correcta, Ruff y migraciones verificados, notas del PO y Seguimiento preservados, auditoría full stack independiente sin hallazgos pendientes. UAT funcional y visual comprobada en escritorio y móvil (375 px); aplicación activa en http://localhost:4201. El lint frontend no se puede ejecutar por la configuración TSLint heredada del proyecto.
+
+
+- [x] **TS3-07.10 Selección visual de urgencia (TDD):** Tres casillas coloreadas de selección única, Normal por defecto y bloqueo durante carga/emisión. 32 pruebas del formulario y 153 de la suite Angular en verde (0 errores), build correcto y auditoría independiente sin hallazgos bloqueantes. Verificación real de guardado, reanudación y emisión; Tab, flechas, Espacio, foco visible y reflow a 320/375 px sin desborde del control. Localhost:4201 activo para UAT. UAT aprobada por el usuario el 10/10/2026.

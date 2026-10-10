@@ -149,8 +149,18 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS3-07.2 Serialización y Filtro por Urgencia en API REST (Backend TDD):** Inclusión de `urgencia` y `urgencia_display` en `BoardExpedienteSerializer` y `ExpedienteListSerializer`. Filtro por urgencia en `ExpedienteFilter`.
 - [x] **TS3-07.3 Endpoint PATCH de Actualización de Urgencia (Backend TDD):** `PATCH /api/v1/expedientes/<id>/` con `UpdateUrgenciaExpedienteSerializer` y permiso `IsTribunalOrDirectiva`.
 - [x] **TS3-07.4 DTOs, Mapeo y Servicio en Frontend (Angular TDD):** Tipado `NivelUrgencia`, mapeo en `TribunalDataService` y método `actualizarUrgencia()`.
-- [x] **TS3-07.5 Indicadores Visuales y Filtro en Tablero Kanban y Tabla (Frontend):** Filtro de urgencia en toolbar, badge semántico con icono, resaltado de borde rojo en tarjetas urgentes (`.kanban-card-urgente`), columna en tabla explorer y selector de urgencia en modal de detalle.
+- [x] **TS3-07.5 Indicadores Visuales y Filtro en Tablero Kanban y Tabla (Frontend):** Filtro de urgencia en toolbar, badge semántico compacto (icono opcional en Kanban), resaltado de borde rojo en tarjetas urgentes (`.kanban-card-urgente`), columna en tabla explorer y selector de urgencia en modal de detalle.
 - [x] **TS3-07.6 Verificación Integral, Cobertura y Consistencia con PO:** 9 tests unitarios e integrales backend en verde, 13 tests frontend en Karma pasando en verde y compilación de producción exitosa.
+
+---
+
+### Observaciones del PO en PR #50 — S3-07 / SCRUM-78
+
+- [x] **TS3-07.7 Urgencia en origen:** Selector Crear Expediente / T01, persistencia de borrador, herencia al expediente y snapshot inmutable de emisión con pruebas. 57 pruebas backend y 30 del formulario Angular en verde.
+- [x] **TS3-07.8 Tarjeta Kanban simplificada:** Únicamente ID sin quiebres, urgencia compacta, puntos, título/motivo y fecha institucional con pruebas de renderizado. 18 pruebas del componente Angular en verde.
+- [x] **TS3-07.9 Verificación y UAT:** 490 pruebas backend/MySQL y 151 frontend/Karma en verde (0 errores), build de producción correcto, Ruff y migraciones verificados, consistencia con PO y auditoría full stack sin hallazgos pendientes. UAT funcional/visual en escritorio y móvil (375 px), con http://localhost:4201 activo. Lint frontend bloqueado por la configuración TSLint heredada.
+
+- [x] **TS3-07.10 Selección visual de urgencia (TDD):** Casillas Baja/Normal/Urgente con tokens verde/azul/rojo, selección única y estados bloqueados. 32 pruebas del formulario y 153 frontend en verde (0 errores), build correcto y auditoría sin bloqueantes. Guardado/reanudación/emisión, teclado y controles a 320/375 px verificados en localhost:4201. UAT aprobada por el usuario el 10/10/2026.
 
 ---
 
