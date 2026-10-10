@@ -1,54 +1,41 @@
-# Spec 004 — Configurar calendario institucional de días hábiles (SCRUM-45 / S3-01)
+# Spec 004 — Calendario institucional de días hábiles (SCRUM-45 / S3-01)
 
-## Contexto y objetivo
-Permitir que la administración y autoridades institucionales de AVEIT (Comisión Directiva, Tribunal de Disciplina y Administrador de Cómputos) configuren y gestionen el calendario institucional de días hábiles, feriados nacionales y excepciones procesales. Esto garantiza que el cómputo de plazos perentorios (como los 5 días hábiles previstos en el Art. 12 Inc. 2 del Reglamento Procesal 2026 para la presentación de descargos T02/T03) sea completamente reproducible, determinista, inmutable en el tiempo y auditado.
+## Contexto y alcance
 
-Referencia Jira: [SCRUM-45](https://guillenmartin94.atlassian.net/browse/SCRUM-45) (Épica [SCRUM-30](https://guillenmartin94.atlassian.net/browse/SCRUM-30) EP-03: Descargos y Plazos Preclusivos).
+Mantener un único calendario institucional de días inhábiles para calcular los plazos procesales de AVEIT. El alta de un feriado impacta directamente en los cálculos nuevos; los vencimientos ya persistidos se conservan.
 
----
+La [revisión del PO del PR #49](https://github.com/MartinG94/seminario-integrador/pull/49#pullrequestreview-5477670411), autorizada para implementación, reemplaza los requisitos anteriores de versiones operativas, tipificación y condición laborable. Referencia: [SCRUM-45](https://guillenmartin94.atlassian.net/browse/SCRUM-45), épica SCRUM-30.
 
-## Historia de Usuario
-**Como** administrador autorizado (ADMIN, CD, TD),  
-**quiero** mantener los feriados y excepciones del calendario institucional,  
-**para que** los plazos procesales sean reproducibles, justos y formalmente auditables.
+## Historia de usuario
 
----
+**Como** autoridad habilitada (ADMIN, CD o TD), **quiero** registrar feriados institucionales con fecha, denominación y auditoría, **para que** los plazos se calculen con los días inhábiles vigentes.
 
-## Criterios de Aceptación (EARS)
+**Como** usuario autenticado, **quiero** consultar el calendario y simular un plazo, **para que** pueda conocer los días computados y el vencimiento.
 
-- **CA1 (Exclusión de fines de semana y feriados):**
-  - Al contabilizar días hábiles para el cómputo de plazos, el sistema excluye automáticamente los sábados (weekday 5) y domingos (weekday 6).
-  - Asimismo, se excluyen todas las fechas declaradas como feriados nacionales, asuetos institucionales o días inhábiles en la versión aplicable del calendario.
+## Criterios de aceptación (EARS)
 
-- **CA2 (Vigencia, Versión y Auditoría):**
-  - Cada configuración de calendario posee un identificador de versión secuencial (`version`), rango de vigencia (`vigencia_desde`, `vigencia_hasta`), indicador de versión activa (`activa`), motivo auditado del cambio (`motivo_cambio`), autor (`creado_por`) y estampas temporales (`created_at`, `updated_at`).
-  - Cada feriado o excepción asociada posee fecha (`fecha`), denominación (`descripcion`), tipo (`tipo`: NACIONAL, PROVINCIAL, INSTITUCIONAL, EXCEPCION) y estado laborable/inhábil (`es_laborable`).
-  - Las versiones publicadas y aplicadas a plazos en curso no pueden modificarse destructivamente ni eliminarse. Todo nuevo ajuste crea una nueva versión de calendario con su correspondiente justificación de auditoría.
+- **CA1 — Calendario único:** Cuando se calcula un plazo nuevo o una simulación, el sistema excluye sábados, domingos y los feriados del calendario institucional único. Cuando se registra un feriado, el sistema lo aplica inmediatamente a los cálculos siguientes y actualiza una simulación visible o pendiente.
+- **CA2 — Auditoría:** Cuando se registra un feriado, el servidor persiste su fecha única, denominación, usuario creador e instante exacto de creación. El cliente no puede asignar la autoría ni el timestamp. La tabla muestra quién lo creó y la fecha/hora con segundos.
+- **CA3 — Vencimientos persistidos:** Cuando ya existe un vencimiento guardado, el sistema conserva su fecha/hora de inicio y límite aunque cambie el calendario. Las referencias históricas de expedientes se preservan como evidencia.
+- **CA4 — Zona institucional:** Cuando el sistema interpreta fechas y horas, usa `America/Argentina/Buenos_Aires`. El cálculo conserva la hora, minutos y segundos del inicio. La fecha de un feriado se exhibe como día de calendario independientemente de la zona del navegador.
+- **CA5 — Acceso:** Cuando cualquier usuario autenticado consulta el calendario o simula un plazo, el sistema permite la lectura, también con calendario vacío y sin versiones inicializadas. Cuando se intenta registrar un feriado, solo ADMIN, CD y TD tienen autorización en servidor. Los usuarios anónimos no pueden consultar.
+- **CA6 — Interfaz:** La tabla muestra Fecha, Denominación, Creado por y Creado el. Fecha permite alternar ascendente/descendente. Los únicos filtros son Año y Mes. El botón de alta dice Crear Feriado. No hay selector de versiones, búsqueda textual, tipo ni condición. La vista contempla carga, vacío, error y reintento; consume los tokens de `DESIGN.md`, es responsive y accesible.
+- **CA7 — Validaciones:** Cuando se registra un feriado, su fecha debe ser mayor o igual a hoy en la zona institucional y su denominación debe estar completa. El servidor rechaza fechas pasadas o duplicadas; la interfaz aplica las mismas restricciones. Ante dos altas concurrentes de la misma fecha, el sistema informa el conflicto sin error 500.
 
-- **CA3 (Inmutabilidad y Reproducibilidad de Plazos Iniciados):**
-  - Al iniciarse el plazo perentorio de descargo de un expediente (`iniciar_plazo_descargo`), se asocia de forma persistente e inmutable la versión del calendario institucional vigente (`calendario_version_id`).
-  - Si con posterioridad se crea una nueva versión del calendario (por ejemplo, por decreto de un nuevo feriado o asueto imprevisto), los expedientes cuyo plazo ya fue iniciado conservan su versión asignada y su fecha/hora límite original (`plazo_limite_at`) sin recálculos que alteren la seguridad jurídica del socio imputado.
+## Migración y datos existentes
 
-- **CA4 (Zona Horaria Oficial America/Argentina/Buenos_Aires):**
-  - Todas las operaciones de fecha y hora, almacenamiento y cálculo de vencimientos deben ejecutarse de manera estricta bajo la zona horaria `America/Argentina/Buenos_Aires` (UTC-3).
-  - La hora, minuto y segundo de la notificación o evento de despacho (`plazo_inicio_at`) se preservan exactamente en la fecha calculada de vencimiento (`plazo_limite_at`).
+El calendario único importa los días inhábiles del último calendario activo. Los modelos y referencias anteriores se conservan únicamente como evidencia histórica, sin endpoints de publicación o selección de versiones. La lectura nunca inicializa datos.
 
-- **CA5 (Control de Acceso RBAC en Servidor):**
-  - La creación y modificación de versiones y feriados institucionales está restringida a los roles autorizados: `ADMIN`, `CD` y `TD`. Los intentos por parte de roles no autorizados o socios ordinarios son denegados con HTTP 403 Forbidden y registrados en la auditoría de seguridad.
-  - La lectura de la versión activa de feriados y el cálculo estimativo de plazos son públicos para cualquier usuario autenticado en el sistema.
+La carga inicial reconocida se identifica como Sistema. Los registros previos que no guardaron autor por feriado se muestran como Autor no registrado (registro previo); no se atribuyen al creador de una versión.
 
-- **CA6 (Interfaz Web y Simulación Reactiva):**
-  - La SPA provee una interfaz accesible para visualizar los feriados vigentes, el histórico de versiones y agregar excepciones con justificación auditada.
-  - Se provee una herramienta interactiva para que las autoridades y socios puedan simular y verificar el cómputo de plazos hábiles ingresando una fecha de inicio y cantidad de días, visualizando los días hábiles intermedios y el instante exacto de vencimiento.
-  - El diseño cumple estrictamente con los tokens de `DESIGN.md` (Material Dashboard PRO), tipografía, contrastes WCAG 2.2 AA y disposición Mobile-First.
+El usuario autorizó corregir la carga oficial de 2026: Güemes al 15/06 y Soberanía al 23/11. La corrección afecta solamente los pares fecha/denominación reconocidos de la carga inicial de la versión 1; no reclasifica registros institucionales posteriores. Fuente: [Cancillería — feriados 2026](https://clond.cancilleria.gob.ar/es/node/1986).
 
----
+## Finalización
 
-## Criterios de Finalización (DoD)
-1. Modelos ORM de versiones de calendario y feriados/excepciones con restricciones de unicidad e integridad referencial.
-2. Migración de base de datos con seeder inicial de los feriados oficiales de Argentina 2026 para la versión 1 activa.
-3. Vinculación del modelo `Expediente` con la versión del calendario aplicada (`calendario_version`) en `iniciar_plazo_descargo`.
-4. Endpoints REST completos con permisos RBAC en servidor y tests de cobertura > 80%.
-5. Interfaz de usuario en Angular integrada en la navegación con simulación reactiva de plazos.
-6. Suite completa de tests backend (`pytest`) y frontend (`npm test`) pasando en verde.
-7. Verificación de consistencia estricta con `docs/gestion-proyecto/notasPO.md`.
+1. Modelo operativo con fecha única, auditoría protegida y migración que conserva evidencia y timestamps anteriores.
+2. API autenticada, creación por roles habilitados, validación retroactiva y conflictos controlados.
+3. Simulación y apertura de plazos mediante el mismo proveedor de feriados persistidos.
+4. Interfaz simplificada con autoría y timestamp, filtros Año/Mes y orden de Fecha.
+5. Regresión backend y frontend, compilación, chequeo de migraciones y linters disponibles; registrar cualquier limitación preexistente con su evidencia.
+6. Revisión independiente y contraste final con `docs/gestion-proyecto/notasPO.md`, sin modificar ese documento.
+7. Entorno localhost disponible y guía UAT para la validación del usuario.
