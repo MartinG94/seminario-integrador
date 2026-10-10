@@ -48,12 +48,12 @@ class Argentina2026HolidayProvider(HolidayProviderPort):
             date(2026, 4, 3),
             date(2026, 5, 1),
             date(2026, 5, 25),
-            date(2026, 6, 17),
+            date(2026, 6, 15),
             date(2026, 6, 20),
             date(2026, 7, 9),
             date(2026, 8, 17),
             date(2026, 10, 12),
-            date(2026, 11, 20),
+            date(2026, 11, 23),
             date(2026, 12, 8),
             date(2026, 12, 25),
         }
@@ -69,29 +69,18 @@ class Argentina2026HolidayProvider(HolidayProviderPort):
 
 
 class DbHolidayProvider(HolidayProviderPort):
-    """Proveedor que consulta feriados y excepciones desde la base de datos para una versión."""
+    """Proveedor de los feriados del calendario institucional único."""
 
     def __init__(
         self,
-        version=None,
         holidays: set[date] | None = None,
     ) -> None:
         if holidays is not None:
             self._holidays = holidays
-        elif version is not None:
-            self._holidays = set(
-                version.feriados.filter(es_laborable=False).values_list("fecha", flat=True)
-            )
         else:
-            from expedientes.models import CalendarioVersion
+            from expedientes.models import Holiday
 
-            activa = CalendarioVersion.objects.filter(activa=True).order_by("-version").first()
-            if activa:
-                self._holidays = set(
-                    activa.feriados.filter(es_laborable=False).values_list("fecha", flat=True)
-                )
-            else:
-                self._holidays = set(Argentina2026HolidayProvider.OFFICIAL_2026_HOLIDAYS)
+            self._holidays = set(Holiday.objects.values_list("date", flat=True))
 
     def is_holiday(self, target_date: date) -> bool:
         return target_date in self._holidays

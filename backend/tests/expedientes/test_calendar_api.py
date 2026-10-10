@@ -7,6 +7,7 @@ Cubre:
 - CA5: Control de acceso RBAC estricto en servidor (403 para socios ordinarios).
 """
 
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -14,10 +15,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from expedientes.models import (
-    CalendarioVersion,
-    TipoFeriadoEnum,
-)
+from expedientes.models import Holiday
 from socios.models import Role, Socio, Subcomision
 
 User = get_user_model()
@@ -115,141 +113,83 @@ def client_cd(cd_user):
 
 @pytest.mark.django_db
 class TestCalendarioApi:
-    def test_list_versiones_authenticated(self, client_socio):
-        """Cualquier usuario autenticado puede consultar las versiones de calendario."""
-        response = client_socio.get("/api/v1/expedientes/calendario/versiones/")
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 1  # Versión 1 sembrada por migración
-
-    def test_create_version_forbidden_for_socio(self, client_socio):
-        """CA5: Un socio ordinario no puede crear una nueva versión de calendario (403)."""
-        payload = {
-            "nombre": "Nueva versión no autorizada",
-            "vigencia_desde": "2026-11-01",
-            "motivo_cambio": "Intento no autorizado",
-        }
-        response = client_socio.post(
-            "/api/v1/expedientes/calendario/versiones/", payload, format="json"
-        )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_create_version_allowed_for_admin_and_cd(self, client_authenticated, admin_user):
-        """CA2/CA5: Administrador puede crear una nueva versión auditada de calendario."""
-        payload = {
-            "nombre": "Calendario AVEIT 2026 - Modificación Primavera",
-            "vigencia_desde": "2026-09-21",
-            "motivo_cambio": "Incorporación de asueto institucional por Día del Estudiante.",
-            "activa": True,
-            "clonar_de_version_id": 1,
-            "feriados": [
-                {
-                    "fecha": "2026-09-21",
-                    "descripcion": "Día del Estudiante / Asueto AVEIT",
-                    "tipo": TipoFeriadoEnum.INSTITUCIONAL,
-                    "es_laborable": False,
-                }
-            ],
-        }
-        response = client_authenticated.post(
-            "/api/v1/expedientes/calendario/versiones/", payload, format="json"
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert data["version"] == 2
-        assert data["nombre"] == payload["nombre"]
-        assert data["activa"] is True
-        assert data["feriados_count"] == 17  # 16 clonados + 1 nuevo
-
-        # Verificar que la versión 1 fue desactivada
-        v1 = CalendarioVersion.objects.get(version=1)
-        assert v1.activa is False
-
-    def test_get_version_detail_with_feriados(self, client_socio):
-        """Detalle de versión incluye el listado completo de feriados."""
-        response = client_socio.get("/api/v1/expedientes/calendario/versiones/1/")
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["version"] == 1
-        assert "feriados" in data
-        assert len(data["feriados"]) >= 16
-
-    def test_list_feriados_activos(self, client_socio):
-        """Listar feriados de la versión activa."""
+    def test_list_institutional_holidays(self, client_socio):
         response = client_socio.get("/api/v1/expedientes/calendario/feriados/")
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 16
+        assert len(response.data) == 16
+        assert all(item["creado_por_nombre"] == "Sistema (carga inicial)" for item in response.data)
+
+    def test_empty_calendar_is_readable_without_implicit_seed(self, client_socio):
+        Holiday.objects.all().delete()
+        response = client_socio.get("/api/v1/expedientes/calendario/feriados/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == []
+        assert not Holiday.objects.exists()
+        result = client_socio.post(
+            "/api/v1/expedientes/calendario/calcular-plazo/",
+            {"start_at": "2026-10-09T10:00:00-03:00", "business_days": 1},
+            format="json",
+        )
+        assert result.status_code == 200
+        assert result.data["deadline"] == "2026-10-12T10:00:00-03:00"
+
+    @pytest.mark.parametrize(
+        "params", [{"month": 0}, {"month": 13}, {"year": "invalid"}, {"ordering": "id"}]
+    )
+    def test_invalid_filters_return_400(self, client_socio, params):
+        response = client_socio.get("/api/v1/expedientes/calendario/feriados/", params)
+        assert response.status_code == 400
 
     def test_calcular_plazo_endpoint(self, client_socio):
-        """CA1/CA4: Endpoint de cálculo de plazo devuelve fecha límite y desglose de exclusiones."""
-        payload = {
-            "start_at": "2026-10-08T10:00:00-03:00",
-            "business_days": 5,
-        }
         response = client_socio.post(
-            "/api/v1/expedientes/calendario/calcular-plazo/", payload, format="json"
+            "/api/v1/expedientes/calendario/calcular-plazo/",
+            {"start_at": "2026-10-08T10:00:45-03:00", "business_days": 5},
+            format="json",
         )
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "deadline" in data
-        assert "dias_excluidos" in data
-        assert "dias_habiles_computados" in data
-        assert len(data["dias_habiles_computados"]) == 5
+        assert response.data["deadline"] == "2026-10-16T10:00:45-03:00"
+        assert len(response.data["dias_habiles_computados"]) == 5
+        assert [day["date"] for day in response.data["dias_excluidos"]] == [
+            "2026-10-10",
+            "2026-10-11",
+            "2026-10-12",
+        ]
 
-        # 08/10 (Jueves) + 5 días hábiles considerando 10/10 (Sáb), 11/10 (Dom) y 12/10 (Feriado)
-        # -> Vence Viernes 16/10 a las 10:00 hs
-        assert "2026-10-16T10:00:00" in data["deadline"]
-
-        # Comprobar que en días excluidos figuran sábado, domingo y el feriado del 12/10
-        excluded_dates = [d["date"] for d in data["dias_excluidos"]]
-        assert "2026-10-10" in excluded_dates
-        assert "2026-10-11" in excluded_dates
-        assert "2026-10-12" in excluded_dates
-
-    def test_add_feriado_as_admin_success(self, client_authenticated):
-        """ADMIN puede registrar un nuevo feriado o excepción en la versión activa."""
-        payload = {
-            "fecha": "2026-11-09",
-            "descripcion": "Feriado Visita del Papa",
-            "tipo": "NACIONAL",
-            "es_laborable": False,
-        }
-        response = client_authenticated.post(
-            "/api/v1/expedientes/calendario/feriados/", payload, format="json"
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert data["fecha"] == "2026-11-09"
-        assert data["descripcion"] == "Feriado Visita del Papa"
-        assert data["tipo"] == "NACIONAL"
-        assert data["es_laborable"] is False
-
-    def test_add_feriado_duplicate_rejected(self, client_authenticated):
-        """No se permite duplicar una fecha de feriado en la misma versión (400)."""
-        payload = {
-            "fecha": "2026-01-01",  # Ya existe en versión 1
-            "descripcion": "Año Nuevo duplicado",
-            "tipo": "NACIONAL",
-            "es_laborable": False,
-        }
-        response = client_authenticated.post(
-            "/api/v1/expedientes/calendario/feriados/", payload, format="json"
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "fecha" in response.json()
-
-    def test_add_feriado_forbidden_for_socio(self, client_socio):
-        """Un socio ordinario no puede agregar feriados ni excepciones (403)."""
-        payload = {
-            "fecha": "2026-11-10",
-            "descripcion": "Feriado no autorizado",
-            "tipo": "ASUETO",
-            "es_laborable": False,
-        }
+    def test_simulation_normalizes_utc_to_institutional_day(self, client_socio):
         response = client_socio.post(
-            "/api/v1/expedientes/calendario/feriados/", payload, format="json"
+            "/api/v1/expedientes/calendario/calcular-plazo/",
+            {"start_at": "2026-10-13T01:30:00Z", "business_days": 1},
+            format="json",
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == 200
+        assert response.data["start_at"] == "2026-10-12T22:30:00-03:00"
+        assert response.data["deadline"] == "2026-10-13T22:30:00-03:00"
+
+    def test_authenticated_user_without_socio_can_read(self):
+        user = User.objects.create_user(username="authenticated_without_socio")
+        client = APIClient()
+        client.force_authenticate(user)
+        assert client.get("/api/v1/expedientes/calendario/feriados/").status_code == 200
+
+    def test_duplicate_insert_after_validation_is_controlled(
+        self, client_authenticated, admin_user
+    ):
+        from datetime import date
+        from unittest.mock import patch
+
+        Holiday.objects.create(date=date(2026, 10, 13), description="Asueto", created_by=admin_user)
+        # Representa una fecha ocupada después del chequeo de unicidad del serializer.
+        with (
+            patch("rest_framework.validators.UniqueValidator.__call__"),
+            patch(
+                "django.utils.timezone.now", return_value=datetime(2026, 10, 10, 12, tzinfo=TZ_BA)
+            ),
+        ):
+            response = client_authenticated.post(
+                "/api/v1/expedientes/calendario/feriados/",
+                {"fecha": "2026-10-13", "descripcion": "Alta concurrente"},
+                format="json",
+            )
+        assert response.status_code == 400
+        assert "fecha" in response.data
+        assert Holiday.objects.filter(date=date(2026, 10, 13)).count() == 1

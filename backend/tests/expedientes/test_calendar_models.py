@@ -20,6 +20,7 @@ from expedientes.models import (
     EstadoExpedienteEnum,
     Expediente,
     FeriadoExcepcion,
+    Holiday,
     TipoFeriadoEnum,
 )
 from socios.models import Role, Socio, Subcomision
@@ -143,29 +144,29 @@ class TestCalendarioVersionModel:
 @pytest.mark.django_db
 class TestDbHolidayProvider:
     def test_is_holiday_detects_configured_date(self, calendario_v1):
-        provider = DbHolidayProvider(version=calendario_v1)
+        provider = DbHolidayProvider()
         assert provider.is_holiday(date(2026, 10, 12)) is True
         assert provider.is_holiday(date(2026, 10, 13)) is False
 
 
 @pytest.mark.django_db
 class TestExpedienteCalendarVersionImmutability:
-    def test_iniciar_plazo_freezes_calendar_version(
+    def test_existing_historical_reference_and_deadline_are_preserved(
         self, db, socio_imputado, calendario_v1, admin_user
     ):
-        """CA3: Al iniciar un plazo, se congela la versión aplicada de forma inmutable."""
+        """CA3: Los expedientes previos conservan evidencia y límite ya persistidos."""
         exp = Expediente.objects.create(
             numero="EXP-001/2026",
             socio=socio_imputado,
             motivo="Inasistencia a jornada",
             estado=EstadoExpedienteEnum.CREADO,
+            calendario_version=calendario_v1,
         )
 
         start_time = datetime(2026, 10, 8, 14, 30, tzinfo=TZ_BA)
         deadline = exp.iniciar_plazo_descargo(
             fecha_hora_inicio=start_time,
             dias_habiles=5,
-            calendario_version=calendario_v1,
         )
 
         exp.refresh_from_db()
@@ -202,8 +203,8 @@ class TestExpedienteCalendarVersionImmutability:
         assert exp.calendario_version == calendario_v1
         assert exp.plazo_limite_at == datetime(2026, 10, 16, 14, 30, tzinfo=TZ_BA)
 
-    def test_iniciar_plazo_default_uses_active_version(self, db, socio_imputado, calendario_v1):
-        """Si no se pasa versión explícita, se toma la versión activa de la BD."""
+    def test_new_deadline_uses_unified_calendar(self, db, socio_imputado, calendario_v1):
+        """Los plazos nuevos usan el calendario único, sin versión operativa."""
         exp = Expediente.objects.create(
             numero="EXP-002/2026",
             socio=socio_imputado,
@@ -216,7 +217,61 @@ class TestExpedienteCalendarVersionImmutability:
             dias_habiles=5,
         )
         exp.refresh_from_db()
-        assert exp.calendario_version == calendario_v1
+        assert exp.calendario_version is None
         assert exp.plazo_limite_at == deadline
         assert deadline.tzinfo == TZ_BA
         assert deadline.time() == start_time.time()
+
+    def test_new_holiday_changes_future_deadlines_and_transition_only(
+        self, socio_imputado, admin_user
+    ):
+        from expedientes.services.workflow_service import ExpedienteWorkflowService
+
+        start = datetime(2026, 10, 8, 14, 30, 45, tzinfo=TZ_BA)
+        previous = Expediente.objects.create(
+            numero="CAL-PREV/2026", socio=socio_imputado, motivo="Causa previa"
+        )
+        previous_deadline = previous.iniciar_plazo_descargo(start)
+        Holiday.objects.create(date=date(2026, 10, 13), description="Asueto", created_by=admin_user)
+        previous.refresh_from_db()
+        assert previous.plazo_limite_at == previous_deadline
+        assert previous.iniciar_plazo_descargo(start) == previous_deadline
+
+        future = Expediente.objects.create(
+            numero="CAL-NEXT/2026", socio=socio_imputado, motivo="Causa siguiente"
+        )
+        assert future.iniciar_plazo_descargo(start) == datetime(
+            2026, 10, 19, 14, 30, 45, tzinfo=TZ_BA
+        )
+        transition_case = Expediente.objects.create(
+            numero="CAL-TRANS/2026", socio=socio_imputado, motivo="Transición directa"
+        )
+        transitioned = ExpedienteWorkflowService.transition(
+            expediente_id=transition_case.pk,
+            estado_nuevo=EstadoExpedienteEnum.JUSTIFICANDO,
+            actor="tribunal",
+            motivo="Notificación de apertura",
+            ahora=start,
+        )
+        assert transitioned.plazo_limite_at == future.plazo_limite_at
+
+
+@pytest.mark.django_db
+class TestInstitutionalHoliday:
+    def test_unique_date_is_enforced_by_database(self, admin_user):
+        Holiday.objects.create(date=date(2026, 10, 13), description="Asueto", created_by=admin_user)
+        with pytest.raises(IntegrityError):
+            Holiday.objects.create(
+                date=date(2026, 10, 13), description="Duplicado", created_by=admin_user
+            )
+
+    def test_user_created_record_requires_author(self):
+        with pytest.raises(IntegrityError):
+            Holiday.objects.create(date=date(2026, 10, 13), description="Sin autor")
+
+    def test_seed_dates_are_official_transferred_dates(self):
+        provider = DbHolidayProvider()
+        assert provider.is_holiday(date(2026, 6, 15))
+        assert not provider.is_holiday(date(2026, 6, 17))
+        assert provider.is_holiday(date(2026, 11, 23))
+        assert not provider.is_holiday(date(2026, 11, 20))

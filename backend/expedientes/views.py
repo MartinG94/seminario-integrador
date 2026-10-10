@@ -1,9 +1,9 @@
 """Vistas API REST para expedientes y descargos reglamentarios."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -15,17 +15,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from expedientes.domain.calendar import compute_business_deadline
 from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.filters import ExpedienteFilter
 from expedientes.models import (
-    CalendarioVersion,
     CambioEstadoExpediente,
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
-    FeriadoExcepcion,
+    Holiday,
     SolicitudT01,
-    TipoFeriadoEnum,
 )
 from expedientes.permissions import (
     CanCreateT01,
@@ -38,14 +37,12 @@ from expedientes.permissions import (
 from expedientes.serializers import (
     AperturaExpedienteSerializer,
     CalcularPlazoSerializer,
-    CalendarioVersionDetailSerializer,
-    CalendarioVersionSerializer,
+    CalendarQuerySerializer,
     CaseNotificationAuditSerializer,
-    CreateCalendarioVersionSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     ExpedienteListSerializer,
-    FeriadoExcepcionSerializer,
+    HolidaySerializer,
     MisSolicitudesT01Serializer,
     PresentarDescargoSerializer,
     SolicitudT01Serializer,
@@ -555,151 +552,41 @@ class MisSolicitudesT01View(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class CalendarioVersionListView(APIView):
-    """Listado de versiones (autenticado) y creación de versión auditada (ADMIN, CD, TD)."""
-
-    def get_permissions(self):
-        if self.request.method == "POST":
-            return [permissions.IsAuthenticated(), CanManageCalendar()]
-        return [permissions.IsAuthenticated()]
-
-    def get(self, request: Request) -> Response:
-        versiones = CalendarioVersion.objects.all().order_by("-version")
-        serializer = CalendarioVersionSerializer(versiones, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @transaction.atomic
-    def post(self, request: Request) -> Response:
-        serializer = CreateCalendarioVersionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        next_version = (
-            CalendarioVersion.objects.aggregate(max_v=models.Max("version"))["max_v"] or 0
-        ) + 1
-
-        nueva_version = CalendarioVersion.objects.create(
-            version=next_version,
-            nombre=data["nombre"],
-            vigencia_desde=data["vigencia_desde"],
-            vigencia_hasta=data.get("vigencia_hasta"),
-            activa=data.get("activa", True),
-            motivo_cambio=data["motivo_cambio"],
-            creado_por=request.user,
-        )
-
-        if nueva_version.activa:
-            CalendarioVersion.objects.exclude(pk=nueva_version.pk).update(activa=False)
-
-        clonar_id = data.get("clonar_de_version_id")
-        if clonar_id:
-            origen = CalendarioVersion.objects.filter(
-                models.Q(pk=clonar_id) | models.Q(version=clonar_id)
-            ).first()
-            if origen:
-                for f in origen.feriados.all():
-                    FeriadoExcepcion.objects.create(
-                        calendario_version=nueva_version,
-                        fecha=f.fecha,
-                        descripcion=f.descripcion,
-                        tipo=f.tipo,
-                        es_laborable=f.es_laborable,
-                    )
-
-        for f_data in data.get("feriados", []):
-            FeriadoExcepcion.objects.update_or_create(
-                calendario_version=nueva_version,
-                fecha=f_data["fecha"],
-                defaults={
-                    "descripcion": f_data["descripcion"],
-                    "tipo": f_data.get("tipo", TipoFeriadoEnum.NACIONAL),
-                    "es_laborable": f_data.get("es_laborable", False),
-                },
-            )
-
-        return Response(
-            CalendarioVersionDetailSerializer(nueva_version).data,
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class CalendarioVersionDetailView(APIView):
-    """Detalle completo de una versión de calendario con su lista de feriados."""
-
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request: Request, pk: int) -> Response:
-        version = CalendarioVersion.objects.filter(models.Q(pk=pk) | models.Q(version=pk)).first()
-        if not version:
-            raise Http404("Versión de calendario no encontrada.")
-        serializer = CalendarioVersionDetailSerializer(version)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 class CalendarioFeriadosView(APIView):
-    """Consulta de feriados (versión activa o específica) y carga de excepciones."""
+    """Lectura autenticada y alta auditada en el único calendario institucional."""
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
             return [permissions.IsAuthenticated(), CanManageCalendar()]
         return [permissions.IsAuthenticated()]
 
     def get(self, request: Request) -> Response:
-        version_id = request.query_params.get("version_id")
-        if version_id:
-            version = CalendarioVersion.objects.filter(
-                models.Q(pk=version_id) | models.Q(version=version_id)
-            ).first()
-            if not version:
-                raise Http404("Versión no encontrada.")
-        else:
-            version = CalendarioVersion.objects.filter(activa=True).order_by("-version").first()
-
-        if not version:
-            return Response([], status=status.HTTP_200_OK)
-
-        qs = FeriadoExcepcion.objects.filter(calendario_version=version)
-        year = request.query_params.get("year")
-        if year and year.isdigit():
-            qs = qs.filter(fecha__year=int(year))
-
-        serializer = FeriadoExcepcionSerializer(qs.order_by("fecha"), many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        query = CalendarQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        filters = query.validated_data
+        holidays = Holiday.objects.select_related("created_by__socio")
+        if "year" in filters:
+            holidays = holidays.filter(date__year=filters["year"])
+        if "month" in filters:
+            holidays = holidays.filter(date__month=filters["month"])
+        order = "-date" if filters["ordering"] == "-fecha" else "date"
+        return Response(HolidaySerializer(holidays.order_by(order), many=True).data)
 
     def post(self, request: Request) -> Response:
-        version_id = request.data.get("version_id")
-        if version_id:
-            version = CalendarioVersion.objects.filter(
-                models.Q(pk=version_id) | models.Q(version=version_id)
-            ).first()
-            if not version:
-                raise Http404("Versión no encontrada.")
-        else:
-            version = CalendarioVersion.objects.filter(activa=True).order_by("-version").first()
-            if not version:
-                return Response(
-                    {"detail": "No existe una versión de calendario activa."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        serializer = FeriadoExcepcionSerializer(data=request.data)
+        serializer = HolidaySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        fecha = serializer.validated_data["fecha"]
-        if FeriadoExcepcion.objects.filter(calendario_version=version, fecha=fecha).exists():
-            return Response(
-                {
-                    "fecha": [
-                        f"Ya existe un feriado o excepción para la fecha {fecha} en esta versión."
-                    ]
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        feriado = serializer.save(calendario_version=version)
-        return Response(FeriadoExcepcionSerializer(feriado).data, status=status.HTTP_201_CREATED)
+        try:
+            with transaction.atomic():
+                holiday = serializer.save(created_by=request.user, created_at=timezone.now())
+        except IntegrityError:
+            if Holiday.objects.filter(date=serializer.validated_data["date"]).exists():
+                raise DRFValidationError({"fecha": ["Ya existe un feriado para esa fecha."]})
+            raise
+        return Response(HolidaySerializer(holiday).data, status=status.HTTP_201_CREATED)
 
 
 class CalcularPlazoView(APIView):
-    """Simulador y calculador de plazos perentorios en días hábiles (CA1, CA4)."""
+    """Simulación con el mismo calendario que los plazos de expedientes."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -708,72 +595,46 @@ class CalcularPlazoView(APIView):
         serializer.is_valid(raise_exception=True)
         start_at = serializer.validated_data["start_at"]
         business_days = serializer.validated_data["business_days"]
-        version_id = serializer.validated_data.get("version_id")
-
-        if version_id:
-            version = CalendarioVersion.objects.filter(
-                models.Q(pk=version_id) | models.Q(version=version_id)
-            ).first()
-        else:
-            version = CalendarioVersion.objects.filter(activa=True).order_by("-version").first()
-
-        provider = DbHolidayProvider(version=version)
-
-        current_date = start_at.date()
-        days_counted = 0
-        excluded_days = []
-        counted_days = []
-        weekday_names = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-
-        while days_counted < business_days:
-            current_date += timedelta(days=1)
-            wday = current_date.weekday()
-            wday_name = weekday_names[wday]
-
-            if wday >= 5:
-                reason = f"{wday_name} (Fin de semana)"
-                excluded_days.append({"date": current_date.isoformat(), "reason": reason})
-                continue
-
-            if provider.is_holiday(current_date):
-                feriado_obj = (
-                    version.feriados.filter(fecha=current_date).first() if version else None
-                )
-                desc = feriado_obj.descripcion if feriado_obj else "Feriado oficial"
-                tipo = feriado_obj.get_tipo_display() if feriado_obj else "Feriado"
-                excluded_days.append(
-                    {"date": current_date.isoformat(), "reason": f"{tipo}: {desc}"}
-                )
-                continue
-
-            days_counted += 1
-            counted_days.append(
-                {"day_number": days_counted, "date": current_date.isoformat(), "weekday": wday_name}
-            )
-
-        deadline = datetime.combine(
-            current_date,
-            start_at.time(),
-            tzinfo=start_at.tzinfo,
+        holidays = dict(Holiday.objects.values_list("date", "description"))
+        provider = DbHolidayProvider(holidays=set(holidays))
+        deadline = compute_business_deadline(
+            start_at=start_at, business_days=business_days, holiday_provider=provider
         )
-
+        current_date = start_at.date()
+        counted_days = []
+        excluded_days = []
+        weekday_names = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        while current_date < deadline.date():
+            current_date += timedelta(days=1)
+            weekday = current_date.weekday()
+            if weekday >= 5:
+                excluded_days.append(
+                    {
+                        "date": current_date.isoformat(),
+                        "reason": f"{weekday_names[weekday]} (Fin de semana)",
+                    }
+                )
+            elif provider.is_holiday(current_date):
+                excluded_days.append(
+                    {
+                        "date": current_date.isoformat(),
+                        "reason": f"Feriado: {holidays[current_date]}",
+                    }
+                )
+            else:
+                counted_days.append(
+                    {
+                        "day_number": len(counted_days) + 1,
+                        "date": current_date.isoformat(),
+                        "weekday": weekday_names[weekday],
+                    }
+                )
         return Response(
             {
                 "start_at": start_at.isoformat(),
                 "business_days": business_days,
                 "deadline": deadline.isoformat(),
-                "calendario_version": (
-                    {
-                        "id": version.id,
-                        "version": version.version,
-                        "nombre": version.nombre,
-                        "activa": version.activa,
-                    }
-                    if version
-                    else None
-                ),
                 "dias_habiles_computados": counted_days,
                 "dias_excluidos": excluded_days,
-            },
-            status=status.HTTP_200_OK,
+            }
         )

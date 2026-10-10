@@ -4,8 +4,6 @@ from expedientes.views import (
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
-    CalendarioVersionDetailView,
-    CalendarioVersionListView,
     CaseNotificationAuditView,
     DispatchCaseOpeningView,
     ExpedienteCollectionView,
@@ -24,12 +22,6 @@ from expedientes.views import (
 app_name = "expedientes"
 
 urlpatterns = [
-    path("calendario/versiones/", CalendarioVersionListView.as_view(), name="calendario-versiones"),
-    path(
-        "calendario/versiones/<int:pk>/",
-        CalendarioVersionDetailView.as_view(),
-        name="calendario-version-detail",
-    ),
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"

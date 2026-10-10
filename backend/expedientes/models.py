@@ -17,7 +17,7 @@ from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
-from expedientes.domain.holiday_provider import Argentina2026HolidayProvider, DbHolidayProvider
+from expedientes.domain.holiday_provider import DbHolidayProvider
 
 if TYPE_CHECKING:
     from expedientes.domain.ports import HolidayProviderPort
@@ -51,7 +51,7 @@ class TipoFeriadoEnum(models.TextChoices):
 
 
 class CalendarioVersion(models.Model):
-    """Versión auditable del calendario institucional de días hábiles (CA2/CA3)."""
+    """Evidencia histórica; no configura el calendario operativo."""
 
     version = models.PositiveIntegerField(unique=True, db_index=True)
     nombre = models.CharField(max_length=150)
@@ -82,7 +82,7 @@ class CalendarioVersion(models.Model):
 
 
 class FeriadoExcepcion(models.Model):
-    """Feriado, asueto o día inhábil dentro de una versión específica de calendario (CA1/CA2)."""
+    """Registro histórico de una versión anterior del calendario."""
 
     calendario_version = models.ForeignKey(
         CalendarioVersion,
@@ -117,6 +117,45 @@ class FeriadoExcepcion(models.Model):
 
     def __str__(self) -> str:
         return f"{self.fecha}: {self.descripcion} ({self.get_tipo_display()})"
+
+
+class Holiday(models.Model):
+    """Día inhábil del único calendario institucional operativo."""
+
+    class Origin(models.TextChoices):
+        USER = "USER", "Registro por usuario"
+        SYSTEM = "SYSTEM", "Carga inicial del sistema"
+        LEGACY = "LEGACY", "Registro previo sin autoría registrada"
+
+    date = models.DateField(unique=True)
+    description = models.CharField(max_length=200)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="institutional_holidays",
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    origin = models.CharField(max_length=10, choices=Origin.choices, default=Origin.USER)
+
+    class Meta:
+        db_table = "expedientes_institutional_holiday"
+        verbose_name = "Feriado institucional"
+        verbose_name_plural = "Feriados institucionales"
+        ordering = ["date"]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(origin="USER", created_by__isnull=False)
+                    | models.Q(origin__in=["SYSTEM", "LEGACY"], created_by__isnull=True)
+                ),
+                name="holiday_requires_creation_audit",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.date}: {self.description}"
 
 
 class ExpedienteNumberSequence(models.Model):
@@ -233,25 +272,16 @@ class Expediente(models.Model):
         fecha_hora_inicio: datetime,
         dias_habiles: int = 5,
         holiday_provider: "HolidayProviderPort | None" = None,
-        calendario_version: "CalendarioVersion | None" = None,
         actor: str = "SISTEMA",
     ) -> datetime:
         """
         Calcula y congela el plazo de 5 días hábiles a partir de fecha_hora_inicio.
-        Conserva inmutablemente la versión del calendario aplicada (CA3).
+        Usa el calendario único y conserva la fecha/hora límite persistida (CA3).
         Transiciona al estado JUSTIFICANDO registrando trazabilidad y auditoría.
         """
-        version = calendario_version
-        if version is None and holiday_provider is None:
-            version = CalendarioVersion.objects.filter(activa=True).order_by("-version").first()
-            if version is not None:
-                provider = DbHolidayProvider(version=version)
-            else:
-                provider = Argentina2026HolidayProvider()
-        elif holiday_provider is not None:
-            provider = holiday_provider
-        else:
-            provider = DbHolidayProvider(version=version)
+        if self.plazo_limite_at is not None:
+            return self.plazo_limite_at
+        provider = holiday_provider if holiday_provider is not None else DbHolidayProvider()
 
         limite = compute_business_deadline(
             start_at=fecha_hora_inicio,
@@ -259,12 +289,10 @@ class Expediente(models.Model):
             holiday_provider=provider,
         )
 
-        self.calendario_version = version
         self.plazo_inicio_at = fecha_hora_inicio
         self.plazo_limite_at = limite
         self.save(
             update_fields=[
-                "calendario_version",
                 "plazo_inicio_at",
                 "plazo_limite_at",
                 "updated_at",
