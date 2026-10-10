@@ -52,6 +52,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   estadoFiltro = new FormControl('');
   private destroy$ = new Subject<void>();
 
+  // Pestañas principales: 'nueva' (Formulario T01) vs 'creadas' (Mis Solicitudes)
+  tabActiva: 'nueva' | 'creadas' = 'nueva';
+
   escalasSancion = [
     { valor: -0.5, desc: '-0.5 pts: Falta Leve' },
     { valor: -1, desc: '-1.0 pts: Falta Media' },
@@ -207,9 +210,14 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     });
   }
 
+  setTab(tab: 'nueva' | 'creadas'): void {
+    this.tabActiva = tab;
+  }
+
   continuarEdicion(solicitud: SolicitudMonitoreo): void {
     if (solicitud.estado === 'ISSUED') return;
 
+    this.tabActiva = 'nueva';
     this.borradorId = solicitud.id;
     this.estado = solicitud.estado;
     this.numeroExpediente = solicitud.numero_expediente;

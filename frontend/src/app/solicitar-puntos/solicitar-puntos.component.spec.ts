@@ -297,6 +297,7 @@ describe('SolicitarPuntosComponent', () => {
     component.continuarEdicion(borrador);
 
     expect(component.borradorId).toBe('draft-1');
+    expect(component.tabActiva).toBe('nueva');
     expect(component.titulo).toBe('Borrador 1');
     expect(component.causal).toBe('Causal borrador');
     expect(component.tipoAccion).toBe('SANCTION');
@@ -309,6 +310,14 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.sociosSeleccionados[0].socio_id).toBe(7);
     expect(component.exitoMensaje).toContain('cargado en el formulario');
     expect(window.scrollTo).toHaveBeenCalled();
+  });
+
+  it('conmuta correctamente entre pestañas (nueva solicitud y solicitudes creadas)', () => {
+    expect(component.tabActiva).toBe('nueva');
+    component.setTab('creadas');
+    expect(component.tabActiva).toBe('creadas');
+    component.setTab('nueva');
+    expect(component.tabActiva).toBe('nueva');
   });
 
   it('no ejecuta continuarEdicion si la solicitud ya está en estado ISSUED', () => {

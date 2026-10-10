@@ -1,301 +1,471 @@
 <div class="main-content">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-10 ml-auto mr-auto">
-        <div class="card">
-          <div class="card-header card-header-primary">
-            <h4 class="card-title text-white">Formulario Oficial T01: Solicitud de Apertura de Causa</h4>
-            <p class="card-category text-white-50">Exclusivo para Autoridades Habilitadas (Comisión Directiva, Tribunal de Disciplina y Comisión Fiscalizadora).</p>
-          </div>
-          <div class="card-body">
-            <div *ngIf="exitoMensaje" class="alert alert-success">{{ exitoMensaje }}</div>
-            <div *ngIf="errorMensaje" class="alert alert-danger">{{ errorMensaje }}</div>
-            <div *ngIf="numeroExpediente" class="alert alert-info">Número de expediente: {{ numeroExpediente }}</div>
+      <div class="col-md-11 col-lg-10 ml-auto mr-auto">
 
-            <!-- Bloque 1: Título -->
-            <div class="form-group mb-4">
-              <label class="section-label">1. Título de la causa:</label>
-              <input class="form-control" placeholder="Ej. Solicitud de sanción por inconducta / Reconocimiento por proyecto institucional" [(ngModel)]="titulo" [disabled]="estado === 'ISSUED'">
+        <!-- Card Principal con Pestañas estilo AVEIT -->
+        <div class="card card-nav-tabs">
+          <!-- Cabecera de Pestañas (Teal AVEIT) -->
+          <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+            <div class="nav-tabs-wrapper">
+              <ul class="nav nav-tabs">
+                <li class="nav-item">
+                  <a class="nav-link" 
+                     [class.active]="tabActiva === 'nueva'" 
+                     (click)="setTab('nueva')" 
+                     href="javascript:void(0)"
+                     role="tab">
+                    <i class="material-icons">edit_calendar</i> NUEVA SOLICITUD
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" 
+                     [class.active]="tabActiva === 'creadas'" 
+                     (click)="setTab('creadas')" 
+                     href="javascript:void(0)"
+                     role="tab">
+                    <i class="material-icons">checklist</i> SOLICITUDES CREADAS
+                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="misSolicitudes.length > 0">
+                      {{ misSolicitudes.length }}
+                    </span>
+                  </a>
+                </li>
+              </ul>
             </div>
+            <div class="text-white-50 d-none d-md-block small">
+              <span *ngIf="tabActiva === 'nueva'">Apertura de Solicitud T-01</span>
+              <span *ngIf="tabActiva === 'creadas'">Seguimiento de Causas y Trámites</span>
+            </div>
+          </div>
 
-            <!-- Bloque 2: Si es premio o sanción (Encuadre de la Acción) -->
-            <div class="section-card mb-4">
-              <label class="section-label">2. Encuadre de la acción (Premio o Sanción):</label>
-              
-              <div class="form-group mb-3">
-                <label class="font-weight-bold text-dark mr-3">Tipo de acción:</label>
-                <div class="form-check form-check-inline">
-                  <label class="form-check-label">
-                    <input class="form-check-input" type="radio" name="tipoAccion" [checked]="tipoAccion === 'SANCTION'" (change)="onTipoAccionChange('SANCTION')" [disabled]="estado === 'ISSUED'">
-                    Sanción disciplinaria
-                    <span class="circle"><span class="check"></span></span>
-                  </label>
-                </div>
-                <div class="form-check form-check-inline ml-3">
-                  <label class="form-check-label">
-                    <input class="form-check-input" type="radio" name="tipoAccion" [checked]="tipoAccion === 'MERIT'" (change)="onTipoAccionChange('MERIT')" [disabled]="estado === 'ISSUED'">
-                    Mérito / Reconocimiento
-                    <span class="circle"><span class="check"></span></span>
-                  </label>
+          <div class="card-body p-4">
+            <!-- ======================================================== -->
+            <!-- PESTAÑA 1: NUEVA SOLICITUD                               -->
+            <!-- ======================================================== -->
+            <div *ngIf="tabActiva === 'nueva'">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="card-title text-dark font-weight-bold mb-0">
+                  {{ borradorId ? 'Continuar solicitud de T-01' : 'Crear solicitud de T-01' }}
+                </h3>
+                <span class="badge badge-info" *ngIf="borradorId">
+                  Borrador en edición
+                </span>
+              </div>
+
+              <!-- Mensajes y alertas -->
+              <div *ngIf="exitoMensaje" class="alert alert-success d-flex align-items-center justify-content-between">
+                <span>{{ exitoMensaje }}</span>
+                <button type="button" class="btn btn-sm btn-outline-light ml-3" (click)="setTab('creadas')" *ngIf="numeroExpediente">
+                  Ver en Solicitudes Creadas
+                </button>
+              </div>
+              <div *ngIf="errorMensaje" class="alert alert-danger">{{ errorMensaje }}</div>
+              <div *ngIf="numeroExpediente" class="alert alert-info">
+                Número de expediente emitido: <strong>{{ numeroExpediente }}</strong>
+              </div>
+
+              <!-- 1. Elección: Sanción o Premio con Colores Vivos -->
+              <div class="section-card mb-4">
+                <label class="form-label-custom mb-2">1. Elegí si es una sanción o un premio:</label>
+                <div class="row">
+                  <div class="col-md-6 mb-2 mb-md-0">
+                    <div class="tipo-card tipo-card-sancion" 
+                         [class.active]="tipoAccion === 'SANCTION'" 
+                         [class.disabled]="estado === 'ISSUED'"
+                         (click)="estado !== 'ISSUED' && onTipoAccionChange('SANCTION')">
+                      <div class="d-flex align-items-center">
+                        <div class="tipo-icon-container">
+                          <i class="material-icons">gavel</i>
+                        </div>
+                        <div class="ml-3">
+                          <div class="tipo-title">Sanción disciplinaria</div>
+                          <div class="tipo-subtitle">Puntos negativos por falta o inconducta</div>
+                        </div>
+                        <div class="ml-auto">
+                          <span class="tipo-radio" [class.checked]="tipoAccion === 'SANCTION'"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="tipo-card tipo-card-premio" 
+                         [class.active]="tipoAccion === 'MERIT'" 
+                         [class.disabled]="estado === 'ISSUED'"
+                         (click)="estado !== 'ISSUED' && onTipoAccionChange('MERIT')">
+                      <div class="d-flex align-items-center">
+                        <div class="tipo-icon-container">
+                          <i class="material-icons">emoji_events</i>
+                        </div>
+                        <div class="ml-3">
+                          <div class="tipo-title">Premio / Reconocimiento</div>
+                          <div class="tipo-subtitle">Puntos positivos por mérito institucional</div>
+                        </div>
+                        <div class="ml-auto">
+                          <span class="tipo-radio" [class.checked]="tipoAccion === 'MERIT'"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="row">
-                <div class="col-md-6 form-group">
-                  <label class="font-weight-bold text-dark">Escala de puntos propuesta:</label>
-                  <select class="form-control" [(ngModel)]="puntosSeleccionados" [disabled]="estado === 'ISSUED'">
-                    <option *ngFor="let escala of (tipoAccion === 'SANCTION' ? escalasSancion : escalasMerito)" [ngValue]="escala.valor">
-                      {{ escala.desc }}
+              <!-- 2. Título del T-01 -->
+              <div class="form-group mb-4">
+                <label class="form-label-custom">Título del T-01</label>
+                <input class="form-control" 
+                       placeholder="Ej. Falta a Reunion Virtual GVP 2026 / Reconocimiento Jornada Solidaria" 
+                       [(ngModel)]="titulo" 
+                       [disabled]="estado === 'ISSUED'">
+              </div>
+
+              <!-- 3. Razón del T-01 -->
+              <div class="form-group mb-4">
+                <label class="form-label-custom">Razón del T-01</label>
+                <textarea class="form-control" 
+                          rows="4" 
+                          placeholder="Describí los hechos y el motivo de la solicitud..." 
+                          [(ngModel)]="razon" 
+                          [disabled]="estado === 'ISSUED'"></textarea>
+              </div>
+
+              <!-- 4. Puntos y Reglamento -->
+              <div class="section-card mb-4">
+                <div class="row">
+                  <div class="col-md-6 form-group">
+                    <label class="form-label-custom">
+                      {{ tipoAccion === 'SANCTION' ? 'Sanción estimada' : 'Premio estimado' }}
+                    </label>
+                    <select class="form-control" [(ngModel)]="puntosSeleccionados" [disabled]="estado === 'ISSUED'">
+                      <option *ngFor="let escala of (tipoAccion === 'SANCTION' ? escalasSancion : escalasMerito)" [ngValue]="escala.valor">
+                        {{ escala.desc }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 form-group">
+                    <label class="form-label-custom">Causal reglamentaria (opcional)</label>
+                    <input class="form-control" 
+                           placeholder="Ej. Inasistencia injustificada / Desempeño sobresaliente" 
+                           [(ngModel)]="causal" 
+                           [disabled]="estado === 'ISSUED'">
+                  </div>
+                </div>
+
+                <div class="form-group mt-2 mb-0">
+                  <label class="form-label-custom">Reglamento respaldante</label>
+                  <select class="form-control" 
+                          multiple 
+                          [(ngModel)]="reglamentosSeleccionados" 
+                          [disabled]="estado === 'ISSUED'" 
+                          style="min-height: 95px;">
+                    <option *ngFor="let reglamento of reglamentosDisponibles" [ngValue]="reglamento">
+                      {{ reglamento }}
                     </option>
                   </select>
-                </div>
-                <div class="col-md-6 form-group">
-                  <label class="font-weight-bold text-dark">Causal reglamentaria:</label>
-                  <input class="form-control" placeholder="Ej. Art. 21 Inc. 2 / Desempeño destacado" [(ngModel)]="causal" [disabled]="estado === 'ISSUED'">
+                  <small class="form-text text-muted">
+                    Podés elegir más de un artículo manteniendo presionado Ctrl (o Cmd).
+                  </small>
                 </div>
               </div>
 
-              <div class="form-group mt-2 mb-0">
-                <label class="font-weight-bold text-dark">Reglamentos respaldantes:</label>
-                <select class="form-control" multiple [(ngModel)]="reglamentosSeleccionados" [disabled]="estado === 'ISSUED'">
-                  <option *ngFor="let reglamento of reglamentosDisponibles" [ngValue]="reglamento">{{ reglamento }}</option>
-                </select>
-                <small class="form-text text-muted">Mantenga presionado Ctrl (o Cmd) para seleccionar múltiples normativas aplicables.</small>
+              <!-- 5. Socios Involucrados (1 a Muchos) -->
+              <div class="section-card mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <label class="form-label-custom mb-0">Socios involucrados</label>
+                  <span class="badge badge-info" *ngIf="sociosSeleccionados.length > 0">
+                    {{ sociosSeleccionados.length }} {{ sociosSeleccionados.length === 1 ? 'socio' : 'socios' }}
+                  </span>
+                </div>
+
+                <!-- Buscador reactivo (Select2 style) -->
+                <mat-form-field appearance="outline" class="w-100" *ngIf="estado !== 'ISSUED'">
+                  <mat-label>Buscar socio por legajo, apellido o nombre</mat-label>
+                  <input matInput 
+                         [formControl]="socioBusqueda" 
+                         [matAutocomplete]="sociosAuto" 
+                         placeholder="Escribí al menos 3 caracteres...">
+                  <mat-icon matSuffix>person_search</mat-icon>
+                  <mat-autocomplete #sociosAuto="matAutocomplete" (optionSelected)="agregarSocio($event.option.value)">
+                    <mat-option *ngFor="let socio of sociosFiltrados" [value]="socio">
+                      {{ nombreSocio(socio) }}<ng-container *ngIf="socio.legajo"> (Legajo {{ socio.legajo }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
+                    </mat-option>
+                  </mat-autocomplete>
+                </mat-form-field>
+
+                <!-- Tabla de socios seleccionados -->
+                <div class="table-responsive mt-2" *ngIf="sociosSeleccionados.length > 0">
+                  <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="thead-light">
+                      <tr>
+                        <th style="width: 120px;">Legajo</th>
+                        <th>Apellido y Nombre</th>
+                        <th>Grupo / Subcomisión</th>
+                        <th class="text-right" style="width: 80px;" *ngIf="estado !== 'ISSUED'">Quitar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let s of sociosSeleccionados">
+                        <td><span class="badge badge-info font-weight-bold">{{ s.legajo || 'S/D' }}</span></td>
+                        <td class="font-weight-bold text-dark">{{ s.last_name }}, {{ s.first_name }}</td>
+                        <td>{{ s.subcomision?.name || 'Sin subcomisión' }}</td>
+                        <td class="text-right" *ngIf="estado !== 'ISSUED'">
+                          <button mat-icon-button color="warn" type="button" (click)="eliminarSocio(s.socio_id)" title="Quitar socio">
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="alert alert-warning py-2 px-3 mt-2 mb-0" *ngIf="sociosSeleccionados.length === 0">
+                  <small>No hay socios añadidos aún. Buscá e incorporá al menos un socio involucrado.</small>
+                </div>
+              </div>
+
+              <!-- 6. Hoja de Anexo / Detalles Adicionales (Opcional) -->
+              <mat-expansion-panel class="border-subtle mb-4" [expanded]="anexoExpandido">
+                <mat-expansion-panel-header>
+                  <mat-panel-title class="font-weight-bold text-dark">
+                    <mat-icon class="mr-2 text-secondary align-middle">note_add</mat-icon>
+                    Detalles adicionales / Hoja de anexo
+                  </mat-panel-title>
+                  <mat-panel-description>
+                    <span class="badge badge-secondary ml-2">Opcional</span>
+                  </mat-panel-description>
+                </mat-expansion-panel-header>
+
+                <div class="p-2">
+                  <div class="row">
+                    <div class="col-md-4 form-group">
+                      <label class="form-label-custom">Fecha del hecho</label>
+                      <input type="date" class="form-control" [(ngModel)]="anexoFecha" [disabled]="estado === 'ISSUED'">
+                    </div>
+                    <div class="col-md-8 form-group">
+                      <label class="form-label-custom">Lugar o evento</label>
+                      <input class="form-control" 
+                             placeholder="Ej. Sede AVEIT, Laboratorio de Cómputos" 
+                             [(ngModel)]="anexoLugar" 
+                             [disabled]="estado === 'ISSUED'">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-custom">Testigos presenciales y participación</label>
+                    <input class="form-control" 
+                           placeholder="Nombres de testigos o cómo intervinieron" 
+                           [(ngModel)]="anexoTestigos" 
+                           [disabled]="estado === 'ISSUED'">
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label-custom">Relato circunstanciado adicional</label>
+                    <textarea class="form-control" 
+                              rows="3" 
+                              placeholder="Detalles adicionales sobre las circunstancias del hecho..." 
+                              [(ngModel)]="anexoRelato" 
+                              [disabled]="estado === 'ISSUED'"></textarea>
+                  </div>
+                </div>
+              </mat-expansion-panel>
+
+              <!-- Botones del Formulario -->
+              <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                <button mat-button class="btn btn-default" (click)="resetearFormulario()">Limpiar</button>
+                <div>
+                  <button mat-raised-button 
+                          class="btn btn-secondary mr-2" 
+                          (click)="guardarBorrador()" 
+                          [disabled]="cargando || estado === 'ISSUED'">
+                    Guardar borrador
+                  </button>
+                  <button mat-raised-button 
+                          color="primary" 
+                          class="btn btn-primary" 
+                          (click)="emitirT01()" 
+                          [disabled]="cargando || estado === 'ISSUED'">
+                    <i class="material-icons mr-1">send</i> Crear Solicitud
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Bloque 3: Socios involucrados -->
-            <div class="section-card mb-4">
-              <label class="section-label">3. Socios involucrados:</label>
-              <p class="text-muted small">Busque y seleccione los socios implicados en la causa. Todos compartirán el encuadre y puntaje indicado.</p>
+            <!-- ======================================================== -->
+            <!-- PESTAÑA 2: SOLICITUDES CREADAS (Mis Solicitudes)          -->
+            <!-- ======================================================== -->
+            <div *ngIf="tabActiva === 'creadas'">
+              <div class="mb-3">
+                <h3 class="card-title text-dark font-weight-bold mb-1">Solicitudes Creadas</h3>
+                <p class="text-muted small mb-3">Seguimiento y consulta de causas y solicitudes iniciadas.</p>
+              </div>
 
-              <mat-form-field appearance="outline" class="w-100" *ngIf="estado !== 'ISSUED'">
-                <mat-label>Buscar socio por legajo, apellido o nombre</mat-label>
-                <input matInput [formControl]="socioBusqueda" [matAutocomplete]="sociosAuto" placeholder="Escriba al menos 3 caracteres...">
-                <mat-autocomplete #sociosAuto="matAutocomplete" (optionSelected)="agregarSocio($event.option.value)">
-                  <mat-option *ngFor="let socio of sociosFiltrados" [value]="socio">
-                    {{ nombreSocio(socio) }}<ng-container *ngIf="socio.legajo"> (Legajo {{ socio.legajo }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
-                  </mat-option>
-                </mat-autocomplete>
-              </mat-form-field>
+              <div *ngIf="errorSolicitudes" class="alert alert-danger">{{ errorSolicitudes }}</div>
 
-              <!-- Tabla compacta de socios seleccionados -->
-              <div class="table-responsive mt-2" *ngIf="sociosSeleccionados.length > 0">
-                <table class="table table-sm table-hover align-middle mb-0">
-                  <thead class="thead-light">
+              <!-- Filtros: Buscador + Selector de Estado -->
+              <div class="row align-items-center mb-3">
+                <div class="col-md-7 mb-2 mb-md-0">
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label>Buscar por causa, causal, expediente o socio...</mat-label>
+                    <input matInput [formControl]="busquedaControl" placeholder="Escribí para filtrar en tiempo real...">
+                    <mat-icon matSuffix>search</mat-icon>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-5">
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label>Filtrar por estado</mat-label>
+                    <mat-select [formControl]="estadoFiltro">
+                      <mat-option value="">Todos los estados</mat-option>
+                      <mat-option value="DRAFT">Borradores</mat-option>
+                      <mat-option value="ISSUED">Emitidos (Todos)</mat-option>
+                      <mat-option value="creado">Iniciados (Apertura)</mat-option>
+                      <mat-option value="en_descargo">En Descargo</mat-option>
+                      <mat-option value="espera_resolucion">En Evaluación</mat-option>
+                      <mat-option value="emitido">Resueltos con Dictamen</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <!-- Indicador de carga -->
+              <div *ngIf="cargandoSolicitudes" class="text-center py-4 text-muted">
+                <p class="mb-0">Cargando solicitudes...</p>
+              </div>
+
+              <!-- Tabla de Solicitudes Creadas estilo AVEIT -->
+              <div class="explorer-table-container table-responsive" *ngIf="!cargandoSolicitudes && misSolicitudes.length > 0">
+                <table class="table-mat">
+                  <thead>
                     <tr>
-                      <th style="width: 120px;">Legajo</th>
-                      <th>Apellido y Nombre</th>
-                      <th>Subcomisión</th>
-                      <th class="text-right" style="width: 80px;" *ngIf="estado !== 'ISSUED'">Quitar</th>
+                      <th style="width: 105px;">Fecha</th>
+                      <th>Causa / Solicitud</th>
+                      <th>Razón</th>
+                      <th>Reglamento</th>
+                      <th style="width: 115px;">Sanción / Mérito</th>
+                      <th style="width: 120px;">Estado</th>
+                      <th style="width: 150px;">Involucrados</th>
+                      <th class="text-right" style="width: 100px;">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let s of sociosSeleccionados">
-                      <td><span class="badge badge-info">{{ s.legajo || 'S/D' }}</span></td>
-                      <td class="font-weight-bold">{{ s.last_name }}, {{ s.first_name }}</td>
-                      <td>{{ s.subcomision?.name || 'Sin subcomisión' }}</td>
-                      <td class="text-right" *ngIf="estado !== 'ISSUED'">
-                        <button mat-icon-button color="warn" type="button" (click)="eliminarSocio(s.socio_id)" title="Quitar socio">
-                          <mat-icon>delete</mat-icon>
+                    <tr *ngFor="let s of misSolicitudes">
+                      <!-- Fecha -->
+                      <td class="text-muted small">
+                        {{ s.fecha | date:'dd/MM/yyyy' }}
+                      </td>
+
+                      <!-- Causa / Solicitud -->
+                      <td>
+                        <div class="font-weight-bold text-dark">{{ s.titulo || 'Sin título' }}</div>
+                        <small class="text-muted">
+                          {{ s.numero }}
+                          <ng-container *ngIf="s.numero_expediente"> &bull; Exp: {{ s.numero_expediente }}</ng-container>
+                        </small>
+                      </td>
+
+                      <!-- Razón (resumen conciso) -->
+                      <td style="max-width: 250px;">
+                        <span class="text-dark small text-truncate d-block" [title]="s.razon || s.motivo || ''">
+                          {{ s.razon || s.motivo || 'Sin fundamentación' }}
+                        </span>
+                      </td>
+
+                      <!-- Reglamento -->
+                      <td style="max-width: 180px;">
+                        <span class="small text-muted text-truncate d-block" 
+                              *ngIf="s.reglamentos_respaldantes && s.reglamentos_respaldantes.length > 0"
+                              [title]="s.reglamentos_respaldantes.join(', ')">
+                          {{ s.reglamentos_respaldantes.join(', ') }}
+                        </span>
+                        <span class="small text-muted" *ngIf="!s.reglamentos_respaldantes || s.reglamentos_respaldantes.length === 0">
+                          {{ s.causal || 'Reglamento Gral.' }}
+                        </span>
+                      </td>
+
+                      <!-- Puntos / Sanción o Mérito -->
+                      <td>
+                        <div>
+                          <span class="badge-mat" [ngClass]="s.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
+                            {{ s.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
+                          </span>
+                        </div>
+                        <small class="font-weight-bold" [ngClass]="s.puntos && s.puntos < 0 ? 'text-danger' : 'text-success'" *ngIf="s.puntos !== null">
+                          {{ s.puntos > 0 ? '+' : '' }}{{ s.puntos }} pts
+                        </small>
+                      </td>
+
+                      <!-- Estado y Urgencia -->
+                      <td>
+                        <div>
+                          <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
+                            {{ obtenerTextoEstado(s) }}
+                          </span>
+                        </div>
+                        <!-- Indicador visual de Urgencia (SCRUM-78) -->
+                        <div class="mt-1" *ngIf="s.estado === 'ISSUED' && s.urgencia">
+                          <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(s.urgencia)">
+                            <i class="material-icons" style="font-size: 11px; vertical-align: middle; line-height: 1;">{{ obtenerIconoUrgencia(s.urgencia) }}</i>
+                            {{ s.urgencia_display || s.urgencia }}
+                          </span>
+                        </div>
+                      </td>
+
+                      <!-- Involucrados (1 a Muchos con Botón "VER SOCIOS") -->
+                      <td>
+                        <div class="text-dark small mb-1">{{ obtenerTextoInvolucrados(s) }}</div>
+                        <button type="button" 
+                                class="btn-ver-socios" 
+                                (click)="abrirDetalle(s)" 
+                                title="Ver detalle de socios involucrados">
+                          <i class="material-icons">people</i> VER SOCIOS
                         </button>
+                      </td>
+
+                      <!-- Acciones -->
+                      <td class="td-actions text-right text-nowrap">
+                        <div class="d-inline-flex align-items-center justify-content-end">
+                          <ng-container *ngIf="s.estado === 'DRAFT'">
+                            <button mat-button 
+                                    type="button" 
+                                    class="btn btn-info btn-link btn-just-icon" 
+                                    (click)="continuarEdicion(s)" 
+                                    title="Continuar edición" 
+                                    matTooltip="Continuar edición">
+                              <i class="material-icons">edit</i>
+                            </button>
+                            <button mat-button 
+                                    type="button" 
+                                    class="btn btn-danger btn-link btn-just-icon ml-1" 
+                                    (click)="eliminarBorrador(s)" 
+                                    title="Eliminar borrador" 
+                                    matTooltip="Eliminar borrador">
+                              <i class="material-icons">delete</i>
+                            </button>
+                          </ng-container>
+                          <ng-container *ngIf="s.estado === 'ISSUED'">
+                            <button mat-button 
+                                    type="button" 
+                                    class="btn btn-info btn-link btn-just-icon" 
+                                    (click)="abrirDetalle(s)" 
+                                    title="Ver Detalle" 
+                                    matTooltip="Ver detalle completo">
+                              <i class="material-icons">visibility</i>
+                            </button>
+                          </ng-container>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <div class="alert alert-warning py-2 px-3 mt-2 mb-0" *ngIf="sociosSeleccionados.length === 0">
-                <small>No hay socios añadidos aún. Debe incorporar al menos un socio involucrado antes de emitir la solicitud.</small>
+
+              <!-- Estado Vacío -->
+              <div *ngIf="!cargandoSolicitudes && misSolicitudes.length === 0" class="text-center py-4 text-muted">
+                <mat-icon style="font-size: 36px; height: 36px; width: 36px;" class="text-secondary mb-2">folder_open</mat-icon>
+                <p class="mb-0">No se encontraron solicitudes con los criterios seleccionados.</p>
               </div>
             </div>
 
-            <!-- Bloque 4: Razón (relato detallado) -->
-            <div class="form-group mb-4">
-              <label class="section-label">4. Razón (relato detallado):</label>
-              <textarea class="form-control" rows="4" placeholder="Exposición fáctica clara de los hechos o fundamentos que motivan la solicitud..." [(ngModel)]="razon" [disabled]="estado === 'ISSUED'"></textarea>
-            </div>
-
-            <!-- Bloque 5: Hoja de Anexo Circunstanciada (Opcional) -->
-            <mat-expansion-panel class="border-subtle" [expanded]="anexoExpandido">
-              <mat-expansion-panel-header>
-                <mat-panel-title class="font-weight-bold text-dark">
-                  5. Hoja de Anexo Circunstanciada
-                </mat-panel-title>
-                <mat-panel-description>
-                  <span class="badge badge-secondary ml-2">Opcional</span>
-                </mat-panel-description>
-              </mat-expansion-panel-header>
-
-              <div class="p-2">
-                <p class="text-muted small">
-                  Completar si se requiere registrar precisiones forenses de tiempo, lugar, testigos o relato circunstanciado. Su omisión no bloquea el borrador ni la emisión.
-                </p>
-                <div class="row">
-                  <div class="col-md-4 form-group">
-                    <label class="text-secondary font-weight-bold">Fecha del hecho:</label>
-                    <input type="date" class="form-control" [(ngModel)]="anexoFecha" [disabled]="estado === 'ISSUED'">
-                  </div>
-                  <div class="col-md-8 form-group">
-                    <label class="text-secondary font-weight-bold">Lugar del hecho:</label>
-                    <input class="form-control" placeholder="Ej. Sede AVEIT, Laboratorio de Cómputos" [(ngModel)]="anexoLugar" [disabled]="estado === 'ISSUED'">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="text-secondary font-weight-bold">Testigos presenciales:</label>
-                  <input class="form-control" placeholder="Nombres de testigos o datos de contacto" [(ngModel)]="anexoTestigos" [disabled]="estado === 'ISSUED'">
-                </div>
-                <div class="form-group mb-0">
-                  <label class="text-secondary font-weight-bold">Relato circunstanciado adicional:</label>
-                  <textarea class="form-control" rows="3" placeholder="Detalle pormenorizado de las circunstancias del hecho..." [(ngModel)]="anexoRelato" [disabled]="estado === 'ISSUED'"></textarea>
-                </div>
-              </div>
-            </mat-expansion-panel>
-
-          </div>
-          <div class="card-footer d-flex justify-content-end gap-2">
-            <button mat-button class="btn btn-default" routerLink="/gestionar-expedientes">Cancelar</button>
-            <button mat-raised-button class="btn btn-secondary" (click)="guardarBorrador()" [disabled]="cargando || estado === 'ISSUED'">Guardar borrador</button>
-            <button mat-raised-button color="primary" class="btn btn-primary" (click)="emitirT01()" [disabled]="cargando || estado === 'ISSUED'">Emitir T01</button>
           </div>
         </div>
 
-        <!-- Panel Inferior: Mis Solicitudes y Trámites T01 (SCRUM-75 / PB-04) -->
-        <div class="card mt-4">
-          <div class="card-header card-header-info">
-            <h4 class="card-title text-white">Mis Solicitudes y Trámites T01</h4>
-            <p class="card-category text-white-50">Monitoreo de causas iniciadas y seguimiento de expedientes procesales.</p>
-          </div>
-          <div class="card-body">
-            <div *ngIf="errorSolicitudes" class="alert alert-danger">{{ errorSolicitudes }}</div>
-
-            <!-- Filtros: Buscador + Selector de Estado -->
-            <div class="row align-items-center mb-3">
-              <div class="col-md-7 mb-2 mb-md-0">
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Buscar por causa, causal, expediente o socio...</mat-label>
-                  <input matInput [formControl]="busquedaControl" placeholder="Escriba para filtrar en tiempo real...">
-                  <mat-icon matSuffix>search</mat-icon>
-                </mat-form-field>
-              </div>
-              <div class="col-md-5">
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Filtrar por estado</mat-label>
-                  <mat-select [formControl]="estadoFiltro">
-                    <mat-option value="">Todos los estados</mat-option>
-                    <mat-option value="DRAFT">Borradores</mat-option>
-                    <mat-option value="ISSUED">Emitidos (Todos)</mat-option>
-                    <mat-option value="creado">Iniciados (Apertura)</mat-option>
-                    <mat-option value="en_descargo">En Descargo</mat-option>
-                    <mat-option value="espera_resolucion">En Evaluación</mat-option>
-                    <mat-option value="emitido">Resueltos con Dictamen</mat-option>
-                  </mat-select>
-                </mat-form-field>
-              </div>
-            </div>
-
-            <!-- Indicador de carga -->
-            <div *ngIf="cargandoSolicitudes" class="text-center py-4 text-muted">
-              <p class="mb-0">Cargando solicitudes...</p>
-            </div>
-
-            <!-- Tabla densa estilo explorador (.table-mat) -->
-            <div class="explorer-table-container" *ngIf="!cargandoSolicitudes && misSolicitudes.length > 0">
-              <table class="table-mat">
-                <thead>
-                  <tr>
-                    <th style="width: 105px;">Fecha</th>
-                    <th>Causa / Solicitud</th>
-                    <th>Socios Involucrados</th>
-                    <th style="width: 115px;">Acción / Pts</th>
-                    <th style="width: 130px;">Estado</th>
-                    <th class="text-right" style="width: 110px;">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let s of misSolicitudes">
-                    <td class="text-muted small">
-                      {{ s.fecha | date:'dd/MM/yyyy' }}
-                    </td>
-                    <td>
-                      <div class="font-weight-bold text-dark">{{ s.titulo || 'Sin título' }}</div>
-                      <small class="text-muted">
-                        {{ s.numero }}
-                        <ng-container *ngIf="s.numero_expediente"> &bull; Exp: {{ s.numero_expediente }}</ng-container>
-                      </small>
-                    </td>
-                    <td>
-                      <span class="text-dark">{{ obtenerTextoInvolucrados(s) }}</span>
-                    </td>
-                    <td>
-                      <div>
-                        <span class="badge-mat" [ngClass]="s.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
-                          {{ s.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
-                        </span>
-                      </div>
-                      <small class="font-weight-bold" [ngClass]="s.puntos && s.puntos < 0 ? 'text-danger' : 'text-success'" *ngIf="s.puntos !== null">
-                        {{ s.puntos > 0 ? '+' : '' }}{{ s.puntos }} pts
-                      </small>
-                    </td>
-                    <td>
-                      <div>
-                        <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
-                          {{ obtenerTextoEstado(s) }}
-                        </span>
-                      </div>
-                      <div class="mt-1" *ngIf="s.estado === 'ISSUED' && s.urgencia">
-                        <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(s.urgencia)">
-                          <i class="material-icons" style="font-size: 11px; vertical-align: middle; line-height: 1;">{{ obtenerIconoUrgencia(s.urgencia) }}</i>
-                          {{ s.urgencia_display || s.urgencia }}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td class="td-actions text-right text-nowrap">
-                      <div class="d-inline-flex align-items-center justify-content-end">
-                        <ng-container *ngIf="s.estado === 'DRAFT'">
-                          <button mat-button 
-                                  type="button" 
-                                  class="btn btn-info btn-link btn-just-icon" 
-                                  (click)="continuarEdicion(s)" 
-                                  title="Continuar edición" 
-                                  matTooltip="Continuar edición">
-                            <i class="material-icons">edit</i>
-                          </button>
-                          <button mat-button 
-                                  type="button" 
-                                  class="btn btn-danger btn-link btn-just-icon ml-1" 
-                                  (click)="eliminarBorrador(s)" 
-                                  title="Eliminar borrador" 
-                                  matTooltip="Eliminar borrador">
-                            <i class="material-icons">delete</i>
-                          </button>
-                        </ng-container>
-                        <ng-container *ngIf="s.estado === 'ISSUED'">
-                          <button mat-button 
-                                  type="button" 
-                                  class="btn btn-info btn-link btn-just-icon" 
-                                  (click)="abrirDetalle(s)" 
-                                  title="Ver Detalle" 
-                                  matTooltip="Ver detalle en modal">
-                            <i class="material-icons">visibility</i>
-                          </button>
-                        </ng-container>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Estado Vacío -->
-            <div *ngIf="!cargandoSolicitudes && misSolicitudes.length === 0" class="text-center py-4 text-muted">
-              <mat-icon style="font-size: 36px; height: 36px; width: 36px;" class="text-secondary mb-2">folder_open</mat-icon>
-              <p class="mb-0">No se encontraron solicitudes o trámites con los criterios seleccionados.</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </div>
-

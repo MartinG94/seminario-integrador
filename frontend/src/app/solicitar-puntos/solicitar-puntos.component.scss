@@ -6,6 +6,61 @@ $border-main: #D1D5DB;
 $text-primary: #151846;
 $text-secondary: #334155;
 
+// Cabecera superior estilo AVEIT con gradiente Teal / Info
+.card-header-tabs-teal {
+  background: linear-gradient(60deg, #0097a7, #00838f);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, .14), 0 7px 10px -5px rgba(0, 151, 167, .4);
+  border-radius: 6px 6px 0 0;
+  padding: 12px 20px;
+}
+
+.nav-tabs-wrapper {
+  display: inline-block;
+}
+
+.nav-tabs {
+  border-bottom: none;
+
+  .nav-item {
+    margin-bottom: 0;
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.82);
+      font-weight: 600;
+      font-size: 0.88rem;
+      letter-spacing: 0.5px;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 4px;
+      margin-right: 8px;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+
+      i.material-icons {
+        font-size: 20px;
+        margin-right: 8px;
+        line-height: 1;
+      }
+
+      &:hover {
+        color: #FFFFFF;
+        background-color: rgba(255, 255, 255, 0.15);
+      }
+
+      &.active {
+        color: #FFFFFF;
+        background-color: rgba(255, 255, 255, 0.28);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+// Tarjetas y formularios
 .section-card {
   border: 1px solid $border-main;
   border-radius: 6px;
@@ -14,11 +69,169 @@ $text-secondary: #334155;
   margin-bottom: 1.5rem;
 }
 
-.section-label {
-  font-weight: 700;
+.form-label-custom {
+  font-weight: 600;
   color: $text-primary;
-  margin-bottom: 0.5rem;
-  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.92rem;
+  display: block;
+}
+
+// Selector visual de Tipo de Acción (Sanción vs Premio) con colores vivos
+.tipo-card {
+  border: 2px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 14px 18px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+  height: 100%;
+
+  &:hover:not(.disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  // Sanción (Rojo / Warning)
+  &.tipo-card-sancion {
+    &:hover:not(.disabled) {
+      border-color: #F87171;
+    }
+
+    &.active {
+      border-color: #DC2626;
+      background-color: #FEF2F2;
+      box-shadow: 0 0 0 1px #DC2626, 0 4px 12px rgba(220, 38, 38, 0.12);
+
+      .tipo-title {
+        color: #B91C1C;
+        font-weight: 700;
+      }
+
+      .tipo-icon-container {
+        background-color: #FEE2E2;
+        color: #DC2626;
+      }
+
+      .tipo-radio {
+        border-color: #DC2626;
+        &::after {
+          background-color: #DC2626;
+        }
+      }
+    }
+  }
+
+  // Premio / Mérito (Verde / Éxito)
+  &.tipo-card-premio {
+    &:hover:not(.disabled) {
+      border-color: #4ADE80;
+    }
+
+    &.active {
+      border-color: #16A34A;
+      background-color: #F0FDF4;
+      box-shadow: 0 0 0 1px #16A34A, 0 4px 12px rgba(22, 163, 74, 0.12);
+
+      .tipo-title {
+        color: #15803D;
+        font-weight: 700;
+      }
+
+      .tipo-icon-container {
+        background-color: #DCFCE7;
+        color: #16A34A;
+      }
+
+      .tipo-radio {
+        border-color: #16A34A;
+        &::after {
+          background-color: #16A34A;
+        }
+      }
+    }
+  }
+
+  .tipo-icon-container {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #F1F5F9;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+
+    i.material-icons {
+      font-size: 24px;
+    }
+  }
+
+  .tipo-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #1E293B;
+  }
+
+  .tipo-subtitle {
+    font-size: 0.8rem;
+    color: #64748B;
+  }
+
+  .tipo-radio {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #CBD5E1;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    transition: all 0.2s ease;
+
+    &.checked::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+  }
+}
+
+// Botón "VER SOCIOS" (Púrpura institucional de la versión original AVEIT)
+.btn-ver-socios {
+  background: #8e24aa;
+  color: #FFFFFF !important;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(142, 36, 170, 0.25);
+
+  &:hover {
+    background: #7b1fa2;
+    box-shadow: 0 4px 8px rgba(142, 36, 170, 0.35);
+  }
+
+  i.material-icons {
+    font-size: 15px;
+    margin-right: 5px;
+  }
 }
 
 .border-subtle {
@@ -29,7 +242,7 @@ $text-secondary: #334155;
 .table {
   th {
     color: $text-secondary;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -37,7 +250,7 @@ $text-secondary: #334155;
   }
   td {
     vertical-align: middle;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     color: $text-primary;
   }
 }
@@ -70,5 +283,3 @@ $text-secondary: #334155;
     }
   }
 }
-
-
