@@ -14,6 +14,15 @@
 - [x] **R7. Presentación y recuperación (TDD):** Alta blanca con radio de 8 px, controles y botones alineados con estilo institucional, estados centrados fuera del scroll de tabla y reintento real. Bloquear altas mientras la carga está pendiente/fallida para evitar mostrar un calendario parcial.
 - [x] **R8. Regresión y auditoría final:** Backend 510/510, frontend 156/156, build/Ruff y migraciones en verde; DESIGN.md lint con 0 errores. Auditoría sin hallazgos, viewports 1306/768/393/320 px y recuperación por Reintentar verificados. Localhost activo; UAT aprobada por el usuario el 10/10/2026.
 
+## Modificaciones adicionales del PM — autorizadas el 10/10/2026
+
+- [x] **R10. Notificaciones centrales (TDD):** Servicio y host global con temporizadores de 10 segundos, cierre independiente, texto plano, accesibilidad y tokens sobre modales. X integrada al foco del diálogo; regla en AGENTS.md.
+- [x] **R11. Login, calendario y sesión (TDD):** Feedback centralizado y 401 concurrentes sin avisos duplicados ni cancelar una sesión nueva.
+- [x] **R12. T01 y descargos (TDD):** Validaciones y resultados centralizados manteniendo borrador, emisión, urgencia, acceso al T01 emitido y evidencia.
+- [x] **R13. Gestión, ranking y restantes vistas (TDD):** Mensajes centralizados, errores clasificados y recuperación conservada; avisos legacy de asistencia/demo retirados.
+- [x] **R14. Simulador modal (TDD):** Botón junto a Crear Feriado; cierre por X/Escape/fondo/navegación cancela solicitudes y reinicia campos/resultados.
+- [x] **R15. Verificación y auditoría:** Frontend 205/205, build correcto y diseño con 0 errores; auditoría independiente cerrada, consistencia PO, teclado real y responsive 1306/393/320 px verificados. Localhost disponible; UAT del nuevo alcance aprobada por el usuario el 10/10/2026 y documentada.
+
 ## Implementación original (antecedente)
 
 - [x] **T1. Modelos ORM y Dominio de Calendario:** Implementar los modelos `CalendarioVersion` y `FeriadoExcepcion` en `backend/expedientes/models.py` con sus enums, restricciones de unicidad y auditoría (CA2). Vincular `Expediente.calendario_version` con ForeignKey protegida (CA3).

@@ -16,6 +16,42 @@ C:\Users\Usuario\.codex\worktrees\calendario-pr49\seminario-integrador
 
 La primera tanda tuvo UAT aprobada por el usuario el 10/10/2026 y se entregó en la misma rama mediante el [PR #49](https://github.com/MartinG94/seminario-integrador/pull/49). La segunda review del PM también cuenta con UAT aprobada por el usuario el 10/10/2026 y se entrega en esa rama, con un nuevo comentario por ítems en la PR. La descripción principal se conserva y la PR permanece sin merge. El checkout original conserva sus cambios previos.
 
+## Modificaciones adicionales del PM — simulador y notificaciones
+
+Solicitud directa del usuario el 10/10/2026, fuera del backlog original y de los comentarios de la PR. **UAT de estas modificaciones aprobada por el usuario el 10/10/2026**, con autorización para crear commits, subirlos a la misma rama y agregar un comentario nuevo por ítems en el PR #49, sin editar la descripción principal ni mergear.
+
+- Simular plazo se abre con el botón junto a Crear Feriado. El modal conserva el cálculo institucional y su detalle de días; al cerrar cancela solicitudes pendientes y reinicia inicio, cantidad y resultado.
+- Login, calendario, T01, descargos, gestión, ranking/legajo y las vistas restantes usan el mismo servicio de notificaciones para feedback transitorio. Los resultados, datos, ayudas y acciones de recuperación se conservan en sus vistas.
+- Cada aviso aparece abajo a la derecha, dura 10 segundos con desvanecimiento final y permite cierre manual independiente. Conserva su temporizador al navegar y su X se puede alcanzar con teclado dentro de un modal.
+- `AGENTS.md` establece esta regla para toda la aplicación. La spec, plan y tareas registran el cambio de alcance autorizado; las notas del PO y el seguimiento macro se conservan.
+
+| Comprobación de este alcance | Resultado |
+| --- | --- |
+| Suite completa Angular / ChromeHeadless | 205 aprobados, 0 errores |
+| Compilación de producción | Aprobada; avisos heredados de Sass/archivos TypeScript sin uso |
+| `designmd lint DESIGN.md` | 0 errores; 10 advertencias previas de tokens de gradiente |
+| Temporizadores y errores | Tests de expiración a 10 segundos, cierre independiente, deduplicación, limpieza y mensajes seguros ante errores 4xx/500/conexión |
+| Sesión | Tests de 401 concurrentes, aviso único de expiración y conservación de una sesión nueva ante una respuesta tardía |
+| Modal | Tests de cancelación/reinicio por X, Escape, fondo, navegación y destrucción; acceso de lectura para SOCIO |
+| Teclado real | Tab desde Calcular enfoca la X del aviso dentro del modal; Enter lo elimina y devuelve el foco a Calcular |
+| Navegación y expiración reales | Los cuatro tipos de aviso sobreviven al cambio de vista; luego desaparecen automáticamente |
+| Responsive | Escritorio 1306 px y móvil 393/320 px: filtros en una fila, botones contiguos, modal y avisos dentro del viewport; scroll de datos limitado a la tabla |
+| Auditoría full stack independiente | Sin hallazgos pendientes; se corrigió y probó el acceso a la X dentro del foco del modal |
+| Django y entorno local | `check` sin incidencias, `migrate --check` sin pendientes y healthcheck HTTP 200; backend sin modificaciones |
+
+La suite backend completa del antecedente de integración pasó 537/537; no se repitió para este cambio exclusivo de frontend/documentación. Las pruebas visuales no crearon ni eliminaron registros de la base local. Se conserva la limitación del lint Angular descrita más abajo.
+
+| Caso para la nueva UAT | Acción | Resultado esperado |
+| --- | --- | --- |
+| Apertura | Pulsar Simular plazo, junto a Crear Feriado | Modal con fecha/hora, días hábiles y Calcular vencimiento; el simulador ya no ocupa una tarjeta al pie |
+| Cálculo | Inicio 20/11/2026 14:30 y 5 días hábiles | Vencimiento 30/11/2026 14:30; el detalle excluye Soberanía del 23/11 |
+| Reinicio | Calcular, cerrar por X/Escape/fondo y reabrir | Inicio actualizado a la hora institucional, 5 días por defecto y ningún resultado anterior |
+| Aviso en modal | Ingresar 1,5 días y pulsar Calcular | Error abajo a la derecha; Tab llega a su X y Enter lo cierra |
+| Éxito y error | Guardar un cambio válido o provocar una validación en una pantalla | Aviso global con tipo correcto; no aparece una alerta transitoria dentro del formulario |
+| Duración | Generar un aviso y dejarlo visible | Barra de tiempo, desvanecimiento final y retiro a los 10 segundos |
+| Cierre y navegación | Generar varios avisos, cerrar uno y cambiar de pantalla | Solo se elimina el elegido; los restantes completan sus tiempos originales |
+| Recuperación | Ante una carga fallida, esperar a que termine el aviso y pulsar Reintentar | La acción sigue disponible y permite recuperar la vista |
+
 ## Integración con main — resolución de conflictos
 
 El 10/10/2026 se incorporó `main` (`0596c64`, PR #50) en la misma rama del calendario. Se resolvieron ocho archivos en conflicto conservando el calendario aprobado y el clasificador de urgencia, la apertura T01 y la precisión de puntos de `main`. La PR #49 permanece abierta y su descripción principal se conserva.

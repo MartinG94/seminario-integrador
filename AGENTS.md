@@ -50,6 +50,11 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
 - **Tokens de Diseño:**
   - Prohibido utilizar colores hexadecimales arbitrarios o estilos ad-hoc.
   - Toda interfaz debe consumir exclusivamente las variables canónicas y tokens definidos en [`DESIGN.md`](DESIGN.md).
+- **Feedback al usuario (solicitud del PM, PR #49):**
+  - En toda la aplicación, incluidos login y modales, los mensajes transitorios de éxito, error, advertencia e información se muestran mediante el servicio central de notificaciones, abajo a la derecha.
+  - Cada notificación dura 10 segundos, se desvanece al finalizar y permite cerrarla con una X accesible. Su temporizador y cierre son independientes; cambiar de pantalla no la elimina anticipadamente.
+  - No se muestran alertas transitorias dentro de formularios ni se usan mecanismos alternativos como `$.notify`. Se conserva el contenido permanente de la vista: ayudas, estados vacíos, acciones de recuperación, resultados del cálculo y datos del expediente.
+  - Los avisos usan texto plano, tokens institucionales, anuncio accesible y foco visible; permanecen visibles sobre modales y respetan la preferencia de movimiento reducido. No exponen HTML, trazas ni referencias internas de implementación.
 - **Componentes y Búsqueda de Socios:**
   - Siempre que se tenga que desarrollar un componente donde sea necesario seleccionar un socio, se debe implementar **Select2** (o componente de autocompletado equivalente con búsqueda reactiva) para ir mostrando dinámicamente las posibles coincidencias a medida que se escribe.
 - **Control de Versiones y Ramas:**

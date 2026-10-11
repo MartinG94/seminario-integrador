@@ -36,6 +36,16 @@ Los formularios usan un grid con filas compartidas para etiquetas, controles y a
 
 ## Verificación y entorno
 
+### Modificaciones adicionales del PM — modal y notificaciones
+
+Usar `MatDialog` existente para el simulador. El botón se agrupa junto a Crear Feriado y está disponible para cualquier usuario autenticado. Al iniciar el cierre se cancela la suscripción del cálculo y se reinician fecha institucional, días, resultado y carga; también se cierra al destruir la ruta. La respuesta de un cálculo cancelado no puede modificar un modal reabierto.
+
+Un `NotificationService` singleton administra avisos tipados y temporizadores independientes de 10 segundos. Un componente global muestra texto interpolado, icono semántico, cierre accesible y desvanecimiento final. Se monta mediante CDK Overlay/Portal, ya instalados, fuera de la raíz que MatDialog oculta a lectores de pantalla. Con un diálogo abierto, un DomPortal incorpora el mismo contenedor de avisos al árbol accesible y al foco del modal, manteniendo su posición fija abajo a la derecha. Al cerrar vuelve al overlay global sin perder mensajes ni reiniciar temporizadores; al retirar un aviso enfocado se restaura el foco. Consume tokens existentes y reduce animaciones según la preferencia del usuario.
+
+Migrar el feedback de login, calendario, T01, descargos, gestión, ranking/legajo, asistencia y la demo de notificaciones. Conservar recuperaciones y datos permanentes sin repetir errores en el formulario. Un 401 de una solicitud autenticada obsoleta se abandona al redirigir al login, que emite un único aviso de sesión expirada; un error de credenciales sigue su manejo normal. Las respuestas 500 o de conexión reciben mensajes amigables, sin contenido técnico del servidor.
+
+Verificar con TDD expiración exacta, cierres independientes, texto plano, persistencia al navegar, notificaciones sobre diálogos, clasificación de errores y cancelación/reapertura del simulador. Ejecutar toda la suite Angular, build, lint del diseño y auditoría independiente; luego comprobar escritorio, móvil, teclado y localhost. No hay cambios de modelos, migraciones ni dependencias.
+
 TDD en endpoints, migración, reglas de negocio y comportamiento del componente. Ejecutar pytest/MySQL, cobertura del dominio, Karma/ChromeHeadless, compilación Angular, Ruff y detección de migraciones pendientes. Revisar los casos de UTC, duplicados concurrentes, historial, calendarios vacíos y alta durante una simulación pendiente.
 
 El backend local aplica `manage.py migrate --noinput` antes del servidor para evitar el error de tablas faltantes reproducido al ingresar. Levantar MySQL/Django en Docker y Angular con el proxy existente en localhost:4200.
