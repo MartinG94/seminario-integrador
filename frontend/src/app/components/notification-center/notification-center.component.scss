@@ -1,0 +1,78 @@
+:host { display: contents; }
+
+.notification-stack {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.user-notification {
+  --notification-color: var(--color-info);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border-main);
+  border-left: 4px solid var(--notification-color);
+  border-radius: 8px;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: 0 2px 8px var(--color-border-main);
+  font-family: var(--font-body);
+  pointer-events: auto;
+  animation: notification-expiry 10s linear forwards;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.notification-success { --notification-color: var(--color-success); }
+.notification-error { --notification-color: var(--color-danger); }
+.notification-warning { --notification-color: var(--color-warning); }
+.notification-icon { color: var(--notification-color); flex-shrink: 0; }
+.notification-content {
+  flex: 1;
+  min-width: 0;
+  strong { font-weight: 600; }
+  p { margin: 0.25rem 0 0; line-height: 1.5; overflow-wrap: anywhere; }
+}
+.notification-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  &:hover { background: var(--color-surface); }
+  &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+}
+.notification-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--notification-color);
+  transform-origin: left;
+  animation: notification-progress 10s linear forwards;
+}
+@keyframes notification-progress { to { transform: scaleX(0); } }
+@keyframes notification-expiry { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .user-notification, .notification-progress { animation: none; }
+  .notification-progress { display: none; }
+}

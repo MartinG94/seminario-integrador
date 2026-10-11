@@ -4,12 +4,14 @@ import { of, throwError } from 'rxjs';
 
 import { SocioApiService, SocioLegajoDTO } from '../../services/socio-api.service';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog.component';
+import { NotificationService } from '../../services/notification.service';
 
 describe('SocioLegajoDialogComponent', () => {
   let component: SocioLegajoDialogComponent;
   let fixture: ComponentFixture<SocioLegajoDialogComponent>;
   let socioApiServiceSpy: jasmine.SpyObj<SocioApiService>;
   let dialogRefSpy: jasmine.SpyObj<MatDialogRef<SocioLegajoDialogComponent>>;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   const mockLegajo: SocioLegajoDTO = {
     id: 1,
@@ -29,12 +31,14 @@ describe('SocioLegajoDialogComponent', () => {
   beforeEach(async () => {
     socioApiServiceSpy = jasmine.createSpyObj('SocioApiService', ['getLegajo']);
     dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['close']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error']);
 
     socioApiServiceSpy.getLegajo.and.returnValue(of(mockLegajo));
 
     await TestBed.configureTestingModule({
       declarations: [SocioLegajoDialogComponent],
       providers: [
+        { provide: NotificationService, useValue: notifications },
         { provide: SocioApiService, useValue: socioApiServiceSpy },
         { provide: MatDialogRef, useValue: dialogRefSpy },
         { provide: MAT_DIALOG_DATA, useValue: { socioId: 1, nombreSocio: 'Lucas Gastiaburu' } }
@@ -75,7 +79,10 @@ describe('SocioLegajoDialogComponent', () => {
     fixture.detectChanges();
 
     expect(component.cargando).toBeFalse();
-    expect(component.errorHttp).toContain('No posee autorización para consultar este legajo (CA4)');
+    expect(notifications.error).toHaveBeenCalledOnceWith('No posee autorización para consultar este legajo.');
+    expect(fixture.nativeElement.textContent).not.toContain('No posee autorización');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Reintentar');
   });
 
   it('debe reflejar el saldo recibido en data.saldo si está definido', () => {

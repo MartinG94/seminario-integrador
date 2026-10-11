@@ -4,7 +4,8 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
@@ -16,6 +17,7 @@ describe('GestionarExpedientesComponent', () => {
   let authService: AuthService;
   let dataService: TribunalDataService;
   let httpMock: HttpTestingController;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   const mockBoardResponse: BoardResponseDTO = {
     columns: [
@@ -29,6 +31,7 @@ describe('GestionarExpedientesComponent', () => {
   };
 
   beforeEach(async () => {
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
     await TestBed.configureTestingModule({
       imports: [
         CommonModule,
@@ -39,6 +42,7 @@ describe('GestionarExpedientesComponent', () => {
       ],
       declarations: [GestionarExpedientesComponent],
       providers: [
+        { provide: NotificationService, useValue: notifications },
         TribunalDataService,
         AuthService
       ]
@@ -296,6 +300,38 @@ describe('GestionarExpedientesComponent', () => {
   });
 
   describe('Clasificador e indicador visual de urgencia (SCRUM-78)', () => {
+    it('notifica un fallo de urgencia como error y conserva su valor anterior', () => {
+      component.expedienteSeleccionado = { id: '1', urgencia: 'normal' } as Expediente;
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(
+        throwError(() => ({ status: 500, error: { detail: 'Traceback database' } })));
+      component.cambiarUrgenciaExpediente('urgente');
+      expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo actualizar la urgencia.');
+      expect(notifications.success).not.toHaveBeenCalled();
+      expect(component.expedienteSeleccionado.urgencia).toBe('normal');
+    });
+
+    it('notifica fallos de transición sin insertarlos como mensajes de éxito', () => {
+      spyOn(dataService, 'transicionarExpediente').and.returnValue(
+        throwError(() => ({ status: 400, error: { to_status: ['Transición no permitida.'] } })));
+      component.transicionarEstado({ id: '1', numero: '001/2026' } as Expediente, 'justificando');
+      fixture.detectChanges();
+      expect(notifications.error).toHaveBeenCalledOnceWith('Transición no permitida.');
+      expect(notifications.success).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.textContent).not.toContain('Transición no permitida.');
+    });
+
+    it('notifica un fallo de tablero y ofrece reintentar su carga', () => {
+      (dataService.obtenerTablero as jasmine.Spy).and.returnValue(throwError(() => ({ status: 500 })));
+      component.cargarDatosTablero();
+      fixture.detectChanges();
+      expect(notifications.error).toHaveBeenCalledWith('No se pudo cargar el tablero. Intentá nuevamente.');
+      const retry = fixture.nativeElement.querySelector('[aria-label="Reintentar carga del tablero"]') as HTMLButtonElement;
+      expect(retry).toBeTruthy();
+      (dataService.obtenerTablero as jasmine.Spy).and.returnValue(of(mockBoardResponse));
+      retry.click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[aria-label="Reintentar carga del tablero"]')).toBeNull();
+    });
     it('debe mapear correctamente etiquetas, clases e iconos de urgencia', () => {
       expect(component.getUrgenciaLabel('baja')).toBe('Baja');
       expect(component.getUrgenciaLabel('normal')).toBe('Normal');
@@ -344,6 +380,7 @@ describe('GestionarExpedientesComponent', () => {
 
       expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
       expect(expMock.urgencia).toBe('urgente');
+      expect(notifications.success).toHaveBeenCalledWith('Urgencia actualizada a "Urgente" exitosamente.');
     });
   });
 });
