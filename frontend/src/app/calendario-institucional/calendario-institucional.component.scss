@@ -41,6 +41,33 @@
     min-width: 0;
   }
 
+  .calendar-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+  .simulation-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border-main);
+    h2 { color: var(--color-text-primary); font-family: var(--font-h2); margin: 0; }
+  }
+
+  .dialog-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    width: 2.5rem;
+    height: 2.5rem;
+    cursor: pointer;
+  }
+
   .calendar-field {
     flex: 1 1 10rem;
     min-width: 0;
@@ -143,26 +170,6 @@
     .calendar-state-help { color: var(--color-text-secondary); }
   }
 
-  .calendar-notice {
-    border: 1px solid currentColor;
-    background: var(--color-surface-card);
-    color: var(--color-text-primary);
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-  .calendar-success { border-color: var(--color-success); }
-  .calendar-error { border-color: var(--color-danger); }
-
-  .notice-close {
-    float: right;
-    background: transparent;
-    border: 0;
-    color: inherit;
-    min-width: 2rem;
-    min-height: 2rem;
-    cursor: pointer;
-  }
-
   .simulation-result {
     margin-top: 1.5rem;
     padding: 1rem;
@@ -196,6 +203,11 @@
       width: 100%;
       gap: 0.5rem;
       .form-control { padding-inline: 0.25rem; }
+    }
+    .calendar-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      .btn { padding-inline: 0.5rem; }
     }
     .holiday-form, .simulation-form {
       grid-template-columns: minmax(0, 1fr);

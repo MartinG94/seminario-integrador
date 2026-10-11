@@ -1,9 +1,12 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Component, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { NavigationStart, Router } from '@angular/router';
+import { merge, Subject } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 
 import { CalendarioApiService, CalcularPlazoResponse, HolidayDto } from '../services/calendario-api.service';
 import { AuthService } from '../services/auth.service';
+import { NotificationService, httpErrorMessage } from '../services/notification.service';
 
 @Component({
   selector: 'app-calendario-institucional',
@@ -18,8 +21,6 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   dateAscending = true;
   loading = false;
   loadError = '';
-  errorMessage = '';
-  successMessage = '';
   showHolidayForm = false;
   holidayDate = '';
   holidayDescription = '';
@@ -29,7 +30,8 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   simulationDays = 5;
   simulationLoading = false;
   simulationResult: CalcularPlazoResponse | null = null;
-  simulationError = '';
+  @ViewChild('simulationTemplate', { static: true }) simulationTemplate: TemplateRef<unknown>;
+  private simulationDialog: MatDialogRef<unknown> | null = null;
 
   readonly months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -38,7 +40,8 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly cancelSimulation$ = new Subject<void>();
 
-  constructor(private calendarApi: CalendarioApiService, public auth: AuthService) {}
+  constructor(private calendarApi: CalendarioApiService, public auth: AuthService,
+    private notifications: NotificationService, private dialog: MatDialog, private router: Router) {}
 
   get canManage(): boolean { return this.auth.tieneRol('ADMIN', 'CD', 'TD'); }
 
@@ -61,12 +64,55 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.simulationStart = this.institutionalDateTime();
     this.loadHolidays();
+    this.router.events.pipe(takeUntil(this.destroy$)).subscribe(event => {
+      if (event instanceof NavigationStart) { this.closeSimulation(); }
+    });
   }
 
   ngOnDestroy(): void {
+    this.closeSimulation();
     this.destroy$.next();
     this.destroy$.complete();
     this.cancelSimulation$.complete();
+  }
+
+  openSimulation(): void {
+    if (this.simulationDialog) { return; }
+    this.resetSimulation();
+    this.simulationDialog = this.dialog.open(this.simulationTemplate, {
+      width: '56rem',
+      maxWidth: 'calc(100vw - 2rem)',
+      maxHeight: 'calc(100vh - 2rem)',
+      autoFocus: '#simulation-start',
+      ariaLabelledBy: 'simulation-title',
+      panelClass: 'calendar-simulation-dialog',
+      closeOnNavigation: true,
+      restoreFocus: true
+    });
+    // Cancelar al comenzar el cierre evita respuestas durante la animación de salida.
+    this.simulationDialog.beforeClosed().pipe(takeUntil(this.destroy$)).subscribe(() => this.resetSimulation());
+    merge(
+      this.simulationDialog.backdropClick(),
+      this.simulationDialog.keydownEvents().pipe(filter(event =>
+        event.key === 'Escape' && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey))
+    ).pipe(takeUntil(this.simulationDialog.afterClosed()), takeUntil(this.destroy$))
+      .subscribe(() => this.resetSimulation());
+    this.simulationDialog.afterClosed().pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.simulationDialog = null;
+    });
+  }
+
+  closeSimulation(): void {
+    this.resetSimulation();
+    this.simulationDialog?.close();
+  }
+
+  private resetSimulation(): void {
+    this.cancelSimulation$.next();
+    this.simulationLoading = false;
+    this.simulationResult = null;
+    this.simulationDays = 5;
+    this.simulationStart = this.institutionalDateTime();
   }
 
   private institutionalDateTime(): string {
@@ -91,6 +137,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       error: () => {
         this.loading = false;
         this.loadError = 'No se pudo cargar el calendario. Intentá nuevamente.';
+        this.notifications.error(this.loadError);
       }
     });
   }
@@ -122,15 +169,13 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   saveHoliday(): void {
     if (!this.canManage || this.savingHoliday || this.loading || this.loadError) { return; }
     if (!this.holidayDate || !this.holidayDescription.trim()) {
-      this.errorMessage = 'Completá la fecha y la denominación.';
+      this.notifications.error('Completá la fecha y la denominación.');
       return;
     }
     if (this.holidayDate < this.today) {
-      this.errorMessage = 'La fecha debe ser hoy o posterior.';
+      this.notifications.error('La fecha debe ser hoy o posterior.');
       return;
     }
-    this.errorMessage = '';
-    this.successMessage = '';
     this.savingHoliday = true;
     this.calendarApi.addFeriado({
       fecha: this.holidayDate,
@@ -145,31 +190,29 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
         this.showHolidayForm = false;
         this.holidayDate = '';
         this.holidayDescription = '';
-        this.successMessage = 'Feriado creado.';
+        this.notifications.success('Feriado creado.');
         if (this.simulationResult || this.simulationLoading) {
           this.cancelSimulation$.next();
           this.simulationLoading = false;
           this.calculateDeadline();
         }
       },
-      error: (error: { error?: { fecha?: string[]; descripcion?: string[]; detail?: string } }) => {
+      error: (error: unknown) => {
         this.savingHoliday = false;
-        this.errorMessage = error.error?.fecha?.[0] || error.error?.descripcion?.[0] ||
-          error.error?.detail || 'No se pudo crear el feriado. Intentá nuevamente.';
+        this.notifications.error(httpErrorMessage(error, 'No se pudo crear el feriado. Intentá nuevamente.'));
       }
     });
   }
 
   calculateDeadline(): void {
     if (this.simulationLoading) { return; }
-    this.simulationError = '';
     this.simulationResult = null;
     if (!this.simulationStart || Number.isNaN(Date.parse(`${this.simulationStart}-03:00`))) {
-      this.simulationError = 'Indicá una fecha y hora de inicio válidas.';
+      this.notifications.error('Indicá una fecha y hora de inicio válidas.');
       return;
     }
     if (!Number.isInteger(this.simulationDays) || this.simulationDays < 1) {
-      this.simulationError = 'La cantidad de días hábiles debe ser un entero mayor a cero.';
+      this.notifications.error('La cantidad de días hábiles debe ser un entero mayor a cero.');
       return;
     }
     this.simulationLoading = true;
@@ -183,7 +226,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.simulationLoading = false;
-        this.simulationError = 'No se pudo calcular el vencimiento. Intentá nuevamente.';
+        this.notifications.error('No se pudo calcular el vencimiento. Intentá nuevamente.');
       }
     });
   }

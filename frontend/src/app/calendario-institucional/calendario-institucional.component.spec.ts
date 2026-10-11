@@ -1,17 +1,27 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { ApplicationRef, Component, NO_ERRORS_SCHEMA, NgZone } from '@angular/core';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { Router } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 import { FormsModule } from '@angular/forms';
 import { of, Subject, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
 import { CalendarioApiService, HolidayDto, CalcularPlazoResponse } from '../services/calendario-api.service';
 import { CalendarioInstitucionalComponent } from './calendario-institucional.component';
+
+@Component({ template: '<p>Otra vista</p>' })
+class CalendarNextView {}
 
 describe('CalendarioInstitucionalComponent', () => {
   let component: CalendarioInstitucionalComponent;
   let fixture: ComponentFixture<CalendarioInstitucionalComponent>;
   let api: jasmine.SpyObj<CalendarioApiService>;
   let auth: jasmine.SpyObj<AuthService>;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   const holidays: HolidayDto[] = [
     { id: 1, fecha: '2026-10-12', descripcion: 'Diversidad cultural', creado_por: null,
@@ -32,10 +42,13 @@ describe('CalendarioInstitucionalComponent', () => {
     api.calcularPlazo.and.returnValue(of(result));
     auth = jasmine.createSpyObj('AuthService', ['tieneRol']);
     auth.tieneRol.and.returnValue(true);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
     await TestBed.configureTestingModule({
-      imports: [FormsModule],
-      declarations: [CalendarioInstitucionalComponent],
-      providers: [{ provide: CalendarioApiService, useValue: api }, { provide: AuthService, useValue: auth }],
+      imports: [FormsModule, MatDialogModule, NoopAnimationsModule,
+        RouterTestingModule.withRoutes([{ path: 'prueba', component: CalendarNextView }])],
+      declarations: [CalendarioInstitucionalComponent, CalendarNextView],
+      providers: [{ provide: CalendarioApiService, useValue: api }, { provide: AuthService, useValue: auth },
+        { provide: NotificationService, useValue: notifications }],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
     fixture = TestBed.createComponent(CalendarioInstitucionalComponent);
@@ -66,9 +79,11 @@ describe('CalendarioInstitucionalComponent', () => {
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelector('.holiday-date')?.textContent).toBe('12/10/2026');
     expect(component.formatCalendarDate('2026-01-01')).toBe('01/01/2026');
+    component.openSimulation();
     component.simulationResult = result;
     fixture.detectChanges();
-    expect(root.querySelector('.simulation-days')?.textContent).toContain('13/10/2026');
+    expect(TestBed.inject(OverlayContainer).getContainerElement().querySelector('.simulation-days')?.textContent)
+      .toContain('13/10/2026');
   });
 
   it('ordena Fecha mediante un botón accesible y filtra por Año/Mes', () => {
@@ -92,7 +107,7 @@ describe('CalendarioInstitucionalComponent', () => {
     api.getFeriados.and.returnValue(of([]));
     component.loadHolidays();
     fixture.detectChanges();
-    expect(component.errorMessage).toBe('');
+    expect(notifications.error).not.toHaveBeenCalled();
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelector('.calendar-state[role="status"]')?.textContent).toContain('No hay feriados registrados.');
     expect(root.querySelector('[role="alert"]')).toBeNull();
@@ -105,8 +120,9 @@ describe('CalendarioInstitucionalComponent', () => {
     fixture.detectChanges();
     const root: HTMLElement = fixture.nativeElement;
     expect(component.loading).toBeFalse();
-    const state = root.querySelector('.calendar-state[role="alert"]');
-    expect(state?.textContent).toContain('No se pudo cargar el calendario. Intentá nuevamente.');
+    const state = root.querySelector('.calendar-state');
+    expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo cargar el calendario. Intentá nuevamente.');
+    expect(state?.textContent).not.toContain('No se pudo cargar el calendario');
     expect(root.querySelectorAll('.holiday-date').length).toBe(0);
     const retry = state?.querySelector('button') as HTMLButtonElement;
     expect(retry?.textContent).toContain('Reintentar');
@@ -130,7 +146,8 @@ describe('CalendarioInstitucionalComponent', () => {
     component.saveHoliday();
     fixture.detectChanges();
     const root: HTMLElement = fixture.nativeElement;
-    expect(root.querySelector('.calendar-notice[role="alert"]')?.textContent).toContain('Ya existe');
+    expect(notifications.error).toHaveBeenCalledWith('Ya existe un feriado para esa fecha.');
+    expect(root.querySelector('[role="alert"]')).toBeNull();
     expect(root.querySelector('.calendar-state[role="alert"]')).toBeNull();
     expect(root.querySelectorAll('.holiday-date').length).toBe(2);
   });
@@ -181,7 +198,7 @@ describe('CalendarioInstitucionalComponent', () => {
       component.holidayDescription = 'Asueto';
       component.saveHoliday();
       expect(api.addFeriado).not.toHaveBeenCalled();
-      expect(component.errorMessage).toContain('hoy o posterior');
+      expect(notifications.error).toHaveBeenCalledWith('La fecha debe ser hoy o posterior.');
     } finally { jasmine.clock().uninstall(); }
   });
 
@@ -197,7 +214,7 @@ describe('CalendarioInstitucionalComponent', () => {
     pending.next({ ...holidays[1], id: 3, fecha: '2099-10-13', descripcion: 'Asueto nuevo' });
     expect(component.filteredHolidays.length).toBe(3);
     expect(component.savingHoliday).toBeFalse();
-    expect(component.successMessage).toBe('Feriado creado.');
+    expect(notifications.success).toHaveBeenCalledOnceWith('Feriado creado.');
   });
 
   it('muestra el error del servidor al intentar crear un duplicado', () => {
@@ -205,7 +222,7 @@ describe('CalendarioInstitucionalComponent', () => {
     component.holidayDate = '2099-10-13';
     component.holidayDescription = 'Asueto';
     component.saveHoliday();
-    expect(component.errorMessage).toContain('Ya existe');
+    expect(notifications.error).toHaveBeenCalledWith('Ya existe un feriado para esa fecha.');
     expect(component.savingHoliday).toBeFalse();
   });
 
@@ -267,4 +284,88 @@ describe('CalendarioInstitucionalComponent', () => {
     pending.next([]);
     expect(component.holidays.length).toBe(2);
   });
+
+  it('abre el simulador desde la misma fila de acciones y enfoca su primer campo', fakeAsync(() => {
+    const root: HTMLElement = fixture.nativeElement;
+    const button = root.querySelector('[aria-haspopup="dialog"]') as HTMLButtonElement;
+    const create = root.querySelector('[aria-controls="create-holiday-form"]');
+    expect(button.parentElement).toBe(create?.parentElement);
+    expect(root.querySelector('#simulation-start')).toBeNull();
+    button.focus();
+    button.click();
+    fixture.detectChanges();
+    tick();
+    const dialog = TestBed.inject(OverlayContainer).getContainerElement().querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog).toBeTruthy();
+    expect(dialog.textContent).toContain('Simular plazo');
+    expect(document.activeElement?.id).toBe('simulation-start');
+    (dialog.querySelector('[aria-label="Cerrar simulador"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    tick(500);
+    expect(document.activeElement).toBe(button);
+  }));
+
+  for (const closeMethod of ['X', 'Escape', 'fondo', 'navegación', 'destrucción']) {
+    it(`cierra por ${closeMethod}, cancela solicitudes y reinicia el simulador`, fakeAsync(() => {
+      const pending = new Subject<CalcularPlazoResponse>();
+      api.calcularPlazo.and.returnValue(pending);
+      component.openSimulation();
+      fixture.detectChanges();
+      tick();
+      component.simulationStart = '2099-11-20T15:10';
+      component.simulationDays = 7;
+      component.calculateDeadline();
+      const container = TestBed.inject(OverlayContainer).getContainerElement();
+      if (closeMethod === 'X') {
+        (container.querySelector('[aria-label="Cerrar simulador"]') as HTMLButtonElement).click();
+      } else if (closeMethod === 'Escape') {
+        container.querySelector('[role="dialog"]').dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+      } else if (closeMethod === 'fondo') {
+        (container.querySelector('.cdk-overlay-backdrop') as HTMLElement).click();
+      } else if (closeMethod === 'navegación') {
+        TestBed.inject(NgZone).run(() => TestBed.inject(Router).navigateByUrl('/prueba'));
+      } else {
+        fixture.destroy();
+      }
+      if (closeMethod !== 'destrucción') { fixture.detectChanges(); }
+      else { TestBed.inject(ApplicationRef).tick(); }
+      tick(500);
+      pending.next(result);
+      expect(component.simulationLoading).toBeFalse();
+      expect(component.simulationResult).toBeNull();
+      expect(component.simulationDays).toBe(5);
+      expect(component.simulationStart).not.toBe('2099-11-20T15:10');
+      expect(container.querySelector('[role="dialog"]')).toBeNull();
+      if (closeMethod !== 'destrucción' && closeMethod !== 'navegación') {
+        component.openSimulation();
+        fixture.detectChanges();
+        tick();
+        pending.next(result);
+        expect(component.simulationResult).toBeNull();
+        expect(container.querySelector('.simulation-result')).toBeNull();
+        TestBed.inject(MatDialog).closeAll();
+        fixture.detectChanges();
+        tick(500);
+      }
+    }));
+  }
+
+  it('permite simular a un socio sin permiso de creación y notifica un error de cálculo', fakeAsync(() => {
+    auth.tieneRol.and.returnValue(false);
+    api.calcularPlazo.and.returnValue(throwError(() => ({ status: 500 })));
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('[aria-haspopup="dialog"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    tick();
+    component.calculateDeadline();
+    fixture.detectChanges();
+    expect(notifications.error).toHaveBeenCalledWith('No se pudo calcular el vencimiento. Intentá nuevamente.');
+    const container = TestBed.inject(OverlayContainer).getContainerElement();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(component.simulationLoading).toBeFalse();
+    TestBed.inject(MatDialog).closeAll();
+    fixture.detectChanges();
+    tick(500);
+  }));
 });

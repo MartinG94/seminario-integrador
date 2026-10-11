@@ -1,14 +1,5 @@
 <div class="main-content calendar-page">
   <div class="container-fluid">
-    <div *ngIf="successMessage" class="calendar-notice calendar-success" role="status">
-      {{ successMessage }}
-      <button type="button" class="notice-close" (click)="successMessage = ''" aria-label="Cerrar mensaje">×</button>
-    </div>
-    <div *ngIf="errorMessage" class="calendar-notice calendar-error" role="alert">
-      {{ errorMessage }}
-      <button type="button" class="notice-close" (click)="errorMessage = ''" aria-label="Cerrar mensaje">×</button>
-    </div>
-
     <div class="card">
       <div class="card-header card-header-primary calendar-heading">
         <h3 class="card-title">Calendario institucional</h3>
@@ -31,12 +22,18 @@
               </select>
             </div>
           </div>
-          <button *ngIf="canManage" type="button" mat-raised-button class="btn btn-primary"
-            [disabled]="savingHoliday || loading || !!loadError" (click)="toggleHolidayForm()"
-            [attr.aria-expanded]="showHolidayForm" aria-controls="create-holiday-form">
-            <span class="material-icons" aria-hidden="true">{{ showHolidayForm ? 'close' : 'add' }}</span>
-            {{ showHolidayForm ? 'Cancelar' : 'Crear Feriado' }}
-          </button>
+          <div class="calendar-actions">
+            <button type="button" mat-raised-button class="btn btn-primary" (click)="openSimulation()"
+              aria-haspopup="dialog">
+              <span class="material-icons" aria-hidden="true">calculate</span> Simular plazo
+            </button>
+            <button *ngIf="canManage" type="button" mat-raised-button class="btn btn-primary"
+              [disabled]="savingHoliday || loading || !!loadError" (click)="toggleHolidayForm()"
+              [attr.aria-expanded]="showHolidayForm" aria-controls="create-holiday-form">
+              <span class="material-icons" aria-hidden="true">{{ showHolidayForm ? 'close' : 'add' }}</span>
+              {{ showHolidayForm ? 'Cancelar' : 'Crear Feriado' }}
+            </button>
+          </div>
         </div>
 
         <form *ngIf="showHolidayForm" id="create-holiday-form" class="holiday-form"
@@ -61,13 +58,12 @@
         </form>
 
         <div *ngIf="loading || loadError || filteredHolidays.length === 0" class="calendar-state"
-          [attr.role]="loadError ? 'alert' : 'status'">
+          role="status">
           <span class="material-icons calendar-state-icon" aria-hidden="true">
             {{ loading ? 'hourglass_empty' : (loadError ? 'event_busy' : 'event_note') }}
           </span>
           <p *ngIf="loading">Cargando calendario…</p>
           <ng-container *ngIf="!loading">
-            <p *ngIf="loadError">{{ loadError }}</p>
             <button *ngIf="loadError" type="button" mat-raised-button class="btn btn-primary"
               (click)="loadHolidays()">
               <span class="material-icons" aria-hidden="true">refresh</span>
@@ -113,12 +109,18 @@
       </div>
     </div>
 
-    <div class="card calendar-simulator">
-      <div class="card-header card-header-primary calendar-heading">
-        <h4 class="card-title">Simular plazo</h4>
-      </div>
-      <div class="card-body">
-        <div *ngIf="simulationError" class="calendar-notice calendar-error" role="alert">{{ simulationError }}</div>
+  </div>
+</div>
+
+<ng-template #simulationTemplate>
+  <div class="calendar-page simulation-modal">
+    <div class="simulation-heading">
+      <h2 mat-dialog-title id="simulation-title">Simular plazo</h2>
+      <button type="button" class="dialog-close" (click)="closeSimulation()" aria-label="Cerrar simulador">
+        <span class="material-icons" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <mat-dialog-content>
         <form class="simulation-form" (ngSubmit)="calculateDeadline()" #simulationForm="ngForm">
           <div class="calendar-field">
             <label for="simulation-start">Fecha y hora de inicio</label>
@@ -160,7 +162,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </mat-dialog-content>
   </div>
-</div>
+</ng-template>
