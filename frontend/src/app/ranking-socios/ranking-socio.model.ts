@@ -13,6 +13,7 @@ export interface RankingSocio {
   apellido: string;
   categoria: 'ACTIVO' | 'PASIVO';
   subcomision: string;
+  grupo: string | null;
   saldo: number;
 
   saldoHistorico?: number;

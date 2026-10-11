@@ -78,6 +78,17 @@ export interface SolicitudT01 {
   issued_at: string | null;
 }
 
+export interface ExpedienteRankingDetalle {
+  id: number;
+  numero: string;
+  motivo: string;
+  puntos: number | string;
+  estado: string;
+  urgencia: string;
+  urgencia_display: string;
+  created_at: string;
+}
+
 export interface SolicitudT01Payload {
   destinatario_socio_id?: number | null;
   destinatarios_socios_ids?: number[];
@@ -121,6 +132,14 @@ export class ExpedienteApiService {
 
   listarReglamentos(): Observable<{ reglamentos: string[] }> {
     return this.http.get<{ reglamentos: string[] }>(`${this.apiUrl}/reglamentos/`);
+  }
+
+  listarPorLegajo(legajo: string): Observable<ExpedienteRankingDetalle[]> {
+    const params = new HttpParams().set('legajo', legajo);
+    return this.http.get<ExpedienteRankingDetalle[]>(
+      `${this.apiUrl}/gestion/`,
+      { params }
+    );
   }
 
   listarMisSolicitudes(params?: { search?: string; estado?: string }): Observable<SolicitudMonitoreo[]> {

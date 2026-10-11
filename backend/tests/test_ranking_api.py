@@ -1,12 +1,14 @@
 """Pruebas de integración para la API REST del Ranking Reconciliado."""
 
+from datetime import datetime, timezone
+
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from padron.models import Socio, SocioEstudio, Subcomision
+from padron.models import Socio, SocioEstadoHistorial, SocioEstudio, Subcomision
 from ranking.models import PuntajeAplicado, PuntajeGeneral
 from tests.legacy_schema import (
     create_legacy_record,
@@ -22,6 +24,7 @@ def api_client() -> APIClient:
 @pytest.fixture
 def seed_ranking_data(db) -> dict[str, list]:
     """Crea una base de socios con casos balanceados, discrepantes y sin movimientos."""
+
     sub_computos = create_legacy_record(Subcomision, codSubcomision=1, nombre="Cómputos")
     sub_eventos = create_legacy_record(Subcomision, codSubcomision=7, nombre="Eventos")
     sub_td = create_legacy_record(Subcomision, codSubcomision=10, nombre="Tribunal de Disciplina")
@@ -147,6 +150,7 @@ class TestRankingAPIEndpoints:
             "apellido",
             "categoria",
             "subcomision",
+            "grupo",
             "saldo",
             "saldoHistorico",
             "saldoPuntajeGeneral",
@@ -299,6 +303,95 @@ class TestRankingFilteringAndOrdering:
         assert response.status_code == status.HTTP_200_OK
         saldos = [item["saldo"] for item in response.json()]
         assert saldos == sorted(saldos)
+
+    def test_grupo_uses_latest_history_record(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """El grupo del ranking corresponde al ?ltimo estado hist?rico del socio."""
+        socio = seed_ranking_data["socios"][0]
+
+        create_legacy_record(
+            SocioEstadoHistorial,
+            idEstadoHistorial=9001,
+            idGrupo=2,
+            socio=socio,
+            fechaHora=datetime(2025, 1, 1, 10, 0, tzinfo=timezone.utc),
+            codEstadoSocio=1,
+            socio_motivoCambioEstado=1,
+        )
+        create_legacy_record(
+            SocioEstadoHistorial,
+            idEstadoHistorial=9002,
+            idGrupo=7,
+            socio=socio,
+            fechaHora=datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc),
+            codEstadoSocio=1,
+            socio_motivoCambioEstado=1,
+        )
+
+        response = api_client.get("/api/v1/ranking/?search=Carlos")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()[0]["grupo"] == "G7"
+
+    def test_grupo_tie_breaks_latest_history_by_id(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """A igual fecha, el historial con mayor id determina el grupo vigente."""
+        socio = seed_ranking_data["socios"][1]
+        fecha = datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc)
+
+        create_legacy_record(
+            SocioEstadoHistorial,
+            idEstadoHistorial=9101,
+            idGrupo=3,
+            socio=socio,
+            fechaHora=fecha,
+            codEstadoSocio=1,
+            socio_motivoCambioEstado=1,
+        )
+        create_legacy_record(
+            SocioEstadoHistorial,
+            idEstadoHistorial=9102,
+            idGrupo=9,
+            socio=socio,
+            fechaHora=fecha,
+            codEstadoSocio=1,
+            socio_motivoCambioEstado=1,
+        )
+
+        response = api_client.get("/api/v1/ranking/?search=Beatriz")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()[0]["grupo"] == "G9"
+
+    def test_ordering_by_grupo_then_apellido_nombre(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Ordena por grupo y secundariamente por apellido y nombre."""
+        socios = seed_ranking_data["socios"]
+        grupos = [2, 1, 1, 3]
+
+        for index, (socio, grupo) in enumerate(zip(socios, grupos), start=1):
+            create_legacy_record(
+                SocioEstadoHistorial,
+                idEstadoHistorial=9200 + index,
+                idGrupo=grupo,
+                socio=socio,
+                fechaHora=datetime(2026, 3, index, 10, 0, tzinfo=timezone.utc),
+                codEstadoSocio=1,
+                socio_motivoCambioEstado=1,
+            )
+
+        response = api_client.get(
+            "/api/v1/ranking/?ordering=grupo,apellido,nombre"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [item["id"] for item in response.json()] == [
+            "102",
+            "103",
+            "101",
+            "104",
+        ]
 
     def test_ordering_by_subcomision(self, api_client: APIClient, seed_ranking_data) -> None:
         """Ordenamiento alfabético por nombre de subcomisión."""
