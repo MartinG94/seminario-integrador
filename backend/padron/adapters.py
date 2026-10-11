@@ -250,12 +250,13 @@ class DatabasePadronAdapter:
         from padron.models import SocioEstadoHistorial
 
         latest_estado = SocioEstadoHistorial.objects.filter(socio=OuterRef("pk")).order_by(
-            "-fechaHora"
+            "-fechaHora", "-idEstadoHistorial"
         )
 
         return (
             Socio.objects.annotate(
-                latest_cod_estado=Subquery(latest_estado.values("codEstadoSocio")[:1])
+                latest_cod_estado=Subquery(latest_estado.values("codEstadoSocio")[:1]),
+                latest_grupo_id=Subquery(latest_estado.values("idGrupo")[:1]),
             )
             .select_related("subcomision")
             .prefetch_related(
@@ -313,6 +314,11 @@ class DatabasePadronAdapter:
             last_name=socio.apellido,
             email=email,
             subcomision=subcomision,
+            grupo=(
+                f"G{getattr(socio, 'latest_grupo_id', '')}"
+                if getattr(socio, "latest_grupo_id", None)
+                else None
+            ),
             social_year=socio.anoSocial,
             category=category,
             is_active=is_active,

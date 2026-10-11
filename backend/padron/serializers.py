@@ -51,6 +51,7 @@ class SocioInstitucionalSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     email = serializers.CharField(allow_null=True)
     subcomision = SubcomisionSerializer(allow_null=True)
+    grupo = serializers.CharField(allow_null=True)
     social_year = serializers.IntegerField()
     category = serializers.ChoiceField(choices=[c.value for c in SocioCategoryEnum])
     is_active = serializers.BooleanField()
