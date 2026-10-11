@@ -78,8 +78,11 @@
               Cargando ranking...
             </div>
 
-            <div *ngIf="error" class="alert alert-danger text-center">
-              {{error}}
+            <div *ngIf="error && !cargando" class="text-center py-4">
+              <button type="button" class="btn btn-primary" (click)="ngOnInit()"
+                aria-label="Reintentar carga del ranking">
+                <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
+              </button>
             </div>
 
             <div *ngIf="!cargando && !error" class="table-responsive">

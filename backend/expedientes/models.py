@@ -11,12 +11,13 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
-from expedientes.domain.holiday_provider import Argentina2026HolidayProvider
+from expedientes.domain.holiday_provider import DbHolidayProvider
 
 if TYPE_CHECKING:
     from expedientes.domain.ports import HolidayProviderPort
@@ -38,6 +39,123 @@ class TipoDescargoEnum(models.TextChoices):
 
     T02_CERTIFICADO = "T02_CERTIFICADO", "Formulario T02 - Causal con Certificado"
     T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
+
+
+class TipoFeriadoEnum(models.TextChoices):
+    """Tipos de feriados y días inhábiles procesales."""
+
+    NACIONAL = "NACIONAL", "Feriado Nacional"
+    PROVINCIAL = "PROVINCIAL", "Feriado Provincial"
+    INSTITUCIONAL = "INSTITUCIONAL", "Asueto Institucional"
+    EXCEPCION = "EXCEPCION", "Día Inhábil Excepcional"
+
+
+class CalendarioVersion(models.Model):
+    """Evidencia histórica; no configura el calendario operativo."""
+
+    version = models.PositiveIntegerField(unique=True, db_index=True)
+    nombre = models.CharField(max_length=150)
+    vigencia_desde = models.DateField(db_index=True)
+    vigencia_hasta = models.DateField(null=True, blank=True)
+    activa = models.BooleanField(default=True, db_index=True)
+    motivo_cambio = models.TextField(
+        help_text="Justificación formal de auditoría para la creación/modificación de la versión."
+    )
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="calendarios_creados",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "expedientes_calendario_version"
+        verbose_name = "Versión de Calendario Institucional"
+        verbose_name_plural = "Versiones de Calendario Institucional"
+        ordering = ["-version"]
+
+    def __str__(self) -> str:
+        return f"v{self.version} - {self.nombre} ({'Activa' if self.activa else 'Inactiva'})"
+
+
+class FeriadoExcepcion(models.Model):
+    """Registro histórico de una versión anterior del calendario."""
+
+    calendario_version = models.ForeignKey(
+        CalendarioVersion,
+        on_delete=models.CASCADE,
+        related_name="feriados",
+    )
+    fecha = models.DateField(db_index=True)
+    descripcion = models.CharField(max_length=200)
+    tipo = models.CharField(
+        max_length=30,
+        choices=TipoFeriadoEnum.choices,
+        default=TipoFeriadoEnum.NACIONAL,
+    )
+    es_laborable = models.BooleanField(
+        default=False,
+        help_text="False indica día inhábil (feriado/asueto); True para excepciones laborables.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "expedientes_feriado_excepcion"
+        verbose_name = "Feriado o Excepción de Calendario"
+        verbose_name_plural = "Feriados y Excepciones de Calendario"
+        ordering = ["fecha"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["calendario_version", "fecha"],
+                name="unique_fecha_per_calendario_version",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.fecha}: {self.descripcion} ({self.get_tipo_display()})"
+
+
+class Holiday(models.Model):
+    """Día inhábil del único calendario institucional operativo."""
+
+    class Origin(models.TextChoices):
+        USER = "USER", "Registro por usuario"
+        SYSTEM = "SYSTEM", "Carga inicial del sistema"
+        LEGACY = "LEGACY", "Registro previo sin autoría registrada"
+
+    date = models.DateField(unique=True)
+    description = models.CharField(max_length=200)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="institutional_holidays",
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    origin = models.CharField(max_length=10, choices=Origin.choices, default=Origin.USER)
+
+    class Meta:
+        db_table = "expedientes_institutional_holiday"
+        verbose_name = "Feriado institucional"
+        verbose_name_plural = "Feriados institucionales"
+        ordering = ["date"]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(origin="USER", created_by__isnull=False)
+                    | models.Q(origin__in=["SYSTEM", "LEGACY"], created_by__isnull=True)
+                ),
+                name="holiday_requires_creation_audit",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.date}: {self.description}"
 
 
 class UrgenciaExpedienteEnum(models.TextChoices):
@@ -115,6 +233,14 @@ class Expediente(models.Model):
         help_text="Nivel de urgencia procesal (Baja, Normal, Urgente).",
     )
     # Plazos procesales perentorios (CA1 y CA2)
+    calendario_version = models.ForeignKey(
+        CalendarioVersion,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="expedientes_congelados",
+        help_text="Versión del calendario institucional aplicada al congelar el plazo (CA3).",
+    )
     plazo_inicio_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -165,9 +291,13 @@ class Expediente(models.Model):
     ) -> datetime:
         """
         Calcula y congela el plazo de 5 días hábiles a partir de fecha_hora_inicio.
+        Usa el calendario único y conserva la fecha/hora límite persistida (CA3).
         Transiciona al estado JUSTIFICANDO registrando trazabilidad y auditoría.
         """
-        provider = holiday_provider or Argentina2026HolidayProvider()
+        if self.plazo_limite_at is not None:
+            return self.plazo_limite_at
+        provider = holiday_provider if holiday_provider is not None else DbHolidayProvider()
+
         limite = compute_business_deadline(
             start_at=fecha_hora_inicio,
             business_days=dias_habiles,
@@ -176,7 +306,13 @@ class Expediente(models.Model):
 
         self.plazo_inicio_at = fecha_hora_inicio
         self.plazo_limite_at = limite
-        self.save(update_fields=["plazo_inicio_at", "plazo_limite_at", "updated_at"])
+        self.save(
+            update_fields=[
+                "plazo_inicio_at",
+                "plazo_limite_at",
+                "updated_at",
+            ]
+        )
 
         from expedientes.services.workflow_service import ExpedienteWorkflowService
 

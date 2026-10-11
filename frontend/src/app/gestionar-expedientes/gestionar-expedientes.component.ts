@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
+import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -77,14 +78,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     'Ing. Rossi (Vocal 2)'
   ];
 
-  mensajeExito = '';
+  failedToLoadBoard = false;
   cargando = false;
 
   private subs: Subscription[] = [];
 
   constructor(
     public dataService: TribunalDataService,
-    private auth: AuthService
+    private auth: AuthService,
+    private notifications: NotificationService
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -129,6 +131,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   cargarDatosTablero(): void {
     this.cargando = true;
+    this.failedToLoadBoard = false;
     const filtros: any = {};
     if (this.filtroSocio.trim()) filtros.socio = this.filtroSocio.trim();
     if (this.filtroEstado.trim()) filtros.estado = this.filtroEstado.trim();
@@ -143,6 +146,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       error: () => {
         // En caso de error o backend no disponible, se mantiene la colección local
         this.cargando = false;
+        this.failedToLoadBoard = true;
+        this.notifications.error('No se pudo cargar el tablero. Intentá nuevamente.');
       }
     });
   }
@@ -245,8 +250,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.cargarDatosTablero();
       },
       error: (err) => {
-        const errorMsg = err?.error?.to_status || err?.error?.detail || 'No se pudo realizar la transición.';
-        this.mostrarNotificacion(`Error: ${errorMsg}`);
+        this.notifications.error(httpErrorMessage(err, 'No se pudo realizar la transición.'));
       }
     });
   }
@@ -400,8 +404,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   mostrarNotificacion(msg: string): void {
-    this.mensajeExito = msg;
-    setTimeout(() => { this.mensajeExito = ''; }, 4500);
+    this.notifications.success(msg);
   }
 
   getEstadoLabel(estado: string): string {
@@ -472,8 +475,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.cargarDatosTablero();
       },
       error: (err) => {
-        const errorMsg = err?.error?.detail || err?.error?.urgencia || 'No se pudo actualizar la urgencia.';
-        this.mostrarNotificacion(`Error: ${errorMsg}`);
+        this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar la urgencia.'));
       }
     });
   }

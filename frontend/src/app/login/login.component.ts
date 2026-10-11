@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
 
 @Component({
   selector: 'app-login',
@@ -13,8 +14,6 @@ import { AuthService } from '../services/auth.service';
 export class LoginComponent implements OnInit {
   formulario: FormGroup;
   enviando = false;
-  mensajeError = '';
-  sesionExpirada = false;
 
   cuentasDemo = [
     { legajo: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
@@ -30,7 +29,8 @@ export class LoginComponent implements OnInit {
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private notifications: NotificationService
   ) {
     this.formulario = this.fb.group({
       identifier: ['', Validators.required]
@@ -39,7 +39,9 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParams;
-    this.sesionExpirada = params['expirada'] === '1';
+    if (params['expirada'] === '1' && !this.auth.isAuthenticated()) {
+      this.notifications.warning('Tu sesión expiró. Volvé a iniciar sesión para continuar.');
+    }
     if (params['volverA']) {
       this.volverA = params['volverA'];
     }
@@ -54,14 +56,14 @@ export class LoginComponent implements OnInit {
   }
 
   ingresar(): void {
-    if (this.formulario.invalid || this.enviando) {
+    if (this.enviando) { return; }
+    if (this.formulario.invalid) {
       this.formulario.markAllAsTouched();
+      this.notifications.error('Ingresá tu Número de Socio.');
       return;
     }
 
     this.enviando = true;
-    this.mensajeError = '';
-    this.sesionExpirada = false;
 
     const { identifier } = this.formulario.value;
     this.auth.login(identifier).subscribe({
@@ -71,10 +73,10 @@ export class LoginComponent implements OnInit {
       },
       error: (error: HttpErrorResponse) => {
         this.enviando = false;
-        this.mensajeError =
+        this.notifications.error(
           error.status === 401
             ? 'Número de Socio no encontrado o cuenta no habilitada.'
-            : 'No pudimos conectar con el servidor. Intentá nuevamente en unos instantes.';
+            : 'No pudimos conectar con el servidor. Intentá nuevamente en unos instantes.');
       }
     });
   }

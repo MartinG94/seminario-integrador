@@ -2,17 +2,20 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { MisExpedientesComponent } from './mis-expedientes.component';
+import { NotificationService } from '../services/notification.service';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 
 describe('MisExpedientesComponent', () => {
   let component: MisExpedientesComponent;
   let fixture: ComponentFixture<MisExpedientesComponent>;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   beforeEach(async(() => {
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, FormsModule],
       declarations: [MisExpedientesComponent],
-      providers: [TribunalDataService]
+      providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
     }).compileComponents();
   }));
 
@@ -24,6 +27,20 @@ describe('MisExpedientesComponent', () => {
 
   it('debe crearse correctamente', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('notifica validaciones de T02/T03 sin enviar un descargo inválido', () => {
+    const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
+    component.expedienteSeleccionado = { id: 'test' } as Expediente;
+    component.tipoDescargo = 'T02_CERTIFICADO';
+    component.nombreArchivo = '';
+    component.enviarDescargo();
+    expect(notifications.error).toHaveBeenCalledWith('Es obligatorio adjuntar el comprobante o constancia digital (PDF, JPG o PNG).');
+    component.tipoDescargo = 'T03_EXTRAORDINARIO';
+    component.relatoTexto = '';
+    component.enviarDescargo();
+    expect(notifications.error).toHaveBeenCalledWith('Por favor expone detalladamente los hechos y motivos extraordinarios.');
+    expect(submit).not.toHaveBeenCalled();
   });
 
   describe('Coloreado de Puntos Totales', () => {

@@ -22,14 +22,7 @@
   </div>
 
   <!-- Estado: Error HTTP -->
-  <div *ngIf="!cargando && errorHttp" class="dialog-state state-error alert alert-warning">
-    <div class="d-flex align-items-center gap-2">
-      <i class="material-icons">warning</i>
-      <div>
-        <strong>Aviso de Seguridad:</strong>
-        <p class="mb-0">{{ errorHttp }}</p>
-      </div>
-    </div>
+  <div *ngIf="!cargando && errorHttp" class="dialog-state state-error">
     <div class="mt-3 text-right">
       <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cerrar()">Cerrar</button>
       <button type="button" class="btn btn-sm btn-primary ml-2" (click)="cargarLegajo()">Reintentar</button>

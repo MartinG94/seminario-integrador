@@ -1,5 +1,7 @@
 """Vistas API REST para expedientes y descargos reglamentarios."""
 
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -13,17 +15,21 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from expedientes.domain.calendar import compute_business_deadline
+from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.filters import ExpedienteFilter
 from expedientes.models import (
     CambioEstadoExpediente,
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    Holiday,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
 from expedientes.permissions import (
     CanCreateT01,
+    CanManageCalendar,
     CanOpenExpedientes,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
@@ -31,10 +37,13 @@ from expedientes.permissions import (
 )
 from expedientes.serializers import (
     AperturaExpedienteSerializer,
+    CalcularPlazoSerializer,
+    CalendarQuerySerializer,
     CaseNotificationAuditSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     ExpedienteListSerializer,
+    HolidaySerializer,
     MisSolicitudesT01Serializer,
     PresentarDescargoSerializer,
     SolicitudT01Serializer,
@@ -566,3 +575,91 @@ class MisSolicitudesT01View(APIView):
 
         serializer = MisSolicitudesT01Serializer(queryset, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CalendarioFeriadosView(APIView):
+    """Lectura autenticada y alta auditada en el único calendario institucional."""
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "POST":
+            return [permissions.IsAuthenticated(), CanManageCalendar()]
+        return [permissions.IsAuthenticated()]
+
+    def get(self, request: Request) -> Response:
+        query = CalendarQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        filters = query.validated_data
+        holidays = Holiday.objects.select_related("created_by__socio")
+        if "year" in filters:
+            holidays = holidays.filter(date__year=filters["year"])
+        if "month" in filters:
+            holidays = holidays.filter(date__month=filters["month"])
+        order = "-date" if filters["ordering"] == "-fecha" else "date"
+        return Response(HolidaySerializer(holidays.order_by(order), many=True).data)
+
+    def post(self, request: Request) -> Response:
+        serializer = HolidaySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                holiday = serializer.save(created_by=request.user, created_at=timezone.now())
+        except IntegrityError:
+            if Holiday.objects.filter(date=serializer.validated_data["date"]).exists():
+                raise DRFValidationError({"fecha": ["Ya existe un feriado para esa fecha."]})
+            raise
+        return Response(HolidaySerializer(holiday).data, status=status.HTTP_201_CREATED)
+
+
+class CalcularPlazoView(APIView):
+    """Simulación con el mismo calendario que los plazos de expedientes."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        serializer = CalcularPlazoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        start_at = serializer.validated_data["start_at"]
+        business_days = serializer.validated_data["business_days"]
+        holidays = dict(Holiday.objects.values_list("date", "description"))
+        provider = DbHolidayProvider(holidays=set(holidays))
+        deadline = compute_business_deadline(
+            start_at=start_at, business_days=business_days, holiday_provider=provider
+        )
+        current_date = start_at.date()
+        counted_days = []
+        excluded_days = []
+        weekday_names = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        while current_date < deadline.date():
+            current_date += timedelta(days=1)
+            weekday = current_date.weekday()
+            if weekday >= 5:
+                excluded_days.append(
+                    {
+                        "date": current_date.isoformat(),
+                        "reason": f"{weekday_names[weekday]} (Fin de semana)",
+                    }
+                )
+            elif provider.is_holiday(current_date):
+                excluded_days.append(
+                    {
+                        "date": current_date.isoformat(),
+                        "reason": f"Feriado: {holidays[current_date]}",
+                    }
+                )
+            else:
+                counted_days.append(
+                    {
+                        "day_number": len(counted_days) + 1,
+                        "date": current_date.isoformat(),
+                        "weekday": weekday_names[weekday],
+                    }
+                )
+        return Response(
+            {
+                "start_at": start_at.isoformat(),
+                "business_days": business_days,
+                "deadline": deadline.isoformat(),
+                "dias_habiles_computados": counted_days,
+                "dias_excluidos": excluded_days,
+            }
+        )

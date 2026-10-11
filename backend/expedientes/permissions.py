@@ -16,11 +16,18 @@ from socios.models import Role
 
 __all__ = [
     "CanCreateT01",
+    "CanManageCalendar",
     "CanOpenExpedientes",
     "CanTransitionExpedientes",
     "IsImputadoOrTribunal",
     "IsTribunalOrDirectiva",
 ]
+
+
+class CanManageCalendar(HasAnyRole):
+    """Autoridades y administradores autorizados a configurar calendario y feriados (CA5)."""
+
+    allowed_roles = (Role.ADMIN, Role.CD, Role.TD)
 
 
 class CanOpenExpedientes(HasAnyRole):

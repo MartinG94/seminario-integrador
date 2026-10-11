@@ -7,7 +7,7 @@ import {
 } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
+import { EMPTY, Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { AuthService } from './auth.service';
@@ -24,11 +24,13 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(autorizada).pipe(
       catchError((error: HttpErrorResponse) => {
-        // 401 sobre una sesión que el navegador creía válida significa token
-        // vencido o revocado: se limpia y se vuelve al login.
-        if (error.status === 401 && this.auth.isAuthenticated()) {
-          this.auth.logout();
-          this.router.navigate(['/login'], { queryParams: { expirada: 1 } });
+        if (error.status === 401 && token) {
+          if (this.auth.getToken() === token) {
+            this.auth.logout();
+            this.router.navigate(['/login'], { queryParams: { expirada: 1 } });
+          }
+          // La pantalla anterior no debe emitir otro aviso ni cerrar una sesión nueva.
+          return EMPTY;
         }
         return throwError(() => error);
       })

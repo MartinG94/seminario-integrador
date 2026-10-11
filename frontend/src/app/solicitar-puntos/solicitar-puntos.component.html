@@ -52,16 +52,11 @@
                 </span>
               </div>
 
-              <!-- Mensajes y alertas -->
-              <div *ngIf="exitoMensaje" class="alert alert-success d-flex align-items-center justify-content-between">
-                <span>{{ exitoMensaje }}</span>
-                <button type="button" class="btn btn-sm btn-outline-light ml-3" (click)="setTab('creadas')" *ngIf="numeroExpediente">
+              <div *ngIf="numeroExpediente" class="section-card">
+                Número de expediente emitido: <strong>{{ numeroExpediente }}</strong>
+                <button type="button" class="btn btn-primary" (click)="setTab('creadas')">
                   Ver en Solicitudes Creadas
                 </button>
-              </div>
-              <div *ngIf="errorMensaje" class="alert alert-danger">{{ errorMensaje }}</div>
-              <div *ngIf="numeroExpediente" class="alert alert-info">
-                Número de expediente emitido: <strong>{{ numeroExpediente }}</strong>
               </div>
 
               <!-- 1. Elección: Sanción o Premio con Colores Vivos -->
@@ -317,7 +312,12 @@
                 <p class="text-muted small mb-3">Seguimiento y consulta de causas y solicitudes iniciadas.</p>
               </div>
 
-              <div *ngIf="errorSolicitudes" class="alert alert-danger">{{ errorSolicitudes }}</div>
+              <div *ngIf="failedToLoadRequests && !cargandoSolicitudes" class="text-center py-4">
+                <button type="button" class="btn btn-primary" (click)="cargarMisSolicitudes()"
+                  aria-label="Reintentar carga de solicitudes">
+                  <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
+                </button>
+              </div>
 
               <!-- Filtros: Buscador + Selector de Estado -->
               <div class="row align-items-center mb-3">
@@ -350,7 +350,7 @@
               </div>
 
               <!-- Tabla de Solicitudes Creadas estilo AVEIT -->
-              <div class="explorer-table-container table-responsive" *ngIf="!cargandoSolicitudes && misSolicitudes.length > 0">
+              <div class="explorer-table-container table-responsive" *ngIf="!cargandoSolicitudes && !failedToLoadRequests && misSolicitudes.length > 0">
                 <table class="table-mat">
                   <thead>
                     <tr>
@@ -477,7 +477,7 @@
               </div>
 
               <!-- Estado Vacío -->
-              <div *ngIf="!cargandoSolicitudes && misSolicitudes.length === 0" class="text-center py-4 text-muted">
+              <div *ngIf="!cargandoSolicitudes && !failedToLoadRequests && misSolicitudes.length === 0" class="text-center py-4 text-muted">
                 <mat-icon style="font-size: 36px; height: 36px; width: 36px;" class="text-secondary mb-2">folder_open</mat-icon>
                 <p class="mb-0">No se encontraron solicitudes con los criterios seleccionados.</p>
               </div>

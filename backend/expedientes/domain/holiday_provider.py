@@ -48,12 +48,12 @@ class Argentina2026HolidayProvider(HolidayProviderPort):
             date(2026, 4, 3),
             date(2026, 5, 1),
             date(2026, 5, 25),
-            date(2026, 6, 17),
+            date(2026, 6, 15),
             date(2026, 6, 20),
             date(2026, 7, 9),
             date(2026, 8, 17),
             date(2026, 10, 12),
-            date(2026, 11, 20),
+            date(2026, 11, 23),
             date(2026, 12, 8),
             date(2026, 12, 25),
         }
@@ -63,6 +63,24 @@ class Argentina2026HolidayProvider(HolidayProviderPort):
         self._holidays = set(self.OFFICIAL_2026_HOLIDAYS)
         if additional_holidays:
             self._holidays.update(additional_holidays)
+
+    def is_holiday(self, target_date: date) -> bool:
+        return target_date in self._holidays
+
+
+class DbHolidayProvider(HolidayProviderPort):
+    """Proveedor de los feriados del calendario institucional único."""
+
+    def __init__(
+        self,
+        holidays: set[date] | None = None,
+    ) -> None:
+        if holidays is not None:
+            self._holidays = holidays
+        else:
+            from expedientes.models import Holiday
+
+            self._holidays = set(Holiday.objects.values_list("date", flat=True))
 
     def is_holiday(self, target_date: date) -> bool:
         return target_date in self._holidays
