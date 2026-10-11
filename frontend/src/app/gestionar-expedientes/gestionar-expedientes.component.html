@@ -1,13 +1,11 @@
 <div class="main-content">
   <div class="container-fluid">
 
-    <!-- Notificación de Acción Exitosa -->
-    <div *ngIf="mensajeExito" class="alert alert-success alert-with-icon" role="alert">
-      <i class="material-icons" data-notify="icon">check_circle</i>
-      <button mat-button type="button" class="close" (click)="mensajeExito = ''" aria-label="Cerrar notificación">
-        <i class="material-icons">close</i>
+    <div *ngIf="failedToLoadBoard && !cargando" class="text-center py-3">
+      <button type="button" class="btn btn-primary" (click)="cargarDatosTablero()"
+        aria-label="Reintentar carga del tablero">
+        <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
       </button>
-      <span>{{mensajeExito}}</span>
     </div>
 
     <!-- Barra de Herramientas y Filtros Explícitos (CA2) -->

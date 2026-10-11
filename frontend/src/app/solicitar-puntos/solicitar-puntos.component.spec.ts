@@ -19,6 +19,7 @@ import { SolicitarPuntosComponent } from './solicitar-puntos.component';
 
 describe('SolicitarPuntosComponent', () => {
   let component: SolicitarPuntosComponent;
+  let notifications: jasmine.SpyObj<NotificationService>;
   let fixture: ComponentFixture<SolicitarPuntosComponent>;
   let expediente: jasmine.SpyObj<ExpedienteApiService>;
   let padron: jasmine.SpyObj<PadronApiService>;
@@ -148,6 +149,7 @@ describe('SolicitarPuntosComponent', () => {
     expediente.listarMisSolicitudes.and.returnValue(of(mockSolicitudes));
     expediente.eliminarBorrador.and.returnValue(of(undefined as unknown as void));
 
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
       imports: [
         FormsModule,
@@ -165,6 +167,7 @@ describe('SolicitarPuntosComponent', () => {
       ],
       declarations: [SolicitarPuntosComponent],
       providers: [
+        { provide: NotificationService, useValue: notifications },
         { provide: ExpedienteApiService, useValue: expediente },
         { provide: PadronApiService, useValue: padron },
         { provide: MatDialog, useValue: dialog },
@@ -362,6 +365,9 @@ describe('SolicitarPuntosComponent', () => {
     expect(expediente.crearBorrador).toHaveBeenCalled();
     component.guardarBorrador();
     expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.any(Object));
+    expect(notifications.success).toHaveBeenCalledWith('Borrador guardado.');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Borrador guardado.');
   });
 
   it('emite usando el id del borrador y bloquea el estado ISSUED', () => {
@@ -372,12 +378,13 @@ describe('SolicitarPuntosComponent', () => {
     expect(expediente.emitir).toHaveBeenCalledWith('draft-1');
     expect(component.estado).toBe('ISSUED');
     expect(component.numeroExpediente).toBe('T01-2026-1');
+    expect(notifications.success).toHaveBeenCalledWith('Expediente creado: T01-2026-1.');
   });
 
   it('muestra errores del backend', () => {
     expediente.crearBorrador.and.returnValue(throwError(() => ({ error: { detail: 'No autorizado' } })));
     component.guardarBorrador();
-    expect(component.errorMensaje).toBe('No autorizado');
+    expect(notifications.error).toHaveBeenCalledOnceWith('No autorizado');
   });
 
   it('muestra un mensaje seguro para errores 500', () => {
@@ -385,9 +392,7 @@ describe('SolicitarPuntosComponent', () => {
       throwError(() => ({ status: 500, error: '<pre>traceback</pre>' }))
     );
     component.guardarBorrador();
-    expect(component.errorMensaje).toContain('servicio no está disponible');
-    expect(component.errorMensaje).not.toContain('traceback');
-    expect(component.errorMensaje).not.toContain('<pre>');
+    expect(notifications.error).toHaveBeenCalledOnceWith('El servicio no está disponible en este momento. Intentá nuevamente más tarde.');
   });
 
   it('no trata una respuesta string o HTML como objeto de errores', () => {
@@ -395,13 +400,31 @@ describe('SolicitarPuntosComponent', () => {
       throwError(() => ({ status: 400, error: '<html>Error interno</html>' }))
     );
     component.guardarBorrador();
-    expect(component.errorMensaje).toBe('No se pudo completar la operación.');
-    expect(component.errorMensaje).not.toContain('<html>');
+    expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo completar la operación.');
   });
 
   // ==========================================
   // Pruebas TS-75.5: Panel Mis Solicitudes T01
   // ==========================================
+
+  it('notifica la validación de emisión sin crear un borrador ni insertar una alerta', () => {
+    component.titulo = '';
+    component.emitirT01();
+    fixture.detectChanges();
+    expect(notifications.error).toHaveBeenCalledOnceWith('Indica el título de la solicitud.');
+    expect(expediente.crearBorrador).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).not.toContain('Indica el título de la solicitud.');
+  });
+
+  it('notifica un fallo de solicitudes y conserva un botón de reintento', () => {
+    expediente.listarMisSolicitudes.and.returnValue(throwError(() => ({ status: 500 })));
+    component.cargarMisSolicitudes();
+    component.setTab('creadas');
+    fixture.detectChanges();
+    expect(notifications.error).toHaveBeenCalledWith('No se pudieron cargar las solicitudes iniciadas.');
+    expect(fixture.nativeElement.textContent).not.toContain('No se pudieron cargar las solicitudes iniciadas.');
+    expect(fixture.nativeElement.querySelector('[aria-label="Reintentar carga de solicitudes"]')).toBeTruthy();
+  });
 
   it('carga la lista de solicitudes al inicializar el componente', () => {
     expect(expediente.listarMisSolicitudes).toHaveBeenCalledWith({ search: undefined, estado: undefined });
@@ -443,7 +466,7 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.anexoExpandido).toBeTrue();
     expect(component.sociosSeleccionados.length).toBe(1);
     expect(component.sociosSeleccionados[0].socio_id).toBe(7);
-    expect(component.exitoMensaje).toContain('cargado en el formulario');
+    expect(notifications.info).toHaveBeenCalledWith(jasmine.stringContaining('cargado en el formulario'));
     expect(window.scrollTo).toHaveBeenCalled();
   });
 
@@ -477,7 +500,7 @@ describe('SolicitarPuntosComponent', () => {
     component.eliminarBorrador(mockSolicitudes[0]);
 
     expect(expediente.eliminarBorrador).toHaveBeenCalledWith('draft-1');
-    expect(component.exitoMensaje).toContain('eliminado correctamente');
+    expect(notifications.success).toHaveBeenCalledWith('Borrador eliminado correctamente.');
     expect(component.borradorId).toBeNull();
     expect(component.titulo).toBe('');
     expect(expediente.listarMisSolicitudes).toHaveBeenCalled();
@@ -517,3 +540,4 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[1])).toBe('Prueba, Ana (+1)');
   });
 });
+import { NotificationService } from '../services/notification.service';

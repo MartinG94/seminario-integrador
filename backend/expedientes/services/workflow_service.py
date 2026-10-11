@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
-from expedientes.domain.holiday_provider import Argentina2026HolidayProvider
+from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.models import (
     CambioEstadoExpediente,
     EstadoExpedienteEnum,
@@ -115,7 +115,7 @@ class ExpedienteWorkflowService:
             expediente.plazo_limite_at = compute_business_deadline(
                 start_at=start_at,
                 business_days=5,
-                holiday_provider=Argentina2026HolidayProvider(),
+                holiday_provider=DbHolidayProvider(),
             )
             fields_to_update.extend(["plazo_inicio_at", "plazo_limite_at"])
         expediente.save(update_fields=fields_to_update)

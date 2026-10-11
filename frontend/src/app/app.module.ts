@@ -1,5 +1,8 @@
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
+import { OverlayModule } from '@angular/cdk/overlay';
+import { PortalModule } from '@angular/cdk/portal';
+import { MatDialogModule } from '@angular/material/dialog';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
@@ -9,10 +12,14 @@ import { AppComponent } from './app.component';
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout.component';
 import { LoginComponent } from './login/login.component';
 import { AuthInterceptor } from './services/auth.interceptor';
+import { NotificationCenterComponent } from './components/notification-center/notification-center.component';
 
 @NgModule({
   imports: [
     BrowserAnimationsModule,
+    OverlayModule,
+    PortalModule,
+    MatDialogModule,
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule,
@@ -22,6 +29,7 @@ import { AuthInterceptor } from './services/auth.interceptor';
   ],
   declarations: [
     AppComponent,
+    NotificationCenterComponent,
     AdminLayoutComponent,
     LoginComponent,
 

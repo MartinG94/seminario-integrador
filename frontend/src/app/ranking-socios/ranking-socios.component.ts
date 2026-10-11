@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { RankingService } from '../services/ranking.service';
+import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
 
@@ -23,7 +24,8 @@ export class RankingSociosComponent implements OnInit {
 
   constructor(
     public rankingService: RankingService,
-    public dialog: MatDialog
+    public dialog: MatDialog,
+    private notifications: NotificationService
   ) {}
 
   abrirLegajoSocio(socio: RankingSocio): void {
@@ -83,6 +85,7 @@ export class RankingSociosComponent implements OnInit {
         this.socios = [];
         this.subcomisiones = [];
         this.error = 'No se pudo cargar el ranking. Intentá nuevamente.';
+        this.notifications.error(this.error);
         this.cargando = false;
       }
     });

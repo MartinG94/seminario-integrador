@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -25,7 +26,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
   nombreArchivo = '';
   relatoTexto = '';
-  errorMensaje = '';
   esEdicion = false;
 
   // Temporizador dinámico para cuenta regresiva (CA3)
@@ -37,7 +37,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   constructor(
     public dataService: TribunalDataService,
     private auth: AuthService,
-    private renderer: Renderer2
+    private renderer: Renderer2,
+    private notifications: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -210,7 +211,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = '';
     this.relatoTexto = '';
-    this.errorMensaje = '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
   }
@@ -223,7 +223,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = exp.descargo.archivo || '';
     this.relatoTexto = exp.descargo.texto || '';
-    this.errorMensaje = '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
   }
@@ -289,12 +288,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
       if (!this.nombreArchivo) {
-        this.errorMensaje = 'Es obligatorio adjuntar el comprobante o constancia digital (PDF, JPG o PNG).';
+        this.notifications.error('Es obligatorio adjuntar el comprobante o constancia digital (PDF, JPG o PNG).');
         return;
       }
     } else {
       if (!this.relatoTexto.trim()) {
-        this.errorMensaje = 'Por favor expone detalladamente los hechos y motivos extraordinarios.';
+        this.notifications.error('Por favor expone detalladamente los hechos y motivos extraordinarios.');
         return;
       }
     }

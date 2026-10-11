@@ -1,0 +1,18 @@
+<ng-template cdkPortal>
+  <div class="notification-stack" aria-label="Notificaciones">
+    <article *ngFor="let item of notifications.messages$ | async; trackBy: trackNotification"
+      class="user-notification" [ngClass]="'notification-' + item.type" [attr.data-notification-id]="item.id"
+      [attr.role]="item.type === 'error' ? 'alert' : 'status'" aria-atomic="true">
+      <span class="material-icons notification-icon" aria-hidden="true">{{ icons[item.type] }}</span>
+      <div class="notification-content">
+        <strong>{{ labels[item.type] }}</strong>
+        <p>{{ item.message }}</p>
+      </div>
+      <button type="button" class="notification-close" (click)="notifications.dismiss(item.id)"
+        [attr.aria-label]="'Cerrar notificación: ' + labels[item.type]">
+        <span class="material-icons" aria-hidden="true">close</span>
+      </button>
+      <div class="notification-progress" aria-hidden="true"></div>
+    </article>
+  </div>
+</ng-template>

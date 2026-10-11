@@ -8,10 +8,6 @@
     </header>
 
     <form class="aveit-login__form" [formGroup]="formulario" (ngSubmit)="ingresar()" novalidate>
-      <div *ngIf="sesionExpirada" class="aveit-login__aviso" role="status">
-        Tu sesión expiró. Volvé a iniciar sesión para continuar.
-      </div>
-
       <div class="aveit-login__campo">
         <label for="identifier">Número de Socio</label>
         <input
@@ -21,14 +17,7 @@
           autocomplete="username"
           placeholder="Ej.: 74907"
           [attr.aria-invalid]="formulario.get('identifier')?.touched && formulario.get('identifier')?.invalid" />
-        <span
-          class="aveit-login__ayuda-error"
-          *ngIf="formulario.get('identifier')?.touched && formulario.get('identifier')?.invalid">
-          Ingresá tu Número de Socio.
-        </span>
       </div>
-
-      <p class="aveit-login__error" *ngIf="mensajeError" role="alert">{{ mensajeError }}</p>
 
       <button class="aveit-login__boton" type="submit" [disabled]="enviando">
         {{ enviando ? 'Verificando…' : 'Iniciar sesión' }}

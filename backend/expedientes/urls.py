@@ -2,6 +2,8 @@ from django.urls import path
 
 from expedientes.views import (
     BoardExpedientesView,
+    CalcularPlazoView,
+    CalendarioFeriadosView,
     CaseNotificationAuditView,
     DispatchCaseOpeningView,
     ExpedienteCollectionView,
@@ -20,6 +22,10 @@ from expedientes.views import (
 app_name = "expedientes"
 
 urlpatterns = [
+    path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
+    path(
+        "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
+    ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
     path("", SolicitudT01CreateView.as_view(), name="solicitud-create"),
     path("gestion/", ExpedienteCollectionView.as_view(), name="expedientes"),

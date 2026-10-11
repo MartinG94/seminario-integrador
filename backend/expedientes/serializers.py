@@ -1,13 +1,19 @@
+"""Serializadores para el módulo de expedientes y descargos."""
+
 import logging
+from datetime import date
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    Holiday,
     SolicitudT01,
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
@@ -677,3 +683,64 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
                 "dictamen": f"Resolución firme emitida para causa {obj.expediente.numero}.",
             }
         return None
+
+
+class HolidaySerializer(serializers.ModelSerializer):
+    """Feriados con fecha única y auditoría asignada por el servidor."""
+
+    fecha = serializers.DateField(
+        source="date",
+        validators=[
+            UniqueValidator(
+                queryset=Holiday.objects.all(), message="Ya existe un feriado para esa fecha."
+            )
+        ],
+    )
+    descripcion = serializers.CharField(source="description", max_length=200)
+    creado_por = serializers.PrimaryKeyRelatedField(source="created_by", read_only=True)
+    creado_por_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Holiday
+        fields = ["id", "fecha", "descripcion", "creado_por", "creado_por_nombre", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate_fecha(self, value: date) -> date:
+        today = timezone.localdate(timezone=ZoneInfo("America/Argentina/Buenos_Aires"))
+        if value < today:
+            raise serializers.ValidationError("La fecha debe ser hoy o posterior.")
+        return value
+
+    def get_creado_por_nombre(self, obj: Holiday) -> str:
+        if obj.created_by_id is None:
+            return (
+                "Sistema (carga inicial)"
+                if obj.origin == Holiday.Origin.SYSTEM
+                else "Autor no registrado (registro previo)"
+            )
+        user = obj.created_by
+        socio = getattr(user, "socio", None)
+        name = (
+            f"{socio.first_name} {socio.last_name}".strip()
+            if socio is not None
+            else user.get_full_name().strip()
+        )
+        username = user.get_username()
+        return f"{name} ({username})" if name else username
+
+
+class CalendarQuerySerializer(serializers.Serializer):
+    """Valida los únicos filtros y el orden de la consulta institucional."""
+
+    year = serializers.IntegerField(min_value=1, max_value=9999, required=False)
+    month = serializers.IntegerField(min_value=1, max_value=12, required=False)
+    ordering = serializers.ChoiceField(choices=["fecha", "-fecha"], default="fecha")
+
+
+class CalcularPlazoSerializer(serializers.Serializer):
+    """Entrada del simulador del calendario institucional."""
+
+    start_at = serializers.DateTimeField(
+        default_timezone=ZoneInfo("America/Argentina/Buenos_Aires")
+    )
+    business_days = serializers.IntegerField(min_value=1, default=5)
