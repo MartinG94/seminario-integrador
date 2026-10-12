@@ -1,5 +1,7 @@
 # Tareas — Spec 001: Walking Skeleton
 
+**Registro histórico de Sprint 1:** las tareas cerradas conservan la descripción y evidencia de su implementación original Pasivo/Activo. La clasificación vigente se rige por la [constitución](../../docs/constitution.md); la adecuación Junior/Senior y exviajeros se sigue en [tasks de la spec 005](../005-mysql-seed-g57-g60/tasks.md), no cambiando retroactivamente el alcance o estado de estas tareas.
+
 Lista de tareas de desarrollo atómicas (<30 minutos), ordenadas por orden de dependencia técnica.
 
 - [x] **T1. Esqueleto Backend Django & Configuración:** Inicializar estructura del proyecto en `backend/` con `core/settings.py`, `pytest.ini` y dependencias en `requirements.txt`.

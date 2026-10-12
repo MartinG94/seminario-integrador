@@ -41,4 +41,35 @@ describe('PadronApiService', () => {
 
     expect(result).toEqual([socio(1), socio(2), socio(3)]);
   });
+
+  it('incluye exviajeros y anomalías vigentes sin filtro de categoría (TS77.35)', () => {
+    let result: unknown;
+    service.listarSocios().subscribe(socios => result = socios);
+    const request = http.expectOne(r => r.url === `${environment.apiUrl}/padron/socios/`);
+    expect(request.request.params.get('is_active')).toBe('true');
+    expect(request.request.params.has('category')).toBeFalse();
+    const members = [
+      { ...socio(57), category: 'EX_TRAVELER', social_year: null },
+      { ...socio(58), category: 'SENIOR', social_year: 6 },
+      { ...socio(63), category: 'JUNIOR', social_year: 1 },
+      { ...socio(64), category: 'UNKNOWN', social_year: null }
+    ];
+    request.flush({ count: 4, page: 1, page_size: 100, results: members });
+    expect(result).toEqual(members);
+  });
+
+  it('propaga el error de la página siguiente sin exponer una selección parcial (TS77.35)', () => {
+    let emitted = false;
+    let status = 0;
+    service.listarSocios().subscribe({
+      next: () => emitted = true,
+      error: error => status = error.status
+    });
+    http.expectOne(r => r.url === `${environment.apiUrl}/padron/socios/`)
+      .flush({ count: 101, page: 1, page_size: 100, results: [socio(1)] });
+    http.expectOne(r => r.url === `${environment.apiUrl}/padron/socios/`)
+      .flush({}, { status: 500, statusText: 'Error' });
+    expect(emitted).toBeFalse();
+    expect(status).toBe(500);
+  });
 });

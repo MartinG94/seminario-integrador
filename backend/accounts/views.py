@@ -2,8 +2,13 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from accounts.serializers import LoginSerializer, SocioProfileSerializer
+from accounts.serializers import (
+    CurrentSocioTokenRefreshSerializer,
+    LoginSerializer,
+    SocioProfileSerializer,
+)
 
 
 class LoginView(APIView):
@@ -38,3 +43,9 @@ class MeView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response(SocioProfileSerializer(socio).data)
+
+
+class CurrentSocioTokenRefreshView(TokenRefreshView):
+    """POST /api/v1/auth/refresh/ — clasificación desde el socio actual."""
+
+    serializer_class = CurrentSocioTokenRefreshSerializer

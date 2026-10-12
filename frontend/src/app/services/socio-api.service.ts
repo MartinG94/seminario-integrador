@@ -4,17 +4,20 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 
+export type InstitutionalMembershipCategory = 'JUNIOR' | 'SENIOR' | 'EX_TRAVELER' | 'UNKNOWN';
+export type SocioIdentitySource = 'local' | 'institutional';
+
 export interface SocioLegajoDTO {
   id: number;
-  legajo: string;
+  legajo: string | null;
   first_name: string;
   last_name: string;
   email: string;
   role: string;
-  category: 'PASSIVE' | 'ACTIVE';
+  category: InstitutionalMembershipCategory;
   category_display: string;
   subcomision: string | null;
-  social_year: number;
+  social_year: number | null;
   is_enabled: boolean;
   points_balance?: number;
 }
@@ -33,7 +36,7 @@ export interface SocioListItemDTO {
   last_name: string;
   email: string;
   role: string;
-  category: 'PASSIVE' | 'ACTIVE';
+  category: InstitutionalMembershipCategory;
   category_display: string;
   subcomision: string | null;
 }
@@ -60,7 +63,10 @@ export class SocioApiService {
   /**
    * Obtiene los datos detallados del legajo de un socio (T7 / CA2 / CA4).
    */
-  getLegajo(socioId: number | string): Observable<SocioLegajoDTO> {
-    return this.http.get<SocioLegajoDTO>(`${this.baseUrl}/${socioId}/legajo/`);
+  getLegajo(socioId: number | string, identitySource?: SocioIdentitySource): Observable<SocioLegajoDTO> {
+    const params = identitySource
+      ? new HttpParams().set('identity_source', identitySource)
+      : new HttpParams();
+    return this.http.get<SocioLegajoDTO>(`${this.baseUrl}/${socioId}/legajo/`, { params });
   }
 }

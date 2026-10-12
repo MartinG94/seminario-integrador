@@ -4,8 +4,8 @@ Define los DTOs (Data Transfer Objects) y enumeraciones canónicas que constituy
 el vocabulario ubicuo del dominio societario de AVEIT 2026.
 
 Referencia normativa:
-  - Estatuto AVEIT 2026, Arts. 3 y 6 (categorías Pasivo / Activo).
-  - Constitución del Proyecto, Principio 8 (terminología canónica).
+  - Aclaración corregida del PO, SCRUM-77, RN77-01–04.
+  - Constitución del Proyecto, Principio 8 (clasificación social canónica).
   - ADR-001, Sección 4.1 (reglas de transformación CA1–CA5).
 """
 
@@ -15,22 +15,34 @@ from typing import Optional
 
 
 class SocioCategoryEnum(str, Enum):
-    """Categoría estatutaria según año social (Arts. 3 y 6 Estatuto 2026).
+    """Junior 1–2, Senior 3–6 y condición exviajero confirmada fuera de escala."""
 
-    - PASSIVE: 1.º a 3.º año social (alias histórico: Junior).
-    - ACTIVE:  4.º a 6.º año social (alias histórico: Senior).
-    - UNKNOWN: Año social no parametrizado, nulo o fuera del rango 1–6.
-    """
-
-    PASSIVE = "PASSIVE"
-    ACTIVE = "ACTIVE"
+    JUNIOR = "JUNIOR"
+    SENIOR = "SENIOR"
+    EX_TRAVELER = "EX_TRAVELER"
     UNKNOWN = "UNKNOWN"
 
+    @property
+    def label(self) -> str:
+        return {
+            self.JUNIOR: "Junior",
+            self.SENIOR: "Senior",
+            self.EX_TRAVELER: "Exviajero",
+            self.UNKNOWN: "Sin clasificación",
+        }[self]
 
-# Rangos estatutarios canónicos de año social (Arts. 3 y 6 Estatuto AVEIT 2026).
-# Fuente Única de Verdad (SSOT) para la capa de dominio puro y consultas de infraestructura.
-PASSIVE_SOCIAL_YEARS: tuple[int, ...] = (1, 2, 3)
-ACTIVE_SOCIAL_YEARS: tuple[int, ...] = (4, 5, 6)
+
+# Corte confirmado por el PO; clasificación y filtros SQL comparten estos rangos.
+JUNIOR_SOCIAL_YEARS: tuple[int, ...] = (1, 2)
+SENIOR_SOCIAL_YEARS: tuple[int, ...] = (3, 4, 5, 6)
+
+# Compatibilidad exclusiva de consultas de entrada; nunca normaliza filas ni perfiles.
+CATEGORY_FILTER_ALIASES: dict[str, SocioCategoryEnum] = {
+    "PASSIVE": SocioCategoryEnum.JUNIOR,
+    "PASIVO": SocioCategoryEnum.JUNIOR,
+    "ACTIVE": SocioCategoryEnum.SENIOR,
+    "ACTIVO": SocioCategoryEnum.SENIOR,
+}
 
 
 class MembershipStatusEnum(str, Enum):
@@ -63,7 +75,8 @@ class SocioInstitucionalDTO:
     - legajo: str(nroLegajo) si existe estudio; None si carece.
     - dni: str(nroDoc) si > 0; None si ausente o 0.
     - subcomision: None si codSubcomision == 99 (centinela).
-    - category: derivada exclusivamente de anoSocial (CA3).
+    - category: condición confirmada o clasificación de un año válido.
+    - social_year: None para EX_TRAVELER y UNKNOWN.
     - is_active / membership_status: derivados de socio_estadoHistorial (CA4).
     """
 
@@ -74,7 +87,7 @@ class SocioInstitucionalDTO:
     last_name: str
     email: Optional[str]
     subcomision: Optional[SubcomisionDTO]
-    social_year: int
+    social_year: int | None
     category: SocioCategoryEnum
     is_active: bool
     membership_status: MembershipStatusEnum

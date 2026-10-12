@@ -3,6 +3,8 @@
 Uso: python manage.py seed_demo
 Sólo corre con DEBUG=1: son credenciales conocidas, no deben existir en
 producción ni sobre datos reales del padrón.
+Las altas usan Junior en años 1–2 y Senior en 3–6 mediante el modelo Socio.
+Las cuentas existentes se omiten, conservando categoría, credenciales y permisos.
 """
 
 from django.conf import settings
@@ -16,7 +18,7 @@ UserModel = get_user_model()
 
 DEMO_PASSWORD = "Aveit-Demo-2026!"
 
-DEMO_SOCIOS = [
+DEMO_SOCIOS: list[tuple[str, str, str, str, int]] = [
     ("74907", "Gastiaburu", "Lucas", Role.SOCIO, 2),
     ("85194", "Guillén", "Lucas Martín", Role.FISCALIZADORA, 4),
     ("87414", "Sánchez", "Diego Gabriel", Role.CD, 5),
@@ -26,10 +28,10 @@ DEMO_SOCIOS = [
 
 
 class Command(BaseCommand):
-    help = "Crea socios de demostración con un rol RBAC cada uno."
+    help = "Crea cinco socios de demostración, con categoría por año social y un rol RBAC cada uno."
 
     @transaction.atomic
-    def handle(self, *args, **options):
+    def handle(self, *args: object, **options: object) -> None:
         if not settings.DEBUG:
             raise CommandError("seed_demo sólo puede ejecutarse con DEBUG=1.")
 

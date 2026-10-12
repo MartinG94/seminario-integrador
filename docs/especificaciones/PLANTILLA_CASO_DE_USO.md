@@ -1,5 +1,7 @@
 # CU-XX: [Nombre del Caso de Uso en Verbo Infinitivo + Objeto]
 
+**Clasificación de referencia:** usar Junior (1.º–2.º), Senior (desde 3.º dentro de la escala) y condición exviajero fuera de ella, conforme a [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md). Actor y autorización se especifican por su regla propia; [DP77-FAC-01](../constitution.md#facultades-pendientes) no permite completar elegibilidad/firma por inferencia.
+
 ## 1. Ficha Técnica
 
 | Atributo | Detalle |
@@ -7,7 +9,7 @@
 | **Identificador** | CU-XX |
 | **Nombre** | [Nombre del Caso de Uso] |
 | **Módulo / Subsistema** | [Módulo 1: Tramitación / Módulo 2: Deliberación / Módulo 3: Puntos / Módulo 4: Portal / Módulo 5: Balances] |
-| **Actor Principal** | [Actor que inicia la interacción: Socio Pasivo / Socio Activo / Miembro del TD / Autoridad de Subcomisión / Comisión Directiva / Sistema] |
+| **Actor Principal** | [Actor que inicia la interacción: Socio Junior / Socio Senior / Socio exviajero (sin permisos derivados de la clasificación) / Miembro del TD / Autoridad de Subcomisión / Comisión Directiva / Sistema] |
 | **Actores Secundarios** | [Otros actores que intervienen o reciben notificaciones] |
 | **Propósito / Objetivo** | [Descripción breve de una o dos oraciones sobre qué logra el actor con este caso de uso] |
 | **Tipo de Ejecución** | [En línea (Web/Mobile) / Asíncrono / Automático por Cron Job / Por Lote (Batch)] |

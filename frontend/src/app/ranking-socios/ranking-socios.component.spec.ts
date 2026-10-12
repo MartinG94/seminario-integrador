@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
@@ -17,12 +18,13 @@ describe('RankingSociosComponent', () => {
   let notifications: jasmine.SpyObj<NotificationService>;
 
   const sociosMock: RankingSocio[] = [
+    // Clasificación declarada del caso sintético: Ana 4.º año, Bruno 2.º año.
     {
       id: '1',
       legajo: '1001',
       nombre: 'Ana',
       apellido: 'Gómez',
-      categoria: 'ACTIVO',
+      categoria: 'SENIOR',
       subcomision: 'Cómputos',
       saldo: 5,
       saldoHistorico: 5,
@@ -35,7 +37,7 @@ describe('RankingSociosComponent', () => {
       legajo: '1002',
       nombre: 'Bruno',
       apellido: 'Pérez',
-      categoria: 'PASIVO',
+      categoria: 'JUNIOR',
       subcomision: 'Deportes',
       saldo: -1,
       saldoHistorico: -1,
@@ -53,7 +55,7 @@ describe('RankingSociosComponent', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
 
     await TestBed.configureTestingModule({
-      imports: [FormsModule],
+      imports: [CommonModule, FormsModule],
       declarations: [RankingSociosComponent],
       providers: [
         { provide: NotificationService, useValue: notifications },
@@ -95,7 +97,7 @@ describe('RankingSociosComponent', () => {
   it('debería filtrar socios por categoría', () => {
     fixture.detectChanges();
 
-    component.filtroCategoria = 'ACTIVO';
+    component.filtroCategoria = 'SENIOR';
 
     expect(component.sociosOrdenados.length).toBe(1);
     expect(component.sociosOrdenados[0].nombre).toBe('Ana');
@@ -132,7 +134,7 @@ describe('RankingSociosComponent', () => {
   it('debería ordenar por mérito y desempatar por apellido y nombre', () => {
     const crearSocio = (id: string, apellido: string, nombre: string, saldo: number): RankingSocio => ({
       id, legajo: id, apellido, nombre, saldo,
-      categoria: 'ACTIVO', subcomision: 'Cómputos'
+      categoria: 'SENIOR', subcomision: 'Cómputos'
     });
     rankingServiceSpy.obtenerRanking.and.returnValue(of([
       crearSocio('1', 'Zapata', 'Ana', 5),
@@ -258,7 +260,8 @@ describe('RankingSociosComponent', () => {
       data: {
         socioId: '1',
         nombreSocio: 'Ana Gómez',
-        saldo: 5
+        saldo: 5,
+        identitySource: 'institutional'
       }
     });
   });
@@ -278,7 +281,8 @@ describe('RankingSociosComponent', () => {
       data: {
         socioId: '1',
         nombreSocio: 'Ana Gómez',
-        saldo: 5
+        saldo: 5,
+        identitySource: 'institutional'
       }
     });
   });
@@ -298,7 +302,8 @@ describe('RankingSociosComponent', () => {
       data: {
         socioId: '1',
         nombreSocio: 'Ana Gómez',
-        saldo: 5
+        saldo: 5,
+        identitySource: 'institutional'
       }
     });
   });
@@ -341,5 +346,31 @@ describe('RankingSociosComponent', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(prevTr.focus).toHaveBeenCalled();
+  });
+
+  it('ofrece categorías actuales con etiquetas legibles en el selector', () => {
+    fixture.detectChanges();
+    const selector: HTMLSelectElement = fixture.nativeElement.querySelector('.filtro-categoria');
+    expect(Array.from(selector.options).map(option => [option.value, option.textContent.trim()]))
+      .toEqual([
+        ['', 'Todas las categorías'], ['JUNIOR', 'Junior'], ['SENIOR', 'Senior'],
+        ['EX_TRAVELER', 'Exviajero'], ['UNKNOWN', 'Sin clasificación']
+      ]);
+    expect(selector.getAttribute('aria-label')).toBe('Filtrar por categoría');
+  });
+
+  const categoryCases: Array<[RankingSocio['categoria'], string]> = [
+    ['JUNIOR', 'Junior'], ['SENIOR', 'Senior'],
+    ['EX_TRAVELER', 'Exviajero'], ['UNKNOWN', 'Sin clasificación']
+  ];
+  categoryCases.forEach(([category, label]) => {
+    it(`representa ${category} como ${label} sin exponer códigos técnicos`, () => {
+      rankingServiceSpy.obtenerRanking.and.returnValue(of([
+        { ...sociosMock[0], categoria: category }
+      ]));
+      fixture.detectChanges();
+      const row: HTMLTableRowElement = fixture.nativeElement.querySelector('tbody tr');
+      expect(row.cells[3].textContent.trim()).toBe(label);
+    });
   });
 });

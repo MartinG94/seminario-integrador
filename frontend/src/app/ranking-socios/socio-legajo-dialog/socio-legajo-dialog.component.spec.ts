@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
 
@@ -20,8 +21,8 @@ describe('SocioLegajoDialogComponent', () => {
     last_name: 'Gastiaburu',
     email: '74907@aveit.test',
     role: 'SOCIO',
-    category: 'ACTIVE',
-    category_display: 'Activo',
+    category: 'SENIOR',
+    category_display: 'Senior',
     subcomision: 'Cómputos',
     social_year: 4,
     is_enabled: true,
@@ -36,6 +37,7 @@ describe('SocioLegajoDialogComponent', () => {
     socioApiServiceSpy.getLegajo.and.returnValue(of(mockLegajo));
 
     await TestBed.configureTestingModule({
+      imports: [CommonModule],
       declarations: [SocioLegajoDialogComponent],
       providers: [
         { provide: NotificationService, useValue: notifications },
@@ -57,7 +59,7 @@ describe('SocioLegajoDialogComponent', () => {
   });
 
   it('debe cargar los datos del legajo al inicializar (CA2)', () => {
-    expect(socioApiServiceSpy.getLegajo).toHaveBeenCalledWith(1);
+    expect(socioApiServiceSpy.getLegajo).toHaveBeenCalledWith(1, undefined);
     expect(component.cargando).toBeFalse();
     expect(component.legajo).toEqual(mockLegajo);
     expect(component.errorHttp).toBeNull();
@@ -83,6 +85,7 @@ describe('SocioLegajoDialogComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('No posee autorización');
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Reintentar');
+    expect(component.legajo).toBeNull();
   });
 
   it('debe reflejar el saldo recibido en data.saldo si está definido', () => {
@@ -93,5 +96,100 @@ describe('SocioLegajoDialogComponent', () => {
   it('debe cerrar el modal al invocar cerrar()', () => {
     component.cerrar();
     expect(dialogRefSpy.close).toHaveBeenCalled();
+  });
+
+  it('mantiene la fuente institucional en la consulta y en su reintento', () => {
+    component.data = { socioId: 1, identitySource: 'institutional' };
+    socioApiServiceSpy.getLegajo.and.returnValue(throwError(() => ({ status: 404 })));
+    component.cargarLegajo();
+    socioApiServiceSpy.getLegajo.and.returnValue(of(mockLegajo));
+    component.cargarLegajo();
+
+    expect(socioApiServiceSpy.getLegajo.calls.mostRecent().args)
+      .toEqual([1, 'institutional']);
+    expect(component.legajo).toEqual(mockLegajo);
+    expect(component.errorHttp).toBeNull();
+  });
+
+  it('muestra Exviajero sin año ficticio y preserva la vigencia de su cuenta', () => {
+    const exTraveler: SocioLegajoDTO = {
+      ...mockLegajo, category: 'EX_TRAVELER', category_display: 'Exviajero',
+      social_year: null, role: 'SOCIO', is_enabled: true
+    };
+    socioApiServiceSpy.getLegajo.and.returnValue(of(exTraveler));
+    component.cargarLegajo();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const yearItem = Array.from(compiled.querySelectorAll('.data-item'))
+      .find(item => item.querySelector('.data-label')?.textContent === 'Año Social');
+    expect(yearItem).toBeUndefined();
+    expect(compiled.textContent).toContain('Exviajero');
+    expect(compiled.textContent).not.toContain('º Año');
+    expect(compiled.textContent).toContain('Habilitado');
+    expect(component.legajo?.social_year).toBeNull();
+  });
+
+  it('muestra Sin clasificación para año desconocido sin inventar Junior ni cero', () => {
+    const unknown: SocioLegajoDTO = {
+      ...mockLegajo, category: 'UNKNOWN', category_display: 'Sin clasificación', social_year: null
+    };
+    socioApiServiceSpy.getLegajo.and.returnValue(of(unknown));
+    component.cargarLegajo();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Sin clasificación');
+    expect(compiled.textContent).not.toContain('º Año');
+    expect(compiled.textContent).not.toContain('Junior');
+    expect(component.legajo?.social_year).toBeNull();
+  });
+
+  it('indica Sin legajo cuando la persona institucional no tiene legajo real', () => {
+    socioApiServiceSpy.getLegajo.and.returnValue(of<SocioLegajoDTO>({ ...mockLegajo, legajo: null }));
+    component.cargarLegajo();
+    fixture.detectChanges();
+    const badge: HTMLElement = fixture.nativeElement.querySelector('.socio-legajo-badge');
+    expect(badge.textContent).toContain('Legajo:');
+    expect(badge.textContent).toContain('Sin legajo');
+    expect(component.legajo?.legajo).toBeNull();
+  });
+
+  [1, 2, 3, 6].forEach(year => {
+    it(`muestra el año social ${year} con su categoría vigente`, () => {
+      const category = year <= 2 ? 'JUNIOR' : 'SENIOR';
+      socioApiServiceSpy.getLegajo.and.returnValue(of<SocioLegajoDTO>({
+        ...mockLegajo, social_year: year, category,
+        category_display: year <= 2 ? 'Junior' : 'Senior'
+      }));
+      component.cargarLegajo();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(`${year}º Año`);
+    });
+  });
+
+  [0, 7].forEach(year => {
+    it(`evita mostrar el año ${year} de un DTO fuera de escala`, () => {
+      socioApiServiceSpy.getLegajo.and.returnValue(of<SocioLegajoDTO>({
+        ...mockLegajo, social_year: year, category: 'UNKNOWN', category_display: 'Sin clasificación'
+      }));
+      component.cargarLegajo();
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('Sin clasificación');
+      expect(compiled.textContent).not.toContain(`${year}º Año`);
+    });
+  });
+
+  it('oculta la ficha anterior si una nueva consulta falla', () => {
+    socioApiServiceSpy.getLegajo.and.returnValue(throwError(() => ({ status: 404 })));
+    component.cargarLegajo();
+    fixture.detectChanges();
+    expect(component.legajo).toBeNull();
+    expect(fixture.nativeElement.querySelector('.dialog-content')).toBeNull();
+    expect(notifications.error).toHaveBeenCalledOnceWith('El socio solicitado no fue encontrado en el padrón.');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('no fue encontrado');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Reintentar');
   });
 });

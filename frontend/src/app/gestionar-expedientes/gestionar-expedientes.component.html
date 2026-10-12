@@ -253,10 +253,17 @@
 
 <!-- Modal 1: Detalle Completo del Expediente -->
 <div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom">
-  <div class="modal-dialog-custom">
+  <div #caseDetailDialog class="modal-dialog-custom"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="case-detail-title"
+       tabindex="-1"
+       [cdkTrapFocus]="true"
+       [cdkTrapFocusAutoCapture]="true"
+       (keydown.escape)="cerrarModales(); $event.stopPropagation()">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-primary">
-        <h4 class="card-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
+        <h4 class="card-title" id="case-detail-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
         <p class="card-category">Socio: {{expedienteSeleccionado.socio}} &bull; N° de Socio: {{expedienteSeleccionado.legajo}}</p>
       </div>
       <div class="card-body">
@@ -349,7 +356,7 @@
 
       </div>
       <div class="card-footer d-flex justify-content-end">
-        <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
+        <button mat-button class="btn btn-default" cdkFocusInitial (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>
   </div>

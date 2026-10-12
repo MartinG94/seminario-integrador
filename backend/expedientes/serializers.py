@@ -1,12 +1,15 @@
 """Serializadores para el módulo de expedientes y descargos."""
 
-import logging
 from datetime import date
 from decimal import Decimal
+from typing import Any
 from zoneinfo import ZoneInfo
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 from rest_framework.validators import UniqueValidator
 
 from expedientes.models import (
@@ -18,10 +21,14 @@ from expedientes.models import (
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
+from expedientes.services.solicitud_t01_service import (
+    canonical_t01_classification,
+    materialize_t01_recipient,
+    validate_t01_reference,
+)
+from padron.domain import SocioInstitucionalDTO
 from padron.factory import get_padron_repository
-from socios.models import Role, Socio, Subcomision
-
-logger = logging.getLogger(__name__)
+from socios.models import Socio
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
@@ -321,9 +328,9 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
         return attrs
 
 
-def _snapshot(socio):
+def _snapshot(socio: SocioInstitucionalDTO) -> dict[str, Any]:
     sub = socio.subcomision
-    category = getattr(socio.category, "value", socio.category)
+    category, social_year = canonical_t01_classification(socio)
     status = getattr(socio.membership_status, "value", socio.membership_status)
     return {
         "socio_id": socio.socio_id,
@@ -333,7 +340,7 @@ def _snapshot(socio):
         "last_name": socio.last_name,
         "email": socio.email,
         "subcomision": {"id": sub.id, "name": sub.name} if sub else None,
-        "social_year": socio.social_year,
+        "social_year": social_year,
         "category": category,
         "is_active": socio.is_active,
         "membership_status": status,
@@ -341,7 +348,9 @@ def _snapshot(socio):
 
 
 class EmitirT01Serializer(serializers.Serializer):
-    def validate(self, attrs):
+    _recipients: list[SocioInstitucionalDTO]
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         solicitud = self.context["solicitud"]
         if solicitud.estado == SolicitudT01.Estado.ISSUED:
             return attrs
@@ -358,31 +367,36 @@ class EmitirT01Serializer(serializers.Serializer):
             raise serializers.ValidationError({"motivo": "Es requerido al emitir."})
 
         padron_repo = get_padron_repository()
+        recipients: list[SocioInstitucionalDTO] = []
         for sid in socios_ids:
             socio = padron_repo.get_by_id(sid)
             if socio is None:
                 raise serializers.ValidationError(
                     {"destinatarios_socios_ids": f"El socio ID {sid} no existe en el padrón."}
                 )
+            validate_t01_reference(socio, sid)
             if not socio.is_active:
                 raise serializers.ValidationError(
                     {"destinatarios_socios_ids": f"El socio ID {sid} no está activo."}
                 )
+            recipients.append(socio)
+        self._recipients = recipients
         return attrs
 
-    def save(self):
+    @transaction.atomic
+    def save(self) -> SolicitudT01:
         solicitud = self.context["solicitud"]
         if solicitud.estado == SolicitudT01.Estado.ISSUED:
             return solicitud
-        padron_repo = get_padron_repository()
         socios_ids = solicitud.destinatarios_socios_ids or (
             [solicitud.destinatario_socio_id] if solicitud.destinatario_socio_id else []
         )
-        snapshots = []
-        for sid in socios_ids:
-            s = padron_repo.get_by_id(sid)
-            if s:
-                snapshots.append(_snapshot(s))
+        resolved_socio_ids = [materialize_t01_recipient(dto).pk for dto in self._recipients]
+        if len(set(resolved_socio_ids)) != len(resolved_socio_ids):
+            raise serializers.ValidationError(
+                {"destinatarios_socios_ids": "Las referencias no identifican socios distintos."}
+            )
+        snapshots = [_snapshot(dto) for dto in self._recipients]
         solicitud.snapshots_destinatarios = snapshots
         solicitud.snapshot_destinatario = snapshots[0] if snapshots else None
         solicitud.destinatarios_socios_ids = socios_ids
@@ -411,48 +425,7 @@ class EmitirT01Serializer(serializers.Serializer):
             f"T01-{solicitud.issued_at:%Y}-{solicitud.id.hex[:12].upper()}"
         )
 
-        # Apertura atómica y vinculación formal con Expediente
-        # Resolver socios (ya sea por PK local de Socio o por padrón institucional)
-        resolved_socio_ids = []
-        for sid in socios_ids:
-            local_socio = Socio.objects.filter(pk=sid).first()
-            if not local_socio:
-                s_dto = padron_repo.get_by_id(sid)
-                if s_dto:
-                    if s_dto.legajo:
-                        local_socio = Socio.objects.filter(legajo=s_dto.legajo).first()
-                    if not local_socio and s_dto.email:
-                        local_socio = Socio.objects.filter(email__iexact=s_dto.email).first()
-                    if not local_socio and s_dto.legajo:
-                        from django.contrib.auth import get_user_model
-
-                        UserModel = get_user_model()
-                        username = str(s_dto.legajo)
-                        email = s_dto.email or f"{username}@aveit.utn.edu.ar"
-                        user, _ = UserModel.objects.get_or_create(
-                            username=username,
-                            defaults={"email": email},
-                        )
-                        subcom = None
-                        if s_dto.subcomision:
-                            subcom, _ = Subcomision.objects.get_or_create(
-                                name=s_dto.subcomision.name
-                            )
-                        local_socio = Socio.objects.create(
-                            user=user,
-                            legajo=s_dto.legajo,
-                            first_name=s_dto.first_name,
-                            last_name=s_dto.last_name,
-                            email=email,
-                            subcomision=subcom,
-                            social_year=s_dto.social_year or 1,
-                            role=Role.SOCIO,
-                            is_enabled=s_dto.is_active,
-                        )
-            if local_socio:
-                resolved_socio_ids.append(local_socio.pk)
-
-        if resolved_socio_ids and not solicitud.expediente:
+        if not solicitud.expediente:
             from expedientes.services.workflow_service import ExpedienteWorkflowService
 
             actor_name = getattr(solicitud.solicitante, "legajo", str(solicitud.solicitante_id))
@@ -468,8 +441,10 @@ class EmitirT01Serializer(serializers.Serializer):
                     points=solicitud.puntos,
                 )
                 solicitud.expediente = expediente
-            except Exception:
-                logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
+            except DjangoValidationError:
+                raise serializers.ValidationError(
+                    {"destinatarios_socios_ids": "No se pudo abrir el expediente solicitado."}
+                ) from None
 
         solicitud.save()
         return solicitud
@@ -627,7 +602,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             return obj.expediente.get_estado_display()
         return "Expediente Creado"
 
-    def get_involucrados(self, obj: SolicitudT01) -> list[dict]:
+    def get_involucrados(self, obj: SolicitudT01) -> list[dict[str, Any]]:
         if obj.snapshots_destinatarios:
             return [
                 {
@@ -661,19 +636,46 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
         socios_ids = obj.destinatarios_socios_ids or (
             [obj.destinatario_socio_id] if obj.destinatario_socio_id else []
         )
-        if not socios_ids:
+        if not isinstance(socios_ids, list):
             return []
-        socios = Socio.objects.filter(pk__in=socios_ids).select_related("subcomision")
-        return [
-            {
-                "socio_id": s.id,
-                "legajo": s.legajo,
-                "first_name": s.first_name,
-                "last_name": s.last_name,
-                "subcomision": s.subcomision.name if s.subcomision else "Sin subcomisión",
-            }
-            for s in socios
-        ]
+        identifiers = dict.fromkeys(
+            identifier
+            for identifier in socios_ids
+            if isinstance(identifier, int) and not isinstance(identifier, bool) and identifier > 0
+        )
+        if not identifiers:
+            return []
+        result = []
+        try:
+            repository = get_padron_repository()
+            for identifier in identifiers:
+                socio = repository.get_by_id(identifier)
+                if (
+                    socio is None
+                    or not isinstance(socio.socio_id, int)
+                    or isinstance(socio.socio_id, bool)
+                    or socio.socio_id != identifier
+                ):
+                    continue
+                result.append(
+                    {
+                        "socio_id": socio.socio_id,
+                        "legajo": socio.legajo,
+                        "first_name": socio.first_name,
+                        "last_name": socio.last_name,
+                        "subcomision": socio.subcomision.name
+                        if socio.subcomision
+                        else "Sin subcomisión",
+                    }
+                )
+        except DatabaseError:
+            error = APIException(
+                detail="El padrón institucional no está disponible temporalmente.",
+                code="padron_unavailable",
+            )
+            error.status_code = 503
+            raise error from None
+        return result
 
     def get_resolucion_final(self, obj: SolicitudT01):
         if obj.expediente and obj.expediente.estado == EstadoExpedienteEnum.EMITIDO:

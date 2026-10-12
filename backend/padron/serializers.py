@@ -13,7 +13,14 @@ Referencia: plan.md §5, spec.md §RF-PADRON-01.
 
 from rest_framework import serializers
 
-from padron.domain import MembershipStatusEnum, SocioCategoryEnum
+from padron.domain import CATEGORY_FILTER_ALIASES, MembershipStatusEnum, SocioCategoryEnum
+from padron.services import normalize_category_filter
+
+
+class OptionalBooleanFilterField(serializers.BooleanField):
+    """Un parámetro de consulta ausente no aplica el filtro de vigencia."""
+
+    default_empty_html = serializers.empty
 
 
 class SocioFilterParamsSerializer(serializers.Serializer):
@@ -22,16 +29,19 @@ class SocioFilterParamsSerializer(serializers.Serializer):
     search = serializers.CharField(required=False, allow_blank=True, max_length=100)
     subcomision_id = serializers.IntegerField(required=False, min_value=1)
     category = serializers.ChoiceField(
-        choices=[c.value for c in SocioCategoryEnum],
+        choices=[c.value for c in SocioCategoryEnum] + list(CATEGORY_FILTER_ALIASES),
         required=False,
     )
-    is_active = serializers.BooleanField(required=False)
+    is_active = OptionalBooleanFilterField(required=False)
     membership_status = serializers.ChoiceField(
         choices=[m.value for m in MembershipStatusEnum],
         required=False,
     )
     page = serializers.IntegerField(required=False, min_value=1, default=1)
     page_size = serializers.IntegerField(required=False, min_value=1, max_value=100, default=20)
+
+    def validate_category(self, value: str) -> str:
+        return normalize_category_filter(value).value
 
 
 class SubcomisionSerializer(serializers.Serializer):
@@ -51,7 +61,7 @@ class SocioInstitucionalSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     email = serializers.CharField(allow_null=True)
     subcomision = SubcomisionSerializer(allow_null=True)
-    social_year = serializers.IntegerField()
+    social_year = serializers.IntegerField(allow_null=True)
     category = serializers.ChoiceField(choices=[c.value for c in SocioCategoryEnum])
     is_active = serializers.BooleanField()
     membership_status = serializers.ChoiceField(choices=[m.value for m in MembershipStatusEnum])

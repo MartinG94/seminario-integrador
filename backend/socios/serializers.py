@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from padron.domain import SocioCategoryEnum
 from socios.models import Socio
 
 
@@ -10,6 +11,11 @@ class SocioLegajoSerializer(serializers.ModelSerializer):
     transaccional de puntos de T4 sin implementarla prematuramente.
     """
 
+    legajo = serializers.CharField(allow_null=True, read_only=True)
+    category = serializers.ChoiceField(
+        choices=[(category.value, category.label) for category in SocioCategoryEnum],
+        read_only=True,
+    )
     category_display = serializers.CharField(source="get_category_display", read_only=True)
     subcomision = serializers.CharField(source="subcomision.name", default=None, read_only=True)
     points_balance = serializers.SerializerMethodField()

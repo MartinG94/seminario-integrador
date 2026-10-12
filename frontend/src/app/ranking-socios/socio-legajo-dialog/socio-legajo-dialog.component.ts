@@ -1,12 +1,13 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { SocioApiService, SocioLegajoDTO } from '../../services/socio-api.service';
+import { SocioApiService, SocioIdentitySource, SocioLegajoDTO } from '../../services/socio-api.service';
 import { NotificationService } from '../../services/notification.service';
 
 export interface SocioLegajoDialogData {
   socioId: number | string;
   nombreSocio?: string;
   saldo?: number;
+  identitySource?: SocioIdentitySource;
 }
 
 @Component({
@@ -26,6 +27,16 @@ export class SocioLegajoDialogComponent implements OnInit {
     return this.legajo?.points_balance ?? 0.0;
   }
 
+  get socialYearLabel(): string | null {
+    const year = this.legajo?.social_year;
+    if (
+      !this.legajo || this.legajo.category === 'EX_TRAVELER' || this.legajo.category === 'UNKNOWN' ||
+      typeof year !== 'number' || !Number.isInteger(year) || year < 1 || year > 6
+    ) {
+      return null;
+    }
+    return `${year}º Año`;
+  }
 
   constructor(
     public dialogRef: MatDialogRef<SocioLegajoDialogComponent>,
@@ -41,8 +52,9 @@ export class SocioLegajoDialogComponent implements OnInit {
   cargarLegajo(): void {
     this.cargando = true;
     this.errorHttp = null;
+    this.legajo = null;
 
-    this.socioApiService.getLegajo(this.data.socioId).subscribe({
+    this.socioApiService.getLegajo(this.data.socioId, this.data.identitySource).subscribe({
       next: (res) => {
         this.legajo = res;
         this.cargando = false;
@@ -63,10 +75,6 @@ export class SocioLegajoDialogComponent implements OnInit {
 
   cerrar(): void {
     this.dialogRef.close();
-  }
-
-  getBadgeClase(category: string): string {
-    return category === 'ACTIVE' ? 'badge-mat-primary' : 'badge-mat-info';
   }
 
   getEstadoClase(isEnabled: boolean): string {

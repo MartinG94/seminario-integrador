@@ -1,10 +1,14 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from accounts import audit
+from socios.models import Socio
 
 UserModel = get_user_model()
 
@@ -43,8 +47,6 @@ class LoginSerializer(serializers.Serializer):
         ).first()
 
         if user is None:
-            from socios.models import Socio
-
             socio_obj = Socio.objects.filter(
                 Q(legajo=identifier) | Q(email__iexact=identifier)
             ).first()
@@ -103,3 +105,40 @@ class SocioProfileSerializer(serializers.Serializer):
     category = serializers.CharField()
     category_display = serializers.CharField(source="get_category_display")
     subcomision = serializers.CharField(source="subcomision.name", default=None)
+
+
+class CurrentSocioRefreshToken(RefreshToken):
+    """Conserva la validación JWT y lee la clasificación al emitir el access."""
+
+    def verify(self) -> None:
+        super().verify()
+        user_id = self.get(api_settings.USER_ID_CLAIM)
+        if user_id is None:
+            raise AuthenticationFailed(INVALID_CREDENTIALS_DETAIL)
+        try:
+            UserModel.objects.get(**{api_settings.USER_ID_FIELD: user_id})
+        except (
+            UserModel.DoesNotExist,
+            UserModel.MultipleObjectsReturned,
+            TypeError,
+            ValueError,
+            ValidationError,
+        ):
+            raise AuthenticationFailed(INVALID_CREDENTIALS_DETAIL) from None
+
+    @property
+    def access_token(self) -> AccessToken:
+        try:
+            socio = Socio.objects.only("category").get(
+                **{f"user__{api_settings.USER_ID_FIELD}": self[api_settings.USER_ID_CLAIM]}
+            )
+        except (Socio.DoesNotExist, Socio.MultipleObjectsReturned):
+            raise AuthenticationFailed(INVALID_CREDENTIALS_DETAIL) from None
+        self["category"] = socio.category
+        return super().access_token
+
+
+class CurrentSocioTokenRefreshSerializer(TokenRefreshSerializer):
+    """Delega rotation, blacklist y opciones al serializador JWT instalado."""
+
+    token_class = CurrentSocioRefreshToken

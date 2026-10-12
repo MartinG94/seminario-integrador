@@ -67,39 +67,39 @@ class TestReconciliationCalculation:
 class TestSocioCategoryDerivation:
     """Pruebas de derivación de categoría estatutaria (Regla canónica AVEIT)."""
 
-    def test_categoria_pasivo_for_first_three_social_years(self) -> None:
-        """Años sociales 1, 2 y 3 deben categorizarse como 'PASIVO' (ex Junior)."""
+    def test_categoria_crosses_the_confirmed_year_three_boundary(self) -> None:
+        """Años 1 y 2 son Junior; el año 3 ya pertenece a Senior."""
         sub = Subcomision(codSubcomision=1, nombre="Cómputos")
 
         s1 = Socio(anoSocial=1, subcomision=sub, idTipoSocio=1)
         s2 = Socio(anoSocial=2, subcomision=sub, idTipoSocio=1)
         s3 = Socio(anoSocial=3, subcomision=sub, idTipoSocio=1)
 
-        assert RankingSocioSerializer().get_categoria(s1) == "PASIVO"
-        assert RankingSocioSerializer().get_categoria(s2) == "PASIVO"
-        assert RankingSocioSerializer().get_categoria(s3) == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s1) == "JUNIOR"
+        assert RankingSocioSerializer().get_categoria(s2) == "JUNIOR"
+        assert RankingSocioSerializer().get_categoria(s3) == "SENIOR"
 
-    def test_categoria_activo_for_fourth_to_sixth_social_years(self) -> None:
-        """Años sociales 4, 5 y 6 deben categorizarse como 'ACTIVO' (ex Senior)."""
+    def test_categoria_senior_for_fourth_to_sixth_social_years(self) -> None:
+        """Años sociales 4, 5 y 6 corresponden a Senior."""
         sub = Subcomision(codSubcomision=1, nombre="Cómputos")
 
         s4 = Socio(anoSocial=4, subcomision=sub, idTipoSocio=1)
         s5 = Socio(anoSocial=5, subcomision=sub, idTipoSocio=1)
         s6 = Socio(anoSocial=6, subcomision=sub, idTipoSocio=1)
 
-        assert RankingSocioSerializer().get_categoria(s4) == "ACTIVO"
-        assert RankingSocioSerializer().get_categoria(s5) == "ACTIVO"
-        assert RankingSocioSerializer().get_categoria(s6) == "ACTIVO"
+        assert RankingSocioSerializer().get_categoria(s4) == "SENIOR"
+        assert RankingSocioSerializer().get_categoria(s5) == "SENIOR"
+        assert RankingSocioSerializer().get_categoria(s6) == "SENIOR"
 
-    def test_categoria_none_or_zero_social_year_defaults_to_pasivo(self) -> None:
-        """Año social None o 0 debe categorizarse como 'PASIVO' sin elevar excepciones."""
+    def test_categoria_none_or_zero_social_year_remains_unknown(self) -> None:
+        """Año social None o 0 carece de clasificación sin condición confirmada."""
         sub = Subcomision(codSubcomision=1, nombre="Cómputos")
 
         s_none = Socio(anoSocial=None, subcomision=sub, idTipoSocio=1)
         s_zero = Socio(anoSocial=0, subcomision=sub, idTipoSocio=1)
 
-        assert RankingSocioSerializer().get_categoria(s_none) == "PASIVO"
-        assert RankingSocioSerializer().get_categoria(s_zero) == "PASIVO"
+        assert RankingSocioSerializer().get_categoria(s_none) == "UNKNOWN"
+        assert RankingSocioSerializer().get_categoria(s_zero) == "UNKNOWN"
 
 
 @pytest.mark.unit

@@ -43,7 +43,7 @@ El sistema reemplaza el uso fragmentado de planillas de cálculo y la manipulaci
 - La tramitación digital de expedientes según el **Reglamento Procesal Disciplinario 2026**.
 - La gestión de descargos y justificaciones tipificadas (**Formularios T01, T02 y T03**) con adjuntos digitales.
 - El control automático de plazos preclusivos (**5 días hábiles**).
-- La deliberación y votación remota con **firma colegiada** de Socios Activos.
+- La deliberación y votación remota con **firma colegiada** de integrantes habilitados del TD, conforme a su regla propia; la clasificación social no otorga esa facultad.
 - El cómputo algorítmico y transaccional de saldos de puntos (+/-), prohibiendo modificaciones no auditadas.
 - La activación de alertas escalonadas (7 pts preventivo y 10 pts crítico por pérdida de condición de socio).
 - La emisión instantánea de **Balances Cuatrimestrales de Auditoría Interna** (Art. 137 del Reglamento Interno).
@@ -60,7 +60,7 @@ Fundada en **1965**, la **Asociación Vocacional de Estudiantes e Ingenieros Tec
 flowchart TD
     AG["Asamblea General de Socios\n(Órgano Soberano)"]
     CD["Comisión Directiva\n(7 Miembros)"]
-    TD["Tribunal de Disciplina\n(3 Titulares + 3 Suplentes - Activos)"]
+    TD["Tribunal de Disciplina\n(3 Titulares + 3 Suplentes)"]
     CR["Comisión Revisora de Cuentas\n(3 Miembros)"]
     SUB["7 Subcomisiones Reglamentarias\n(Cómputos, RRII, Eventos, Prensa, Mant., RRHH, G. Social/Amb.)"]
     
@@ -70,11 +70,10 @@ flowchart TD
     CD --> SUB
 ```
 
-- **Segmentación Estatutaria de Socios:**
-  - **Socios Pasivos (1º, 2º y 3º año social):** Etapa formativa y de integración institucional.
-  - **Socios Activos (4º a 6º año social):** Conducción operativa en subcomisiones, elegibilidad para órganos estatutarios (TD/CD) y preparación al Viaje Final de Estudios.
-- **Equivalencias históricas:** `Junior = Pasivo` y `Senior = Activo`. La vigencia de la membresía se expresa como vigente/no vigente y no modifica la categoría social.
-- **Tribunal de Disciplina (TD):** Órgano jurisdiccional independiente de 6 miembros (3 titulares, 3 suplentes) electos por Asamblea entre los Socios Activos, responsable de velar por la convivencia, juzgar infracciones y otorgar premios.
+- **Clasificación social vigente:** Junior en 1.º–2.º año y Senior desde 3.º dentro de la escala. G57 es exviajero fuera de ella, sin año ficticio; G58/G59/G60 corresponden a 6.º/5.º/4.º y G63 a 1.º como referencia del corte confirmado.
+- **Ciclo social:** todos los integrantes de un grupo comparten año; el avance ocurre en la asamblea de recambio, sin fecha fija. Categoría, vigencia, cargo, rol y saldo conservan significados independientes.
+- **Fuente y estado:** [aclaración corregida del PO](specs/005-mysql-seed-g57-g60/aclaraciones-po.md), RN77-01–04, y [constitución](docs/constitution.md), principio 8. Clasificación, datos, contratos y pantallas adecuados en TS77.30–43; DEP77-02 cerrado. La demo sintética G57–G60 ya está cargada: [preparación, uso y recuperación](docs/gestion-proyecto/GUIA_CARGA_DEMO_SCRUM-77.md). Los antiguos cortes Pasivo 1–3/Activo 4–6 son antecedentes, no equivalencias aplicables a la regla nueva.
+- **Tribunal de Disciplina (TD):** Órgano jurisdiccional independiente de 6 miembros (3 titulares, 3 suplentes) electos por Asamblea, responsable de velar por la convivencia, juzgar infracciones y otorgar premios. Elegibilidad y firma requieren su regla propia: [DP77-FAC-01](docs/constitution.md#facultades-pendientes); no se deducen automáticamente de ser Senior o exviajero.
 
 ---
 
@@ -84,7 +83,7 @@ flowchart TD
 2. **Promover la Transparencia Pública:** Proveer un portal web accesible desde smartphones y ordenadores para que los socios consulten su historial de puntos, sanciones y resoluciones fundamentadas.
 3. **Optimizar el Cumplimiento de Plazos:** Automatizar el cómputo de plazos procesales improrrogables (5 días hábiles) con sellado de tiempo y despacho automático de notificaciones por email.
 4. **Facilitar el Trabajo Remoto / Mobile del TD:** Dotar al Tribunal de herramientas para sustanciar sesiones virtuales, emitir votos nominales fundados y formalizar resoluciones con firma colegiada digital.
-5. **Cumplir con el Marco Estatutario:** Automatizar la generación de balances cuatrimestrales de auditoría (Art. 137) clasificados por socio, subcomisión y grupo social (Pasivos/Activos).
+5. **Cumplir con el Marco Estatutario:** Automatizar los balances cuatrimestrales previstos por sus requisitos propios (Art. 137), clasificados por socio, subcomisión, Junior/Senior y condición exviajero; esta adecuación no implementa reportes.
 
 ---
 
@@ -96,7 +95,7 @@ flowchart TD
 | 📝 **Digitalización T01 / Anexo** | Inicio formal de solicitudes de sanción o premiación por autoridades competentes con validación de atribuciones. |
 | 📎 **Descargos Digitales (T02 / T03)** | Carga de justificaciones tipificadas (médicas, académicas, viajes) y descargos extraordinarios con adjuntos en PDF/imágenes. |
 | ⏱️ **Control de Plazos Preclusivos** | Cronómetro regresivo de 5 días hábiles desde la notificación del acuse de sanción. |
-| 🗳️ **Sesión Virtual y Firma Colegiada** | Votación nominal de los miembros del TD, redacción jurídica (Vistos, Considerandos, Resolución) y firma colegiada de Activos. |
+| 🗳️ **Sesión Virtual y Firma Colegiada** | Votación nominal de los miembros del TD, redacción jurídica (Vistos, Considerandos, Resolución) y firma colegiada de integrantes habilitados según su regla propia. |
 | 🧮 **Motor de Cómputo y Pistas de Auditoría** | Actualización algorítmica de saldos, registro de rectificaciones auditadas y prohibición de modificaciones arbitrarias. |
 | 🚨 **Sistema de Alertas Escalonadas** | Alerta preventiva amarilla (7 pts negativos) y alerta roja crítica de pérdida automática de condición de socio (10 pts negativos). |
 | 📊 **Generador de Balances Cuatrimestrales** | Emisión automática de informes de auditoría interna consolidados por períodos semestrales para Asambleas y CD. |
@@ -114,7 +113,7 @@ stateDiagram-v2
     EnPeriodoJustificaciones --> JustificacionesEnRevision: Carga de T02/T03 o Vencimiento plazo (5 días hábiles)
     JustificacionesEnRevision --> EnEsperaResolucion: Evaluación probatoria y votación del TD
     EnEsperaResolucion --> PendienteFirmaEnvio: Redacción de Resolución (Vistos/Considerandos)
-    PendienteFirmaEnvio --> ExpedientesEmitidos: Firma Colegiada de Socios Activos
+    PendienteFirmaEnvio --> ExpedientesEmitidos: Firma Colegiada del TD habilitado
     ExpedientesEmitidos --> [*]: Impacto transaccional de puntos y publicación
 ```
 
@@ -129,7 +128,7 @@ stateDiagram-v2
 * **Circular 001/2026:** Baremos y pautas normativas de graduación de puntos fijadas por el TD.
 
 ### Mapa de Competencias de Inicio (Arts. 21 a 26)
-* **Comisión Directiva:** Sobre cualquier socio con membresía vigente, de categoría Pasivo o Activo, o equipo, excepto miembros de su propio cuerpo.
+* **Comisión Directiva:** Sobre cualquier socio con membresía vigente o equipo, excepto miembros de su propio cuerpo; Junior/Senior o la condición exviajero no cambian esta competencia por sí solos.
 * **Comisión Fiscalizadora:** Sobre socios con membresía vigente, CD, Comisión Revisora y miembros del TD.
 * **Tribunal de Disciplina:** Actuación de oficio o rectificación (con abstención de juzgamiento del solicitante).
 * **Presidentes de Subcomisión:** Sobre miembros ordinarios o voluntarios a su cargo.
@@ -240,7 +239,7 @@ seminario-integrador/
 | **`docs/analisis-proceso-actual/`** | **Análisis del Sistema y Proceso Actual (AS-IS).** Relevamiento diagnóstico de las planillas de cálculo, procesos operativos en BPMN 2.0, catálogo de actores, antecedentes del sistema legado a reemplazar y marco normativo oficial (`reglamentos-aveit/`). |
 | **`docs/especificaciones/`** | **Especificaciones de Ingeniería de Software (TO-BE).** Documentos técnicos del nuevo sistema: ERS consolidada y por módulo, atributos de calidad ISO/IEC 25010, modelo conceptual de dominio y plantillas de casos de uso. |
 | **`docs/gestion-proyecto/`** | **Gestión Ágil y Planificación del Proyecto.** Acuerdos de trabajo del equipo (Working Agreements, DoD, DoR), calendario maestro de sprints, estimaciones y Product Backlog priorizado. |
-| **`docs/formales/`** | **Documentos Entregables Institucionales y Académicos.** Versiones formales presentables del Estudio Inicial y Plan de Proyecto en formatos Word (`.docx`), OpenDocument (`.odt`) y PDF (`.pdf`), junto con recursos gráficos (`assets/`). |
+| **`docs/formales/`** | **Exportaciones históricas Institucionales y Académicas.** Estudio Inicial y Plan de Proyecto en Word (`.docx`), OpenDocument (`.odt`) y PDF (`.pdf`), con recursos gráficos (`assets/`). No se regeneran en TS77.30; para clasificación vigente consultar los Markdown y la constitución. |
 | **`frontend/`** | **SPA Web de Producción.** Aplicación cliente en Angular 14.2+ basada en Material Dashboard PRO, con componentes modulares, tipado TypeScript estricto y configuración Docker. |
 | **`prototipos/`** | **Prototipos de Interfaz y Experiencia de Usuario (UX/UI).** Maquetas interactivas navegables en HTML5, CSS y JavaScript puro para validación temprana de flujos (Formulario T01 y panel colegiado del Tribunal). |
 | **`specs/`** | **Especificaciones y Tareas SDD.** Módulos de desarrollo organizados bajo la metodología Spec-Driven Development (`spec.md`, `plan.md`, `tasks.md`). |
@@ -248,11 +247,11 @@ seminario-integrador/
 
 ### 📑 Guía de Documentos Clave
 
-* 📘 **Estudio Inicial SGD-AVEIT** ([Markdown](docs/analisis-proceso-actual/TPI_Estudio_Inicial_SGD_AVEIT.md) \| [PDF Formal](docs/formales/Estudio_Inicial.pdf) \| [DOCX](docs/formales/Estudio_Inicial.docx)): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
+* 📘 **Estudio Inicial SGD-AVEIT** ([Markdown vigente](docs/analisis-proceso-actual/TPI_Estudio_Inicial_SGD_AVEIT.md) \| [PDF histórico](docs/formales/Estudio_Inicial.pdf) \| [DOCX histórico](docs/formales/Estudio_Inicial.docx)): Diagnóstico y relevamiento institucional, con aclaración de clasificación incorporada al Markdown; las exportaciones anteriores conservan su contenido original.
 * 👥 **Catálogo de Actores y Roles** ([Markdown](docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md)): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
 * 📝 **Plantilla Estándar de Casos de Uso** ([Markdown](docs/especificaciones/PLANTILLA_CASO_DE_USO.md)): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
 * ⚖️ **[Reglamentos Oficiales de AVEIT](docs/analisis-proceso-actual/reglamentos-aveit/)** (`docs/analisis-proceso-actual/reglamentos-aveit/`):
-  * `NOR_Estatuto_AVEIT_Reforma_2026.pdf`: Estatuto Social general y categorías estatutarias (Pasivos y Activos).
+  * `NOR_Estatuto_AVEIT_Reforma_2026.pdf`: Estatuto Social general, conservando sus denominaciones originales Pasivos/Activos como texto fuente; la clasificación vigente del sistema se consulta en la constitución.
   * `NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf`: Régimen disciplinario, tipificación de faltas y límite de 10 puntos negativos (Art. 93).
   * `NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf`: Procedimiento procesal del Tribunal de Disciplina, plazos de 5 días hábiles, descargos T02/T03 y resoluciones colegiadas.
   * `NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf`: Versión previa del reglamento procesal disciplinario.

@@ -10,7 +10,7 @@ Control de acceso basado en roles del Walking Skeleton (Spec 001). Documenta los
 
 1. **La autorización se resuelve en el servidor.** Que la SPA oculte un botón o una ruta es sólo una mejora de experiencia de usuario. Toda ruta protegida valida el rol en cada petición; un acceso directo por URL sin autorización recibe `403 Forbidden`.
 2. **El rol se relee del padrón, no del token.** Las clases de permiso consultan `Socio.role` e `is_enabled` en cada request. Una baja o un cambio de rol surte efecto de inmediato, sin esperar a que expire el JWT ya emitido.
-3. **El cargo estatutario no confiere permisos.** Se mantiene la separación que ya regía en el sistema legado: el cargo y la categoría social (Pasivo/Activo) son datos del padrón; el acceso lo determina únicamente `Socio.role`.
+3. **La clasificación no confiere permisos.** Cargo, categoría Junior/Senior y condición exviajero son datos independientes del rol y de la vigencia de la cuenta. Se aplica la [aclaración corregida del PO](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md), RN77-01–04, sin sustituir `Socio.role` ni `is_enabled`. La transición de datos/contratos está pendiente en DEP77-02; un exviajero no queda deshabilitado por su clasificación.
 4. **Privilegio mínimo por defecto.** DRF está configurado con `IsAuthenticated` como permiso por defecto: un endpoint nuevo queda protegido salvo que declare explícitamente lo contrario.
 
 ---
@@ -84,3 +84,4 @@ Los endpoints de ranking, búsqueda y legajo integral (RF-03-WS, RF-04-WS) se in
 2. **Órganos de Fiscalización sin rol propio.** El ERS les asigna competencia para iniciar acciones disciplinarias (Arts. 22 y 23) y auditoría de legalidad sobre TD y CD. Si se confirma que necesitan acceso diferenciado, hace falta un sexto rol y su modificación en la spec.
 3. **Sesión de `tribunal_medio` sin módulo destino.** Las capacidades de gestión de eventos y asistencias del nivel medio legado no tienen módulo equivalente dentro del alcance de Spec 001; la equivalencia queda definida pero sin endpoints que la ejerzan todavía.
 4. **Auditoría sin persistencia.** Los eventos de autenticación y autorización se emiten al logger `security` (`backend/accounts/audit.py`), no a una tabla. Si el Balance Cuatrimestral (Art. 137) o ACT-05 requieren consultar la pista desde la aplicación, hace falta especificar un modelo persistente.
+5. **DP77-FAC-01 — Elegibilidad y firma.** Las condiciones para integrar/firmar en el TD y presidir subcomisiones, incluyendo 3.º año y exviajeros, requieren su regla propia en las US correspondientes. Véase la [pregunta registrada](../constitution.md#facultades-pendientes). No se otorgan ni retiran permisos mediante un reemplazo Activo→Senior; los roles y controles actuales se conservan.

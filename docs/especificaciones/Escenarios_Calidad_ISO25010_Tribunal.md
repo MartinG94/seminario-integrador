@@ -1,6 +1,8 @@
 # ESCENARIOS DE CALIDAD Y TÁCTICAS ARQUITECTÓNICAS (ISO/IEC 25010)
 ## Módulo Unificado de Tribunal de Disciplina y Premiaciones (SGD-AVEIT)
 
+**Clasificación de referencia TS77.30:** [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md) y la [constitución](../constitution.md) definen Junior 1.º–2.º / Senior desde 3.º y exviajero fuera de la escala. Se actualiza el vocabulario del escenario, sin cambiar sus umbrales ni acreditar nueva implementación.
+
 ---
 
 ### DATOS DEL DOCUMENTO
@@ -51,7 +53,7 @@ A continuación se formalizan los **Escenarios de Calidad de 6 Partes** y sus co
 | :--- | :--- |
 | **Identificador** | `ESC-REND-01` |
 | **1. Fuente del Estímulo** | 150 socios concurrentes y miembros del TD consultando y ordenando el Ranking General de Socios tras la emisión de una resolución o durante una asamblea. |
-| **2. Estímulo** | Peticiones simultáneas de ordenamiento ascendente/descendente sobre el padrón de más de 500 socios con filtros por subcomisión y categoría Pasivo/Activo. |
+| **2. Estímulo** | Peticiones simultáneas de ordenamiento ascendente/descendente sobre el padrón de más de 500 socios con filtros por subcomisión y clasificación Junior/Senior y condición exviajero. |
 | **3. Entorno** | Momento de alta demanda informativa (pico de tráfico post-asamblea). |
 | **4. Artefacto Afectado** | Módulo de Ranking, API REST Backend y Consultas Agregadas MySQL. |
 | **5. Respuesta del Sistema** | El backend resuelve la consulta utilizando una vista materializada indexada o caché en memoria con invalidación selectiva por eventos de resolución, retornando los datos en formato JSON ligero. |
@@ -74,7 +76,7 @@ A continuación se formalizan los **Escenarios de Calidad de 6 Partes** y sus co
 | **4. Artefacto Afectado** | Interfaz Web Responsive Mobile (Formulario Unificado T02/T03). |
 | **5. Respuesta del Sistema** | Interfaz adaptada que detecta la cámara/archivos del móvil, comprime la imagen en el cliente antes de la subida, valida los campos obligatorios en tiempo real y emite una constancia digital con acuse inmediato. |
 | **6. Medida de Respuesta** | **Tiempo total de carga de justificación <= 60 segundos.** Tasa de éxito al primer intento **>= 95%**. Número máximo de toques de pantalla **<= 4 toques**. Contraste WCAG 2.2 AA verificado en el 100% de elementos. |
-| **Tácticas Arquitectónicas** | • **Prevención de Errores en Cliente:** Validación visual de archivos adjuntos antes del envío; deshabilitación preventiva del botón de envío si falta el certificado en causal tipificada.<br>• **Diseño Universal y Responsive:** Maquetación fluida con Tailwind CSS siguiendo los tokens de [DESIGN.md](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/DESIGN.md).<br>• **Feedback Inmediato:** Indicador visual de progreso de carga y confirmación de recepción con sello de tiempo. |
+| **Tácticas Arquitectónicas** | • **Prevención de Errores en Cliente:** Validación visual de archivos adjuntos antes del envío; deshabilitación preventiva del botón de envío si falta el certificado en causal tipificada.<br>• **Diseño Universal y Responsive:** Maquetación fluida con Tailwind CSS siguiendo los tokens de [DESIGN.md](../../DESIGN.md).<br>• **Feedback Inmediato:** Indicador visual de progreso de carga y confirmación de recepción con sello de tiempo. |
 | **Trade-offs / Conflictos** | La compresión de imágenes en el cliente consume ciclos leves de CPU en móviles de gama baja, pero ahorra más del 80% de ancho de banda y acelera el despacho. |
 
 ---

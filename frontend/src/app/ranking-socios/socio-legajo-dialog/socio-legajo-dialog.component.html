@@ -38,7 +38,7 @@
       <div class="socio-main-info">
         <h4 class="socio-full-name">{{ legajo.last_name }}, {{ legajo.first_name }}</h4>
         <span class="socio-legajo-badge">
-          <i class="material-icons">pin</i> Número de Socio: <strong>{{ legajo.legajo }}</strong>
+          <i class="material-icons">pin</i> Legajo: <strong>{{ legajo.legajo || 'Sin legajo' }}</strong>
         </span>
       </div>
     </div>
@@ -54,15 +54,15 @@
         <span class="data-value">{{ legajo.subcomision || 'Sin Asignar' }}</span>
       </div>
 
-      <div class="data-item">
+      <div class="data-item" *ngIf="socialYearLabel as yearLabel">
         <span class="data-label">Año Social</span>
-        <span class="data-value">{{ legajo.social_year }}º Año</span>
+        <span class="data-value">{{ yearLabel }}</span>
       </div>
 
       <div class="data-item">
         <span class="data-label">Categoría Estatutaria</span>
         <span class="data-value">
-          <span class="badge-mat" [ngClass]="getBadgeClase(legajo.category)">
+          <span class="badge-mat membership-category-badge">
             {{ legajo.category_display }}
           </span>
         </span>
@@ -84,7 +84,7 @@
 
       <div class="data-item">
         <span class="data-label">Saldo de Puntos</span>
-        <span class="data-value font-weight-bold" [ngClass]="saldoPuntos >= 0 ? 'text-success' : 'text-danger'">
+        <span class="data-value font-weight-bold">
           {{ saldoPuntos > 0 ? '+' : '' }}{{ saldoPuntos }} pts
         </span>
       </div>

@@ -1,4 +1,5 @@
 import { NgModule } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -34,6 +35,7 @@ import { CalendarioInstitucionalComponent } from '../../calendario-institucional
 
 @NgModule({
   imports: [
+    A11yModule,
     CommonModule,
     RouterModule.forChild(AdminLayoutRoutes),
     FormsModule,

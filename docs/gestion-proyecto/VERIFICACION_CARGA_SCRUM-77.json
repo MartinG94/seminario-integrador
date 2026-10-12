@@ -1,0 +1,371 @@
+{
+  "story": "SCRUM-77",
+  "units": "TS77.08–27",
+  "date": "2026-10-12",
+  "branch": "feature/US-S3-PO2-mysql-seed-g57-g60",
+  "base_commit": "0596c64a1002fd06f135733c7090ae4480f7351f",
+  "uncommitted_changes": true,
+  "status": "SCRUM-77 completada y auditada; TS77.01–43 cerradas y CA77-00–08 verificados.",
+  "tests": {
+    "backend": {
+      "exit_code": 0,
+      "passed": 1008,
+      "errors": 0,
+      "seconds": 618.46,
+      "coverage_percent": 93.91,
+      "coverage_modules": 22,
+      "statements": 2331,
+      "missed": 142
+    },
+    "frontend": {
+      "passed": 222,
+      "errors": 0,
+      "chrome": "154.0.0.0",
+      "runner_seconds": 0.907,
+      "spec_seconds": 0.725,
+      "exit_code": 0
+    },
+    "production_build": {
+      "exit_code": 0,
+      "hash": "6fae4265931dc3f8",
+      "utc": "2026-10-12T20:52:32.414Z",
+      "ms": 7854
+    },
+    "ruff_check": "passed",
+    "ruff_format_new_python_files": 15,
+    "django_check": "passed",
+    "makemigrations_check": "no changes",
+    "frontend_lint": {
+      "exit_code": 1,
+      "classification": "Limitación heredada: builder @angular-devkit/build-angular:tslint ausente."
+    },
+    "modified_serializer_formatted": true
+  },
+  "guards": {
+    "invalid_profile_exit": 1,
+    "pending_migration_exit": 1,
+    "unchanged_all_48_table_schemas_and_rows": true
+  },
+  "preparation": {
+    "migration": "core.0001_initial",
+    "migrations_applied": 1,
+    "new_table": "core_demofixtureownership",
+    "table_count": 49,
+    "migration_rows": 34,
+    "prior_legacy_rows": 0,
+    "legacy_tables": 27,
+    "legacy_foreign_keys": 39,
+    "repeat_migrations_applied": 0,
+    "repeat_legacy_tables_created": 0
+  },
+  "seed": {
+    "profile": "scrum77-g57-g60-v1",
+    "social_cycle": "PO-SCRUM77-CORTE-01",
+    "fixtures": 162,
+    "identities": 16,
+    "new_accounts": 6,
+    "preserved_accounts": 5,
+    "total_users": 11,
+    "total_local_socios": 11,
+    "explicit_ex_travelers": 4,
+    "causes": {
+      "created": 3,
+      "justifications": 2
+    },
+    "t01s": 4,
+    "historical_cases": 7,
+    "historical_resolutions": 7,
+    "ledger_entries": 8,
+    "ledger_total": "1.00",
+    "outbox": 0,
+    "manifest_first": "C:\\Users\\Usuario\\AppData\\Local\\Temp\\scrum77-manifest-first.json",
+    "manifest_repeat": "C:\\Users\\Usuario\\AppData\\Local\\Temp\\scrum77-manifest-repeat.json",
+    "manifest_sha256": "b5d6fce4594c743926ae76f2c1703cc234edd8b305d4d250dba89b7b68a28eb8"
+  },
+  "repetition": {
+    "identical_manifests": true,
+    "identical_schemas_49": true,
+    "identical_row_hashes_49": true,
+    "identical_counts_49": true,
+    "institutional_counter": 770017,
+    "formal_counter": {
+      "year": 2026,
+      "last_value": 5
+    },
+    "edits_passwords_and_fault_rollback": "Verificados en pruebas MySQL UUID; la repetición real compara las filas completas, sin editar fixtures."
+  },
+  "persistence": {
+    "before_container": "5b793d5d7f35238b749b58c98e3ad58b3fba3862d6008f0ba5b0242dee460617",
+    "after_container": "e5e7116e56791675a2602acd5e2332640bcabc9decf7342947748fcc1592b30c",
+    "volume": "sgd_aveit_scrum77_demo_mysql_data",
+    "reseed_between_measurements": false,
+    "prepare_between_measurements": false,
+    "identical_schemas": true,
+    "identical_rows": true,
+    "identical_counts": true
+  },
+  "reconciliation": {
+    "explicit_conditions": 4,
+    "foreign_key_constraints_checked": 59,
+    "formal_counter": [
+      {
+        "id": 1,
+        "last_value": 5,
+        "year": 2026
+      }
+    ],
+    "groups": [
+      {
+        "group": 57,
+        "members": 4,
+        "social_year": null
+      },
+      {
+        "group": 58,
+        "members": 4,
+        "social_year": 6
+      },
+      {
+        "group": 59,
+        "members": 4,
+        "social_year": 5
+      },
+      {
+        "group": 60,
+        "members": 4,
+        "social_year": 4
+      }
+    ],
+    "ledger": {
+      "entries": 8,
+      "points": "1.00"
+    },
+    "orphans": [],
+    "periods": [
+      {
+        "currently_open": true,
+        "deadline": "2026-10-19T19:58:02.635524+00:00",
+        "id": 5,
+        "start": "2026-10-12T19:58:02.635524+00:00"
+      },
+      {
+        "currently_open": true,
+        "deadline": "2026-10-19T19:58:02.591176+00:00",
+        "id": 4,
+        "start": "2026-10-12T19:58:02.591176+00:00"
+      }
+    ],
+    "states": [
+      {
+        "count": 3,
+        "estado": "creado"
+      },
+      {
+        "count": 2,
+        "estado": "justificando"
+      }
+    ]
+  },
+  "http": {
+    "before_recreation_checks": 78,
+    "after_recreation_checks": 78,
+    "login_contract": "identifier; no acredita contraseña",
+    "secrets_published": false,
+    "after_draft_identity_fix_checks": 78,
+    "draft_recipients_checked_against_catalog": true
+  },
+  "preserved_files": [
+    {
+      "path": "docs/gestion-proyecto/notasPO.md",
+      "sha256": "f9966548bed9d85ad739f817a26dc18454c659f8e0128d9b75063173fdf29064",
+      "unchanged": true
+    },
+    {
+      "path": "docs/formales\\Estudio_Inicial.pdf",
+      "sha256": "a13be34b4cca895bfd9028ad42b7e214199b28948c62cc7c0ac4db35e11ca6b7",
+      "unchanged": true
+    },
+    {
+      "path": "backend/socios/migrations/0004_recalculate_social_categories.py",
+      "sha256": "c4db1c90768869f950fb8310fe83226490aa5b9caa780f03cd57693e025a5690",
+      "unchanged": true
+    },
+    {
+      "path": "docs/analisis-proceso-actual/sistema-actual\\sistema_actual_legado_schema.sql",
+      "sha256": "95604a3a43e9d2a2e657c51748062f828c7923a7eaa52c8d870a7b911b76f09f",
+      "unchanged": true
+    },
+    {
+      "path": "backend/socios/migrations/0001_initial.py",
+      "sha256": "d151e8bb7d5d5ab9be8574e251e75f9078ee3efe591cd4a44bf0b27a679dacfb",
+      "unchanged": true
+    },
+    {
+      "path": "backend/socios/migrations/0003_local_social_categories.py",
+      "sha256": "25ba4b4b974be9f330da98387b3be193bcd7678d69a524ac0966267fa9aa7c66",
+      "unchanged": true
+    },
+    {
+      "path": "docs/constitution.md",
+      "sha256": "f2c708811ca83c39931992ff20d40e1f8636d663c35b880f29e635a0f5e35802",
+      "unchanged": true
+    },
+    {
+      "path": "backend/core/sql/scrum77_legacy_schema.sql",
+      "sha256": "add06f417de2e9f2e2ff13ce0ab6fe7772b52b99662e8b2b6e42126b66e1e138",
+      "unchanged": true
+    },
+    {
+      "path": "docs/formales\\Plan_de_Proyecto.pdf",
+      "sha256": "70579a87a9847ad26520f543c79b147a5692327209a49c15cd009d42ddfeafee",
+      "unchanged": true
+    },
+    {
+      "path": "docs/gestion-proyecto/Seguimiento de Proyecto.md",
+      "sha256": "573708245aeff738c58bd0e85232ae4843f2ddf9053824d985596346eeff4fa0",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "b00cc2f50999f6559fd39a3ce53c5c76e423f9d91a9ad11a292f56c050185e38",
+      "unchanged": true
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "f6585cff38cf637b2a67b23ad0d9a8324781fb4f7c26c7b305a1d6b65d6e4717",
+      "unchanged": true
+    },
+    {
+      "path": "backend/socios/migrations/0005_institutional_membership_condition.py",
+      "sha256": "5ab9064ed71eb84557ee845db9141b90336e8e813e48aea5b30ea6c7960a3bc3",
+      "unchanged": true
+    },
+    {
+      "path": "backend/socios/migrations/0002_ex_traveler_representation.py",
+      "sha256": "6b5fdea23e62d9b52c77f46c6e6c944ae64da7972a2a7748b8583c20ebc433a0",
+      "unchanged": true
+    },
+    {
+      "path": "docker-compose.scrum77-demo.yml",
+      "sha256": "e9123e4f43665715a945c839ef8414dfdda1f7e61559b4e3a657c4db84008b38",
+      "unchanged": true
+    }
+  ],
+  "api_reading": {
+    "method": "MisSolicitudesT01Serializer.get_involucrados",
+    "namespace": "ID del proveedor de padrón",
+    "local_pk_fallback": false,
+    "historical_snapshots_preserved": true,
+    "null_legajo_preserved": true,
+    "provider_database_failure_status": 503,
+    "get_writes": false,
+    "tdd": {
+      "total": 13,
+      "failed_before": 8,
+      "passed_before": 5,
+      "seconds": 14.97
+    },
+    "focused_with_baseline": {
+      "passed": 19,
+      "errors": 0,
+      "seconds": 17.31
+    },
+    "live_authority_draft": {
+      "institutional_number": 770013,
+      "legajo": "99077013",
+      "browser_verified": true
+    }
+  },
+  "visual_tdd": {
+    "first": {
+      "total": 6,
+      "failed_before": 5,
+      "passed_before": 1,
+      "red_seconds": 0.153,
+      "passed_after": 6,
+      "green_seconds": 0.132
+    },
+    "badges": {
+      "total": 8,
+      "failed_before": 4,
+      "passed_before": 4,
+      "red_seconds": 0.095,
+      "passed_after": 8,
+      "green_seconds": 0.062
+    },
+    "t01_dialog": {
+      "total": 5,
+      "failed": 5,
+      "passed": 0,
+      "runner_seconds": 0.129,
+      "spec_seconds": 0.122,
+      "passed_after": 5,
+      "green_seconds": 0.109
+    }
+  },
+  "browser": {
+    "tasks": [
+      "TS77.20",
+      "TS77.21",
+      "TS77.22",
+      "TS77.23",
+      "TS77.24"
+    ],
+    "desktop": "1440×900",
+    "mobile": [
+      "360×800",
+      "414×850"
+    ],
+    "light_and_dark_verified": true,
+    "roles_existing": 5,
+    "ranking_pages": [
+      10,
+      6
+    ],
+    "categories": {
+      "EX_TRAVELER": 4,
+      "SENIOR": 12,
+      "JUNIOR": 0,
+      "UNKNOWN": 0
+    },
+    "secondary_involved_filter": {
+      "academic_number": 99077013,
+      "case_ids": [
+        3,
+        5
+      ]
+    },
+    "authority_draft": {
+      "academic_number": 99077013,
+      "name": "Malena Marea Demo"
+    },
+    "legajo_close_reachable_by_tab_and_scroll": true,
+    "t01_dialog_close_reachable_by_tab_and_scroll": true,
+    "t01_dialog_contents_contained": true,
+    "minimum_measured_t01_badge_contrast": 5.93,
+    "no_writes": true,
+    "evidence": "VERIFICACION_UI_SCRUM-77.md",
+    "synthetic_account_scenarios": 4
+  },
+  "audit": {
+    "agent": "audit_final_seed",
+    "outcome": "approved",
+    "open_findings": 0,
+    "read_only": true,
+    "protected_hashes_verified": 15,
+    "manifests_directly_verified": true,
+    "criteria_verified": "CA77-00–08",
+    "tasks_completed": 43
+  },
+  "final_conservation": {
+    "table_schemas_49_unchanged": true,
+    "row_hashes_49_unchanged": true,
+    "row_counts_49_unchanged": true,
+    "institutional_counter": 770017,
+    "fixture_references": 162,
+    "source_files": 450,
+    "backend_files": 184,
+    "code_unchanged_after_regression": true,
+    "protected_files": 15
+  }
+}

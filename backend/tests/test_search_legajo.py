@@ -173,8 +173,8 @@ def test_legajo_detail_returns_expected_fields_and_exact_legajo(test_setup, auth
     assert data["last_name"] == "Gastiaburu"
     assert data["email"] == "74907@aveit.test"
     assert data["role"] == Role.SOCIO
-    assert data["category"] == "ACTIVE"
-    assert data["category_display"] == "Activo"
+    assert data["category"] == "SENIOR"
+    assert data["category_display"] == "Senior"
     assert data["subcomision"] == "Cómputos"
     assert data["social_year"] == 5
     assert data["is_enabled"] is True
@@ -320,8 +320,8 @@ def test_legajo_detail_for_institutional_padron_socio_by_id_and_legajo(
     assert data_id["first_name"] == "Lucía"
     assert data_id["last_name"] == "Gómez"
     assert data_id["subcomision"] == "Cómputos"
-    assert data_id["category"] == "PASSIVE"
-    assert data_id["category_display"] == "Pasivo"
+    assert data_id["category"] == "SENIOR"
+    assert data_id["category_display"] == "Senior"
     assert data_id["is_enabled"] is True
 
     # 2. Consulta por número de legajo ("89123" -> Lucía Gómez)

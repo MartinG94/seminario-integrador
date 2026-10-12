@@ -38,7 +38,7 @@ def _make_sample_socio_dto(socio_id: int = 1001, legajo: str = "85421") -> Socio
         email="esteban.perez@aveit.utn.edu.ar",
         subcomision=SubcomisionDTO(id=10, name="Tribunal de Disciplina"),
         social_year=4,
-        category=SocioCategoryEnum.ACTIVE,
+        category=SocioCategoryEnum.SENIOR,
         is_active=True,
         membership_status=MembershipStatusEnum.ENABLED,
     )
@@ -76,7 +76,7 @@ class TestPadronSocioDetailView:
         assert data["socio_id"] == 1001
         assert data["legajo"] == "85421"
         assert data["first_name"] == "Esteban"
-        assert data["category"] == "ACTIVE"
+        assert data["category"] == "SENIOR"
         assert data["membership_status"] == "ENABLED"
         assert data["is_active"] is True
         mock_repo.get_by_id.assert_called_once_with(1001)
@@ -364,7 +364,7 @@ class TestPadronSocioListView:
         mock_repo.list_socios.assert_called_once_with(
             search="Gómez",
             subcomision_id=1,
-            category=SocioCategoryEnum.PASSIVE,
+            category=SocioCategoryEnum.JUNIOR,
             is_active=True,
             membership_status=MembershipStatusEnum.ENABLED,
             page=2,

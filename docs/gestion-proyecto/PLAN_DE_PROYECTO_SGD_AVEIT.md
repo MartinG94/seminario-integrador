@@ -9,6 +9,8 @@
 ---
 
 # PLAN DE PROYECTO DE SOFTWARE
+
+**Actualización TS77.30 (11/10/2026):** [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md) define Junior 1.º–2.º, Senior desde 3.º y G57 exviajero fuera de la escala, con grupos/ciclo confirmados. Esta actualización documental no cambia sprints, cronograma ni seguimiento macro. Elegibilidad/firma quedan en [DP77-FAC-01](../constitution.md#facultades-pendientes), sin permisos derivados de categoría. El Markdown contiene la adecuación vigente; las exportaciones de docs/formales conservan su versión histórica y no se regeneran en esta unidad. La implementación DEP77-02 sigue pendiente.
 ## Sistema de Gestión del Tribunal de Disciplina y Premiaciones de A.V.E.I.T. (SGD-AVEIT)
 
 ---
@@ -127,7 +129,7 @@ Aplicando el marco analítico de la skill `systemClassifier`, el sistema SGD-AVE
   3. *Subsistema de Integridad Transaccional y Saldos (TPS):* Sumatoria de puntos auditada mediante ledger histórico y disparador de alarmas preventivas y críticas.
   4. *Subsistema de Transparencia y Rendición Cuatrimestral (MIS/EIS):* Portal público de consulta societaria y motor de compilación de Balances Cuatrimestrales (Art. 137).
 * **Frontera del Sistema:** Comprende desde la detección de la infracción/mérito y solicitud formal hasta la consolidación del balance cuatrimestral y la publicación transparente del fallo. Excluye el cobro de cuotas societarias (Tesorería) y la gestión de la Gran Rifa.
-* **Entorno:** Masa de más de 500 socios con membresía vigente, de categorías Pasivo y Activo, Comisión Directiva, Comisión Fiscalizadora, Subcomisiones operativas, servidores de correo SMTP y red Wi-Fi de la UTN FRC.
+* **Entorno:** Masa de más de 500 socios con membresía vigente, con clasificación Junior/Senior o condición exviajero, independientes de la vigencia, Comisión Directiva, Comisión Fiscalizadora, Subcomisiones operativas, servidores de correo SMTP y red Wi-Fi de la UTN FRC.
 * **Homeostasis:** El sistema mantiene el equilibrio normativo institucional garantizando el debido proceso en 5 días hábiles y aplicando automáticamente la cláusula estatutaria de exclusión societaria al alcanzarse 10 puntos negativos netos.
 * **Negentropía:** Reemplazo de planillas Google Sheets degradables y sentencias manuales `UPDATE` en MySQL por transacciones registradas mediante triggers de auditoría inmutables en base de datos.
 
@@ -248,7 +250,7 @@ classDiagram
 | Buscar Legajo Integral e Histórico por Socio | ❌ | ❌ | **R** | **R** | **R** |
 | Sustanciar Descargos y Aprobar/Rechazar T02/T03 | ❌ | ❌ | ❌ | **C/U** | ❌ |
 | Votar nominalmente y redactar Resoluciones | ❌ | ❌ | ❌ | **C/U** | ❌ |
-| Firma Electrónica Colegiada de Resoluciones | ❌ | ❌ | ❌ | **C/U** *(Activos)* | ❌ |
+| Firma Electrónica Colegiada de Resoluciones | ❌ | ❌ | ❌ | **C/U** *(habilitación según regla propia, DP77-FAC-01)* | ❌ |
 | Recibir Alertas Preventivas (-7 pts) y Críticas (-10 pts) | **R** *(Propia)* | ❌ | **R** *(Global)* | **R** *(Global)* | ❌ |
 | Generar y Exportar Balances Cuatrimestrales (Art. 137)| ❌ | ❌ | **R** | **C/R/E** | ❌ |
 | Gestión de Usuarios, Roles y Pistas de Auditoría DB | ❌ | ❌ | ❌ | ❌ | **C/R/U/D** |
@@ -273,10 +275,10 @@ Aplicando el pipeline de `/requirementsExtractor`, se desglosan los alcances fun
 | **RF-08** | **Evaluación y Sustanciación de Descargos** | El sistema permitirá a las miembros del TD visualizar los comprobantes adjuntos, emitir dictamen de aprobación o rechazo fundado sobre los Formularios T02/T03 y registrar el resultado en el expediente. | **Must Have** | Miembro TD |
 | **RF-09** | **Registro Nominal de Votación del Tribunal** | El sistema registrará el voto individual y nominal de cada miembro del Tribunal de Disciplina habilitado, computando la mayoría absoluta estatutaria para habilitar la confección del fallo. | **Must Have** | Miembro TD |
 | **RF-10** | **Redacción Estructurada y Generación de Resoluciones** | El sistema guiará la redacción de la Resolución final respetando la estructura legal obligatoria (*Vistos, Considerandos y Resolución*) y consolidando los puntos definitivos asignados (+/-). | **Must Have** | Miembro TD |
-| **RF-11** | **Aprobación Colegiada Autenticada (Firma Electrónica)** | El sistema permitirá a los miembros del TD de categoría Activo suscribir colegiadamente la resolución mediante su sesión autenticada, registrando de forma inalterable ID de usuario, rol institucional, categoría, fecha/hora y hash de auditoría. | **Must Have** | Miembro TD |
+| **RF-11** | **Aprobación Colegiada Autenticada (Firma Electrónica)** | El sistema permitirá a los miembros del TD habilitados conforme a su regla propia (condiciones de año/categoría pendientes en DP77-FAC-01) suscribir colegiadamente la resolución mediante su sesión autenticada, registrando de forma inalterable ID de usuario, rol institucional, categoría, fecha/hora y hash de auditoría. | **Must Have** | Miembro TD |
 | **RF-12** | **Sumatoria Transaccional e Inmutable del Saldo de Puntos** | El sistema actualizará el saldo de puntos del socio sumando algebraicamente las transacciones dictaminadas con fracciones mínimas de 0.5 puntos, mediante lógica de backend y triggers en base de datos. | **Must Have** | Sistema (Motor de Reglas) |
 | **RF-13** | **Disparo Automático de Alertas Escalonadas (-7 y -10 pts)** | El sistema evaluará el saldo tras cada impacto: si el saldo acumulado es <= -7 pts despachará alerta amarilla preventiva; si es <= -10 pts despachará alerta roja de pérdida de condición de socio a CD y al socio. | **Must Have** | Sistema (Daemon / Reglas) |
-| **RF-14** | **Generación de Balances Cuatrimestrales de Auditoría (Art. 137)** | El sistema compilará con un solo clic los Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones desglosados por Subcomisión y categoría (Pasivos/Activos), exportables a PDF formal. | **Must Have** | Miembro TD |
+| **RF-14** | **Generación de Balances Cuatrimestrales de Auditoría (Art. 137)** | El sistema compilará con un solo clic los Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones desglosados por Subcomisión y clasificación Junior/Senior y condición exviajero, exportables a PDF formal. | **Must Have** | Miembro TD |
 | **RF-15** | **Portal de Transparencia y Consulta Pública de Resoluciones** | El sistema dispondrá de un portal público accesible por toda la masa societaria para consultar el repositorio de resoluciones firmes dictadas y el legajo de antecedentes individuales. | **Should Have** | Socio Ordinario / Público |
 
 ---
@@ -317,8 +319,8 @@ En respuesta a la observación de la cátedra de reemplazar expresiones vagas co
   Un expediente transiciona de forma secuencial y sin retrocesos: E1(Creado) -> E2(En Justificación) -> E3(En Revisión) -> E4(En Espera Resolución) -> E5(Pendiente Firma) -> E6(Emitido).
 * **`RN-06` — Quórum y Mayoría Absoluta del TD (Art. 96 Estatuto 2026):**  
   Las resoluciones requieren la deliberación de al menos tres (3) miembros habilitados y el voto favorable de al menos dos (2) miembros (mayoría absoluta). Si un miembro es recusado por parentesco o conflicto de interés (Art. 95 Estatuto), asume automáticamente un miembro suplente.
-* **`RN-07` — Suscripción Colegiada por Socios Activos:**
-  La resolución definitiva solo adquiere estado firme y validez cuando ha sido suscripta de manera colegiada por al menos dos integrantes habilitados del TD pertenecientes a la categoría estatutaria de Socios Activos (4º a 6º año social).
+* **`RN-07` — Suscripción Colegiada del TD Habilitado:**
+  La resolución definitiva conserva el requisito de suscripción colegiada por integrantes habilitados del TD. El relevamiento original exigía al menos dos firmas y vinculaba la habilitación a Socios Activos de 4.º–6.º; esa condición es un antecedente que requiere su regla propia en DP77-FAC-01, sin sustituirla por «todo Senior» o exviajero. TS77.30 no cambia permisos ni homologa nuevas facultades.
 * **`RN-08` — Fórmula de Sumatoria de Saldo y Cuantificación de Puntos:**
   El saldo neto individual de un socio se calcula estrictamente mediante la suma algebraica:
   $$\text{SaldoNeto} = \sum \text{PuntosPositivos} - \sum \text{PuntosNegativos}$$
@@ -329,7 +331,7 @@ En respuesta a la observación de la cátedra de reemplazar expresiones vagas co
   - Si SaldoNeto <= -7.0 puntos: El sistema dispara automáticamente la **Alerta Amarilla Preventiva** hacia el socio y Comisión Directiva.
   - Si SaldoNeto <= -10.0 puntos: El sistema dispara de inmediato la **Alerta Roja de Pérdida Automática de la Condición de Socio**, notificando fehacientemente al imputado, a Comisión Directiva y a la Comisión Fiscalizadora para la revocación formal del alta asociativa.
 * **`RN-10` — Balances Cuatrimestrales de Auditoría Interna (Art. 137 Reg. Interno):**  
-  Se deben emitir obligatoriamente dos (2) balances al año social, con fecha de corte al finalizar el 1º y el 2º cuatrimestre institucional, agrupando sanciones y méritos por Subcomisión y categoría (Pasivo/Activo).
+  Se deben emitir obligatoriamente dos (2) balances al año social, con fecha de corte al finalizar el 1º y el 2º cuatrimestre institucional, agrupando sanciones y méritos por Subcomisión y clasificación Junior/Senior y condición exviajero.
 
 ---
 

@@ -23,6 +23,8 @@ from django.db.models import (
 from django.db.models.functions import Abs, Cast, Coalesce, Concat, Round
 
 from padron.models import Socio, SocioEstudio, Subcomision
+from padron.querysets import filter_institutional_category, with_institutional_condition
+from padron.services import normalize_category_filter
 from ranking.models import PuntajeAplicado, PuntajeGeneral
 
 
@@ -92,7 +94,7 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
     # padron declara la FK no nullable; select_related produciría un INNER JOIN
     # que excluiría socios sin subcomisión. La subconsulta preserva esos casos
     # legados sin modificar padron ni agregar consultas por socio.
-    return Socio.objects.annotate(
+    return with_institutional_condition(Socio.objects.all()).annotate(
         _subcomision_nombre=Subquery(
             Subcomision.objects.filter(pk=OuterRef("subcomision_id")).values("nombre")[:1],
             output_field=CharField(),
@@ -134,13 +136,9 @@ def filter_ranking_queryset(
     """Aplica filtros de búsqueda, categoría, subcomisión y estado de reconciliación."""
     qs = queryset
 
-    # Filtro por categoría estatutaria (ACTIVO / PASIVO)
+    # Clasificación canónica y aliases exclusivos de consulta, antes de evaluar SQL.
     if categoria:
-        cat_upper = categoria.strip().upper()
-        if cat_upper == "ACTIVO":
-            qs = qs.filter(anoSocial__gte=4)
-        elif cat_upper == "PASIVO":
-            qs = qs.filter(Q(anoSocial__lt=4) | Q(anoSocial__isnull=True))
+        qs = filter_institutional_category(qs, normalize_category_filter(categoria))
 
     # Filtro por subcomisión (por nombre insensible a acentos, ID numérico o sin subcomisión)
     if subcomision:

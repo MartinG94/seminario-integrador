@@ -160,7 +160,7 @@ class TestRankingAPIEndpoints:
         assert isinstance(item["legajo"], str)
         assert isinstance(item["nombre"], str)
         assert isinstance(item["apellido"], str)
-        assert item["categoria"] in ("ACTIVO", "PASIVO")
+        assert item["categoria"] in ("JUNIOR", "SENIOR")
         assert isinstance(item["subcomision"], str)
         assert isinstance(item["saldo"], (int, float))
         assert isinstance(item["saldoHistorico"], (int, float))
@@ -195,7 +195,7 @@ class TestRankingFilteringAndOrdering:
         data = response.json()
         assert len(data) == 2
         for item in data:
-            assert item["categoria"] == "ACTIVO"
+            assert item["categoria"] == "SENIOR"
 
     def test_filter_by_categoria_pasivo(self, api_client: APIClient, seed_ranking_data) -> None:
         response = api_client.get("/api/v1/ranking/?categoria=PASIVO")
@@ -203,7 +203,7 @@ class TestRankingFilteringAndOrdering:
         data = response.json()
         assert len(data) == 2
         for item in data:
-            assert item["categoria"] == "PASIVO"
+            assert item["categoria"] == "JUNIOR"
 
     def test_filter_by_categoria_invalid_returns_400(
         self, api_client: APIClient, seed_ranking_data
@@ -483,7 +483,7 @@ class TestRankingFilteringAndOrdering:
         data = response.json()
         assert len(data) == 2
         for item in data:
-            assert item["categoria"] == "ACTIVO"
+            assert item["categoria"] == "SENIOR"
             assert item["subcomision"] == "Cómputos"
         assert data[0]["saldo"] >= data[1]["saldo"]
 

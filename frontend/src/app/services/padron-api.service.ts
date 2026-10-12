@@ -4,6 +4,7 @@ import { EMPTY, Observable } from 'rxjs';
 import { expand, map, reduce } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
+import type { InstitutionalMembershipCategory } from './socio-api.service';
 
 export interface PadronSocio {
   socio_id: number;
@@ -12,6 +13,9 @@ export interface PadronSocio {
   last_name: string;
   subcomision: { id: number; name: string } | null;
   is_active: boolean;
+  // La proyección del selector también admite snapshots históricos sin estos datos.
+  category?: InstitutionalMembershipCategory;
+  social_year?: number | null;
 }
 
 export interface PadronSociosResponse {

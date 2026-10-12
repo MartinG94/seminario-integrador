@@ -7,7 +7,7 @@ Funciones puras y testeables de forma aislada — sin dependencias de Django ORM
 
 Referencia normativa:
   - ADR-001, Sección 4.1 (reglas CA1–CA5).
-  - Estatuto AVEIT 2026, Arts. 3 y 6.
+  - Aclaración corregida del PO, SCRUM-77, RN77-01–04.
   - Constitución del Proyecto, Principio 8.
 """
 
@@ -15,8 +15,9 @@ from datetime import date
 from typing import Optional
 
 from padron.domain import (
-    ACTIVE_SOCIAL_YEARS,
-    PASSIVE_SOCIAL_YEARS,
+    CATEGORY_FILTER_ALIASES,
+    JUNIOR_SOCIAL_YEARS,
+    SENIOR_SOCIAL_YEARS,
     MembershipStatusEnum,
     SocioCategoryEnum,
     SubcomisionDTO,
@@ -26,18 +27,25 @@ from padron.domain import (
 _SENTINEL_SUBCOMISION_CODE = 99
 
 
-def classify_category(ano_social: int) -> SocioCategoryEnum:
-    """Clasifica la categoría estatutaria según el año social (CA3).
-
-    - 1 a 3 → PASSIVE (Pasivo / alias Junior, Arts. 3 y 6 Estatuto 2026).
-    - 4 a 6 → ACTIVE  (Activo / alias Senior).
-    - Fuera de rango → UNKNOWN (registro anómalo, sin categoría asumida).
-    """
-    if ano_social in PASSIVE_SOCIAL_YEARS:
-        return SocioCategoryEnum.PASSIVE
-    if ano_social in ACTIVE_SOCIAL_YEARS:
-        return SocioCategoryEnum.ACTIVE
+def classify_category(ano_social: object, *, is_ex_traveler: bool = False) -> SocioCategoryEnum:
+    """Prioriza condición confirmada; un año desconocido no acredita exviajero."""
+    if is_ex_traveler is True:
+        return SocioCategoryEnum.EX_TRAVELER
+    if isinstance(ano_social, bool) or not isinstance(ano_social, int):
+        return SocioCategoryEnum.UNKNOWN
+    if ano_social in JUNIOR_SOCIAL_YEARS:
+        return SocioCategoryEnum.JUNIOR
+    if ano_social in SENIOR_SOCIAL_YEARS:
+        return SocioCategoryEnum.SENIOR
     return SocioCategoryEnum.UNKNOWN
+
+
+def normalize_category_filter(value: str) -> SocioCategoryEnum:
+    """Normaliza sólo filtros de entrada; códigos desconocidos elevan ValueError."""
+    canonical = value.strip().upper()
+    if canonical in CATEGORY_FILTER_ALIASES:
+        return CATEGORY_FILTER_ALIASES[canonical]
+    return SocioCategoryEnum(canonical)
 
 
 def normalize_legajo(nro_legajo: Optional[int]) -> Optional[str]:

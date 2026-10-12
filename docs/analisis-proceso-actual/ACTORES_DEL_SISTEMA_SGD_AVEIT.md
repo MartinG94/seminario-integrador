@@ -10,6 +10,8 @@
 # ESPECIFICACIÓN DE ACTORES Y ROLES DEL SISTEMA
 ## Sistema de Gestión del Tribunal de Disciplina y Premiaciones de A.V.E.I.T. (SGD-AVEIT)
 
+**Actualización TS77.30 (11/10/2026):** la clasificación se rige por [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md): Junior 1.º–2.º, Senior desde 3.º y G57 exviajero fuera de la escala. Los actores y facultades se conservan; elegibilidad/firma requieren [DP77-FAC-01](../constitution.md#facultades-pendientes), sin inferir permisos desde la categoría. La adecuación de código/datos permanece pendiente en DEP77-02.
+
 ---
 
 ### DATOS DEL PROYECTO Y EQUIPO DE TRABAJO
@@ -119,7 +121,7 @@ classDiagram
 
 ### ACT-01: Socio Ordinario
 * **Tipo de Actor:** Actor Humano Principal (Masa Societaria).
-* **Alcance y Agrupación:** Agrupa al padrón total de más de 500 socios con membresía vigente de AVEIT, integrando orgánicamente tanto a **Socios Pasivos (1º, 2º y 3º año social)** como a **Socios Activos (4º a 6º año social)** en su interacción base como miembros de la comunidad.
+* **Alcance y Agrupación:** Agrupa al padrón total de más de 500 socios con membresía vigente de AVEIT, incluyendo Junior (1.º–2.º), Senior (desde 3.º dentro de la escala) y exviajeros fuera de ella según su condición confirmada. La vigencia se verifica independientemente de esa clasificación.
 * **Propósito con el Sistema:** Consultar su posición y saldo neto acumulado de puntos (+/-), revisar el estado procesal de sus trámites en "Mis Expedientes", recibir notificaciones fehacientes de causas y ejercer su derecho reglamentario a defensa mediante formularios digitales con prueba adjunta.
 * **Responsabilidades y Casos de Uso Clave:**
   1. Iniciar sesión en la aplicación web responsive mobile desde smartphones o PCs.
@@ -143,7 +145,7 @@ classDiagram
 * **Responsabilidades y Casos de Uso Clave:**
   1. Gestionar el **Tablero de Control de Estados** (*Expediente Creado, En período de subida de justificaciones, Las justificaciones están siendo revisadas, En espera de resolución, Pendiente de firma y envío, Expedientes ya emitidos*).
   2. Utilizar el **Buscador Integral de Legajos por Socio** para rastrear expedientes históricos, antecedentes y descargos previos de cualquier socio.
-  3. Consultar, filtrar y ordenar el **Ranking Consolidado de Puntos** de la masa societaria (por categoría Pasivo/Activo y por subcomisión).
+  3. Consultar, filtrar y ordenar el **Ranking Consolidado de Puntos** por Junior/Senior, condición exviajero y subcomisión, distinguiendo registros institucionales sin clasificación.
   4. Revisar justificaciones T02 y descargos T03 en el módulo *"Justificaciones"*, aprobando o desaprobando formalmente las solicitudes y analizando los archivos probatorios adjuntos.
   5. Iniciar expedientes disciplinarios de oficio o en concepto de "rectificación" (Art. 24 del Reglamento Procesal 2026).
   6. Emitir su **voto nominal fundado** durante las sesiones del Tribunal.
@@ -162,7 +164,7 @@ classDiagram
 * **Alcance y Agrupación:** Agrupa a los siete (7) integrantes de la Mesa Directiva de AVEIT (Presidente, Vicepresidente, Tesorero, Protesorero, Secretario General, Prosecretario y Secretario de Actas), y abarca las facultades institucionales ejecutivas y fiscalizadoras de inicio de actuaciones.
 * **Propósito con el Sistema:** Supervisar el orden y cumplimiento reglamentario global, requerir formalmente sumarios disciplinarios o premios, monitorear el ranking consolidado de la masa societaria, recepcionar alertas de límites críticos (7 y 10 puntos) y dar tratamiento a los balances cuatrimestrales de auditoría.
 * **Responsabilidades y Casos de Uso Clave:**
-  1. Iniciar solicitudes de premiación o sanción mediante el **Formulario T01 y Hoja Anexo T01** respecto a cualquier socio con membresía vigente, sea de categoría Pasivo o Activo, subcomisión o equipo de trabajo (Art. 21 del Reglamento Procesal 2026).
+  1. Iniciar solicitudes de premiación o sanción mediante el **Formulario T01 y Hoja Anexo T01** respecto a cualquier socio con membresía vigente, subcomisión o equipo de trabajo (Art. 21 del Reglamento Procesal 2026); su clasificación Junior/Senior o condición exviajero no modifica esa competencia por sí sola.
   2. Acceder al **Módulo de Reportes Ejecutivos y Ranking General Consolidado** para el seguimiento global del padrón societario.
   3. Recepcionar las **Alertas Preventivas (7 Puntos Negativos)** y las **Alertas Críticas Rojas (10 Puntos Negativos)** por pérdida automática de condición de socio para su tratamiento formal (Art. 93 del Reglamento Interno de Disciplina).
   4. Recibir, revisar y tratar formalmente los **Balances Cuatrimestrales de Premiaciones y Sanciones** (Art. 137) emitidos por el TD.

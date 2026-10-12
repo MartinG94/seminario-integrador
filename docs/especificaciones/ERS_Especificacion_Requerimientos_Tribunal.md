@@ -1,6 +1,8 @@
 # ESPECIFICACIÓN DE REQUERIMIENTOS DE SOFTWARE (ERS)
 ## Módulo Unificado de Tribunal de Disciplina y Premiaciones (SGD-AVEIT)
 
+**Actualización de clasificación TS77.30 (11/10/2026):** [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md) define Junior 1.º–2.º, Senior desde 3.º dentro de la escala y G57 exviajero fuera de ella; se conserva el corte confirmado y avance en asamblea variable. Categoría, vigencia, cargos, roles y saldos se separan. Elegibilidad/firma requieren [DP77-FAC-01](../constitution.md#facultades-pendientes). Las citas originales y restantes reglas del relevamiento conservan su contexto histórico; esta actualización no las homologa ni implementa DEP77-02. El ciclo obligatorio de seis estados se rige por la constitución y specs activas; la consolidación de cinco estados de documentos previos no lo sustituye.
+
 ---
 
 ### DATOS DEL DOCUMENTO Y CONTROL DE VERSIONES
@@ -24,7 +26,7 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 2. **Formulario Unificado de Justificaciones (T02/T03):** Formulario inteligente que consolida justificaciones tipificadas (con carga obligatoria de certificados médicos/académicos) y descargos extraordinarios (exposición libre).
 3. **Gestionar Expedientes:** Panel operativo para el Tribunal de Disciplina con selector de vista dual (**Tablero Kanban de 5 estados procesales consolidados** y **Vista Detalle estilo Explorador de Windows** con foco en el expediente).
 4. **Reportes:** Motor de analítica y auditoría interna que incluye el Balance Cuatrimestral de Disciplina, desgloses por subcomisión y exportación en PDF/Excel.
-5. **Ranking de Socios:** Padrón ordenable de forma ascendente y descendente por puntaje acumulado (+/-), con filtros por categoría (Pasivo/Activo) y semáforos de advertencia preventiva (7 puntos negativos) y límite de cese (10 puntos negativos).
+5. **Ranking de Socios:** Padrón ordenable de forma ascendente y descendente por puntaje acumulado (+/-), con filtros por categoría (Junior/Senior y condición exviajero) y semáforos de advertencia preventiva (7 puntos negativos) y límite de cese (10 puntos negativos).
 6. **Solicitar Puntos:** Trámite formal de premios o sanciones mediante Formulario T01 + Hoja Anexo, validando las competencias de cada autoridad.
 7. **Eventos y Asistencia Digital:** Programación de actividades institucionales obligatorias con registro de asistencia ("pasar el dedo" / check-in digital) y cierre automático de causas por inasistencias.
 
@@ -45,7 +47,7 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 
 | Actor | Rol en el Sistema | Atribuciones Principales en el Módulo |
 | :--- | :--- | :--- |
-| **Socio Ordinario** | Usuario Base (Pasivos 1º-3º año y Activos 4º-6º año) | Consulta sus causas en "Mis Expedientes", presenta descargos y consulta el ranking. |
+| **Socio Ordinario** | Usuario Base (Junior 1.º–2.º, Senior desde 3.º y exviajero fuera de la escala; vigencia independiente) | Consulta sus causas en "Mis Expedientes", presenta descargos y consulta el ranking. |
 | **Miembro del TD** | Juez / Operador del Tribunal de Disciplina | Gestiona causas en Kanban/Detalle, revisa descargos, vota, firma resoluciones y emite balances. |
 | **Comisión Directiva** | Órgano Ejecutivo de Gobierno | Inicia solicitudes de puntos T01 generales, supervisa el ranking y recibe alertas de 7 y 10 pts. |
 | **Autoridad de Subcomisión / Líder** | Solicitante Operativo Descentralizado | Solicita premios o sanciones (T01) sobre los miembros adscriptos a su área o equipo. |
@@ -63,13 +65,13 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 | **RF-03** | Tablero Kanban de Expedientes | Miembro del TD | El sistema debe ofrecer una vista visual en tablero Kanban estructurada en cinco (5) columnas procesales consolidadas: 1) Creado, 2) En período de justificaciones, 3) En revisión y resolución, 4) Pendiente de firma y envío, 5) Ya emitidos. | **E:** Filtros de búsqueda.<br>**S:** Tablero con tarjetas informativas y badges de estado. | RN-03, RN-04 | **Must** |
 | **RF-04** | Vista Detalle (Estilo Explorador) | Miembro del TD | El sistema debe ofrecer una vista tabular densa con foco en el expediente, permitiendo ordenar por cualquier columna (N° Exp, Socio, Fecha, Plazo, Estado), buscar en tiempo real y acceder a acciones contextuales rápidas. | **E:** Clic en columna para ordenar, texto de búsqueda.<br>**S:** Grilla tabular interactiva ordenada. | RN-03, RN-04 | **Must** |
 | **RF-05** | Sustanciación, Votación y Firma Colegiada | Miembro del TD | En el estado *En revisión y resolución*, el sistema debe permitir a los jueces registrar su voto nominal fundado (aprobación/rechazo/graduación), verificar la mayoría absoluta (>= 2/3 votos), estructurar la resolución (Vistos, Considerandos, Fallo) y pasar a *Pendiente de firma y envío* para recolectar las firmas colegiadas digitales. | **E:** Voto, fundamentación, firma digital.<br>**S:** Resolución formal dictada y firmada. | RN-08, RN-09, RN-10, RN-11 | **Must** |
-| **RF-06** | Ranking de Socios con Ordenamiento Bidireccional | Todos los Actores | El sistema debe listar el padrón completo de socios con su saldo neto acumulado de puntos (+/-), permitiendo ordenamiento ascendente (del más sancionado al más premiado) y descendente, con filtros por categoría (Pasivo/Activo) y Subcomisión. | **E:** Parámetros de orden (asc/desc) y filtros.<br>**S:** Tabla de ranking con semáforos de advertencia. | RN-13, RN-14 | **Must** |
+| **RF-06** | Ranking de Socios con Ordenamiento Bidireccional | Todos los Actores | El sistema debe listar el padrón completo de socios con su saldo neto acumulado de puntos (+/-), permitiendo ordenamiento ascendente (del más sancionado al más premiado) y descendente, con filtros por categoría (Junior/Senior y condición exviajero) y Subcomisión. | **E:** Parámetros de orden (asc/desc) y filtros.<br>**S:** Tabla de ranking con semáforos de advertencia. | RN-13, RN-14 | **Must** |
 | **RF-07** | Consulta de Legajo y Ficha de Socio | Miembro TD, CD | El sistema debe permitir visualizar la ficha histórica consolidada de un socio, detallando sus expedientes vinculados, resoluciones, descargos y el historial transaccional de movimientos de puntos. | **E:** Selección de socio o legajo.<br>**S:** Ficha integral con historial y estado actual. | RN-12 | **Should** |
 | **RF-08** | Solicitud de Puntos (Formulario T01 + Anexo) | Autoridades Habilitadas | El sistema debe permitir tramitar pedidos de puntos positivos (+) en concepto de méritos o negativos (-) por sanciones, exigiendo la carga de la Hoja de Anexo circunstanciada con hechos, fechas y testigos. | **E:** Datos del T01, Anexo fáctico, pruebas.<br>**S:** Expediente disciplinario generado en estado Creado. | RN-01, RN-07 | **Must** |
 | **RF-09** | Validación de Competencias de Autoridades | Sistema (Backend) | El sistema debe validar automáticamente que la autoridad solicitante posea facultades estatutarias sobre el socio destinatario antes de admitir la solicitud de puntos. | **E:** ID solicitante, ID destinatario.<br>**S:** Admisión o rechazo por incompetencia. | RN-07 | **Must** |
 | **RF-10** | Programación de Eventos y Check-in Digital | Autoridades Habilitadas, Socios | El sistema debe permitir dar de alta reuniones y actividades obligatorias, y proveer una interfaz de "pasar el dedo" (check-in digital) que confirme la asistencia en tiempo real y actualice el conteo de presentes/ausentes. | **E:** Datos de evento, confirmación de asistencia.<br>**S:** Registro de presentes y porcentaje de asistencia. | RN-15 | **Must** |
 | **RF-11** | Cierre de Evento y Generación Automática de Causas | Autoridades, Sistema | Al confirmar el cierre definitivo de un evento obligatorio, el sistema debe identificar automáticamente a los socios con inasistencia injustificada y generar los expedientes correspondientes en estado Creado. | **E:** Confirmación de cierre de evento.<br>**S:** Lote de expedientes creados y acuses enviados. | RN-01, RN-05 | **Must** |
-| **RF-12** | Generación de Balances Cuatrimestrales y Reportes | Miembro TD, CD | El sistema debe compilar a demanda los datos del período y generar el Balance Cuatrimestral de Disciplina estructurado por subcomisión y grupo social (Pasivos/Activos), permitiendo exportar en PDF y Excel (XLSX). | **E:** Selección de cuatrimestre y filtros.<br>**S:** Reporte analítico interactivo y archivos descargables. | RN-16 | **Must** |
+| **RF-12** | Generación de Balances Cuatrimestrales y Reportes | Miembro TD, CD | El sistema debe compilar a demanda los datos del período y generar el Balance Cuatrimestral de Disciplina estructurado por subcomisión y grupo social (Junior/Senior y condición exviajero), permitiendo exportar en PDF y Excel (XLSX). | **E:** Selección de cuatrimestre y filtros.<br>**S:** Reporte analítico interactivo y archivos descargables. | RN-16 | **Must** |
 
 ---
 
@@ -92,7 +94,7 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 | **RN-13** | **Alerta Preventiva a los 7 Puntos** | Al acumular un socio un saldo igual o superior a siete (-7.0) puntos negativos netos, el sistema emite automáticamente una Alerta Preventiva Amarilla al socio y a su autoridad de área. |
 | **RN-14** | **Límite Crítico de Pérdida de Condición de Socio (10 Puntos)** | Todo socio que alcance o supere diez (-10.0) puntos negativos netos pierde de forma automática su condición de socio de AVEIT; el sistema emite de inmediato una Alerta Roja Crítica a la Comisión Directiva para formalizar el cese. |
 | **RN-15** | **Cómputo Automático de Inasistencias** | Los socios convocados a un evento obligatorio que no registren check-in ("pasar el dedo") al momento del cierre formal son clasificados automáticamente como ausentes injustificados. |
-| **RN-16** | **Segmentación Obligatoria en Balances** | Los balances cuatrimestrales deben discriminar obligatoriamente el desempeño y saldos de los Socios Pasivos (1º, 2º y 3º año social) respecto de los Socios Activos (4º a 6º año social). |
+| **RN-16** | **Segmentación Obligatoria en Balances** | Los balances cuatrimestrales previstos por sus requisitos propios distinguirán Junior (1.º–2.º), Senior (desde 3.º dentro de la escala) y condición exviajero confirmada, sin convertir anomalías en Junior o exviajero. Fuente de clasificación: RN77-01–04; esta actualización no implementa reportes ni cambia saldos. |
 
 ---
 
@@ -120,7 +122,7 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 * **Categoría FURPS+:** Usability / Usabilidad y Calidad en Uso (ISO 25010).
 * **Métrica Planguage:**
   - **SCALE:** Tiempo en segundos que le toma a un socio completar su justificación con comprobante desde un teléfono móvil.
-  - **METER:** Prueba de usabilidad con 10 socios Pasivos en dispositivos Android/iOS sin capacitación previa.
+  - **METER:** Prueba de usabilidad con 10 socios Junior en dispositivos Android/iOS sin capacitación previa.
   - **BASELINE:** 12 minutos (descargar plantilla Word, editar, escanear, enviar mail).
   - **WORST_ACCEPTABLE:** 3 minutos.
   - **TARGET_PLAN:** `<= 60 segundos`.
@@ -141,7 +143,7 @@ El presente documento formaliza los Requerimientos de Software para la primera i
 
 ### RNF-06: Portabilidad y Compatibilidad Web (Portabilidad)
 * **Categoría FURPS+:** Portability / Compatibilidad (ISO 25010).
-* **TARGET_PLAN:** Funcionamiento 100% garantizado en navegadores modernos (Chrome, Firefox, Safari, Edge) en entornos Desktop y Mobile, cumpliendo con la guía de diseño [DESIGN.md](file:///g:/My%20Drive/Estudios/Seminario/Repositorio/seminario-integrador/DESIGN.md).
+* **TARGET_PLAN:** Funcionamiento 100% garantizado en navegadores modernos (Chrome, Firefox, Safari, Edge) en entornos Desktop y Mobile, cumpliendo con la guía de diseño [DESIGN.md](../../DESIGN.md).
 
 ---
 

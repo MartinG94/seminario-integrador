@@ -1,14 +1,133 @@
 :host {
-  display: block;
-  min-width: 320px;
-  max-width: 750px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
 }
 
 .modal-header {
-  border-bottom: 1px solid #e9ecef;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 8px;
+  border-color: var(--color-border-main) !important;
+}
+
+.detail-heading {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.modal-title {
+  color: var(--color-text-primary);
+}
+
+.detail-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
 }
 
 .mat-dialog-content {
-  max-height: 75vh;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: none;
+  margin: 0;
+  padding-right: 0;
+  padding-left: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.mat-dialog-actions {
+  flex: 0 0 auto;
+  margin: 0;
+  border-color: var(--color-border-main) !important;
+}
+
+.detail-surface,
+.detail-regulation {
+  background: var(--color-surface-card) !important;
+  color: var(--color-text-primary);
+}
+
+.border,
+.table th,
+.table td {
+  border-color: var(--color-border-main) !important;
+}
+
+label,
+small,
+.table {
+  color: var(--color-text-primary);
+}
+
+.table-responsive {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table thead th,
+.table.table-hover tbody tr:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.badge-mat {
+  max-width: 100%;
+  white-space: normal;
+  color: var(--color-text-inverse);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+
+  &.badge-mat-danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+  }
+
+  &.badge-mat-success {
+    background: var(--color-success);
+    border-color: var(--color-success);
+  }
+
+  &.badge-mat-info {
+    background: var(--color-info);
+    border-color: var(--color-info);
+  }
+
+  &.badge-mat-warning {
+    background: var(--color-warning);
+    border-color: var(--color-warning);
+  }
+}
+
+.detail-resolution {
+  border-color: var(--color-success) !important;
+}
+
+.detail-resolution-heading {
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+}
+
+.detail-close {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+button:focus-visible,
+.table-responsive:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }

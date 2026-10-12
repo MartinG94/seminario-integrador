@@ -7,6 +7,8 @@
 **Versión:** 1.0.0-final  
 **Fecha:** 01/09/2026  
 
+**Adecuación de clasificación TS77.30 (11/10/2026):** [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md) y el principio 8 de la [constitución](../constitution.md) sustituyen el corte 1–3/4–6 del baseline. Diagramas y diccionario expresan clasificación vigente; las facultades conceptuales permanecen pendientes en [DP77-FAC-01](../constitution.md#facultades-pendientes), sin valores asignados desde la categoría. Exviajero se distingue fuera de la escala y sus límites de año son nulos, conforme al diccionario; `Integer` en las vistas no obliga a inventar un año. Este modelo es conceptual: no declara cambios de código, migraciones ni reglas de firma implementadas.
+
 ---
 
 # Modelo de Dominio: SGD-AVEIT (Tribunal de Disciplina y Premiaciones)
@@ -21,7 +23,7 @@ El modelo ha sido diseñado bajo las reglas del paradigma orientado a objetos co
 
 | Patrón ASI Canónico | Clases Participantes | Justificación y Regla de Negocio Soportada |
 | :--- | :--- | :--- |
-| **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioT02`<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, categorías Pasivos vs Activos con sus prerrogativas estatutarias) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
+| **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioT02`<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, clasificación Junior/Senior y condición exviajero, separadas de las facultades pendientes DP77-FAC-01) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
 | **2. Encabezado - Detalle**<br>*(Master - Detail)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `DetalleImputacion` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `DetalleResolucionSocio` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `FirmaColegiada` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `ExpedienteDisciplinario` (1) *-- (0..*) `VotoNominal` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `FormularioJustificacion` (1) *-- (0..*) `ComprobanteAdjunto` | Modela la composición atómica de transacciones complejas: un expediente puede imputar a múltiples socios por un mismo hecho; la resolución dictamina los puntos definitivos individuales de cada socio involucrado; y se registra la deliberación nominal individual y la firma colegiada indelegable exigida por estatuto (`RN-04`, `RN-06`, `RN-08`). |
 | **3. Historial de Estados con Vigencia Temporal**<br>*(`[fechaHoraDesde, fechaHoraHasta]`)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `CambioEstadoExpediente` (*) $\rightarrow$ (1) `EstadoExpediente`<br>• `Socio` (1) *-- (1..*) `CambioEstadoSocio` (*) $\rightarrow$ (1) `EstadoSocio` | Otorga auditoría cronológica absoluta y trazabilidad inalterable con intervalos de vigencia temporal (`fechaHoraDesde` y `fechaHoraHasta = null` para el estado actual vigente). Soporta los seis (6) estados oficiales del expediente (Art. 12 del Reglamento 2026) y el ciclo de vida del socio (Activo, Alerta Amarilla 7 pts, Pérdida Automática de Condición 10 pts) (`RN-01`, `RN-02`, `RN-03`, `RN-06`, `RN-11`). |
 | **4. Rol / Tipo de Rol**<br>*(Party - Role)* | • `Socio` (1) *-- (1..*) `RolInstitucional`<br>$\ll$abstract$\gg$ `RolInstitucional` $\leftarrow$ `MiembroTribunal`, `MiembroComisionDirectiva`, `MiembroComisionFiscalizadora`, `MiembroComisionRevisora`, `JefeEquipo` | Permite que un mismo socio físico desempeñe diferentes roles institucionales simultáneamente o en diferentes mandatos sin duplicar su identidad ni generar herencia múltiple. Facilita la validación estricta de competencias para solicitar expedientes (Arts. 21 a 26) y la detección de incompatibilidades/inhibiciones (`RN-05`, `RN-07`, `RN-10`). |
@@ -51,8 +53,8 @@ classDiagram
         -Float saldoPuntosActual
         +conocerEstadoActual() EstadoSocio
         +calcularSaldoPuntos() Float
-        +esCategoriaActiva() Boolean
-        +esCategoriaPasiva() Boolean
+        +isSenior() Boolean
+        +isJunior() Boolean
         +tieneAlertaAmarilla() Boolean
         +tieneAlertaRoja() Boolean
         +cambiarEstado(nuevoEstado, motivo)
@@ -124,7 +126,7 @@ classDiagram
     class MiembroTribunal {
         -Boolean esTitular
         -Integer grupoSocialRepresentado
-        +esCategoriaActivaHabilitadaFirma() Boolean
+        +isEligibleToSign() Boolean
     }
 
     class MiembroComisionDirectiva {
@@ -408,8 +410,8 @@ package "Estructura Societaria y Categorización (Item - Item Descriptor)" {
         - saldoPuntosActual: Float
         + conocerEstadoActual(): EstadoSocio
         + calcularSaldoPuntos(): Float
-        + esCategoriaActiva(): Boolean
-        + esCategoriaPasiva(): Boolean
+        + isSenior(): Boolean
+        + isJunior(): Boolean
         + tieneAlertaAmarilla(): Boolean
         + tieneAlertaRoja(): Boolean
         + cambiarEstado(nuevoEstado: EstadoSocio, motivo: String): void
@@ -479,7 +481,7 @@ package "Roles Institucionales y Competencias (Party - Role)" {
     class MiembroTribunal {
         - esTitular: Boolean
         - grupoSocialRepresentado: Integer
-        + esCategoriaActivaHabilitadaFirma(): Boolean
+        + isEligibleToSign(): Boolean
     }
 
     class MiembroComisionDirectiva {
@@ -758,7 +760,8 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 * **Métodos Conceptuales:**
   - `conocerEstadoActual(): EstadoSocio`: Retorna el estado vigente (aquel cuyo `CambioEstadoSocio.fechaHoraHasta == null`).
   - `calcularSaldoPuntos(): Float`: Totaliza algebraicamente los asientos en `MovimientoPuntos`.
-  - `esCategoriaActiva(): Boolean`: Evalúa si pertenece a la categoría Activo (4º a 6º año social), sin confundirla con el estado de vigencia.
+  - `isSenior(): Boolean`: Evalúa la clasificación Senior desde 3.º dentro de la escala vigente; no implica vigencia ni facultades. La condición exviajero se confirma por su fuente, fuera de esa escala.
+  - `isJunior(): Boolean`: Evalúa la clasificación Junior en 1.º–2.º, sin determinar cargo, vigencia ni facultades.
   - `tieneAlertaAmarilla(): Boolean`: Evalúa si `saldoPuntosActual` $\le -7.0$ y $> -10.0$ (`RN-02`).
   - `tieneAlertaRoja(): Boolean`: Evalúa si `saldoPuntosActual` $\le -10.0$ (`RN-01`).
   - `cambiarEstado(nuevoEstado, motivo)`: Cierra la vigencia del estado actual y genera una nueva instancia de `CambioEstadoSocio`.
@@ -776,15 +779,15 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ### 4.2. Ficha Técnica: `CategoriaSocio`
 * **Patrón ASI:** Descriptor de Ítem (Item Descriptor).
-* **Propósito:** Almacena la caracterización estandarizada de las categorías societarias (Socios Pasivos vs. Socios Activos) y sus atribuciones normativas según el Estatuto 2026.
+* **Propósito:** Describir Junior (1.º–2.º) y Senior (desde 3.º dentro de la escala), según RN77-01–04. La representación también distingue la condición exviajero fuera de ella; esto no la convierte en un rango de años ni en un rol. Las facultades requieren su regla propia, DP77-FAC-01.
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
-  | `denominacion` | `String` | Nombre de la categoría ("Pasivo", "Activo"). | Único ("Pasivo" / "Activo"). |
-  | `anioSocialMinimo` | `Integer` | Año social inicial de la categoría (1 para Pasivo, 4 para Activo). | Entre 1 y 6. |
-  | `anioSocialMaximo` | `Integer` | Año social final de la categoría (3 para Pasivo, 6 para Activo). | $\ge$ `anioSocialMinimo`. |
-  | `permiteIntegrarTD` | `Boolean` | Habilitación estatutaria para ser electo en el TD. | `false` para Pasivos, `true` para Activos (`RN-10`). |
-  | `permitePresidirSubcomision` | `Boolean` | Habilitación estatutaria para presidir subcomisiones. | `false` para Pasivos, `true` para Activos (`RN-10`). |
+  | `denominacion` | `String` | Junior/Senior; Exviajero distingue una condición confirmada fuera de la escala. | No confundir con vigencia. La codificación EX_TRAVELER es una decisión técnica D77-01, no un nuevo rango aprobado por el PO. |
+  | `anioSocialMinimo` | `Integer` opcional | Inicio del rango: 1 para Junior, 3 para Senior. | Nulo para la condición exviajero, fuera de la escala; no utilizar 0 o 7. |
+  | `anioSocialMaximo` | `Integer` opcional | Fin del rango: 2 para Junior, 6 en la escala operativa vigente para Senior. | Nulo para la condición exviajero; en un rango válido, mayor o igual al mínimo. |
+  | `permiteIntegrarTD` | `Boolean` pendiente | Facultad institucional con fuente propia. | DP77-FAC-01: no asignar true/false desde Junior/Senior o exviajero por un cambio de nombres. No es una regla operativa implementada. |
+  | `permitePresidirSubcomision` | `Boolean` pendiente | Facultad institucional con fuente propia. | DP77-FAC-01: requiere confirmación específica; no inferirla desde el año/categoría. No es una regla operativa implementada. |
   | `descripcion` | `String` | Alcance y rol formativo de la categoría. | Texto explicativo. |
 * **Relaciones:**
   - `categoriza` $\rightarrow$ `Socio` (1 a 0..*).
@@ -797,7 +800,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
-  | `nombreEstado` | `String` | Nombre del estado ("Activo Regular", "Alerta Preventiva Amarilla", "Perdida Automatica Condicion de Socio", "Inactivo / Pasivo"). | Único, No Nulo. |
+  | `nombreEstado` | `String` | Vocabulario histórico de estados ("Activo Regular", "Alerta Preventiva Amarilla", "Perdida Automatica Condicion de Socio", "Inactivo / Pasivo"), independiente de la clasificación Junior/Senior o condición exviajero. | Único, No Nulo. |
   | `descripcion` | `String` | Detalle normativo y consecuencias jurídicas del estado. | No Nulo. |
   | `esSocioPleno` | `Boolean` | Indica si goza de todos los derechos societarios activos. | Booleano. |
 * **Relaciones:**
@@ -1102,9 +1105,9 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   | `considerandos` | `String` | Fundamentación doctrinaria, reglamentaria y valoración probatoria. | No Nulo. |
   | `parteDispositiva` | `String` | Texto resolutivo vinculante (Artículos de la resolución). | No Nulo. |
   | `esPublica` | `Boolean` | Indicador de publicación en el panel de transparencia. | `true` por defecto. |
-  | `hashFirmaDigital` | `String` | Firma criptográfica consolidada de los miembros activos. | Inalterable (`RN-06`). |
+  | `hashFirmaDigital` | `String` | Firma criptográfica consolidada de los miembros habilitados del TD según su regla propia. | Inalterable (`RN-06`). |
 * **Métodos Conceptuales:**
-  - `estaCompletamenteFirmada(): Boolean`: Verifica que existan las firmas colegiadas reglamentarias de los miembros activos (`RN-06`).
+  - `estaCompletamenteFirmada(): Boolean`: Verifica que existan las firmas colegiadas reglamentarias de los miembros habilitados (`RN-06`); condiciones de categoría/año pendientes en DP77-FAC-01.
   - `publicarResolucion()`: Habilita la visibilidad en el módulo público y de transparencia.
 * **Relaciones:**
   - `concluye en` $\leftarrow$ `ExpedienteDisciplinario` (0..1 a 1).
@@ -1131,13 +1134,13 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ### 4.21. Ficha Técnica: `FirmaColegiada`
 * **Patrón ASI:** Detalle de Transacción / Aval Institucional.
-* **Propósito:** Registra la suscripción formal y digital de cada integrante habilitado del TD en representación de los grupos sociales activos para conferir eficacia jurídica al fallo.
+* **Propósito:** Registra la suscripción formal y digital de cada integrante habilitado del TD con condiciones habilitantes según su regla institucional propia (DP77-FAC-01), sin atribuirlas desde Junior/Senior o exviajero para conferir eficacia jurídica al fallo.
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
   | `fechaHoraFirma` | `DateTime` | Momento exacto de suscripción digital. | Sellado de tiempo no nulo. |
   | `selloDigital` | `String` | Firma digital / hash criptográfico del firmante. | Inalterable (`RN-06`). |
-  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Vocal Titular Activo"). | No Nulo (`RN-06`, `RN-10`). |
+  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Vocal Titular"). | No Nulo (`RN-06`, `RN-10`). |
 * **Relaciones:**
   - `respaldada por` $\leftarrow$ `ResolucionDisciplinaria` (1..* a 1 - Composición).
   - `firmada por` $\rightarrow$ `MiembroTribunal` (0..* a 1).
@@ -1215,11 +1218,11 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 | **`RN-03` (Art. 12 Inc. 2 Reglamento 2026)** | Plazo Preclusivo fatal de 5 días hábiles para presentar descargos (T02/T03). | • `ExpedienteDisciplinario.calcularPlazoPreclusivo()`<br>• `ExpedienteDisciplinario.estaEnPlazoDescargo()`<br>• `NotificacionAcuseSancion.fechaHoraLimiteDescargo`<br>• `FormularioJustificacion.esPresentadoEnTermino()` |
 | **`RN-04` (Art. 96 Estatuto Social)** | Mayoría absoluta reglamentaria ($\ge 2$ votos) e irrecurribilidad en fallos del TD. | • `ExpedienteDisciplinario.tieneQuorumVotacion()`<br>• `ExpedienteDisciplinario.calcularMayoriaVotacion()`<br>• `VotoNominal.esAfirmativo()` |
 | **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de vocal del TD con conflicto de interés o promotor de la acción. | • `VotoNominal.esInhibicion()`<br>• `MiembroTribunal`<br>• `RolInstitucional.validarCompetenciaAccion()` |
-| **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma Colegiada digital de Socios Activos previa a la emisión del fallo. | • `FirmaColegiada`<br>• `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
+| **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma colegiada del TD habilitado previa a la emisión; condiciones habilitantes por año/categoría pendientes DP77-FAC-01, sin permisos derivados de Senior/exviajero. | • `FirmaColegiada`<br>• `MiembroTribunal.isEligibleToSign()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
 | **`RN-07` (Arts. 21 a 26 Reglamento 2026)** | Delimitación estricta de competencias funcionales para solicitar apertura de causas. | • `RolInstitucional.validarCompetenciaAccion()`<br>• `SolicitudT01.validarCompetenciaSolicitante()`<br>• `MembresiaSubcomision.esAutoridadHabilitada()` |
 | **`RN-08` (Circular 001/2026)** | Escalas tarifadas y fraccionamiento obligatorio en múltiplos de 0.5 puntos. | • `TipificacionFaltaMerito.esPuntajeValido()`<br>• `DetalleImputacion.puntosPropuestos`<br>• `DetalleResolucionSocio.esPuntajeValido()`<br>• `MovimientoPuntos.puntosVariacion` |
 | **`RN-09` (Art. 137 Reglamento Interno)** | Emisión de 2 Balances Cuatrimestrales de Auditoría Interna por año social. | • `BalanceCuatrimestral.calcularMetricasGenerales()`<br>• `BalanceCuatrimestral.exportarInformePDF()`<br>• `DetalleBalanceSubcomision` |
-| **`RN-10` (Estatuto 2026)** | Segmentación Pasivo (1º-3º año) vs. Activo (4º-6º año) y derechos estatutarios. Equivalencias históricas: Junior = Pasivo; Senior = Activo. | • `CategoriaSocio.permiteIntegrarTD`<br>• `CategoriaSocio.permitePresidirSubcomision`<br>• `Socio.esCategoriaActiva()` / `Socio.esCategoriaPasiva()` |
+| **`RN-10` (clasificación: RN77-01–04 del PO)** | Junior 1.º–2.º / Senior desde 3.º dentro de la escala; exviajero fuera de ella con condición confirmada. Elegibilidad/presidencia requieren regla propia, DP77-FAC-01; no se derivan de la nueva categoría. | • `Socio.isSenior()` / `Socio.isJunior()`<br>• `CategoriaSocio.denominacion` y rangos<br>• Facultades `permiteIntegrarTD`/`permitePresidirSubcomision` pendientes de confirmación, no de inferencia. |
 | **`RN-11` (Pistas de Auditoría)** | Inmutabilidad de saldos y erradicación total de sentencias SQL UPDATE directas. | • `MovimientoPuntos.esInalterable()`<br>• `Socio.impactarMovimientoPuntos()`<br>• `CambioEstadoExpediente` / `CambioEstadoSocio` |
 
 ---

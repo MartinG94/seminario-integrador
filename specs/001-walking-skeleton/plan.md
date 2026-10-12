@@ -1,5 +1,7 @@
 # Plan Técnico — Spec 001: Walking Skeleton
 
+**Alcance histórico:** este plan conserva el diseño de Sprint 1, incluido su contrato PASSIVE/ACTIVE y corte 1–3/4–6. La clasificación vigente se define en la [constitución](../../docs/constitution.md) y la [spec 001 actualizada](spec.md). Su transición a Junior/Senior y la representación de exviajeros se planifican en la [revisión TS77.29](../../docs/gestion-proyecto/IMPACTO_COMPATIBILIDAD_SOCIOS_SCRUM-77.md); los detalles siguientes no sustituyen ese plan ni acreditan la adecuación pendiente.
+
 Plan de arquitectura e implementación para la primera iteración funcional de SGD-AVEIT.
 
 ---

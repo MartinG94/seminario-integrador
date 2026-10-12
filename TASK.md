@@ -210,6 +210,77 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+
+## 7.1. Sprint 3 — SCRUM-77 / S3-PO2 (MySQL y datos sintéticos G57–G60)
+
+> **Spec:** [005-mysql-seed-g57-g60](specs/005-mysql-seed-g57-g60/spec.md).
+>
+> **Plan técnico:** [plan.md](specs/005-mysql-seed-g57-g60/plan.md).
+>
+> **Tareas:** [tasks.md](specs/005-mysql-seed-g57-g60/tasks.md).
+>
+> **Objetivo autorizado:** Terminar TS77.09–27 sin confirmaciones individuales, con los subagentes necesarios; TS77.08 integrada como prerrequisito de carga. Se conservan TDD, dependencias y un runner MySQL/Karma por vez.
+>
+> **Estado:** SCRUM-77 completada: TS77.01–43 verificadas y cerradas, con auditoría integral aprobada sin hallazgos abiertos. 1008 backend y 222 frontend verdes (0 errores), cobertura 93,91% en 22 módulos y build 6fae4265931dc3f8 correcto. Catálogo cargado, repetición y persistencia sin reseed verificadas; 78 controles HTTP reforzados y recorridos reales de escritorio/360/414 px en ambos temas. Lint frontend mantiene el builder TSLint heredado ausente. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts770827) y [uso/recuperación](docs/gestion-proyecto/GUIA_CARGA_DEMO_SCRUM-77.md).
+>
+> **Aclaración PO:** DP77-01 cerrado por versión corregida: G57 exviajero; G58/G59/G60 en 6/5/4. Junior 1–2 / Senior 3+.
+>
+> **Prerrequisito del seed:** DEP77-02 cerrado por TS77.37; guardias, propiedad, carga y manifiesto implementados. Clasificación, rol, vigencia y facultades independientes.
+
+- [x] **TS77.01 Registrar alcance autorizado y pendientes:** Datos sintéticos y límites definidos; mapa inicialmente abierto, cerrado luego por aclaración corregida del PO.
+- [x] **TS77.02 Formalizar spec, plan y tareas:** EARS, criterios y seguimiento atómico, sin cambios en notasPO ni Seguimiento de Proyecto.
+- [x] **TS77.03 Configuración Docker demo aislada:** Archivo standalone con nombres, puertos loopback, mounts del checkout y volumen propio. 8 pruebas enfocadas y 498 backend en verde (0 errores), Ruff correcto y auditoría sin bloqueantes. CA77-00 verificado; preflight completado en TS77.04 y persistencia/seed pendientes.
+- [x] **TS77.04 Preflight MySQL y grants:** Comando de diagnóstico SELECT-only, consulta autenticada y grants demo/tests en MySQL 8.0.46; HTTP 200 local, sin proxies/redirecciones. 34 pruebas enfocadas y 532 backend en verde (0 errores), Ruff correcto y auditoría sin hallazgos abiertos. CA77-01 sigue abierto por guardias de carga TS77.08.
+- [x] **TS77.05 DDL y cierre de FKs:** Script mínimo de 27 tablas/39 FKs, auth_user externo y precisión Decimal compatible con Django. 6 pruebas enfocadas y 538 backend en verde (0 errores), Ruff y control de migraciones correctos; auditoría sin hallazgos. Ensayo temporal entregado en esta unidad; aplicación/repetición demo verificadas posteriormente en TS77.06.
+- [x] **TS77.06 Verificar bootstrap vacío y repetido:** Aplicador protegido, 30 pruebas de bootstrap (36 combinadas con DDL) y 568 backend en verde (0 errores). Demo MySQL con 47 tablas, 27 legadas/39 FKs y 29 migraciones; repetición con cero creaciones/migraciones y hashes conservados. Divergencias y colisiones managed/CreateModel/AddField M2M sin historial rechazadas antes de escribir; aislamiento de RunPython en ensayos verificado y auditoría favorable. Sin seed ni adecuación societaria.
+- [x] **TS77.07 Catálogo y mapa de identidades:** Catálogo v1 puro aceptado tras TS77.37: 16 identidades/cuatro por grupo, rangos/corte/referencias y oráculos de saldo futuro, 62 casos verdes. DP77-02 cerrado; sin carga/manifiesto aún. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts774335363707).
+- [x] **TS77.08 Guardias del seed:** Entorno/base/perfil/esquema inválidos sin escrituras.
+- [x] **TS77.09 Propiedad de fixtures:** Registro, namespace, unicidad y ejecución serializada.
+- [x] **TS77.10 Usuarios y socios locales:** Coexistencia con seed_demo y conservación de credenciales/permisos.
+- [x] **TS77.11 Grupos y socios institucionales:** G57–G60, subcomisiones e historial; depende de DEP77-02.
+- [x] **TS77.12 Causas simples y multisocio:** Workflow, correlativo y auditoría.
+- [x] **TS77.13 T01 de dos solicitantes:** Borradores/emitidas, aislamiento y urgencia.
+- [x] **TS77.14 Plazos actuales y urgencias:** Dos etapas seed y regresión de los seis estados.
+- [x] **TS77.15 Antecedentes históricos legados:** Resolución y movimientos individuales trazables.
+- [x] **TS77.16 Segunda ejecución:** IDs/contador estables y ediciones conservadas.
+- [x] **TS77.17 Colisión y fallo intermedio:** Rollback integral del DML y contador.
+- [x] **TS77.18 Conciliar SQL/API/manifiesto:** Relaciones, saldo y límites de legajo.
+- [x] **TS77.19 Persistencia sin reseed:** Nuevo contenedor y mismo volumen/datos.
+- [x] **TS77.20 Smoke login/permisos:** HTTP y perfiles reales.
+- [x] **TS77.21 Smoke ranking/legajo:** Filtros, paginación y saldos cotejados.
+- [x] **TS77.22 Smoke T01/Mis Solicitudes:** Selección múltiple e aislamiento.
+- [x] **TS77.23 Smoke board/tabla:** HTTP/IDs/filtros contra DB y fallbacks detectados.
+- [x] **TS77.24 Responsive y teclado:** Escritorio y 360/414 px.
+- [x] **TS77.25 Regresión backend:** MySQL, cobertura, Ruff y migraciones.
+- [x] **TS77.26 Regresión frontend:** Suite/build y fallos clasificados.
+- [x] **TS77.27 Cierre documental y PO:** Evidencia de criterios y uso/recuperación.
+- [x] **TS77.28 Registrar aclaración corregida del PO:** Fuentes, cierre DP77-01 y actualización SDD; 43 enlaces locales verificados, estados sincronizados y auditoría documental aprobada sin hallazgos abiertos.
+- [x] **TS77.29 Revisar impacto y compatibilidad:** Inventario y decisiones en [impacto/compatibilidad](docs/gestion-proyecto/IMPACTO_COMPATIBILIDAD_SOCIOS_SCRUM-77.md); exviajero explícito/año nulo, contratos canónicos, datos por año, perfil, transición demo e identidad del legajo. 568 pruebas de baseline verdes (0 errores), 43 IDs sincronizados y auditoría independiente aprobada sin hallazgos pendientes. Implementación de la adecuación pendiente.
+- [x] **TS77.30 Alinear documentación activa:** Constitución, spec 001, ADR, ERS, modelo/actores y referencias pertinentes alineadas con Junior/Senior y exviajeros; fuentes históricas preservadas y facultades pendientes separadas. 568 pruebas backend verdes (0 errores), 197 enlaces válidos, hashes protegidos conservados y auditoría aprobada. Sin cambios de código, notasPO ni seguimiento macro.
+- [x] **TS77.31 Representar exviajeros:** Modelo local EX_TRAVELER/año nulo explícito, longitud 12, CHECK y migración nueva con guardias de avance/reversión. Demo aplicada/repetida, 594 pruebas verdes (0 errores) y auditoría integral aprobada; sin año ficticio ni deshabilitación automática. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7731).
+- [x] **TS77.32 Clasificación de socios operativos:** Junior 1/2 y Senior 3–6, con EX_TRAVELER/null conservado y roles/vigencia independientes. 621 pruebas verdes (0 errores), cobertura local 97%, migración de opciones aplicada/repetida y auditoría integral aprobada. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7732).
+- [x] **TS77.33 Migrar categorías existentes:** Migración histórica por año/situación, rechazo previo y rollback DML en ambas direcciones; conserva identidades, credenciales, vínculos, snapshots y saldos. 642 pruebas verdes (0 errores), cobertura de migración 100%, demo aplicada/repetida y auditoría integral aprobada. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7733).
+- [x] **TS77.34 Alinear padrón/ranking backend:** Implementada; 53 casos propios incluidos en 827 pruebas verdes. Clasificación canónica, EX_TRAVELER explícito/UNKNOWN separados y filtros/count/paginación SQL sin N+1; aliases sólo de entrada. Cierre integral aprobado sin hallazgos pendientes. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7740344142).
+- [x] **TS77.35 Alinear contratos/filtros frontend:** Cuatro categorías y nulos coherentes, caché confirmado por me con control de errores/sesiones tardías; ranking abre legajo institucional. Incluida en 202 pruebas frontend verdes; revisión cruzada e integral aprobadas. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts774335363707).
+- [x] **TS77.36 Actualizar etiquetas y datos demo:** Labels/tokens/modal/mock y ayuda/tipos seed_demo alineados; 33 identidades mock y cuentas/credenciales/roles/saldos conservados. 202 frontend/8 casos seed_demo verdes y build correcto; auditada, sin cargar demo. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts774335363707).
+- [x] **TS77.37 Verificar adecuación transversal:** 932 backend/202 frontend verdes (0 errores), cobertura 94,72%, build correcto y auditoría integral/PO aprobados sin hallazgos. CA77-08/DEP77-02 y CF77-01/02 cerrados; demo/protegidos intactos, lint heredado registrado y US aún en curso. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts774335363707).
+- [x] **TS77.38 Evolucionar contrato DDL demo:** anoSocial nullable sólo en el DDL demo; exactamente tres adaptaciones frente al fuente, cierre vacío/repetición y rechazo previo del contrato anterior. 644 pruebas verdes (0 errores), auditoría integral aprobada; demo preparada, modelos, bootstrap y fuente intactos. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7738).
+- [x] **TS77.39 Transicionar demo preparada:** Comando protegido y ALTER acotado, filas/IDs/contador/FKs conservados y repetición vacía; 670 pruebas verdes (0 errores), demo aplicada/repetida y auditoría integral aprobada sin hallazgos pendientes. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7739).
+- [x] **TS77.40 Condición institucional explícita:** Implementada; metadato por nroSocio real, fuente/corte, PK/CHECK y escritor transaccional idempotente, sin FK al legado. 37 casos y bootstrap previo al legado incluidos en 827 pruebas verdes; migración 0005 aplicada/repetida. Propiedad/manifiesto del seed siguen en TS77.09/11. Cierre integral aprobado sin hallazgos pendientes. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7740344142).
+- [x] **TS77.41 Integrar clasificación en T01:** Implementada; 36 casos incluidos en 827 pruebas verdes, EX_TRAVELER/null e identidad institucional inequívoca sin atajo por PK. Conserva credenciales, rol/vigencia y snapshots históricos; rollback de emisión y rechazo de legajo ambiguo. Cierre integral aprobado sin hallazgos pendientes. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7740344142).
+- [x] **TS77.42 Actualizar claims y perfil servidor:** Implementada; 30 casos JWT incluidos en 827 pruebas verdes y 3 rotaciones con blacklist real en proceso aislado. Refresh relee categoría del socio, preservando otros claims/opciones; RBAC sigue leyendo rol/vigencia. SPA completada posteriormente en TS77.35. Cierre integral aprobado sin hallazgos pendientes. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts7740344142).
+- [x] **TS77.43 Resolver identidad del legajo:** Fuente explícita sólo resuelve PK del namespace; 400 para fuente inválida/repetida, 404 genérico para ambigüedad y llamadas antiguas inequívocas conservadas. Propietario por vínculo/legajo institucional real, legajo ausente null; roles/vigencia/saldos intactos. 33 casos nuevos más dos BIGINT incluidos en 932 pruebas verdes; auditoría integral aprobada. [Evidencia](specs/005-mysql-seed-g57-g60/tasks.md#verificación-de-ts774335363707).
+
+---
+
+### Ampliación posterior a UAT — SCRUM-77
+
+UAT original aprobada por el usuario el 12/10/2026. Sincronización con main y datos Junior autorizados en el mismo pedido; evidencias históricas conservadas.
+
+- [x] **TS77.44 Sincronizar main y preservar feedback PR #49:** Respaldo, conflictos combinados, migraciones protegidas y avisos centrales funcionales.
+- [x] **TS77.45 Ampliar catálogo con Juniors:** Cuatro socios/cuentas de G62–G63, años 2/1, saldo cero; carga aditiva y repetición verificadas.
+- [x] **TS77.46 Verificar ampliación y auditar:** Suites/build/HTTP/navegador, conservación de datos y revisión independiente.
+
 ## 9. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.

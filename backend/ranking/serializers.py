@@ -5,6 +5,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from padron.models import Socio, Subcomision
+from padron.services import classify_category
 from ranking.models import PuntajeGeneral
 from ranking.services import calculate_reconciliation
 
@@ -16,7 +17,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
     - legajo (string)
     - nombre (string)
     - apellido (string)
-    - categoria ('ACTIVO' | 'PASIVO')
+    - categoria ('JUNIOR' | 'SENIOR' | 'EX_TRAVELER' | 'UNKNOWN')
     - subcomision (string)
     - saldo (number)
     - saldoHistorico (number)
@@ -72,7 +73,10 @@ class RankingSocioSerializer(serializers.ModelSerializer):
             return str(obj.nroSocio)
 
     def get_categoria(self, obj: Socio) -> str:
-        return "ACTIVO" if (obj.anoSocial or 0) >= 4 else "PASIVO"
+        return classify_category(
+            obj.anoSocial,
+            is_ex_traveler=getattr(obj, "is_ex_traveler_confirmed", False) is True,
+        ).value
 
     def get_subcomision(self, obj: Socio) -> str:
         sub_calc = getattr(obj, "subcomision_nombre_calc", None)

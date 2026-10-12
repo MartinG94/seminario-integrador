@@ -3,6 +3,8 @@
 - **Identificador:** ADR-001
 - **Fecha:** 2026-09-19
 - **Estado:** Aceptado
+
+**Actualización de clasificación TS77.30 (11/10/2026):** las reglas vigentes se alinean con la [aclaración corregida del PO](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md), RN77-01–04, y la [constitución](../constitution.md). El corte Pasivo 1–3/Activo 4–6 de la decisión anterior queda como antecedente; la transición técnica se define en [TS77.29](../gestion-proyecto/IMPACTO_COMPATIBILIDAD_SOCIOS_SCRUM-77.md) y su implementación permanece pendiente. No se modifican la fecha ni las aprobaciones del ADR original.
 - **Trazabilidad:** Historia de Usuario Jira [`SCRUM-37`](https://guillenmartin94.atlassian.net/browse/SCRUM-37) (Código: `S1-04`)
 - **Normativa de Referencia:** Estatuto AVEIT 2026 (Arts. 3 y 6), Reglamento Procesal 2026 (Art. 12), Constitución del Proyecto (Principios 1, 2 y 8). *(Nota de desvinculación: La US SCRUM-37 no depende de los baremos tarifados de la Circular 001/2026, la cual rige exclusivamente para solicitudes T01 y alertas de puntos).*
 
@@ -24,7 +26,7 @@ El Tribunal de Disciplina **no es la autoridad rectora del padrón societario**:
 Adicionalmente, el esquema preexistente presenta deuda técnica acumulada:
 - Nombres de tablas y columnas con mezcla de convenciones (`socio_lista`, `anoSocial`, `codSubcomision`, `compositeKey`).
 - Dispersión de atributos en tablas satélites sin claves foráneas declaradas formalmente en el DDL o mediante artificios de clave compuesta (`socio_email`, `socio_estadoHistorial`).
-- Necesidad de normalización terminológica de interfaz: la plataforma SGD-AVEIT adopta las denominaciones canónicas *"Pasivo"* y *"Activo"* (Decisión de Product Owner del 08/09/2026 y Principio 8 de la Constitución) para los socios ordinarios denominados *"Junior"* y *"Senior"* en los Arts. 3 y 6 del Estatuto 2026.
+- Necesidad de adecuar la clasificación vigente a Junior 1.º–2.º / Senior desde 3.º y distinguir exviajeros fuera de la escala, conforme a la aclaración corregida del PO. El cambio de corte exige recalcular por año/situación, no sustituir nombres del contrato anterior.
 - Ausencia de tipado estricto en el motor de base de datos legado.
 
 ---
@@ -33,9 +35,10 @@ Adicionalmente, el esquema preexistente presenta deuda técnica acumulada:
 
 - **DD-1 (Fuente Única de Verdad):** Garantizar que exista una sola fuente canónica para los datos de socios y subcomisiones, eliminando cualquier posibilidad de divergencia o duplicación no controlada.
 - **DD-2 (Principio de Menor Privilegio y Seguridad):** El sistema SGD-AVEIT debe tener permisos estrictos de **sólo lectura (`SELECT`)** sobre las tablas institucionales del padrón, garantizando que ninguna operación del Tribunal pueda alterar los registros maestros.
-- **DD-3 (Alineación Normativa 2026):** Dar estricto cumplimiento a la Decisión de Product Owner del 08/09/2026 y el Principio 8 de la Constitución sobre las categorías de los Arts. 3 y 6 del Estatuto 2026:
-  - Categoría **Pasivo**: Mapea a los socios ordinarios de 1.º a 3.º año social (denominados *"Junior"* en el Estatuto 2026).
-  - Categoría **Activo**: Mapea a los socios ordinarios de 4.º a 6.º año social (denominados *"Senior"* en el Estatuto 2026).
+- **DD-3 (Clasificación confirmada):** Aplicar RN77-01–04 y el principio 8 de la constitución, conservando las normas fuente:
+  - Categoría **Junior**: 1.º y 2.º año social.
+  - Categoría **Senior**: desde 3.º dentro de la escala vigente.
+  - **Exviajero**: condición confirmada fuera de la escala; G57 no se representa con un año ficticio ni como Senior automático.
   - **Separación de Vigencia:** La categoría social jamás debe confundirse con la vigencia de la membresía o cuenta (`habilitado`/`inactivo`), la cual debe modelarse de forma independiente.
 - **DD-4 (Estabilidad de Identidad):** El legajo universitario y el número de socio deben resolverse como una identidad unívoca, inmutable y auditable en todo el ciclo procesal.
 - **DD-5 (Aislamiento de Entornos y Resiliencia):** El sistema debe poder ejecutarse y probarse localmente en Docker y pipelines de CI/CD sin depender de conectividad a la red física de AVEIT, y debe ser observable ante cortes o degradaciones de enlace.
@@ -96,7 +99,7 @@ Se decide implementar una **Capa Anticorrupción (ACL)** basada en el patrón de
 ```
 
 ### 4.1 Reglas Canónicas de Transformación de Dominio (Mapeador)
-El adaptador aplica obligatoriamente las siguientes reglas de traducción al transformar una fila del esquema preexistente a `SocioInstitucionalDTO`:
+El adaptador deberá aplicar las siguientes reglas al transformar una fila del esquema preexistente a `SocioInstitucionalDTO`. La adecuación de clasificación nueva está pendiente en DEP77-02; este texto no acredita que el código ya la implemente:
 
 1. **Resolución de Identidad Estable y Métodos de Consulta (CA2 / H02 / H05 / HIGH-IT2-001):**
    - En el esquema MySQL institucional, `socio_estudio.nroLegajo` es de tipo numérico `int(11)`.
@@ -113,15 +116,15 @@ El adaptador aplica obligatoriamente las siguientes reglas de traducción al tra
    - La Capa Anticorrupción intercepta este valor centinela:
      $$\text{Si } \text{codSubcomision} == 99 \implies \text{subcomision} = \text{None}$$
      En la API JSON y en TypeScript se expone como `subcomision = null`, garantizando semántica limpia sin distorsionar reportes ni métricas estadísticas.
-3. **Categorización Estatutaria Automática (CA3):**
-   - Si $1 \le \text{anoSocial} \le 3 \implies \text{category} = \text{"PASSIVE"}$ (denominación oficial en UI: *"Pasivo"*; alias anterior *Junior*).
-   - Si $4 \le \text{anoSocial} \le 6 \implies \text{category} = \text{"ACTIVE"}$ (denominación oficial en UI: *"Activo"*; alias anterior *Senior*).
-   - Si $\text{anoSocial}$ es inválido o nulo, el adaptador reporta el registro como anómalo (`"UNKNOWN"`) y no asume categoría por defecto.
+3. **Clasificación social (CA3, actualizada por SCRUM-77):**
+   - Año 1 o 2 válido: Junior (`JUNIOR`). Año desde 3 válido dentro de la escala: Senior (`SENIOR`).
+   - Condición exviajero confirmada: proyectar año nulo y `EX_TRAVELER`, representación técnica elegida en D77-01/02; no inferirla desde cargo, baja o año inválido.
+   - Sin condición confirmada ni año válido: `UNKNOWN` (Sin clasificación), separado de exviajero. Filtros y proyección deben aplicar la misma regla antes de paginar.
 4. **Desacoplamiento de Vigencia (CA4) y Advertencia de Trampa Semántica (H07):**
-   - La categoría estatutaria (`ACTIVE`/`PASSIVE`) es independiente del estado operativo.
+   - Junior/Senior y la condición exviajero son independientes del estado operativo.
    - El estado de cuenta se extrae del histórico de membresía (`socio_estadoHistorial` / `socio_email.habilitado`) y se mapea a `is_active: bool` y `membership_status: str` (`"ENABLED"`, `"SUSPENDED"`, `"TERMINATED"`), con presentación visual en español rioplatense ("Habilitado", "Suspendido", "Baja") conforme al Principio 7 de la Constitución.
     - > [!WARNING]
-    - > **Trampa Semántica Histórica (socio_estado vs category):** La tabla preexistente `socio_estado` contiene registros homónimos (`codEstadoSocio = 1`: "Activo" [al día con cuota/plenos derechos], `codEstadoSocio = 2`: "Pasivo" [en receso o licencia]). El adaptador **prohíbe estrictamente** mapear `socio_estado` a `category`. La categoría societaria (`ACTIVE`/`PASSIVE`) proviene **únicamente de `anoSocial`** (Arts. 3 y 6 del Estatuto 2026 y Principio 8 de la Constitución). La tabla `socio_estado` alimenta exclusivamente la vigencia operativa (`membership_status`).
+    - > **Trampa Semántica Histórica (socio_estado vs category):** La tabla preexistente `socio_estado` conserva los valores (`codEstadoSocio = 1`: "Activo" [al día con cuota/plenos derechos], `codEstadoSocio = 2`: "Pasivo" [en receso o licencia]). Esos nombres no son categorías Junior/Senior ni prueban condición exviajero. El adaptador prohíbe mapearlos a `category`: el año válido determina Junior/Senior y una fuente confirmada determina exviajero. `socio_estado` alimenta exclusivamente la vigencia operativa (`membership_status`).
 5. **Resolución de Correo Electrónico Institucional (BLK-004):**
    - La tabla matriz `socio_lista` carece de columna física de correo. Los emails residen en la tabla satélite `socio_email` vinculada por `nroSocio`.
    - La Capa Anticorrupción mapea `socio_email` y extrae prioritariamente la casilla donde `habilitado = 1` y `comprobado = 1` (o la primera casilla habilitada). En caso de que el socio no posea correos registrados o habilitados, se mapea limpiamente a `email = None`.
@@ -151,6 +154,8 @@ Para dar estricto cumplimiento al criterio **CA5** (*"Fallas/sincronizaciones qu
 ---
 
 ## 6. Consecuencias y Trade-offs
+
+**Registro histórico de Sprint 1:** las consecuencias, constantes PASSIVE_SOCIAL_YEARS/ACTIVE_SOCIAL_YEARS y mitigaciones siguientes documentan la implementación de aquel corte. La clasificación de DD-3/4.1 queda sustituida por RN77-01–04 y D77-01–08; se conserva esta evidencia sin presentarla como implementación actualizada. La base institucional sigue siendo de sólo lectura; la evolución específica de la demo y el metadato propio se rigen por TS77.29.
 
 ### Consecuencias Positivas (+)
 - **Cero Divergencia:** SGD-AVEIT refleja inmediatamente cualquier cambio en el padrón institucional.

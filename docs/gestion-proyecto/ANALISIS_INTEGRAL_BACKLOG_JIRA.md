@@ -1,5 +1,7 @@
 # Análisis integral y propuesta de backlog — SGD-AVEIT
 
+**Alcance histórico:** este análisis conserva la fecha de corte 08/09/2026 y su propuesta original, incluidas las decisiones Pasivo/Activo; no describe el estado implementado actual. Sus conclusiones sobre clasificación quedan sustituidas por [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md) y el principio 8 de la [constitución](../constitution.md). La adecuación se sigue en la spec 005; este antecedente no autoriza facultades por categoría.
+
 **Fecha de corte:** 08/09/2026
 
 **Destino:** Jira, proyecto `SCRUM`, tablero 1

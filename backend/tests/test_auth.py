@@ -51,8 +51,8 @@ def test_login_success_returns_tokens_and_profile(api_client, make_socio):
     assert response.data["refresh"]
     assert response.data["user"]["legajo"] == socio.legajo
     assert response.data["user"]["role"] == Role.TD
-    assert response.data["user"]["category"] == SocialCategory.ACTIVE
-    assert response.data["user"]["category_display"] == "Activo"
+    assert response.data["user"]["category"] == SocialCategory.SENIOR
+    assert response.data["user"]["category_display"] == "Senior"
     # El perfil devuelto no debe arrastrar credenciales.
     assert "password" not in response.data["user"]
 
@@ -108,7 +108,7 @@ def test_access_token_carries_rbac_claims(api_client, make_socio):
     claims = AccessToken(response.data["access"])
     assert claims["legajo"] == "408917"
     assert claims["role"] == Role.CD
-    assert claims["category"] == SocialCategory.ACTIVE
+    assert claims["category"] == SocialCategory.SENIOR
 
 
 # --- 2. Login con credenciales inválidas -> 401 sin filtración -------------

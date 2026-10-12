@@ -1,0 +1,330 @@
+{
+  "scope": "SCRUM-77 / TS77.44–46: sincronización main y ampliación Junior posterior a UAT",
+  "status": "verified_and_audited",
+  "user_uat": {
+    "original_scope": "approved_by_user_2026-10-12",
+    "extension": "approved_by_user_2026-10-12"
+  },
+  "git": {
+    "branch": "feature/US-S3-PO2-mysql-seed-g57-g60",
+    "base_before_sync": "0596c64a1002fd06f135733c7090ae4480f7351f",
+    "main_integrated": "73a2d8ab0096fdcf54ae1573c06947d5e13dd076",
+    "safety_stash": "c603e05376750ab9f19df1cf8523f389aa066f5c",
+    "conflicts_resolved": 5,
+    "committed_at_validation": false,
+    "pushed_at_validation": false
+  },
+  "catalog": {
+    "profile": "scrum77-g57-g60-v1",
+    "social_cycle": "PO-SCRUM77-CORTE-01",
+    "members": 20,
+    "original_members": 16,
+    "juniors": 4,
+    "seniors": 12,
+    "ex_travelers": 4,
+    "local_accounts": 15,
+    "owned_references": 188,
+    "historical_movements": 8,
+    "historical_resolutions": 7,
+    "total_balance": "1.00",
+    "new_juniors": [
+      {
+        "legajo": "99077017",
+        "name": "Quimey Quimera Demo",
+        "group": 62,
+        "social_year": 2
+      },
+      {
+        "legajo": "99077018",
+        "name": "Rocío Rumbo Demo",
+        "group": 62,
+        "social_year": 2
+      },
+      {
+        "legajo": "99077019",
+        "name": "Sol Sendero Demo",
+        "group": 63,
+        "social_year": 1
+      },
+      {
+        "legajo": "99077020",
+        "name": "Tomás Trama Demo",
+        "group": 63,
+        "social_year": 1
+      }
+    ],
+    "new_accounts_role": "SOCIO",
+    "new_accounts_enabled": true,
+    "new_accounts_balance": "0"
+  },
+  "migrations": {
+    "allOriginalRowsPreserved": true,
+    "addedColumn": "calendario_version_id",
+    "addedTables": 3,
+    "appliedMigrations": 5
+  },
+  "upgrade_preservation": {
+    "oldRowTablesCompared": 52,
+    "missingOriginalRowTables": [],
+    "changedTables": [
+      "auth_user",
+      "core_demofixtureownership",
+      "grupo_lista",
+      "socio_email",
+      "socio_estadoHistorial",
+      "socio_estudio",
+      "socio_lista",
+      "socios_socio"
+    ],
+    "rowCounts": {
+      "auth_group": 0,
+      "auth_group_permissions": 0,
+      "auth_permission": 112,
+      "auth_user": 15,
+      "auth_user_groups": 0,
+      "auth_user_user_permissions": 0,
+      "core_demofixtureownership": 188,
+      "django_admin_log": 0,
+      "django_content_type": 28,
+      "django_migrations": 39,
+      "django_session": 0,
+      "expedientes_calendario_version": 1,
+      "expedientes_cambio_estado": 8,
+      "expedientes_descargo": 0,
+      "expedientes_expediente": 6,
+      "expedientes_expediente_socios": 8,
+      "expedientes_feriado_excepcion": 16,
+      "expedientes_institutional_holiday": 16,
+      "expedientes_numero_secuencia": 1,
+      "expedientes_solicitudt01": 5,
+      "grupo_lista": 6,
+      "notifications_email_attachment": 0,
+      "notifications_email_outbox": 0,
+      "socio_email": 20,
+      "socio_especialidad": 1,
+      "socio_estado": 2,
+      "socio_estadoHistorial": 20,
+      "socio_estadocivil": 0,
+      "socio_estudio": 20,
+      "socio_lista": 20,
+      "socio_motivoCambioEstado": 1,
+      "socio_sexo": 1,
+      "socio_tipoEstudioTurno": 0,
+      "socio_tipoSocio": 1,
+      "socio_tipodocumento": 1,
+      "socio_tiposubcomision": 4,
+      "socios_institutionalmembershipcondition": 4,
+      "socios_socio": 15,
+      "socios_subcomision": 3,
+      "tribunal_afectados": 0,
+      "tribunal_datosresolucion": 7,
+      "tribunal_estadoevento": 0,
+      "tribunal_estadoexpediente": 1,
+      "tribunal_evento": 0,
+      "tribunal_expediente": 7,
+      "tribunal_puntajeaplicado": 8,
+      "tribunal_puntajegeneral": 0,
+      "tribunal_sancionpersonalizadaeventos": 0,
+      "tribunal_solicitud": 0,
+      "tribunal_tipoevento": 0,
+      "tribunal_tiposancion": 0,
+      "tribunal_valorsancion": 7
+    }
+  },
+  "repetition": {
+    "tables": 52,
+    "sameSchemas": true,
+    "sameRows": true,
+    "sameCounts": true,
+    "first_manifest_sha256": "8d6ebe7e12143c620181a88e7cd46843ecdc6603f86cbbd9f0fa91ce31b26efe",
+    "repeat_manifest_sha256": "8d6ebe7e12143c620181a88e7cd46843ecdc6603f86cbbd9f0fa91ce31b26efe"
+  },
+  "verification": {
+    "backend": {
+      "status": "passed",
+      "passed": 1064,
+      "errors": 0,
+      "unverified_skips": 0,
+      "mysql_suite": {
+        "passed": 1056,
+        "skipped_compose": 8,
+        "seconds": 729.05,
+        "exit_code": 0
+      },
+      "compose_suite": {
+        "passed": 8,
+        "seconds": 0.26,
+        "exit_code": 0,
+        "mode": "real_sanitized_compose_config_with_verified_source_hashes"
+      },
+      "coverage_percent": 93.9060516292848,
+      "statements": 2363,
+      "covered_lines": 2219,
+      "missed": 144,
+      "coverage_modules": [
+        "core.demo_seed",
+        "core.demo_fixtures",
+        "core.demo_members",
+        "core.demo_scenes",
+        "core.demo_schema",
+        "socios.demo_catalog",
+        "socios.identity",
+        "socios.institutional_conditions",
+        "socios.models",
+        "socios.serializers",
+        "padron.domain",
+        "padron.querysets",
+        "padron.adapters",
+        "padron.services",
+        "padron.serializers",
+        "accounts.serializers",
+        "accounts.views",
+        "ranking.serializers",
+        "ranking.services",
+        "ranking.views",
+        "expedientes.serializers",
+        "expedientes.services.solicitud_t01_service"
+      ]
+    },
+    "frontend": {
+      "passed": 278,
+      "errors": 0,
+      "runner_seconds": 1.051,
+      "spec_seconds": 0.967,
+      "chrome": "154.0.0.0",
+      "exit_code": 0
+    },
+    "build": {
+      "hash": "b03663973a049f50",
+      "milliseconds": 12186,
+      "at_utc": "2026-10-12T21:35:22.818Z",
+      "exit_code": 0
+    },
+    "http": {
+      "checks": 111,
+      "expected_status_counts": {
+        "200": 87,
+        "401": 3,
+        "403": 20,
+        "404": 1
+      },
+      "artifact": "evidencias/scrum77-ampliacion/http-local.json",
+      "mode": "fixture_subset_after_complete_api_to_db_collection_checks",
+      "data_unchanged": true,
+      "script_sha256": "64824628f9eb104b805c9950cc2cb11327b95a66832d6da4ba0c5c48e6b1deb5",
+      "verified_at_utc": "2026-10-12T18:47:33.24823-03:00"
+    },
+    "browser": {
+      "viewport_desktop": {
+        "width": 1280,
+        "height": 720
+      },
+      "viewport_mobile": {
+        "width": 360,
+        "height": 800
+      },
+      "new_juniors_shown": 4,
+      "year_1_and_2_verified": true,
+      "login_junior": "99077019",
+      "junior_create_manage_absent": true,
+      "own_legajo_access": true,
+      "other_legajo_rejected": true,
+      "login_empty_toast": true,
+      "disabled_login_toast": true,
+      "empty_t01_toast": true,
+      "notice_persists_on_navigation": true,
+      "notice_inside_mat_dialog": true,
+      "notice_inside_custom_dialog": true,
+      "mat_dialog_close_reached_by_tab_steps": 4,
+      "custom_dialog_close_reached_by_tab_steps": 1,
+      "keyboard_close_restores_focus": true,
+      "escape_restores_case_focus": true,
+      "mobile_notice_rect": {
+        "x": 16,
+        "y": 698,
+        "width": 328,
+        "height": 86
+      },
+      "mobile_horizontal_overflow": false,
+      "viewport_reset": true
+    },
+    "ruff": "passed",
+    "format": "passed_7_changed_python_files",
+    "django_check": "passed",
+    "makemigrations": "no_changes",
+    "frontend_lint": {
+      "exit_code": 1,
+      "reason": "Inherited missing @angular-devkit/build-angular:tslint builder"
+    },
+    "demo_after_regression": {
+      "tables": 52,
+      "rowsUnchanged": true,
+      "schemasUnchanged": true,
+      "countsUnchanged": true
+    },
+    "health": {
+      "frontend_http": 200,
+      "backend_http": 200,
+      "database": "connected"
+    },
+    "document_qa": {
+      "synchronized_states": 46,
+      "diff_check": "ok",
+      "document_count": 30,
+      "completed_count": 46,
+      "local_references": 465,
+      "ts40": "x",
+      "pending_count": 0,
+      "ts39": "x",
+      "missing": [],
+      "bad_anchors": []
+    },
+    "publication_formatting": {
+      "ddl_contract_tests": {
+        "passed": 7,
+        "seconds": 9.08,
+        "errors": 0
+      },
+      "markdown": "Remove trailing whitespace and preserve header breaks with blank lines",
+      "source_path": "backend/core/sql/scrum77_legacy_schema.sql",
+      "change": "Remove final blank line only; SQL statements unchanged"
+    }
+  },
+  "tdd": {
+    "catalog": {
+      "failed_before": 8,
+      "passed_before": 60,
+      "final_focused": 70,
+      "errors": 0,
+      "seconds": 19.84
+    },
+    "custom_dialog_notification": {
+      "failed_before": 1,
+      "passed_before": 2,
+      "first_green_attempt": "DOM/focus assertions passed; one CDKFocusMonitor 1ms timer pending",
+      "final_focused": 3,
+      "errors": 0,
+      "seconds": 0.16
+    }
+  },
+  "audit": {
+    "status": "approved_no_open_findings",
+    "resolved_findings": [
+      "RF/CA section location and original-versus-extension completion state",
+      "notification close outside custom detail focus trap",
+      "Exact search-filtered complete Mis Solicitudes collection checked before fixture subset"
+    ],
+    "approved_scope": [
+      "TS77.44",
+      "TS77.45",
+      "TS77.46",
+      "CA77-09"
+    ],
+    "independent_source_files_checked": 408,
+    "independent_document_local_links_checked": 220
+  },
+  "source_freeze": {
+    "files": 408,
+    "artifact": "local_ignored_scrum77-source-final.tmp"
+  }
+}

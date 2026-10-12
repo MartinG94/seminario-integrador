@@ -16,8 +16,6 @@ from django.db import DatabaseError, OperationalError
 from django.db.models import Exists, OuterRef, Prefetch, Q, QuerySet, Subquery
 
 from padron.domain import (
-    ACTIVE_SOCIAL_YEARS,
-    PASSIVE_SOCIAL_YEARS,
     HealthStatusDTO,
     MembershipStatusEnum,
     PaginatedSociosDTO,
@@ -26,6 +24,7 @@ from padron.domain import (
     SubcomisionDTO,
 )
 from padron.models import Socio, SocioEstudio, Subcomision
+from padron.querysets import filter_institutional_category, with_institutional_condition
 from padron.services import (
     classify_category,
     normalize_dni,
@@ -66,7 +65,7 @@ _MOCK_SOCIOS: list[SocioInstitucionalDTO] = [
         email="esteban.perez@aveit.utn.edu.ar",
         subcomision=SubcomisionDTO(id=10, name="Tribunal de Disciplina"),
         social_year=4,
-        category=SocioCategoryEnum.ACTIVE,
+        category=SocioCategoryEnum.SENIOR,
         is_active=True,
         membership_status=MembershipStatusEnum.ENABLED,
     ),
@@ -79,7 +78,7 @@ _MOCK_SOCIOS: list[SocioInstitucionalDTO] = [
         email="lucia.gomez@aveit.utn.edu.ar",
         subcomision=SubcomisionDTO(id=1, name="Cómputos"),
         social_year=3,
-        category=SocioCategoryEnum.PASSIVE,
+        category=SocioCategoryEnum.SENIOR,
         is_active=True,
         membership_status=MembershipStatusEnum.ENABLED,
     ),
@@ -92,7 +91,7 @@ _MOCK_SOCIOS: list[SocioInstitucionalDTO] = [
         email="martin.rossi@aveit.utn.edu.ar",
         subcomision=SubcomisionDTO(id=1, name="Cómputos"),
         social_year=2,
-        category=SocioCategoryEnum.PASSIVE,
+        category=SocioCategoryEnum.JUNIOR,
         is_active=True,
         membership_status=MembershipStatusEnum.ENABLED,
     ),
@@ -254,9 +253,8 @@ class DatabasePadronAdapter:
         )
 
         return (
-            Socio.objects.annotate(
-                latest_cod_estado=Subquery(latest_estado.values("codEstadoSocio")[:1])
-            )
+            with_institutional_condition(Socio.objects.all())
+            .annotate(latest_cod_estado=Subquery(latest_estado.values("codEstadoSocio")[:1]))
             .select_related("subcomision")
             .prefetch_related(
                 Prefetch(
@@ -295,8 +293,16 @@ class DatabasePadronAdapter:
         ]
         email = resolve_email(emails_payload)
 
-        # 5. Categoría estatutaria derivada de año social (CA3)
-        category = classify_category(socio.anoSocial)
+        # 5. La condición explícita tiene prioridad sobre la clasificación de la escala.
+        category = classify_category(
+            socio.anoSocial,
+            is_ex_traveler=getattr(socio, "is_ex_traveler_confirmed", False) is True,
+        )
+        social_year = (
+            socio.anoSocial
+            if category in (SocioCategoryEnum.JUNIOR, SocioCategoryEnum.SENIOR)
+            else None
+        )
 
         # 6. Membresía y vigencia operativa desde historial y fecha de baja (CA4 / BLK-005)
         latest_cod = getattr(socio, "latest_cod_estado", None)
@@ -313,7 +319,7 @@ class DatabasePadronAdapter:
             last_name=socio.apellido,
             email=email,
             subcomision=subcomision,
-            social_year=socio.anoSocial,
+            social_year=social_year,
             category=category,
             is_active=is_active,
             membership_status=membership_status,
@@ -379,14 +385,7 @@ class DatabasePadronAdapter:
             queryset = queryset.filter(subcomision_id=subcomision_id)
 
         if category is not None:
-            if category == SocioCategoryEnum.PASSIVE:
-                queryset = queryset.filter(anoSocial__in=PASSIVE_SOCIAL_YEARS)
-            elif category == SocioCategoryEnum.ACTIVE:
-                queryset = queryset.filter(anoSocial__in=ACTIVE_SOCIAL_YEARS)
-            elif category == SocioCategoryEnum.UNKNOWN:
-                queryset = queryset.exclude(
-                    anoSocial__in=PASSIVE_SOCIAL_YEARS + ACTIVE_SOCIAL_YEARS
-                )
+            queryset = filter_institutional_category(queryset, category)
 
         if is_active is not None:
             if is_active:

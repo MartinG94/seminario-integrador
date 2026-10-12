@@ -1,5 +1,7 @@
 # Sistema Actual Preexistente (Legado) — Stack Tecnológico, Modelos de Datos y Brechas Funcionales
 
+**Contexto histórico de clasificación:** Pasivo/Activo y sus cortes en este informe describen el legado y recomendaciones del relevamiento anterior. La clasificación vigente del nuevo sistema es Junior 1.º–2.º / Senior desde 3.º y condición exviajero fuera de la escala, según [RN77-01–04](../../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md) y la [constitución](../../constitution.md). TS77.30 conserva el cuerpo AS-IS; estas menciones históricas no fijan nuevas reglas ni acreditan su implementación.
+
 > [!IMPORTANT]
 > **DOCUMENTO EXCLUSIVO DE REFERENCIA DEL SISTEMA ACTUAL A REEMPLAZAR (LEGADO / AS-IS)**  
 > **Alcance y propósito institucional:** Este informe documenta exhaustivamente la arquitectura técnica, dependencias (`Python 3.5`, `Django 2.2`, `Angular 9.1`, `MySQL 5.7`), interfaces y modelos de datos preexistentes (`svaveit/tribunal/models.py` y `svaveit/socios/models.py`) de la plataforma interna histórica de la Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (**A.V.E.I.T.** - UTN FRC).  

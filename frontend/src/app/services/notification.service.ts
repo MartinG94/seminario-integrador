@@ -28,6 +28,8 @@ export class NotificationService implements OnDestroy {
   readonly duration = 10000;
   private readonly messages = new BehaviorSubject<readonly UserNotification[]>([]);
   readonly messages$ = this.messages.asObservable();
+  private readonly dialogContainer = new BehaviorSubject<HTMLElement | null>(null);
+  readonly dialogContainer$ = this.dialogContainer.asObservable();
   private readonly timers = new Map<number, ReturnType<typeof setTimeout>>();
   private nextId = 0;
 
@@ -35,6 +37,16 @@ export class NotificationService implements OnDestroy {
   error(message: string): number { return this.show('error', message); }
   warning(message: string): number { return this.show('warning', message); }
   info(message: string): number { return this.show('info', message); }
+
+  /** Incluye los avisos en el foco de un diálogo que no utiliza MatDialog. */
+  registerDialogContainer(container: HTMLElement): () => void {
+    this.dialogContainer.next(container);
+    return () => {
+      if (this.dialogContainer.value === container) {
+        this.dialogContainer.next(null);
+      }
+    };
+  }
 
   show(type: NotificationType, message: string): number {
     const existing = this.messages.value.find(item => item.type === type && item.message === message);
@@ -56,5 +68,7 @@ export class NotificationService implements OnDestroy {
     this.timers.clear();
     this.messages.next([]);
     this.messages.complete();
+    this.dialogContainer.next(null);
+    this.dialogContainer.complete();
   }
 }

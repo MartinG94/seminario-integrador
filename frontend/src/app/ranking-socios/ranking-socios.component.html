@@ -52,10 +52,13 @@
               </div>
 
               <select class="form-control ml-2 filtro-categoria"
+                      aria-label="Filtrar por categoría"
                       [(ngModel)]="filtroCategoria" (ngModelChange)="paginaActual = 1">
                 <option value="">Todas las categorías</option>
-                <option value="ACTIVO">Activo</option>
-                <option value="PASIVO">Pasivo</option>
+                <option value="JUNIOR">{{categoryLabels.JUNIOR}}</option>
+                <option value="SENIOR">{{categoryLabels.SENIOR}}</option>
+                <option value="EX_TRAVELER">{{categoryLabels.EX_TRAVELER}}</option>
+                <option value="UNKNOWN">{{categoryLabels.UNKNOWN}}</option>
               </select>
 
               <select class="form-control ml-2"
@@ -115,7 +118,7 @@
                       <div class="font-weight-bold text-dark">{{s.nombre}} {{s.apellido}}</div>
                     </td>
                     <td>{{s.legajo}}</td>
-                    <td>{{s.categoria}}</td>
+                    <td>{{getCategoryLabel(s.categoria)}}</td>
                     <td>{{s.subcomision}}</td>
                     <td class="text-center font-weight-bold" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
                       <div>{{s.saldo > 0 ? '+' : ''}}{{s.saldo | number:'1.2-2'}} pts</div>

@@ -6,6 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from padron.services import normalize_category_filter
 from ranking.serializers import RankingSocioSerializer
 from ranking.services import (
     filter_ranking_queryset,
@@ -18,7 +19,7 @@ class RankingListView(APIView):
     """
     Endpoint GET /api/v1/ranking/ y /api/ranking/
     Retorna la lista completa del Ranking Oficial Reconciliado con soporte para:
-    - Filtro por categoría estatutaria (ACTIVO / PASIVO)
+    - Filtro por clasificación canónica y aliases históricos de entrada
     - Filtro por subcomisión (nombre o id)
     - Búsqueda textual (q o search sobre nombre, apellido, legajo)
     - Ordenamiento por saldo, apellido, nombre o legajo
@@ -71,18 +72,18 @@ class RankingListView(APIView):
         )
         cat_clean = None
         if categoria is not None and categoria.strip():
-            c_val = categoria.strip().upper()
-            if c_val not in ("ACTIVO", "PASIVO"):
+            try:
+                cat_clean = normalize_category_filter(categoria).value
+            except ValueError:
                 return Response(
                     {
                         "error": (
                             f"Categoría '{categoria}' inválida. "
-                            "Valores permitidos: 'ACTIVO', 'PASIVO'."
+                            "Valores permitidos: 'JUNIOR', 'SENIOR', 'EX_TRAVELER', 'UNKNOWN'."
                         )
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            cat_clean = c_val
 
         sort_param = (
             request.query_params.get("ordering")

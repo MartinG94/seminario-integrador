@@ -17,6 +17,8 @@ export class NotificationCenterComponent implements AfterViewInit, OnDestroy {
   private notificationElement: HTMLElement | null = null;
   private dialogOutlet: DomPortalOutlet | null = null;
   private activeDialog: MatDialogRef<unknown> | null = null;
+  private customDialogContainer: HTMLElement | null = null;
+  private activeDialogContainer: HTMLElement | null = null;
   private dialogSubscriptions = new Subscription();
   private subscriptions = new Subscription();
   private lastFocusedElement: HTMLElement | null = null;
@@ -51,7 +53,10 @@ export class NotificationCenterComponent implements AfterViewInit, OnDestroy {
         this.restoreFocus();
       }
     }));
-    this.followDialog();
+    this.subscriptions.add(this.notifications.dialogContainer$.subscribe(container => {
+      this.customDialogContainer = container;
+      this.followDialog();
+    }));
   }
 
   @HostListener('document:focusin', ['$event'])
@@ -68,24 +73,29 @@ export class NotificationCenterComponent implements AfterViewInit, OnDestroy {
     this.releaseDialogOutlet();
     this.activeDialog = ref || [...this.dialog.openDialogs].reverse()
       .find(item => item.getState() === MatDialogState.OPEN) || null;
-    const container = this.activeDialog && this.document.getElementById(this.activeDialog.id);
+    const container = this.activeDialog
+      ? this.document.getElementById(this.activeDialog.id) : this.customDialogContainer;
+    this.activeDialogContainer = container;
     if (!container || !this.notificationElement) { return; }
     // El mismo DOM y sus temporizadores pasan al foco/árbol accesible del modal.
     const outletElement = this.document.createElement('div');
     container.appendChild(outletElement);
     this.dialogOutlet = new DomPortalOutlet(outletElement, undefined, undefined, undefined, this.document);
     this.dialogOutlet.attach(new DomPortal(this.notificationElement));
-    this.dialogSubscriptions.add(this.activeDialog.beforeClosed().subscribe(() => this.releaseDialogOutlet()));
-    this.dialogSubscriptions.add(this.activeDialog.afterClosed().subscribe(() => this.followDialog()));
+    if (this.activeDialog) {
+      this.dialogSubscriptions.add(this.activeDialog.beforeClosed().subscribe(() => this.releaseDialogOutlet()));
+      this.dialogSubscriptions.add(this.activeDialog.afterClosed().subscribe(() => this.followDialog()));
+    }
   }
 
   private releaseDialogOutlet(): void {
     this.dialogOutlet?.dispose();
     this.dialogOutlet = null;
+    this.activeDialogContainer = null;
   }
 
   private restoreFocus(): void {
-    const container = this.activeDialog && this.document.getElementById(this.activeDialog.id);
+    const container = this.activeDialogContainer;
     const last = this.lastFocusedElement;
     const target = last?.isConnected && !last.closest('[aria-hidden="true"]') &&
       (!container || container.contains(last)) ? last : container;

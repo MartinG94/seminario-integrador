@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
@@ -31,9 +32,11 @@ describe('GestionarExpedientesComponent', () => {
   };
 
   beforeEach(async () => {
-    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'registerDialogContainer']);
+    notifications.registerDialogContainer.and.returnValue(() => undefined);
     await TestBed.configureTestingModule({
       imports: [
+        A11yModule,
         CommonModule,
         HttpClientTestingModule,
         FormsModule,

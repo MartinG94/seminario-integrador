@@ -1,6 +1,8 @@
 # MODELADO OPERATIVO DE PROCESOS DE NEGOCIO (BPMN 2.0)
 ## Módulo Unificado de Tribunal de Disciplina y Premiaciones (SGD-AVEIT)
 
+**Referencia de clasificación TS77.30:** la ficha de participantes usa [RN77-01–04](../../specs/005-mysql-seed-g57-g60/aclaraciones-po.md), Junior 1.º–2.º / Senior desde 3.º y condición exviajero fuera de la escala. El proceso relevado conserva su flujo y fuentes originales; no se infieren facultades de firma desde la categoría. Véase [DP77-FAC-01](../constitution.md#facultades-pendientes).
+
 ---
 
 ### DATOS DEL DOCUMENTO Y CONTROL DE VERSIONES
@@ -30,7 +32,7 @@
 | **Disparador (Trigger)** | Cierre administrativo de un evento institucional obligatorio con inasistencias detectadas o recepción de Formulario T01 formal con Hoja de Anexo por autoridad habilitada. |
 | **Límite Inicial** | Detección de falta/mérito o registro formal de solicitud de puntos. |
 | **Límite Final** | Publicación de la resolución firmada, impacto inalterable en el saldo de puntos y emisión de balances cuatrimestrales de auditoría. |
-| **Cliente(s) del Proceso** | Masa Societaria de AVEIT (Socios Pasivos y Activos), Comisión Directiva, Asamblea General. |
+| **Cliente(s) del Proceso** | Masa Societaria de AVEIT (Junior/Senior y condición exviajero, según vigencia), Comisión Directiva, Asamblea General. |
 | **Productos / Salidas** | 1. Expediente disciplinario tramitado y resuelto formalmente.<br>2. Resolución Oficial con estructura reglamentaria y firma digital de 3 jueces.<br>3. Saldo de puntos del socio actualizado de forma auditada e inmutable.<br>4. Alertas escalonadas (Amarilla a los -7 pts y Roja a los -10 pts) despachadas.<br>5. Balances Cuatrimestrales de Auditoría Interna consolidados en PDF/Excel. |
 
 ---

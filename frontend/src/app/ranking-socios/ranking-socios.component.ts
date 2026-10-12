@@ -14,7 +14,13 @@ export class RankingSociosComponent implements OnInit {
   socios: RankingSocio[] = [];
   criterioOrden: 'merito' | 'sancion' = 'merito';
   filtroTexto = '';
-  filtroCategoria: 'ACTIVO' | 'PASIVO' | '' = '';
+  filtroCategoria: RankingSocio['categoria'] | '' = '';
+  readonly categoryLabels: Record<RankingSocio['categoria'], string> = {
+    JUNIOR: 'Junior',
+    SENIOR: 'Senior',
+    EX_TRAVELER: 'Exviajero',
+    UNKNOWN: 'Sin clasificación'
+  };
   filtroSubcomision = '';
   subcomisiones: string[] = [];
   paginaActual = 1;
@@ -36,7 +42,8 @@ export class RankingSociosComponent implements OnInit {
       data: {
         socioId: socio.id,
         nombreSocio: `${socio.nombre} ${socio.apellido}`.trim(),
-        saldo: socio.saldo
+        saldo: socio.saldo,
+        identitySource: 'institutional'
       }
     });
   }
@@ -94,6 +101,10 @@ export class RankingSociosComponent implements OnInit {
   onFiltroChange(texto: string): void {
     this.filtroTexto = texto;
     this.paginaActual = 1;
+  }
+
+  getCategoryLabel(category: RankingSocio['categoria']): string {
+    return this.categoryLabels[category];
   }
 
   get sociosOrdenados(): RankingSocio[] {

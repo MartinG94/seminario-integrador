@@ -1,3 +1,5 @@
+import type { InstitutionalMembershipCategory } from '../services/socio-api.service';
+
 /**
  * Modelo del Ranking Oficial de SCRUM-38.
  * `saldo` representa por ahora el saldo oficial utilizado por el frontend.
@@ -11,7 +13,7 @@ export interface RankingSocio {
   legajo: string;
   nombre: string;
   apellido: string;
-  categoria: 'ACTIVO' | 'PASIVO';
+  categoria: InstitutionalMembershipCategory;
   subcomision: string;
   saldo: number;
 

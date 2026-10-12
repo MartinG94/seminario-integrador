@@ -58,7 +58,7 @@ class TestSocioFilterParamsSerializer:
         data = serializer.validated_data
         assert data["search"] == "Pérez"
         assert data["subcomision_id"] == 1
-        assert data["category"] == "ACTIVE"
+        assert data["category"] == "SENIOR"
         assert data["is_active"] is True
         assert data["membership_status"] == "ENABLED"
         assert data["page"] == 2
@@ -147,7 +147,7 @@ class TestSocioInstitucionalSerializer:
             email="esteban.perez@aveit.utn.edu.ar",
             subcomision=SubcomisionDTO(id=10, name="Tribunal de Disciplina"),
             social_year=4,
-            category=SocioCategoryEnum.ACTIVE,
+            category=SocioCategoryEnum.SENIOR,
             is_active=True,
             membership_status=MembershipStatusEnum.ENABLED,
         )
@@ -162,7 +162,7 @@ class TestSocioInstitucionalSerializer:
         assert data["email"] == "esteban.perez@aveit.utn.edu.ar"
         assert data["subcomision"] == {"id": 10, "name": "Tribunal de Disciplina"}
         assert data["social_year"] == 4
-        assert data["category"] == "ACTIVE"
+        assert data["category"] == "SENIOR"
         assert data["is_active"] is True
         assert data["membership_status"] == "ENABLED"
 
@@ -179,7 +179,7 @@ class TestSocioInstitucionalSerializer:
             email=None,
             subcomision=None,
             social_year=1,
-            category=SocioCategoryEnum.PASSIVE,
+            category=SocioCategoryEnum.JUNIOR,
             is_active=False,
             membership_status=MembershipStatusEnum.TERMINATED,
         )
@@ -191,7 +191,7 @@ class TestSocioInstitucionalSerializer:
         assert data["dni"] is None
         assert data["email"] is None
         assert data["subcomision"] is None
-        assert data["category"] == "PASSIVE"
+        assert data["category"] == "JUNIOR"
         assert data["is_active"] is False
         assert data["membership_status"] == "TERMINATED"
 
@@ -217,7 +217,7 @@ class TestPaginatedSociosSerializer:
             email="esteban.perez@aveit.utn.edu.ar",
             subcomision=None,
             social_year=4,
-            category=SocioCategoryEnum.ACTIVE,
+            category=SocioCategoryEnum.SENIOR,
             is_active=True,
             membership_status=MembershipStatusEnum.ENABLED,
         )

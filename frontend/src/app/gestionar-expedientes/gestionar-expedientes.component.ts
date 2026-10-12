@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
@@ -82,6 +82,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   cargando = false;
 
   private subs: Subscription[] = [];
+  private confirmedSocioFilter: string | null = null;
+  private releaseDetailNotifications: (() => void) | null = null;
+
+  @ViewChild('caseDetailDialog')
+  set caseDetailDialog(ref: ElementRef<HTMLElement> | undefined) {
+    this.releaseDetailNotifications?.();
+    this.releaseDetailNotifications = ref
+      ? this.notifications.registerDialogContainer(ref.nativeElement) : null;
+  }
 
   constructor(
     public dataService: TribunalDataService,
@@ -103,6 +112,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.releaseDetailNotifications?.();
+    this.releaseDetailNotifications = null;
     this.subs.forEach(s => s.unsubscribe());
   }
 
@@ -132,6 +143,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   cargarDatosTablero(): void {
     this.cargando = true;
     this.failedToLoadBoard = false;
+    const requestedSocioFilter = this.filtroSocio.trim();
     const filtros: any = {};
     if (this.filtroSocio.trim()) filtros.socio = this.filtroSocio.trim();
     if (this.filtroEstado.trim()) filtros.estado = this.filtroEstado.trim();
@@ -141,9 +153,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     this.dataService.obtenerTablero(filtros).subscribe({
       next: () => {
+        this.confirmedSocioFilter = requestedSocioFilter;
         this.cargando = false;
       },
       error: () => {
+        this.confirmedSocioFilter = null;
         // En caso de error o backend no disponible, se mantiene la colección local
         this.cargando = false;
         this.failedToLoadBoard = true;
@@ -164,8 +178,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
-    // Filtro por socio en memoria (fallback / reactivo)
-    if (this.filtroSocio.trim()) {
+    // El servidor busca entre todos los involucrados; el DTO compacto muestra
+    // sólo al principal. Un resultado confirmado no debe recortarse otra vez.
+    if (this.filtroSocio.trim() && this.confirmedSocioFilter !== this.filtroSocio.trim()) {
       const q = this.filtroSocio.trim().toLowerCase();
       result = result.filter(e =>
         (e.socio && e.socio.toLowerCase().includes(q)) ||

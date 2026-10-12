@@ -11,7 +11,7 @@ export type EstadoT01 = 'DRAFT' | 'ISSUED';
 
 export interface SocioInvolucrado {
   socio_id?: number;
-  legajo?: string;
+  legajo?: string | null;
   first_name?: string;
   last_name?: string;
   subcomision?: string;

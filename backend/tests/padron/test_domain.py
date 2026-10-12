@@ -2,7 +2,7 @@
 
 Cobertura:
   - CA2: Identidad estable (legajo, DNI).
-  - CA3: Categorización estatutaria (Pasivo 1-3, Activo 4-6, Unknown).
+  - CA3: Junior 1–2, Senior 3–6 y lecturas sin clasificación.
   - CA4: Desacoplamiento de vigencia de membresía vs. categoría.
   - BLK-004: Resolución de email institucional.
   - H03: Centinela de subcomisión (cod=99 → None).
@@ -28,21 +28,21 @@ from padron.domain import (
 class TestClassifyCategory:
     """Pruebas para la regla CA3: categorización por año social."""
 
-    @pytest.mark.parametrize("ano_social", [1, 2, 3])
-    def test_passive_years_1_to_3(self, ano_social: int) -> None:
-        """Años sociales 1, 2 y 3 corresponden a categoría PASSIVE (Junior)."""
+    @pytest.mark.parametrize("ano_social", [1, 2])
+    def test_junior_years_1_to_2(self, ano_social: int) -> None:
+        """Años sociales 1 y 2 corresponden a Junior."""
         from padron.services import classify_category
 
         result = classify_category(ano_social)
-        assert result == SocioCategoryEnum.PASSIVE
+        assert result == SocioCategoryEnum.JUNIOR
 
-    @pytest.mark.parametrize("ano_social", [4, 5, 6])
-    def test_active_years_4_to_6(self, ano_social: int) -> None:
-        """Años sociales 4, 5 y 6 corresponden a categoría ACTIVE (Senior)."""
+    @pytest.mark.parametrize("ano_social", [3, 4, 5, 6])
+    def test_senior_years_3_to_6(self, ano_social: int) -> None:
+        """Años sociales 3 a 6 corresponden a Senior."""
         from padron.services import classify_category
 
         result = classify_category(ano_social)
-        assert result == SocioCategoryEnum.ACTIVE
+        assert result == SocioCategoryEnum.SENIOR
 
     @pytest.mark.parametrize("ano_social", [0, -1, 7, 99, 100])
     def test_invalid_year_returns_unknown(self, ano_social: int) -> None:
@@ -201,27 +201,27 @@ class TestResolveMembershipStatus:
 
 
 class TestCategoryIndependentOfMembership:
-    """Prueba de integración lógica: un socio ACTIVE puede estar SUSPENDED."""
+    """La clasificación no decide la vigencia de la membresía."""
 
-    def test_active_category_with_suspended_membership(self) -> None:
-        """Un socio de 4.º año (ACTIVE) puede estar suspendido (SUSPENDED)."""
+    def test_senior_category_with_suspended_membership(self) -> None:
+        """Un socio de 4.º año Senior puede estar suspendido."""
         from padron.services import classify_category, resolve_membership_status
 
         category = classify_category(4)
         status, is_active = resolve_membership_status(cod_estado_socio=3, fecha_baja=None)
 
-        assert category == SocioCategoryEnum.ACTIVE
+        assert category == SocioCategoryEnum.SENIOR
         assert status == MembershipStatusEnum.SUSPENDED
         assert is_active is False
 
-    def test_passive_category_with_enabled_membership(self) -> None:
-        """Un socio de 2.º año (PASSIVE) puede estar habilitado (ENABLED)."""
+    def test_junior_category_with_enabled_membership(self) -> None:
+        """Un socio de 2.º año Junior puede estar habilitado."""
         from padron.services import classify_category, resolve_membership_status
 
         category = classify_category(2)
         status, is_active = resolve_membership_status(cod_estado_socio=1, fecha_baja=None)
 
-        assert category == SocioCategoryEnum.PASSIVE
+        assert category == SocioCategoryEnum.JUNIOR
         assert status == MembershipStatusEnum.ENABLED
         assert is_active is True
 

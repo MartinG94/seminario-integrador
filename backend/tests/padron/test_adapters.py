@@ -15,8 +15,8 @@ from django.db import OperationalError
 
 from padron.adapters import DatabasePadronAdapter
 from padron.domain import (
-    ACTIVE_SOCIAL_YEARS,
-    PASSIVE_SOCIAL_YEARS,
+    JUNIOR_SOCIAL_YEARS,
+    SENIOR_SOCIAL_YEARS,
     HealthStatusDTO,
     MembershipStatusEnum,
     PaginatedSociosDTO,
@@ -132,9 +132,9 @@ class TestMockPadronAdapterQueries:
     def test_filter_by_category(self) -> None:
         """list_socios(category=PASSIVE) filtra correctamente."""
         adapter = self._get_adapter()
-        result = adapter.list_socios(category=SocioCategoryEnum.PASSIVE)
+        result = adapter.list_socios(category=SocioCategoryEnum.JUNIOR)
         for socio in result.results:
-            assert socio.category == SocioCategoryEnum.PASSIVE
+            assert socio.category == SocioCategoryEnum.JUNIOR
 
     def test_filter_by_membership_status(self) -> None:
         """list_socios(membership_status=ENABLED) filtra correctamente."""
@@ -367,7 +367,7 @@ class TestDatabasePadronAdapterMapping:
         assert isinstance(dto, SocioInstitucionalDTO)
         assert dto.socio_id == 42
         assert dto.legajo == "99999"  # Del estudio con compositeKey=200
-        assert dto.category == SocioCategoryEnum.ACTIVE
+        assert dto.category == SocioCategoryEnum.SENIOR
         assert dto.membership_status == MembershipStatusEnum.ENABLED
         assert dto.is_active is True
 
@@ -391,7 +391,7 @@ class TestDatabasePadronAdapterMapping:
 
         dto = adapter._map_to_dto(socio_orm)
         assert dto.legajo is None
-        assert dto.category == SocioCategoryEnum.PASSIVE
+        assert dto.category == SocioCategoryEnum.JUNIOR
 
     def test_map_to_dto_sentinel_subcomision_99_is_none(self) -> None:
         """Socio con subcomisión 99 ('Sin Subcomisión') mapea subcomision = None."""
@@ -664,14 +664,19 @@ class TestDatabasePadronAdapterQueries:
         adapter.list_socios(subcomision_id=3)
         mock_qs.filter.assert_any_call(subcomision_id=3)
 
-        adapter.list_socios(category=SocioCategoryEnum.PASSIVE)
-        mock_qs.filter.assert_any_call(anoSocial__in=PASSIVE_SOCIAL_YEARS)
+        adapter.list_socios(category=SocioCategoryEnum.JUNIOR)
+        mock_qs.filter.assert_any_call(
+            anoSocial__in=JUNIOR_SOCIAL_YEARS, is_ex_traveler_confirmed=False
+        )
 
-        adapter.list_socios(category=SocioCategoryEnum.ACTIVE)
-        mock_qs.filter.assert_any_call(anoSocial__in=ACTIVE_SOCIAL_YEARS)
+        adapter.list_socios(category=SocioCategoryEnum.SENIOR)
+        mock_qs.filter.assert_any_call(
+            anoSocial__in=SENIOR_SOCIAL_YEARS, is_ex_traveler_confirmed=False
+        )
 
         adapter.list_socios(category=SocioCategoryEnum.UNKNOWN)
-        mock_qs.exclude.assert_any_call(anoSocial__in=PASSIVE_SOCIAL_YEARS + ACTIVE_SOCIAL_YEARS)
+        mock_qs.filter.assert_any_call(is_ex_traveler_confirmed=False)
+        mock_qs.exclude.assert_any_call(anoSocial__in=JUNIOR_SOCIAL_YEARS + SENIOR_SOCIAL_YEARS)
 
         adapter.list_socios(is_active=True)
         # Verifica que filter fue invocado

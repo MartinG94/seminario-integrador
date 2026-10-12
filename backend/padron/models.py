@@ -106,7 +106,7 @@ class Socio(ReadOnlyModel):
     )
     codEstadoCivil = models.IntegerField(null=True, blank=True, db_column="codEstadoCivil")
     fechaBaja = models.DateField(null=True, blank=True, db_column="fechaBaja")
-    anoSocial = models.IntegerField(db_column="anoSocial")
+    anoSocial = models.IntegerField(null=True, blank=True, db_column="anoSocial")
     ingresante = models.BooleanField(default=False)
     idTipoSocio = models.IntegerField(db_column="idTipoSocio")
     user_id = models.IntegerField(null=True, blank=True, db_column="user_id")

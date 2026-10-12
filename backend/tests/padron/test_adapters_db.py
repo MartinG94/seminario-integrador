@@ -252,7 +252,7 @@ class TestDatabasePadronAdapterRealDB:
         assert dto.email == "martin.gomez@aveit.utn.edu.ar"
         assert dto.subcomision is not None
         assert dto.subcomision.name == "Cómputos"
-        assert dto.category == SocioCategoryEnum.ACTIVE
+        assert dto.category == SocioCategoryEnum.SENIOR
         assert dto.membership_status == MembershipStatusEnum.ENABLED
         assert dto.is_active is True
 
@@ -262,7 +262,7 @@ class TestDatabasePadronAdapterRealDB:
         assert dto is not None
         assert dto.legajo is None
         assert dto.subcomision is None  # Centinela 99 limpiado
-        assert dto.category == SocioCategoryEnum.PASSIVE
+        assert dto.category == SocioCategoryEnum.JUNIOR
 
     def test_get_by_legajo_finds_record_via_exists_subquery(self) -> None:
         """get_by_legajo() ejecuta la subconsulta Exists sin requerir JOIN cartesiano."""
@@ -283,12 +283,12 @@ class TestDatabasePadronAdapterRealDB:
     def test_list_socios_filters_and_pagination_real_db(self) -> None:
         """list_socios() ejecuta filtros nativos SQL y paginación LIMIT/OFFSET."""
         # Filtro por categoría ACTIVE
-        res_active = self.adapter.list_socios(category=SocioCategoryEnum.ACTIVE)
+        res_active = self.adapter.list_socios(category=SocioCategoryEnum.SENIOR)
         assert res_active.count == 1
         assert res_active.results[0].socio_id == 101
 
         # Filtro por categoría PASSIVE
-        res_passive = self.adapter.list_socios(category=SocioCategoryEnum.PASSIVE)
+        res_passive = self.adapter.list_socios(category=SocioCategoryEnum.JUNIOR)
         assert res_passive.count == 1
         assert res_passive.results[0].socio_id == 102
 
