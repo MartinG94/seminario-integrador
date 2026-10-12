@@ -12,6 +12,7 @@ from rest_framework.validators import UniqueValidator
 from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
+    EvidenciaDescargo,
     Expediente,
     Holiday,
     SolicitudT01,
@@ -22,6 +23,24 @@ from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
 
 logger = logging.getLogger(__name__)
+
+
+class EvidenciaMetadataSerializer(serializers.ModelSerializer):
+    """Metadatos de un comprobante probatorio (sin contenido binario)."""
+
+    class Meta:
+        model = EvidenciaDescargo
+        fields = [
+            "id",
+            "nombre_original",
+            "extension",
+            "mime_type",
+            "tamanio_bytes",
+            "sha256_hash",
+            "es_vigente",
+            "created_at",
+        ]
+        read_only_fields = fields
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
@@ -41,6 +60,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     horas_restantes = serializers.SerializerMethodField()
     socios = serializers.SerializerMethodField()
     historial = serializers.SerializerMethodField()
+    evidencias = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -68,6 +88,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "horas_restantes",
             "created_at",
             "historial",
+            "evidencias",
         ]
 
     def get_socio_nombre(self, obj: Expediente) -> str:
@@ -146,6 +167,24 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             for socio in obj.socios.all()
         ]
 
+    def get_evidencias(self, obj: Expediente) -> list[dict]:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return []
+        socio = getattr(user, "socio", None)
+        role = getattr(socio, "role", "")
+        # Usar .all() precargado por prefetch_related para no disparar
+        # queries adicionales por cada expediente
+        todas = obj.evidencias.all()
+        if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or user.is_staff:
+            vigentes = [ev for ev in todas if ev.es_vigente]
+        elif socio and socio.is_enabled:
+            vigentes = [ev for ev in todas if ev.es_vigente and ev.socio_id == socio.pk]
+        else:
+            return []
+        return EvidenciaMetadataSerializer(vigentes, many=True).data
+
     def get_historial(self, obj: Expediente) -> list[dict[str, str]]:
         changes = sorted(obj.cambios_estado.all(), key=lambda c: (c.fecha_hora, c.id))
         return [
@@ -195,18 +234,33 @@ class PresentarDescargoSerializer(serializers.Serializer):
     causal = serializers.CharField(max_length=255, required=False, allow_blank=True)
     archivo = serializers.CharField(max_length=255, required=False, allow_blank=True)
     texto = serializers.CharField(required=False, allow_blank=True)
+    evidencia_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
 
     def validate(self, attrs: dict) -> dict:
         tipo = attrs.get("tipo")
+        evidencia_ids = attrs.get("evidencia_ids", [])
         if tipo == TipoDescargoEnum.T02_CERTIFICADO:
-            if not attrs.get("archivo"):
+            if not attrs.get("archivo") and not evidencia_ids:
                 raise serializers.ValidationError(
                     {"archivo": "Es obligatorio adjuntar comprobante para justificaciones T02."}
+                )
+            if len(evidencia_ids) > 3:
+                raise serializers.ValidationError(
+                    {"evidencia_ids": "El Formulario T02 admite un máximo de 3 comprobantes."}
                 )
         elif tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
             if not attrs.get("texto", "").strip():
                 raise serializers.ValidationError(
                     {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
+                )
+            if len(evidencia_ids) > 5:
+                raise serializers.ValidationError(
+                    {"evidencia_ids": "El Formulario T03 admite un máximo de 5 comprobantes."}
                 )
         return attrs
 

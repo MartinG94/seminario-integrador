@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
+import { ExpedienteApiService, EvidenciaMetadata } from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -25,8 +26,20 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   tipoDescargo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO' = 'T02_CERTIFICADO';
   causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
   nombreArchivo = '';
+  archivosSeleccionados: File[] = [];
+  evidenciasExistentes: any[] = [];
+  subiendoArchivos = false;
+  readonly LIMITE_T02 = 3;
+  readonly LIMITE_T03 = 5;
+  readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
   relatoTexto = '';
   esEdicion = false;
+
+  // Modal propio de Confirmación
+  modalConfirmacionAbierto = false;
+  modalConfirmacionTitulo = '';
+  modalConfirmacionMensaje = '';
+  modalConfirmacionAccion: (() => void) | null = null;
 
   // Temporizador dinámico para cuenta regresiva (CA3)
   private tickerSub: Subscription | null = null;
@@ -38,7 +51,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     public dataService: TribunalDataService,
     private auth: AuthService,
     private renderer: Renderer2,
-    private notifications: NotificationService
+    private notifications: NotificationService,
+    private expedienteApi: ExpedienteApiService
   ) {}
 
   ngOnInit(): void {
@@ -207,10 +221,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   abrirModalDescargo(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.esEdicion = false;
-    this.tipoDescargo = 'T02_CERTIFICADO';
-    this.causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
+    // Respetar trazabilidad: si el expediente ya tiene un tipo asignado o descargo previo, preservarlo; por defecto T02
+    this.tipoDescargo = exp.descargo?.tipo || (exp as any).descargo_tipo || 'T02_CERTIFICADO';
+    this.causalSeleccionada = exp.descargo?.causal || 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = '';
-    this.relatoTexto = '';
+    this.archivosSeleccionados = [];
+    this.evidenciasExistentes = exp.descargo?.evidencias ? [...exp.descargo.evidencias] : (exp.evidencias ? [...exp.evidencias] : []);
+    this.relatoTexto = exp.descargo?.texto || '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
   }
@@ -222,6 +239,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.tipoDescargo = exp.descargo.tipo;
     this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = exp.descargo.archivo || '';
+    this.archivosSeleccionados = [];
+    this.evidenciasExistentes = exp.descargo.evidencias ? [...exp.descargo.evidencias] : (exp.evidencias ? [...exp.evidencias] : []);
     this.relatoTexto = exp.descargo.texto || '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
@@ -229,24 +248,40 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   eliminarDescargo(exp: Expediente): void {
     if (!exp.descargo) return;
-    const confirma = confirm(`¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`);
-    if (!confirma) return;
+    this.abrirConfirmacion(
+      'Eliminar Justificativo Reglamentario',
+      `¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`,
+      () => {
+        const perfil = this.auth.getPerfil();
+        const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
+        const legajo = perfil?.legajo || '';
+        
+        // Sincronizar con backend: dar de baja las evidencias activas (es_vigente = false)
+        this.expedienteApi.presentarDescargo(exp.id, {
+          tipo: exp.descargo?.tipo || 'T02_CERTIFICADO',
+          texto: '',
+          evidencia_ids: []
+        }).subscribe({
+          next: () => {},
+          error: () => {}
+        });
 
-    const perfil = this.auth.getPerfil();
-    const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
-    const legajo = perfil?.legajo || '';
-
-    this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
+        this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
+        this.notifications.info(`Justificativo del expediente ${exp.numero} eliminado.`);
+      }
+    );
   }
 
   cerrarModal(): void {
     this.modalAbierto = false;
     this.expedienteSeleccionado = null;
+    this.archivosSeleccionados = [];
+    this.evidenciasExistentes = [];
     this.actualizarScrollBloqueo();
   }
 
   private actualizarScrollBloqueo(): void {
-    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto;
+    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
     const body = document.body;
     const docElem = document.documentElement;
     const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
@@ -263,6 +298,36 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  abrirConfirmacion(titulo: string, mensaje: string, onConfirm: () => void): void {
+    this.modalConfirmacionTitulo = titulo;
+    this.modalConfirmacionMensaje = mensaje;
+    this.modalConfirmacionAccion = onConfirm;
+    this.modalConfirmacionAbierto = true;
+    this.actualizarScrollBloqueo();
+  }
+
+  cerrarConfirmacion(): void {
+    this.modalConfirmacionAbierto = false;
+    this.modalConfirmacionAccion = null;
+    this.actualizarScrollBloqueo();
+  }
+
+  confirmarAccion(): void {
+    if (this.modalConfirmacionAccion) {
+      this.modalConfirmacionAccion();
+    }
+    this.cerrarConfirmacion();
+  }
+
+  get totalComprobantes(): number {
+    return this.evidenciasExistentes.length + this.archivosSeleccionados.length;
+  }
+
+  get puedeSubirMas(): boolean {
+    const limite = this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+    return this.totalComprobantes < limite;
+  }
+
   private removerScrollBloqueo(): void {
     const body = document.body;
     const docElem = document.documentElement;
@@ -277,18 +342,123 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      this.nombreArchivo = file.name;
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const nuevos = Array.from(input.files);
+    const limite = this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+    const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length + nuevos.length;
+
+    if (totalComprobantes > limite) {
+      this.notifications.error(`El Formulario ${this.tipoDescargo === 'T02_CERTIFICADO' ? 'T02' : 'T03'} admite un máximo de ${limite} comprobantes en total.`);
+      input.value = '';
+      return;
     }
+
+    for (const f of nuevos) {
+      if (f.size > this.MAX_BYTES) {
+        this.notifications.error(`El archivo "${f.name}" supera el límite de 5 MB.`);
+        input.value = '';
+        return;
+      }
+      const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
+      if (!['.pdf', '.jpg', '.jpeg', '.png'].includes(ext)) {
+        this.notifications.error(`El archivo "${f.name}" no tiene un formato válido (PDF, JPG, PNG).`);
+        input.value = '';
+        return;
+      }
+
+      // Validación de duplicados: chequear contra archivos ya guardados en custodia
+      const yaExisteEnCustodia = this.evidenciasExistentes.some(
+        ev => (ev.nombre_original || ev.name || '').toLowerCase() === f.name.toLowerCase()
+      );
+      if (yaExisteEnCustodia) {
+        this.notifications.error(`El comprobante "${f.name}" ya se encuentra incorporado en custodia.`);
+        input.value = '';
+        return;
+      }
+
+      // Validación de duplicados: chequear contra archivos ya seleccionados en esta tanda
+      const yaSeleccionado = this.archivosSeleccionados.some(
+        sel => sel.name.toLowerCase() === f.name.toLowerCase() && sel.size === f.size
+      );
+      if (yaSeleccionado) {
+        this.notifications.error(`El archivo "${f.name}" ya está seleccionado para adjuntar.`);
+        input.value = '';
+        return;
+      }
+
+      this.archivosSeleccionados.push(f);
+    }
+    this.nombreArchivo = this.archivosSeleccionados.map(f => f.name).join(', ');
+    input.value = '';
+  }
+
+  removerArchivo(index: number): void {
+    const archivo = this.archivosSeleccionados[index];
+    const nombre = archivo ? archivo.name : 'este archivo';
+    this.abrirConfirmacion(
+      'Quitar archivo de la selección',
+      `¿Confirmas que deseas eliminar el archivo "${nombre}" de la selección?`,
+      () => {
+        this.archivosSeleccionados.splice(index, 1);
+        this.nombreArchivo = this.archivosSeleccionados.map(f => f.name).join(', ');
+      }
+    );
+  }
+
+  removerEvidenciaExistente(index: number): void {
+    const ev = this.evidenciasExistentes[index];
+    const nombre = ev ? (ev.nombre_original || ev.name) : 'este comprobante';
+    this.abrirConfirmacion(
+      'Eliminar comprobante custodiado',
+      `¿Confirmas que deseas eliminar el comprobante ya custodiado "${nombre}"?`,
+      () => {
+        this.evidenciasExistentes.splice(index, 1);
+        this.notifications.info(`Comprobante "${nombre}" eliminado del justificativo.`);
+      }
+    );
+  }
+
+  formatFileSize(bytes: number): string {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  descargarEvidencia(ev: any): void {
+    if (!this.expedienteDetalle) return;
+    this.expedienteApi.descargarEvidencia(this.expedienteDetalle.id, ev.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = ev.nombre_original || 'comprobante';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.notifications.info(`Descargando comprobante: ${ev.nombre_original}`);
+      },
+      error: () => {
+        this.notifications.error('Error al descargar el comprobante probatorio.');
+      }
+    });
   }
 
   enviarDescargo(): void {
     if (!this.expedienteSeleccionado) return;
 
+    const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length;
+
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
-      if (!this.nombreArchivo) {
-        this.notifications.error('Es obligatorio adjuntar el comprobante o constancia digital (PDF, JPG o PNG).');
+      if (totalComprobantes === 0 && !this.nombreArchivo) {
+        this.notifications.error('Debe adjuntar al menos 1 comprobante para la causal tipificada (Formulario T02).');
+        return;
+      }
+      if (totalComprobantes > this.LIMITE_T02) {
+        this.notifications.error(`El Formulario T02 admite un máximo de ${this.LIMITE_T02} comprobantes.`);
         return;
       }
     } else {
@@ -296,28 +466,73 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error('Por favor expone detalladamente los hechos y motivos extraordinarios.');
         return;
       }
+      if (totalComprobantes > this.LIMITE_T03) {
+        this.notifications.error(`El Formulario T03 admite un máximo de ${this.LIMITE_T03} comprobantes.`);
+        return;
+      }
     }
 
     const perfil = this.auth.getPerfil();
     const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
     const legajo = perfil?.legajo || '';
+    const expId = this.expedienteSeleccionado.id;
 
-    this.dataService.enviarDescargo(
-      this.expedienteSeleccionado.id, 
-      this.tipoDescargo, 
-      {
+    const guardarEnDataService = (todasLasEvidencias: any[]) => {
+      this.dataService.enviarDescargo(
+        expId,
+        this.tipoDescargo,
+        {
+          causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
+          archivo: this.nombreArchivo || (todasLasEvidencias.length > 0 ? todasLasEvidencias[0].nombre_original : undefined),
+          archivos: todasLasEvidencias.map(e => e.nombre_original || e.name || 'comprobante'),
+          texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`,
+          evidencias: todasLasEvidencias
+        },
+        {
+          nombre,
+          legajo,
+          esEdicion: this.esEdicion
+        }
+      );
+      this.notifications.success('Justificación y documentación probatoria registradas correctamente.');
+      this.subiendoArchivos = false;
+      this.cerrarModal();
+    };
+
+    if (this.archivosSeleccionados.length > 0) {
+      this.subiendoArchivos = true;
+      this.expedienteApi.subirEvidencias(expId, this.archivosSeleccionados, this.tipoDescargo).subscribe({
+        next: (nuevasEvidencias) => {
+          const todasLasEvidencias = [...this.evidenciasExistentes, ...nuevasEvidencias];
+          const ids = todasLasEvidencias.map(e => e.id);
+          this.expedienteApi.presentarDescargo(expId, {
+            tipo: this.tipoDescargo,
+            causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
+            texto: this.relatoTexto,
+            evidencia_ids: ids
+          }).subscribe({
+            next: () => guardarEnDataService(todasLasEvidencias),
+            error: () => guardarEnDataService(todasLasEvidencias)
+          });
+        },
+        error: (err) => {
+          this.subiendoArchivos = false;
+          const msg = err?.error?.detail || 'Error al custodiar la documentación probatoria.';
+          this.notifications.error(msg);
+        }
+      });
+    } else {
+      const ids = this.evidenciasExistentes.map(e => e.id);
+      this.expedienteApi.presentarDescargo(expId, {
+        tipo: this.tipoDescargo,
         causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
-        archivo: this.nombreArchivo,
-        texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`
-      },
-      {
-        nombre,
-        legajo,
-        esEdicion: this.esEdicion
-      }
-    );
-
-    this.cerrarModal();
+        texto: this.relatoTexto,
+        evidencia_ids: ids
+      }).subscribe({
+        next: () => guardarEnDataService(this.evidenciasExistentes),
+        error: () => guardarEnDataService(this.evidenciasExistentes)
+      });
+    }
   }
 
   getBadgeClaseOperacion(operacion: string): string {

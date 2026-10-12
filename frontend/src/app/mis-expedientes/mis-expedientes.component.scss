@@ -114,3 +114,24 @@
     margin-left: 4px;
   }
 }
+
+.file-upload-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  input[type="file"].custom-file-input-visible {
+    opacity: 1 !important;
+    position: static !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    cursor: pointer !important;
+    padding: 8px 12px;
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+  }
+}

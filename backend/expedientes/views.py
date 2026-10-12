@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status
@@ -16,12 +16,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from expedientes.domain.calendar import compute_business_deadline
+from expedientes.domain.evidence_validator import EvidenceValidationError, EvidenceValidator
 from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.filters import ExpedienteFilter
 from expedientes.models import (
     CambioEstadoExpediente,
     DescargoExpediente,
     EstadoExpedienteEnum,
+    EvidenciaDescargo,
     Expediente,
     Holiday,
     SolicitudT01,
@@ -42,6 +44,7 @@ from expedientes.serializers import (
     CaseNotificationAuditSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
+    EvidenciaMetadataSerializer,
     ExpedienteListSerializer,
     HolidaySerializer,
     MisSolicitudesT01Serializer,
@@ -51,6 +54,7 @@ from expedientes.serializers import (
     UpdateUrgenciaExpedienteSerializer,
 )
 from expedientes.services.board_service import build_board_payload
+from expedientes.services.evidence_service import EvidenceService
 from expedientes.services.opening_notification_service import (
     CaseNotificationQueryService,
     InvalidCaseStatusError,
@@ -70,7 +74,7 @@ class ExpedienteCollectionView(APIView):
     def get(self, request: Request) -> Response:
         queryset = Expediente.objects.select_related(
             "socio", "socio__subcomision"
-        ).prefetch_related("socios", "cambios_estado", "descargos")
+        ).prefetch_related("socios", "cambios_estado", "descargos", "evidencias")
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -139,7 +143,7 @@ class MisExpedientesView(APIView):
             Expediente.objects.filter(Q(socio=socio) | Q(socios=socio))
             .distinct()
             .select_related("socio", "socio__subcomision")
-            .prefetch_related("socios", "cambios_estado", "descargos")
+            .prefetch_related("socios", "cambios_estado", "descargos", "evidencias")
         )
         serializer = ExpedienteListSerializer(queryset, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -210,7 +214,7 @@ class PresentarDescargoView(APIView):
             es_correccion = DescargoExpediente.objects.filter(
                 expediente=expediente, socio=socio
             ).exists() or (expediente.descargo_presentado and expediente.socio_id == socio.id)
-            DescargoExpediente.objects.update_or_create(
+            descargo, _ = DescargoExpediente.objects.update_or_create(
                 expediente=expediente,
                 socio=socio,
                 defaults={
@@ -221,6 +225,24 @@ class PresentarDescargoView(APIView):
                     "presentado_at": now,
                 },
             )
+            if "evidencia_ids" in validated_data:
+                evidencia_ids = validated_data.get("evidencia_ids") or []
+                EvidenciaDescargo.objects.filter(expediente=expediente, socio=socio).exclude(
+                    id__in=evidencia_ids
+                ).update(es_vigente=False)
+                if evidencia_ids:
+                    EvidenciaDescargo.objects.filter(
+                        expediente=expediente, socio=socio, id__in=evidencia_ids
+                    ).update(descargo=descargo, es_vigente=True)
+                    if not descargo.archivo:
+                        first_ev = EvidenciaDescargo.objects.filter(id__in=evidencia_ids).first()
+                        if first_ev:
+                            descargo.archivo = first_ev.nombre_original
+                            descargo.save(update_fields=["archivo"])
+                else:
+                    if not validated_data.get("archivo"):
+                        descargo.archivo = ""
+                        descargo.save(update_fields=["archivo"])
             expediente.descargo_presentado = (
                 expediente.descargos.count() >= expediente.socios.count()
             )
@@ -228,7 +250,7 @@ class PresentarDescargoView(APIView):
             if expediente.socio_id == socio.id:
                 expediente.descargo_tipo = validated_data["tipo"]
                 expediente.descargo_causal = validated_data.get("causal", "")
-                expediente.descargo_archivo = validated_data.get("archivo", "")
+                expediente.descargo_archivo = descargo.archivo or validated_data.get("archivo", "")
                 expediente.descargo_texto = validated_data.get("texto", "")
                 expediente.descargo_presentado_at = now
                 fields_to_update.extend(
@@ -266,6 +288,128 @@ class PresentarDescargoView(APIView):
                 },
                 status=status.HTTP_200_OK if es_correccion else status.HTTP_201_CREATED,
             )
+
+
+class EvidenciaUploadView(APIView):
+    """Endpoint para carga multipart protegida de comprobantes probatorios (CA1, CA2, CA3).
+
+    - POST /api/v1/expedientes/<pk>/evidencia/
+    - Requiere autenticación.
+    - Valida titularidad del socio (imputado en la causa).
+    - Valida que el expediente esté en estado 'justificando' y dentro del plazo de 5 días hábiles.
+    - Valida cupos (T02 máx 3, T03 máx 5) y formatos válidos (PDF/JPG/PNG <= 5 MB).
+    - Persiste en BD LONGBLOB (Directiva PO).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        socio = getattr(request.user, "socio", None)
+        if not socio:
+            raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
+
+        expediente = Expediente.objects.filter(id=pk).first()
+        if not expediente:
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not expediente.socios.filter(pk=socio.pk).exists() and expediente.socio_id != socio.id:
+            raise PermissionDenied(
+                "No tiene autorización para presentar evidencias en este expediente."
+            )
+
+        if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
+            msg = (
+                f"El expediente está en '{expediente.get_estado_display()}', "
+                "no admitiendo evidencias."
+            )
+            return Response({"detail": msg}, status=status.HTTP_409_CONFLICT)
+
+        now = timezone.now()
+        if not expediente.esta_en_plazo(ahora=now):
+            return Response(
+                {
+                    "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                    "plazo_limite_at": expediente.plazo_limite_at,
+                    "server_time": now,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        files = request.FILES.getlist("archivos")
+        if not files and "archivo" in request.FILES:
+            files = [request.FILES["archivo"]]
+        if not files:
+            return Response(
+                {"detail": "Debe enviar al menos un archivo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tipo_descargo = request.data.get("tipo_descargo")
+        if tipo_descargo:
+            try:
+                EvidenceValidator.validate_quota(tipo_descargo, len(files))
+            except EvidenceValidationError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        created = []
+        try:
+            with transaction.atomic():
+                for file_obj in files:
+                    evidencia = EvidenceService.save_evidence(
+                        expediente=expediente,
+                        socio=socio,
+                        file_obj=file_obj,
+                    )
+                    created.append(evidencia)
+        except EvidenceValidationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            EvidenciaMetadataSerializer(created, many=True).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class EvidenciaDownloadView(APIView):
+    """Endpoint para descarga segura y deserialización en streaming de evidencias (CA3, CA4).
+
+    - GET /api/v1/expedientes/<pk>/evidencia/<uuid:evidencia_id>/
+    - Protegido por IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto).
+    - Deserializa bytes de la base de datos (BinaryField).
+    - Asienta fila inmutable en AuditoriaDescargaEvidencia y log de seguridad.
+    - Emite respuesta con cabeceras nosniff y Content-Disposition inline.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsImputadoOrTribunal]
+
+    def get(self, request: Request, pk: int, evidencia_id: str) -> HttpResponse:
+        evidencia = EvidenciaDescargo.objects.filter(id=evidencia_id, expediente_id=pk).first()
+        if not evidencia:
+            raise NotFound("Comprobante probatorio no encontrado.")
+
+        self.check_object_permissions(request, evidencia)
+
+        ip_address = request.META.get("HTTP_X_FORWARDED_FOR")
+        if ip_address:
+            ip_address = ip_address.split(",")[0].strip()
+        else:
+            ip_address = request.META.get("REMOTE_ADDR")
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+        EvidenceService.record_download_audit(
+            evidencia=evidencia,
+            user=request.user,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
+        response["Content-Disposition"] = f'inline; filename="{evidencia.nombre_original}"'
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 class DispatchCaseOpeningView(APIView):
