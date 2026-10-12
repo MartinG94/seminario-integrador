@@ -58,7 +58,7 @@ jobs:
       - name: Verificación de formateo con Ruff
         run: ruff format --check backend/
 
-      - name: Conceder permisos a la base temporal de Django
+      - name: Conceder permisos a las bases temporales de pruebas
         env:
           MYSQL_PWD: test_root_ci_2026
         run: |
@@ -67,7 +67,10 @@ jobs:
             --host=127.0.0.1 \
             --port=3306 \
             --user=root <<'SQL'
-          GRANT ALL PRIVILEGES ON `test_aveit_tribunal_test`.* TO 'aveit_test'@'%';
+          GRANT ALL PRIVILEGES ON `test\_aveit\_tribunal\_test`.* TO 'aveit_test'@'%';
+          -- Las fixtures SCRUM-77 crean schemas UUID aislados; sólo el sufijo es comodín.
+          GRANT ALL PRIVILEGES ON `test\_scrum77\_bootstrap\_%`.* TO 'aveit_test'@'%';
+          GRANT ALL PRIVILEGES ON `test\_scrum77\_ddl\_%`.* TO 'aveit_test'@'%';
           SQL
 
       - name: Ejecutar suite de pruebas con Pytest
