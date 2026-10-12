@@ -123,13 +123,14 @@ def test_explicit_institutional_source_never_uses_a_colliding_local_pk(
 
 
 @pytest.mark.django_db
-def test_explicit_local_source_does_not_query_the_institutional_repository(
+def test_explicit_local_source_in_mock_mode_does_not_query_the_institutional_repository(
     identity_world: dict, monkeypatch: Any
 ) -> None:
     from socios import views
 
     local = identity_world["local"]
     identity_world["create"](local.pk)
+    monkeypatch.setenv("PADRON_ADAPTER", "mock")
 
     def unexpected_repository() -> None:
         pytest.fail("La fuente local consultó otro namespace.")
@@ -138,6 +139,7 @@ def test_explicit_local_source_does_not_query_the_institutional_repository(
     response = request_legajo(local, local.pk, "local")
     assert response.status_code == 200
     assert response.data["first_name"] == local.first_name
+    assert response.data["points_balance"] is None
 
 
 @pytest.mark.django_db
@@ -359,7 +361,7 @@ def test_repository_failure_cannot_choose_an_unverified_local_candidate(
     monkeypatch.setattr(views, "get_padron_repository", lambda: BrokenRepository())
     local = identity_world["local"]
     response = request_legajo(identity_world["authority"], local.pk)
-    assert response.status_code == 404
+    assert response.status_code == 503
     assert "sensitive-test-diagnostic" not in str(response.data)
     assert "sensitive-test-diagnostic" not in caplog.text
 

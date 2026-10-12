@@ -1,0 +1,445 @@
+{
+  "status": "ok",
+  "verified_at_utc": "2026-10-12T22:59:01.7722535Z",
+  "database": "aveit_tribunal_scrum77_demo",
+  "tables_checked": 52,
+  "previous_rows_preserved_except_number_sequence": true,
+  "all_schemas_unchanged": true,
+  "cases_before": 6,
+  "cases_after": 16,
+  "ledger_before": 8,
+  "ledger_after": 12,
+  "references_before": 188,
+  "references_after": 272,
+  "sequence_before": {
+    "id": 1,
+    "year": 2026,
+    "last_value": 6
+  },
+  "sequence_after": {
+    "id": 1,
+    "year": 2026,
+    "last_value": 16
+  },
+  "repeat_tables_identical": true,
+  "repeat_sequence_identical": true,
+  "manifest_sha256": "90fd22eaf2758c98d94d695a2c8a4539008630c870aa06049465c3fe45fbb158",
+  "tables": [
+    {
+      "table": "auth_group",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "1ad88daf45990be226528ab8e3316a45a52dcfda6f374dd82b16c404ea01e15b"
+    },
+    {
+      "table": "auth_group_permissions",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "e7550af4e634684af2e5f1ab2be136a0f0d755555e90a5d4f5461ae7e45ab3ad"
+    },
+    {
+      "table": "auth_permission",
+      "count_before": 112,
+      "count_after": 112,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "242be09bdaac0b0627e7b61a8bfdd40059c840a2c1e7d2afef05920314e8c0c6"
+    },
+    {
+      "table": "auth_user",
+      "count_before": 15,
+      "count_after": 15,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "463ea28417c642c4f1b8c7db251460f641423f3b537c4a670ea4049538eddbcb"
+    },
+    {
+      "table": "auth_user_groups",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "4198c9df32452f1719d73cf5d31de5f2b9c0624ab0e03c456776266bb05b3111"
+    },
+    {
+      "table": "auth_user_user_permissions",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "da17f955a40e89bfc5bbd06b574b47e93ae64be27a3c86388d9d2ba605c6bbc2"
+    },
+    {
+      "table": "core_demofixtureownership",
+      "count_before": 188,
+      "count_after": 272,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "846be6dda9c1d657e9474f18c8e83c3481c1d553f4df6ed839994ed907ff8c1a"
+    },
+    {
+      "table": "django_admin_log",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "43b339f1add10fa7d6ca28e28fa753be3aff86e71e8a5e1c246bfc06a124eace"
+    },
+    {
+      "table": "django_content_type",
+      "count_before": 28,
+      "count_after": 28,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "b0bb0609dc4ab9e8c632649d4e56b7c82b836bf6b7b8c67ace83d7a7b2ce8246"
+    },
+    {
+      "table": "django_migrations",
+      "count_before": 39,
+      "count_after": 39,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "c1f18d78209b9d20c534cc9f15d5ab8a516c4d40577d97b89f5d1e879e744192"
+    },
+    {
+      "table": "django_session",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "5cd3cd46350b992b0cec6e5d97cdffa131b944541d459f8274e2236a752e15b5"
+    },
+    {
+      "table": "expedientes_calendario_version",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "92d30886ebd89b97096ea90d31aeefe4e1db129449e611d344518e95ac473f33"
+    },
+    {
+      "table": "expedientes_cambio_estado",
+      "count_before": 8,
+      "count_after": 55,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "b0eca92df02053b18ef57b8609995ee718cd7631838015956de9876138e1647e"
+    },
+    {
+      "table": "expedientes_descargo",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "03af3396f67bd1ffec0464bf650ce1cdde43150a86752dfc39f44bd10b7e254a"
+    },
+    {
+      "table": "expedientes_expediente",
+      "count_before": 6,
+      "count_after": 16,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "b4d47879cf06e443383df0fc056c419c6f0798766e8763cb0d497717a431e1ee"
+    },
+    {
+      "table": "expedientes_expediente_socios",
+      "count_before": 8,
+      "count_after": 19,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "4fc9f69b8d13eb12d92d83073b8d827d4395a2e4b0927dbb159b59a72e03a8c5"
+    },
+    {
+      "table": "expedientes_feriado_excepcion",
+      "count_before": 16,
+      "count_after": 16,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "b9fbee62f4304ae6f97e5d4d134f3ae182608d09e3ce06aa66ec9bc76d27a84a"
+    },
+    {
+      "table": "expedientes_institutional_holiday",
+      "count_before": 16,
+      "count_after": 16,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "60ac4c08b84698c23b2924d6549248966a44d0caad08d99839c77fdc5bd30bbd"
+    },
+    {
+      "table": "expedientes_numero_secuencia",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": false,
+      "number_sequence_exception": true,
+      "schema_sha256": "951b877eba79966abf0825c74e1909e6b8ea74a4851cdb892d657201351c06c1"
+    },
+    {
+      "table": "expedientes_solicitudt01",
+      "count_before": 5,
+      "count_after": 5,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "9fe0b0ead78640d14165df87e622fe45b2605891fdd5a8c72f919f2cd33f48d5"
+    },
+    {
+      "table": "grupo_lista",
+      "count_before": 6,
+      "count_after": 6,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "da4a84a7e7ea4f0eac09a9bf30d4f511abec9e2752d634be048378c78cd5feb1"
+    },
+    {
+      "table": "notifications_email_attachment",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "dd1e819435b2b5218d92f50d1c8d30c494512501f7285da2348048987d1dd8d1"
+    },
+    {
+      "table": "notifications_email_outbox",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "e91e78d53b5a1606238bfb1fe40f4d14577e5c6112f5e78a65948524eba0c3ad"
+    },
+    {
+      "table": "socio_email",
+      "count_before": 20,
+      "count_after": 20,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "ad376a1a8a919c8d80efa19d30b0a02f14282eb76b10fbf04eee00e367f02d26"
+    },
+    {
+      "table": "socio_especialidad",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "a2e7968f727e71591569d59efd460da268772586bb374fcd218fe4ca81f32afc"
+    },
+    {
+      "table": "socio_estado",
+      "count_before": 2,
+      "count_after": 2,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "8d04464266952cae67f410e68dd8208290328e09f756eb6617b75aa6ed4107a4"
+    },
+    {
+      "table": "socio_estadoHistorial",
+      "count_before": 20,
+      "count_after": 20,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "a6de34de01d0f4c0548406225da4b20a42f22dcceff79a9cbd404abbb1205bd4"
+    },
+    {
+      "table": "socio_estadocivil",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "dbf9aa97d6cfc5daac342e63ed3bb4a25b1410814995b7620b2561578f4709f9"
+    },
+    {
+      "table": "socio_estudio",
+      "count_before": 20,
+      "count_after": 20,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "d916a7e21a4d6b33c44b9346fe027441aa59f68bf506d6b0ce203c1cd5567494"
+    },
+    {
+      "table": "socio_lista",
+      "count_before": 20,
+      "count_after": 20,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "9395b7de7f1361c8792177410c59df9e2120a2a748bbdc130d2ffdf8a1e51d85"
+    },
+    {
+      "table": "socio_motivoCambioEstado",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "e9e56fb251c07c2ac523c17e269fcf8a08f144fc6ce95f961a65c449c5b4a61d"
+    },
+    {
+      "table": "socio_sexo",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "12fc119a637b299b1ca6c5533d96c09b240620f6c37dbad7d441688f685ceae8"
+    },
+    {
+      "table": "socio_tipoEstudioTurno",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "8a103673f54989fc3c3743346fbb84ba11795b4819bc061bb6884a9d87e441fa"
+    },
+    {
+      "table": "socio_tipoSocio",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "d9e47eae57a9895aacdfb9e2263328ef55555e38eacbd5d915917a20cf7d1da7"
+    },
+    {
+      "table": "socio_tipodocumento",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "8207d8457c429f394debc6662c5322af08a4743f2fe0eeb9dd1aeb9e7e16eb70"
+    },
+    {
+      "table": "socio_tiposubcomision",
+      "count_before": 4,
+      "count_after": 4,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "0b2c07c732c2d30704e3fa2fee170c475dbe63c30b627abe547393ebe1a6deb3"
+    },
+    {
+      "table": "socios_institutionalmembershipcondition",
+      "count_before": 4,
+      "count_after": 4,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "eebc36ebcbb6885d5c4d3ce90d119f01a111ae6d263c5f08d2cd028ded2166f5"
+    },
+    {
+      "table": "socios_socio",
+      "count_before": 15,
+      "count_after": 15,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "dcc9a31d4b120520080f295f4e0555e766cbcbc41be0fd92922152b1a3a0673f"
+    },
+    {
+      "table": "socios_subcomision",
+      "count_before": 3,
+      "count_after": 3,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "f09584088f256392c2445822a7f67987dcb8473d6841205e4d2315bd745ec3bc"
+    },
+    {
+      "table": "tribunal_afectados",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "bc1e726928eadd0beafc208b200c60351b1955bdcb9457182b26a5c1e109d719"
+    },
+    {
+      "table": "tribunal_datosresolucion",
+      "count_before": 7,
+      "count_after": 11,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "0d49687ccb99ea25797714cd62b7fcc82417cee63f3bef675a5a731c58261085"
+    },
+    {
+      "table": "tribunal_estadoevento",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "212d443e190a5d6f55f6068925a4206473877cc65d200f83fb5abc7190dc7aca"
+    },
+    {
+      "table": "tribunal_estadoexpediente",
+      "count_before": 1,
+      "count_after": 1,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "b14a93f02e4efe70fd9df2f866f40aa890c87795a483d2b6e9b7be52c0b3ad01"
+    },
+    {
+      "table": "tribunal_evento",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "ce531e0e814626f69eda0f84f451bce0bd12fd94fde82268e52e7701830ea732"
+    },
+    {
+      "table": "tribunal_expediente",
+      "count_before": 7,
+      "count_after": 11,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "493ded07cb285b783bdfcf2cd32cd12babd5f6e89f02d514aef15f26d893bc15"
+    },
+    {
+      "table": "tribunal_puntajeaplicado",
+      "count_before": 8,
+      "count_after": 12,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "53b778aa3ac9e20348bf137bfd0675038fd193093fb1d992475eb6879c3a5887"
+    },
+    {
+      "table": "tribunal_puntajegeneral",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "297744e41035c479201194fc9be42128aa2852e581fe4e0db1fd582f81037423"
+    },
+    {
+      "table": "tribunal_sancionpersonalizadaeventos",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "34ddc75e6e03dd8e3f9d42792b42010748765a758bc2302d0a45f4f915ea5d4c"
+    },
+    {
+      "table": "tribunal_solicitud",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "9837abead58b8b05e36cfc0f493ac6823a788baea5d771e6bb77aaa4d01be32d"
+    },
+    {
+      "table": "tribunal_tipoevento",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "2a26dd342a9a25a4ee1860dded05aa32fd61495dc6086639eb5b978b84da511b"
+    },
+    {
+      "table": "tribunal_tiposancion",
+      "count_before": 0,
+      "count_after": 0,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "e60c8381484e97ae6cca880e806319e9d1915067b54245600810ee92f25b1b73"
+    },
+    {
+      "table": "tribunal_valorsancion",
+      "count_before": 7,
+      "count_after": 11,
+      "previous_rows_preserved": true,
+      "number_sequence_exception": false,
+      "schema_sha256": "190f6a99b4f3344926da292c00c70b1c9363932ba193b17ed8f34a2dafd5407f"
+    }
+  ]
+}

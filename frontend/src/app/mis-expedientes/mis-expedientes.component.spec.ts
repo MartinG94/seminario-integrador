@@ -1,9 +1,17 @@
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
+import { HttpClientTestingModule, HttpTestingController, TestRequest } from '@angular/common/http/testing';
+import { async, ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MisExpedientesComponent } from './mis-expedientes.component';
 import { NotificationService } from '../services/notification.service';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
+import { AuthService, PerfilSocio } from '../services/auth.service';
+import { BehaviorSubject } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { AppliedResolutionDialogComponent } from './applied-resolution-dialog/applied-resolution-dialog.component';
+import { AppliedPointsHistoryComponent } from './applied-points-history/applied-points-history.component';
 
 describe('MisExpedientesComponent', () => {
   let component: MisExpedientesComponent;
@@ -13,8 +21,8 @@ describe('MisExpedientesComponent', () => {
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule],
-      declarations: [MisExpedientesComponent],
+      imports: [HttpClientTestingModule, FormsModule, MatDialogModule, NoopAnimationsModule],
+      declarations: [MisExpedientesComponent, AppliedPointsHistoryComponent, AppliedResolutionDialogComponent],
       providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
     }).compileComponents();
   }));
@@ -27,6 +35,23 @@ describe('MisExpedientesComponent', () => {
 
   it('debe crearse correctamente', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('conserva las etiquetas de revisión, firma y envío sin deducir el estado desde descargos (TS77.56)', () => {
+    expect(component.getEstadoLabel('revision_resolucion')).toBe('En Revisión');
+    expect(component.getEstadoLabel('espera_resolucion')).toBe('Pendiente de Firma');
+    expect(component.getEstadoLabel('pendiente_correos')).toBe('Pendiente de Envío');
+    expect(component.getEstadoBadgeClass('espera_resolucion')).toBe('badge-mat-primary');
+    expect(component.getEstadoBadgeClass('pendiente_correos')).toBe('badge-mat-rose');
+  });
+
+  it('un plazo vencido no cambia la etiqueta de un expediente que sigue justificando en servidor (TS77.56)', () => {
+    const pending: Expediente = {
+      id: 'pending', numero: 'EXP-2026-123', tipo: 'falta', socio: 'Socio', legajo: '123',
+      subcomision: 'Cómputos', motivo: 'Causa', fechaCreacion: '2026-01-01',
+      estado: 'justificando', horasRestantes: 0, puntos: -1, plazoLimiteAt: '2026-01-10T12:00:00Z'
+    };
+    expect(component.getEstadoLabel('justificando', pending)).toBe('Justificando · Plazo vencido');
   });
 
   it('notifica validaciones de T02/T03 sin enviar un descargo inválido', () => {
@@ -352,5 +377,318 @@ describe('MisExpedientesComponent', () => {
       expect(document.body.classList.contains('modal-open')).toBeFalse();
       expect(document.body.style.overflow).toBe('');
     });
+  });
+});
+
+describe('MisExpedientesComponent — saldo propio confirmado (TS77.49)', () => {
+  const balanceUrl = `${environment.apiUrl}/socios/me/points-history/`;
+  function historyResponse(points: number) {
+    return {
+      points_balance: points,
+      entries: points === 0 ? [] : [{
+        movement_id: 17, applied_points: points,
+        historical_case: { id: 101, number: 'HIST-101', recorded_at: null, state: 'emitido' as const },
+        resolution: { id: 201, text: 'RESOLUCIÓN 201\nVISTO\nCONSIDERANDO\nSE RESUELVE', regulations: ['Art. 93'] },
+        managed_case: null
+      }]
+    };
+  }
+  const profile: PerfilSocio = {
+    legajo: '99077001', first_name: 'Ámbar', last_name: 'Faro Demo',
+    email: 'demo@aveit.test', role: 'SOCIO', category: 'EX_TRAVELER',
+    category_display: 'Exviajero', subcomision: 'Cómputos'
+  };
+  let fixture: ComponentFixture<MisExpedientesComponent>;
+  let component: MisExpedientesComponent;
+  let profiles: BehaviorSubject<PerfilSocio | null>;
+  let cases: BehaviorSubject<Expediente[]>;
+  let mockBalances: BehaviorSubject<readonly { nombre: string; saldo: number }[]>;
+  let http: HttpTestingController;
+  let notifications: jasmine.SpyObj<NotificationService>;
+
+  beforeEach(async(() => {
+    profiles = new BehaviorSubject<PerfilSocio | null>(null);
+    cases = new BehaviorSubject<Expediente[]>([]);
+    mockBalances = new BehaviorSubject([{ nombre: 'Ámbar Faro Demo', saldo: 99 }]);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    TestBed.configureTestingModule({
+      imports: [CommonModule, HttpClientTestingModule, FormsModule, MatDialogModule, NoopAnimationsModule],
+      declarations: [MisExpedientesComponent, AppliedPointsHistoryComponent, AppliedResolutionDialogComponent],
+      providers: [
+        { provide: AuthService, useValue: { perfil$: profiles.asObservable(), getPerfil: () => profiles.value } },
+        { provide: TribunalDataService, useValue: { socios$: mockBalances.asObservable(), expedientes$: cases.asObservable() } },
+        { provide: NotificationService, useValue: notifications }
+      ]
+    }).compileComponents();
+  }));
+
+  beforeEach(() => {
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(MisExpedientesComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    http.verify();
+  });
+
+  function currentRequest(): TestRequest {
+    return http.expectOne(balanceUrl);
+  }
+
+  function balanceWidget(): HTMLElement {
+    return fixture.nativeElement.querySelector('[data-testid="points-balance"]') as HTMLElement;
+  }
+
+  it('saldo y resolución histórica provienen de una sola consulta sin crear una causa operativa (TS77.58)', () => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(2));
+    fixture.detectChanges();
+    const table: HTMLElement = fixture.nativeElement.querySelector('[data-testid="applied-resolutions"]');
+    expect(table.textContent).toContain('HIST-101');
+    expect(table.textContent).toContain('Emitida');
+    expect(table.textContent.replace(/\s+/g, ' ')).toContain('+2 pts');
+    expect(component.misExpedientes.length).toBe(0);
+    expect(component.saldoNeto).toBe(2);
+    http.expectNone(`${environment.apiUrl}/socios/me/points-balance/`);
+  });
+
+  it('saldo cero compensado mantiene ambas resoluciones +3/-3 visibles (TS77.58)', () => {
+    const positive = historyResponse(3).entries[0];
+    const negative = { ...historyResponse(-3).entries[0], movement_id: 18,
+      resolution: { id: 202, text: 'Resolución sancionatoria', regulations: ['Art. 93'] } };
+    profiles.next(profile);
+    currentRequest().flush({ points_balance: 0, entries: [positive, negative] });
+    fixture.detectChanges();
+    const rows = fixture.nativeElement.querySelectorAll('[data-testid="applied-resolutions"] tbody tr');
+    expect(rows.length).toBe(2);
+    expect(fixture.nativeElement.textContent).not.toContain('No hay movimientos');
+    expect(component.saldoNeto).toBe(0);
+  });
+
+  it('un cero confirmado sin movimientos muestra el estado vacío explícito (TS77.58)', () => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(0));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No hay movimientos de puntos aplicados.');
+    expect(fixture.nativeElement.querySelector('[data-testid="applied-resolutions"]')).toBeNull();
+  });
+
+  it('muestra la causa operativa sólo cuando llega el vínculo acreditado (TS77.58)', () => {
+    const response = historyResponse(2);
+    const entry = { ...response.entries[0], managed_case: { id: 801, number: 'EXP-0012/2026', state: 'emitido' as const } };
+    profiles.next(profile);
+    currentRequest().flush({ points_balance: 2, entries: [entry] });
+    fixture.detectChanges();
+    const table: HTMLElement = fixture.nativeElement.querySelector('[data-testid="applied-resolutions"]');
+    expect(table.textContent).toContain('EXP-0012/2026');
+    expect(table.textContent).toContain('HIST-101');
+  });
+
+  it('al cambiar de sesión retira inmediatamente las resoluciones anteriores (TS77.58)', () => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(2));
+    fixture.detectChanges();
+    profiles.next({ ...profile, first_name: 'Otra persona' });
+    const request = currentRequest();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('HIST-101');
+    expect(fixture.nativeElement.textContent).not.toContain('Resolución #201');
+    request.flush(historyResponse(0));
+  });
+
+  it('abre el texto formal completo en un diálogo accesible, enfoca Cerrar y restaura el foco con Escape (TS77.58)', fakeAsync(() => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(2));
+    fixture.detectChanges();
+    const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="open-applied-resolution"]');
+    trigger.focus();
+    trigger.click();
+    fixture.detectChanges();
+    tick();
+    const dialog: HTMLElement = document.querySelector('[role="dialog"]');
+    expect(dialog.getAttribute('aria-labelledby')).toBe('applied-resolution-title');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.textContent).toContain('VISTO');
+    expect(dialog.textContent).toContain('CONSIDERANDO');
+    expect(dialog.textContent).toContain('SE RESUELVE');
+    expect(dialog.textContent).toContain('Art. 93');
+    expect((document.activeElement as HTMLElement).classList.contains('resolution-close')).toBeTrue();
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+    tick();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    fixture.destroy();
+    flush();
+  }));
+
+  it('cambiar sesión cierra el detalle y borra todo texto de la resolución anterior (TS77.58)', fakeAsync(() => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(2));
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('[data-testid="open-applied-resolution"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    tick();
+    profiles.next({ ...profile, first_name: 'Otra persona' });
+    const request = currentRequest();
+    fixture.detectChanges();
+    tick();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.textContent).not.toContain('RESOLUCIÓN 201');
+    request.flush(historyResponse(0));
+    fixture.destroy();
+    flush();
+  }));
+
+  it('sin perfil no consulta ni inventa un saldo cero', () => {
+    http.expectNone(balanceUrl);
+    expect(component.saldoNeto).toBeNull();
+    expect(balanceWidget().textContent).toContain('Iniciá sesión');
+    expect(balanceWidget().textContent).not.toMatch(/\b0\s*pts\b/);
+  });
+
+  it('muestra carga mientras el servidor confirma el saldo', () => {
+    profiles.next(profile);
+    const request = currentRequest();
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBeNull();
+    expect(balanceWidget().textContent).toContain('Cargando');
+    expect(balanceWidget().getAttribute('aria-busy')).toBe('true');
+    request.flush(historyResponse(2));
+  });
+
+  it('muestra +2 del servidor aunque el mock tenga 99 y las causas pendientes sumen -6', () => {
+    cases.next([-1, -3, -2].map((points, index): Expediente => ({
+      id: String(index), numero: `EXP-${index}/2026`, socio: 'Ámbar Faro Demo',
+      legajo: '99077001', motivo: 'Causa pendiente', subcomision: 'Cómputos',
+      puntos: points, tipo: 'falta', estado: 'creado', fechaCreacion: '2026-10-12', horasRestantes: 0
+    })));
+    profiles.next(profile);
+    const request = currentRequest();
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush(historyResponse(2));
+    mockBalances.next([{ nombre: 'Ámbar Faro Demo', saldo: -99 }]);
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBe(2);
+    expect(component.misExpedientes.reduce((sum, item) => sum + item.puntos, 0)).toBe(-6);
+    expect(balanceWidget().textContent.replace(/\s+/g, ' ')).toContain('+2 pts');
+    expect(balanceWidget().getAttribute('aria-busy')).toBe('false');
+    expect(balanceWidget().classList.contains('puntos-verde')).toBeTrue();
+  });
+
+  [-10, 0].forEach(points => {
+    it(`presenta el saldo ${points} sólo después de confirmarlo en servidor`, () => {
+      profiles.next(profile);
+      currentRequest().flush(historyResponse(points));
+      fixture.detectChanges();
+      expect(component.saldoNeto).toBe(points);
+      expect(balanceWidget().textContent.replace(/\s+/g, ' ')).toContain(`${points} pts`);
+      expect(balanceWidget().textContent).not.toContain('No disponible');
+    });
+  });
+
+  [0, 403, 404, 503].forEach(status => {
+    it(`distingue el error HTTP ${status} de cero y usa la notificación central`, () => {
+      profiles.next(profile);
+      const request = currentRequest();
+      if (status === 0) {
+        request.error(new ProgressEvent('error'));
+      } else {
+        request.flush({ detail: 'No divulgar detalles internos.' }, { status, statusText: 'Error' });
+      }
+      fixture.detectChanges();
+      expect(component.saldoNeto).toBeNull();
+      expect(balanceWidget().textContent).toContain('No disponible');
+      expect(balanceWidget().textContent).not.toMatch(/\b0\s*pts\b/);
+      expect(notifications.error).toHaveBeenCalledWith('No se pudieron consultar tus puntos y resoluciones. Volvé a intentarlo más tarde.');
+    });
+  });
+
+  const invalidResponses: readonly unknown[] = [
+    {}, null, { points_balance: null }, { points_balance: '2' },
+    { points_balance: Number.NaN }, { points_balance: Number.POSITIVE_INFINITY }
+  ];
+  invalidResponses.forEach((response, index) => {
+    it(`una respuesta HTTP 200 malformada ${index} no confirma el saldo (TS77.51)`, () => {
+      profiles.next(profile);
+      currentRequest().flush(response);
+      fixture.detectChanges();
+      expect(component.saldoNeto).toBeNull();
+      expect(balanceWidget().textContent).toContain('No disponible');
+      expect(balanceWidget().textContent).not.toMatch(/\b0\s*pts\b/);
+      expect(notifications.error).toHaveBeenCalledOnceWith('No se pudieron consultar tus puntos y resoluciones. Volvé a intentarlo más tarde.');
+    });
+  });
+
+  it('cancela la lectura anterior cuando cambia la sesión y no admite su respuesta tardía', () => {
+    profiles.next(profile);
+    const previous = currentRequest();
+    profiles.next({ ...profile, legajo: '99077009', first_name: 'Irina', last_name: 'Isla Demo' });
+    const current = currentRequest();
+    expect(previous.cancelled).toBeTrue();
+    expect(() => previous.flush(historyResponse(2))).toThrowError(/cancelled/);
+    expect(component.saldoNeto).toBeNull();
+    current.flush(historyResponse(-2));
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBe(-2);
+    expect(balanceWidget().textContent.replace(/\s+/g, ' ')).toContain('-2 pts');
+    expect(notifications.error).not.toHaveBeenCalled();
+  });
+
+  it('limpia el saldo confirmado antes de leer el de una nueva sesión', () => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(2));
+    profiles.next({ ...profile, first_name: 'Otra persona' });
+    const request = currentRequest();
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBeNull();
+    expect(balanceWidget().textContent).toContain('Cargando');
+    expect(balanceWidget().textContent).not.toContain('+2');
+    request.flush(historyResponse(0));
+  });
+
+  it('al salir cancela la lectura y mantiene el saldo sin confirmar', () => {
+    profiles.next(profile);
+    const request = currentRequest();
+    profiles.next(null);
+    fixture.detectChanges();
+    expect(request.cancelled).toBeTrue();
+    expect(component.saldoNeto).toBeNull();
+    expect(balanceWidget().textContent).toContain('Iniciá sesión');
+    http.expectNone(balanceUrl);
+    expect(notifications.error).not.toHaveBeenCalled();
+  });
+
+  it('al salir borra también un saldo ya confirmado', () => {
+    profiles.next(profile);
+    currentRequest().flush(historyResponse(2));
+    profiles.next(null);
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBeNull();
+    expect(balanceWidget().textContent).not.toContain('+2');
+  });
+
+  it('la destrucción cancela HTTP y descarta cambios posteriores de perfil', () => {
+    profiles.next(profile);
+    const request = currentRequest();
+    fixture.destroy();
+    expect(request.cancelled).toBeTrue();
+    profiles.next({ ...profile, first_name: 'Otra persona' });
+    http.expectNone(balanceUrl);
+    expect(notifications.error).not.toHaveBeenCalled();
+  });
+
+  it('una falla no termina la escucha de una sesión posterior', () => {
+    profiles.next(profile);
+    currentRequest().flush({}, { status: 503, statusText: 'Unavailable' });
+    profiles.next({ ...profile, last_name: "D'Angelo" });
+    const request = currentRequest();
+    request.flush(historyResponse(1));
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBe(1);
+    expect(balanceWidget().textContent.replace(/\s+/g, ' ')).toContain('+1 pts');
   });
 });

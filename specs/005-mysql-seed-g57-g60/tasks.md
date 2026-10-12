@@ -474,3 +474,44 @@ Regresión backend completa: 1056 verdes, ocho controles Compose omitidos por mo
 
 
 UAT de la ampliación aprobada por el usuario el 12/10/2026. El usuario autorizó publicar esta rama y abrir la PR hacia main, sin mergearla.
+
+## Corrección de CI — PR #54
+
+El usuario autorizó revisar y corregir cualquier fallo de CI el 12/10/2026, manteniendo la PR abierta sin merge. El run 38314352466 pasó Ruff/formato y frontend (278 tests/build), pero pytest terminó con 934 verdes/130 errores MySQL 1044: el usuario CI no tenía permisos para las bases UUID test_scrum77_bootstrap_* y test_scrum77_ddl_*.
+
+- [x] **TS77.47 Corregir permisos de los schemas CI (25 min):** Grants acotados y guiones bajos literales para las dos familias de scratch; usuario de prueba/checks conservados. Reproducción/auditoría aprobadas y fe468b8 publicado. Los runs PR 38316123126 y push 38316117765 aprobaron cada uno 1064 backend/278 frontend, Ruff/formato y build, sin errores ni merge. [Evidencia](../../docs/gestion-proyecto/VERIFICACION_CI_PR54.md).
+
+## Corrección de saldo en Mis Expedientes — PR #54
+
+El usuario autorizó el 12/10/2026 resolver la diferencia de saldo con ranking. RF77-15/CA77-10 formalizan la lectura propia desde el libro mayor; el listado y los descargos conservan su alcance.
+
+- [x] **TS77.48 Leer saldo propio desde el libro mayor (25 min):** GET autenticado de saldo, identidad institucional inequívoca, permisos y errores; TDD de fuentes, individualización y consulta sin escrituras.
+- [x] **TS77.49 Conectar widget de Mis Expedientes (25 min):** Contrato tipado y lectura cancelable por sesión; estados de carga/error y saldo real; TDD DOM y carreras, sin sumar puntos pendientes.
+- [ ] **TS77.50 Verificar corrección integrada (25 min):** HTTP/SQL y navegador sobre demo, regresiones/build, auditoría independiente, documentación y publicación en PR #54; verificar los checks del último commit sin merge.
+- [x] **TS77.51 Unificar saldos de las fichas (25 min):** Lector compartido para identidad local/institucional; saldo desconocido explícito y errores de base; modal con dato actual sin snapshot anterior y contratos válidos. TDD y auditoría, sin escrituras de puntos.
+
+## Escenas de todos los estados — PR #54
+
+El usuario autorizó agregar diez causas adicionales el 12/10/2026; RF77-16/CA77-11 incorporan escenas históricas sintéticas y sus respaldos, conservando las causas previas.
+
+- [x] **TS77.52 Definir catálogo de estados avanzados (25 min):** Diez escenas 3/1/2/4, referencias, fechas pasadas, destinatarios y puntos individualizados; TDD de validación.
+- [x] **TS77.53 Importar escenas históricas coherentes (25 min):** Inserciones nuevas con numeración, plazo, secuencia de estados, actor/motivo y propiedad, sin alterar escenas previas ni relojes globales; TDD MySQL.
+- [x] **TS77.54 Respaldar emitidos y upgrade aditivo (25 min):** Cuatro resoluciones/expedientes/asientos, relaciones verificables y saldo esperado; TDD de conservación/repetición/colisión/rollback.
+- [ ] **TS77.55 Verificar demo ampliada (25 min):** Carga/repetición sobre demo con UAT, HTTP/SQL de seis estados y saldos, navegador, suites, auditoría y CI de PR #54, sin merge.
+- [x] **TS77.56 Preservar los seis estados en la SPA (25 min):** Corregir la conversión que agrupa firma en revisión y envío en firma; TDD de contrato y distribución de las seis columnas, tabla/detalle coherentes, sin modificar estados persistidos.
+
+## Resoluciones que respaldan el saldo — PR #54
+
+El usuario solicitó hacer visible el respaldo emitido de todos los puntos, incluidos los históricos de 99077001. RF77-17/CA77-12 incorporan la lectura de asientos y actos existentes en Mis Expedientes y fichas locales/institucionales bajo sus permisos vigentes.
+
+- [x] **TS77.57 Exponer historial propio respaldado (25 min):** Identidad/permisos, lectura consistente de asientos/expedientes/resoluciones y enlaces managed acreditados; TDD de atribución, errores y consulta sin escrituras.
+- [x] **TS77.58 Mostrar resoluciones aplicadas (25 min):** Widget/historial del mismo DTO y tabla/modal accesibles; contratos, sesiones y estados de cero/desconocido/error, TDD frontend.
+- [ ] **TS77.59 Verificar trazabilidad visible (25 min):** Todos los asientos por cuenta comparados con SQL/ranking/fichas, navegador, regresiones/cobertura, auditoría y CI final; conservar cantidades/datos previos y PR sin merge.
+
+### Verificación local de TS77.48–59
+
+Código y pruebas finalizados: 1155 backend MySQL verdes sin errores ni omisiones (591,78 s), cobertura 94,17% en 25 módulos; 362 frontend verdes y build c8e0ecb245aa8807 correcto (11830 ms). Ruff global/formato de 169 archivos, Django check y ausencia de migraciones nuevas aprobados. La suite MySQL usó el usuario CI restringido; los ocho controles Compose se incluyeron mediante configuraciones reales saneadas y hashes fuente.
+
+Carga aditiva/repetición conservó las 52 tablas y las altas de UAT. Dieciséis causas efectivas: 4/2/3/1/2/4 en los seis estados, quince fixtures; once respaldos y doce asientos, agregado +1. HTTP final: 197 controles sobre veinte historiales, nueve cuentas propias y cinco referencias locales sin identidad, con SQL/ranking/fichas y huellas sin escrituras. Navegador confirmó saldos/resoluciones propios, ficha autorizada sin cuenta operativa, seis etapas y modal/Escape/foco a 360 px. Auditoría de código aprobada sin hallazgos abiertos y PO contrastado, sin modificar las notas ni el seguimiento macro.
+
+[Evidencia local](../../docs/gestion-proyecto/VERIFICACION_CORRECCIONES_PR54.md). TS77.50/55/59 permanecen pendientes exclusivamente del cierre integrado con CI del commit publicado; no se afirma todavía su aprobación remota.

@@ -1,0 +1,33 @@
+.resolution-dialog {
+  background: var(--color-surface-card);
+  color: var(--color-text-primary);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.resolution-content {
+  color: var(--color-text-primary);
+}
+
+.resolution-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  > div { flex: 1 1 14rem; }
+  dt { color: var(--color-text-secondary); }
+  dd { margin: 0; }
+}
+
+.resolution-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+h2, h3 { color: var(--color-text-primary); }
+
+.resolution-close:focus-visible {
+  outline: 3px solid var(--color-border-focus);
+  outline-offset: 3px;
+}

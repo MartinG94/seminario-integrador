@@ -128,7 +128,7 @@ if ($LASTEXITCODE -ne 0) {
 
 El registro resuelve por propiedad y PK efectiva, conservando credenciales, ediciones válidas, números, vínculos y auditoría. No adopta una fila ajena por coincidir en sus datos visibles; tampoco recrea una referencia registrada que perdió su destino. Los asientos mantienen su socio, respaldo y puntos individuales inmutables. Repetir no debe avanzar el contador formal ni insertar movimientos adicionales.
 
-El conjunto ampliado esperado comprende 20 fichas institucionales, diez cuentas del catálogo y las cinco referencias de `seed_demo`; los fixtures conservan tres causas en Creado, dos en Justificaciones y cuatro T01, dos por solicitante. Ocho asientos individuales vinculan siete expedientes/resoluciones históricos y suman **+1**. Las altas manuales durante UAT se conservan y pueden aumentar los totales de causas/T01, sin alterar esos fixtures. Los puntos solicitados de causas pendientes no forman el saldo. Los saldos por persona están en el catálogo; una resolución compartida atribuye +2 y +1 a destinatarios distintos, sin duplicar su total.
+El conjunto ampliado esperado comprende 20 fichas institucionales, diez cuentas del catálogo y las cinco referencias de `seed_demo`; los fixtures conservan tres causas en Creado, dos en Justificaciones y cuatro T01, dos por solicitante. RF77-16 agrega tres En revisión, una Pendiente de firma, dos Pendientes de envío y cuatro Emitidos: quince causas fixtures y doce asientos vinculados a once expedientes/resoluciones históricos, con suma **+1**. Las altas manuales durante UAT se conservan y pueden aumentar los totales de causas/T01. Los puntos solicitados de causas pendientes no forman el saldo. Los cuatro Juniors reciben +2/-1/-2/+1 por sus nuevos actos sintéticos, conservando los ocho asientos anteriores; una resolución original compartida atribuye +2 y +1 a destinatarios distintos, sin duplicar su total.
 
 ## Conservar datos al recrear MySQL
 
@@ -167,9 +167,9 @@ No imprimir secretos ni el contenido de excepciones SQL en el informe. Registrar
 
 ## Límites del recorrido
 
-DEP77-01 conserva las brechas fuera de alcance: columna visible de grupo, ampliación del historial de legajo, conexión de Mis Expedientes a su API, ordenamiento compuesto y simulaciones de firma/votación. El grupo se comprueba en catálogo, historial y manifiesto. Un detalle sin historial ampliado no acredita una funcionalidad nueva.
+DEP77-01 conserva las brechas fuera de alcance: columna visible de grupo, historial general de legajo más allá de los puntos aplicados, conexión completa del listado/descargos de Mis Expedientes, ordenamiento compuesto y simulaciones de firma/votación. RF77-15 incorpora el saldo propio y coherencia de las fichas; RF77-17 permite consultar sus asientos/resoluciones bajo los permisos existentes. El grupo se comprueba en catálogo, historial y manifiesto.
 
-Las escenas managed sólo pueblan Creado y Justificaciones con fechas actuales y plazo hábil vigente; se conservan los seis estados canónicos. Los antecedentes legados contienen textos resolutivos sintéticos y referencias individuales, sin simular firmas válidas ni otorgar facultades. No se implementa el motor 3:1 mediante movimientos fraccionarios.
+Las cinco escenas managed originales conservan Creado y Justificaciones con fechas actuales y plazo hábil vigente. RF77-16 importa diez historias nuevas temporalmente coherentes hasta las cuatro etapas restantes, con auditoría y respaldos sintéticos. No modifica fechas ni estados previos, ni acredita firmas productivas o facultades nuevas. Los antecedentes contienen textos resolutivos y referencias individuales; no se implementa el motor 3:1 mediante movimientos fraccionarios.
 
 El lint frontend permanece clasificado como limitación heredada por el builder `@angular-devkit/build-angular:tslint` ausente. La evidencia de pruebas y build debe registrarse por separado; no presentar ese lint como aprobado ni ampliar dependencias para ocultarlo.
 

@@ -2,6 +2,7 @@
 
 import importlib
 from collections import Counter
+from dataclasses import replace
 from decimal import Decimal
 from typing import Any
 
@@ -51,7 +52,9 @@ def load_scenes(scenes: Any, registry: Any, members: Any) -> Any:
     fixtures = importlib.import_module("core.demo_fixtures")
     with fixtures.demo_fixture_lock(registry.connection):
         with transaction.atomic():
-            return scenes.load_demo_scenes(CATALOG, registry, members)
+            # Estos oráculos conservan el contrato de la carga inicial aprobada;
+            # la ampliación 3/1/2/4 se verifica en test_scrum77_advanced_states.
+            return scenes.load_demo_scenes(replace(CATALOG, advanced_causes=()), registry, members)
 
 
 def test_three_created_and_two_issued_causes_use_server_numbers_and_individual_links(

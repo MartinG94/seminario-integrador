@@ -84,11 +84,15 @@
 
       <div class="data-item">
         <span class="data-label">Saldo de Puntos</span>
-        <span class="data-value font-weight-bold">
-          {{ saldoPuntos > 0 ? '+' : '' }}{{ saldoPuntos }} pts
+        <span class="data-value font-weight-bold" data-testid="legajo-points-balance">
+          <ng-container *ngIf="saldoPuntos !== null">{{ saldoPuntos > 0 ? '+' : '' }}{{ saldoPuntos }} pts</ng-container>
+          <span *ngIf="historyStatus === 'loading'">Cargando...</span>
+          <span *ngIf="historyStatus !== 'loading' && saldoPuntos === null">No disponible</span>
         </span>
       </div>
     </div>
+
+    <app-applied-points-history [entries]="appliedEntries" [status]="historyStatus"></app-applied-points-history>
 
     <!-- Sección de Información Procesal / Auditoría -->
     <div class="notice-box mt-3">

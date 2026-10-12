@@ -153,7 +153,7 @@ Oráculo posterior a TS77.15: ocho asientos individuales con siete respaldos res
 | member.g59.01 | +2, empate con G57.01 |
 | member.g59.02 | -4 |
 | member.g60.01 | +1, empate con G58.02 |
-| Otras trece fichas, incluidos los cuatro Juniors | 0, sin movimientos |
+| Otras trece fichas, incluidos los cuatro Juniors antes de RF77-16 | 0, sin movimientos iniciales |
 
 La suma del conjunto es +1. Los pedidos de las cinco causas actuales quedan separados y no integran ese saldo. No se fabrica PuntajeGeneral para ocultar historial vacío. No se usan movimientos fraccionarios para felicitaciones/llamados ni se implementa el motor 3:1; sus pruebas continúan en sus US propias.
 
@@ -173,3 +173,16 @@ Los ocho asientos y siete respaldos históricos concilian con los saldos de esta
 ## Ampliación Junior autorizada — TS77.45
 
 El usuario pidió incorporar Juniors después de aprobar la UAT original. Se conserva el perfil scrum77-g57-g60-v1 y el corte explícito, agregando G62 de 2.º año y G63 de 1.º año según la escala del corte de referencia. No se modifica el conjunto original ni se recalculan años desde el calendario. La carga ampliada quedó verificada y auditada en TS77.44–46: veinte fichas, quince cuentas/perfiles y 188 referencias; cuatro Junior con saldo cero, sin alterar las filas previas ni las altas de UAT. Primera/repetición mantienen el mismo manifiesto y las 52 tablas. [Evidencia ampliada](VERIFICACION_AMPLIACION_SCRUM-77.json).
+
+## Estados avanzados y saldos actuales — RF77-15/16
+
+El usuario autorizó añadir diez escenas históricas: tres En revisión, una Pendiente de firma, dos Pendientes de envío y cuatro Emitidos. El catálogo original de cinco causas/cuatro T01 se conserva; las diez causas nuevas tienen fechas pasadas, plazo vencido e historial canónico. Los cuatro emitidos añaden cuatro resoluciones/expedientes históricos y cuatro asientos individuales. El conjunto previsto tiene quince causas fixtures, doce asientos y once respaldos históricos, con saldo agregado +1. Las altas de UAT se mantienen además de los fixtures.
+
+| Cuenta Junior | Escena emitida | Saldo después del acto sintético |
+| --- | --- | ---: |
+| 99077017 — Quimey Quimera Demo | advanced.emitted.01 | +2 |
+| 99077018 — Rocío Rumbo Demo | advanced.emitted.02 | -1 |
+| 99077019 — Sol Sendero Demo | advanced.emitted.03 | -2 |
+| 99077020 — Tomás Trama Demo | advanced.emitted.04 | +1 |
+
+Estos cuatro movimientos son posteriores al alta inicial con cero; conservan los ocho asientos y saldos anteriores. Mis Expedientes y las fichas consultan el saldo aplicado del libro mayor, igual que ranking. PuntajeGeneral se conserva como caché de conciliación y los pedidos pendientes no se suman. Las cinco cuentas seed_demo carecen de vínculo institucional en este catálogo: muestran saldo desconocido, sin inventar un número ni otra identidad. La [verificación de PR #54](VERIFICACION_CORRECCIONES_PR54.md) registra carga, conservación y recorridos finales.

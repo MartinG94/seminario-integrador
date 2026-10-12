@@ -1,9 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { MatDialogModule } from '@angular/material/dialog';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
-import { SocioApiService, SocioLegajoDTO } from '../../services/socio-api.service';
+import { SocioApiService, SocioLegajoDTO, OwnPointsHistoryDTO } from '../../services/socio-api.service';
+import { AuthService } from '../../services/auth.service';
+import { AppliedPointsHistoryComponent } from '../../mis-expedientes/applied-points-history/applied-points-history.component';
+import { AppliedResolutionDialogComponent } from '../../mis-expedientes/applied-resolution-dialog/applied-resolution-dialog.component';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog.component';
 import { NotificationService } from '../../services/notification.service';
 
@@ -29,17 +34,28 @@ describe('SocioLegajoDialogComponent', () => {
     points_balance: 3.5
   };
 
+  const mockHistory: OwnPointsHistoryDTO = {
+    points_balance: 3.5, entries: [{
+      movement_id: 17, applied_points: 3.5,
+      historical_case: { id: 101, number: 'HIST-101', recorded_at: null, state: 'emitido' },
+      resolution: { id: 201, text: 'VISTO\nCONSIDERANDO\nSE RESUELVE', regulations: ['Art. 93'] },
+      managed_case: null
+    }]
+  };
+
   beforeEach(async () => {
-    socioApiServiceSpy = jasmine.createSpyObj('SocioApiService', ['getLegajo']);
+    socioApiServiceSpy = jasmine.createSpyObj('SocioApiService', ['getLegajo', 'getPointsHistory']);
     dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['close']);
     notifications = jasmine.createSpyObj('NotificationService', ['error']);
 
     socioApiServiceSpy.getLegajo.and.returnValue(of(mockLegajo));
+    socioApiServiceSpy.getPointsHistory.and.returnValue(of(mockHistory));
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule],
-      declarations: [SocioLegajoDialogComponent],
+      imports: [CommonModule, MatDialogModule, NoopAnimationsModule],
+      declarations: [SocioLegajoDialogComponent, AppliedPointsHistoryComponent, AppliedResolutionDialogComponent],
       providers: [
+        { provide: AuthService, useValue: { perfil$: of(null) } },
         { provide: NotificationService, useValue: notifications },
         { provide: SocioApiService, useValue: socioApiServiceSpy },
         { provide: MatDialogRef, useValue: dialogRefSpy },
@@ -88,9 +104,79 @@ describe('SocioLegajoDialogComponent', () => {
     expect(component.legajo).toBeNull();
   });
 
-  it('debe reflejar el saldo recibido en data.saldo si está definido', () => {
+  it('usa el saldo fresco de la API aunque el snapshot del ranking sea diferente (TS77.51)', () => {
     component.data.saldo = -7.5;
-    expect(component.saldoPuntos).toBe(-7.5);
+    fixture.detectChanges();
+    expect(component.saldoPuntos).toBe(3.5);
+    expect(fixture.nativeElement.querySelector('[data-testid="legajo-points-balance"]').textContent).toContain('+3.5 pts');
+  });
+
+  [undefined, null, Number.NaN, Number.POSITIVE_INFINITY].forEach(points => {
+    it(`ignora saldo legado ${String(points)} y usa el historial confirmado sin snapshot (TS77.58)`, () => {
+      component.data.saldo = 99;
+      socioApiServiceSpy.getLegajo.and.returnValue(of<SocioLegajoDTO>({ ...mockLegajo, points_balance: points }));
+      component.cargarLegajo();
+      fixture.detectChanges();
+      expect(component.saldoPuntos).toBe(3.5);
+      const balance: HTMLElement = fixture.nativeElement.querySelector('[data-testid="legajo-points-balance"]');
+      expect(balance.textContent).toContain('3.5 pts');
+      expect(balance.textContent).not.toContain('99');
+      expect(balance.textContent).not.toMatch(/\b0\s*pts\b/);
+    });
+  });
+
+  it('muestra cero sólo cuando la API lo confirma (TS77.51)', () => {
+    component.data.saldo = -7.5;
+    socioApiServiceSpy.getLegajo.and.returnValue(of<SocioLegajoDTO>({ ...mockLegajo, points_balance: 0 }));
+    socioApiServiceSpy.getPointsHistory.and.returnValue(of({ points_balance: 0, entries: [] }));
+    component.cargarLegajo();
+    fixture.detectChanges();
+    expect(component.saldoPuntos).toBe(0);
+    expect(fixture.nativeElement.querySelector('[data-testid="legajo-points-balance"]').textContent).toContain('0 pts');
+  });
+
+  it('durante una nueva lectura oculta el saldo anterior y al finalizar muestra el nuevo (TS77.51)', () => {
+    const response = new Subject<SocioLegajoDTO>();
+    socioApiServiceSpy.getLegajo.and.returnValue(response);
+    component.cargarLegajo();
+    fixture.detectChanges();
+    expect(component.saldoPuntos).toBeNull();
+    expect(fixture.nativeElement.querySelector('.state-loading')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="legajo-points-balance"]')).toBeNull();
+    socioApiServiceSpy.getPointsHistory.and.returnValue(of({
+      points_balance: -2, entries: [{ ...mockHistory.entries[0], applied_points: -2 }]
+    }));
+    response.next({ ...mockLegajo, points_balance: -2 });
+    response.complete();
+    fixture.detectChanges();
+    expect(component.saldoPuntos).toBe(-2);
+    expect(fixture.nativeElement.querySelector('[data-testid="legajo-points-balance"]').textContent).toContain('-2 pts');
+  });
+
+  it('confirma saldo y resoluciones juntos aunque el legajo y el ranking tengan otro saldo (TS77.58)', () => {
+    component.data.saldo = 99;
+    socioApiServiceSpy.getLegajo.and.returnValue(of({ ...mockLegajo, points_balance: -7.5 }));
+    socioApiServiceSpy.getPointsHistory.and.returnValue(of({
+      points_balance: 2, entries: [{ ...mockHistory.entries[0], applied_points: 2 }]
+    }));
+    component.cargarLegajo();
+    fixture.detectChanges();
+    expect(socioApiServiceSpy.getPointsHistory).toHaveBeenCalledWith(1, undefined);
+    expect(component.saldoPuntos).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('HIST-101');
+    expect(fixture.nativeElement.textContent).not.toContain('-7.5 pts');
+  });
+
+  it('conserva la ficha pero desconoce el saldo ante falla del historial, sin fallback legado ni cero (TS77.58)', () => {
+    component.data.saldo = 99;
+    socioApiServiceSpy.getPointsHistory.and.returnValue(throwError(() => ({ status: 503 })));
+    component.cargarLegajo();
+    fixture.detectChanges();
+    expect(component.legajo).toEqual(mockLegajo);
+    expect(component.saldoPuntos).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="legajo-points-balance"]').textContent).toContain('No disponible');
+    expect(fixture.nativeElement.querySelector('[data-testid="applied-resolutions"]')).toBeNull();
+    expect(notifications.error).toHaveBeenCalledWith('No se pudieron consultar los puntos y las resoluciones de este socio.');
   });
 
   it('debe cerrar el modal al invocar cerrar()', () => {

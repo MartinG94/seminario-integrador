@@ -178,7 +178,7 @@ def test_legajo_detail_returns_expected_fields_and_exact_legajo(test_setup, auth
     assert data["subcomision"] == "Cómputos"
     assert data["social_year"] == 5
     assert data["is_enabled"] is True
-    assert data["points_balance"] == 0.0
+    assert data["points_balance"] is None
 
 
 # ==============================================================================

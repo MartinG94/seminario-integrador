@@ -232,7 +232,7 @@
                           aria-label="Votar Dictamen">
                     <i class="material-icons">how_to_vote</i>
                   </button>
-                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'pendiente_correos'" 
+                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'espera_resolucion'"
                           mat-button 
                           class="btn btn-success btn-link btn-just-icon" 
                           (click)="abrirFirma(exp)" 

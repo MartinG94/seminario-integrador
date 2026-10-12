@@ -1,0 +1,15 @@
+.applied-history {
+  background: var(--color-surface-card);
+  color: var(--color-text-primary);
+
+  td { color: var(--color-text-primary); }
+  strong, small { overflow-wrap: anywhere; }
+  th { color: var(--color-text-secondary); }
+  .text-success { color: var(--color-success) !important; }
+  .text-danger { color: var(--color-danger) !important; }
+}
+
+.applied-history-scroll:focus-visible {
+  outline: 3px solid var(--color-border-focus);
+  outline-offset: 3px;
+}

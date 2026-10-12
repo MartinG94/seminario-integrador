@@ -76,7 +76,7 @@ describe('GestionarExpedientesComponent', () => {
       'creado',
       'justificando',
       'revision_resolucion',
-      'pendiente_firma',
+      'espera_resolucion',
       'pendiente_correos',
       'emitido'
     ]);

@@ -7,8 +7,8 @@ from socios.models import Socio
 class SocioLegajoSerializer(serializers.ModelSerializer):
     """
     Serializer para el detalle del legajo del socio (T7 / CA2).
-    Expone los datos constitutivos y deja el espacio preparado para la futura agregación
-    transaccional de puntos de T4 sin implementarla prematuramente.
+    Expone datos constitutivos y el saldo aplicado acreditado por la vista.
+    Un saldo desconocido conserva null, sin sustituirlo por cero.
     """
 
     legajo = serializers.CharField(allow_null=True, read_only=True)
@@ -38,5 +38,5 @@ class SocioLegajoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
-    def get_points_balance(self, obj: Socio) -> float:
-        return getattr(obj, "points_balance", 0.0)
+    def get_points_balance(self, obj: Socio) -> float | None:
+        return getattr(obj, "points_balance", None)

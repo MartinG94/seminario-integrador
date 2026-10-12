@@ -10,7 +10,6 @@ export type EstadoExpediente =
   | 'justificando' 
   | 'revision_resolucion' 
   | 'espera_resolucion'
-  | 'pendiente_firma'
   | 'pendiente_correos' 
   | 'emitido';
 
@@ -254,7 +253,7 @@ export class TribunalDataService {
       subcomision: 'Cómputos',
       motivo: 'Retraso reiterado en entrega de actas de subcomisión',
       fechaCreacion: '2026-03-02',
-      estado: 'pendiente_firma',
+      estado: 'espera_resolucion',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.0,

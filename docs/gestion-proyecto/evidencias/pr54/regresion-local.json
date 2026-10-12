@@ -1,0 +1,30 @@
+{
+  "verified_at_utc": "2026-10-12T23:37:23Z",
+  "backend": {
+    "passed": 1155,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 591.78,
+    "database": "MySQL 8.0.46",
+    "restricted_ci_user": true,
+    "compose_checks_included": 8,
+    "coverage_percent": 94.17,
+    "coverage_modules": 25,
+    "statements": 2779,
+    "missed_statements": 162
+  },
+  "frontend": {
+    "passed": 362,
+    "failed": 0,
+    "build_hash": "c8e0ecb245aa8807",
+    "build_duration_ms": 11830
+  },
+  "controls": {
+    "ruff_check": "passed",
+    "ruff_format_files": 169,
+    "django_check": "passed",
+    "new_migrations": 0,
+    "code_audit": "approved",
+    "remote_final_ci": "pending"
+  }
+}

@@ -8,6 +8,9 @@ import { RankingService } from '../services/ranking.service';
 import { SocioApiService, SocioLegajoDTO } from '../services/socio-api.service';
 import { RankingSociosComponent } from './ranking-socios.component';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
+import { AuthService } from '../services/auth.service';
+import { AppliedPointsHistoryComponent } from '../mis-expedientes/applied-points-history/applied-points-history.component';
+import { AppliedResolutionDialogComponent } from '../mis-expedientes/applied-resolution-dialog/applied-resolution-dialog.component';
 
 type Color = [number, number, number, number];
 
@@ -66,9 +69,18 @@ describe('SCRUM-77 legibilidad de ranking y ficha en ambos temas', () => {
     originalHtmlClass = document.documentElement.className;
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule],
-      declarations: [RankingSociosComponent, SocioLegajoDialogComponent],
+      declarations: [RankingSociosComponent, SocioLegajoDialogComponent, AppliedPointsHistoryComponent, AppliedResolutionDialogComponent],
       providers: [
-        { provide: SocioApiService, useValue: { getLegajo: () => of(legajo) } },
+        { provide: AuthService, useValue: { perfil$: of(null) } },
+        { provide: SocioApiService, useValue: {
+          getLegajo: () => of(legajo),
+          getPointsHistory: () => of({ points_balance: 2, entries: [{
+            movement_id: 17, applied_points: 2,
+            historical_case: { id: 101, number: 'HIST-101', recorded_at: null, state: 'emitido' },
+            resolution: { id: 201, text: 'Resolución de prueba', regulations: ['Art. 93'] },
+            managed_case: null
+          }] })
+        } },
         { provide: MatDialogRef, useValue: { close: () => undefined } },
         { provide: MAT_DIALOG_DATA, useValue: { socioId: legajo.id } },
         { provide: MatDialog, useValue: { open: () => undefined } },

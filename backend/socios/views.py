@@ -1,11 +1,14 @@
 import logging
 from typing import Any, Optional
 
-from django.db.models import Sum
 from django.http import Http404
-from rest_framework.exceptions import ValidationError
+from rest_framework import status
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from accounts.permissions import IsTribunalOrDirectiva
 from accounts.serializers import SocioProfileSerializer
@@ -17,12 +20,27 @@ from socios.identity import (
     resolve_institutional_candidate,
     resolve_institutional_owner,
     resolve_local_candidate,
+    resolve_owned_institutional_candidate,
 )
 from socios.models import Role, Socio
 from socios.pagination import SocioPagination
+from socios.points import (
+    has_institutional_points_source,
+    read_applied_points_balance,
+    read_local_points_balance,
+)
+from socios.points_history import read_own_points_history
 from socios.serializers import SocioLegajoSerializer
 
 logger = logging.getLogger(__name__)
+
+
+class PointsBalanceUnavailable(APIException):
+    """Falla de lectura sanitizada, distinta de un saldo confirmado en cero."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "No se pudieron consultar los puntos. Intentá nuevamente."
+    default_code = "points_unavailable"
 
 
 class InstitutionalSubcomision:
@@ -41,7 +59,7 @@ class InstitutionalSocioAdapter:
         self,
         dto: SocioInstitucionalDTO,
         role: str = Role.SOCIO,
-        points_balance: float = 0.0,
+        points_balance: float | None = None,
         owner_local_id: int | None = None,
     ) -> None:
         self.id = dto.socio_id
@@ -109,6 +127,82 @@ class PadronListView(ListAPIView):
     filter_backends = [AccentInsensitiveSearchFilter]
 
 
+class MyPointsBalanceView(APIView):
+    """GET del saldo aplicado del socio autenticado, sin parámetros de identidad."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        headers = {"Cache-Control": "no-store"}
+        try:
+            socio = getattr(request.user, "socio", None)
+            if socio is None or not socio.is_enabled:
+                return Response(
+                    {"detail": "No posee un legajo de socio vigente."},
+                    status=status.HTTP_403_FORBIDDEN,
+                    headers=headers,
+                )
+            if not has_institutional_points_source():
+                raise PointsBalanceUnavailable
+            total = read_local_points_balance(socio, get_padron_repository())
+            if total is None:
+                raise AmbiguousSocioIdentity
+        except AmbiguousSocioIdentity:
+            return Response(
+                {"detail": "Socio no encontrado en el padrón."},
+                status=status.HTTP_404_NOT_FOUND,
+                headers=headers,
+            )
+        except Exception:
+            logger.error("No fue posible consultar los puntos del socio autenticado.")
+            return Response(
+                {"detail": "No se pudieron consultar los puntos. Intentá nuevamente."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                headers=headers,
+            )
+        return Response(
+            {"points_balance": float(total)},
+            headers=headers,
+        )
+
+
+class MyPointsHistoryView(APIView):
+    """Asientos propios y documentos persistidos del mismo snapshot de lectura."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        headers = {"Cache-Control": "no-store"}
+        try:
+            socio = getattr(request.user, "socio", None)
+            if socio is None or not socio.is_enabled:
+                return Response(
+                    {"detail": "No posee un legajo de socio vigente."},
+                    status=status.HTTP_403_FORBIDDEN,
+                    headers=headers,
+                )
+            if not has_institutional_points_source():
+                raise PointsBalanceUnavailable
+            identity = resolve_owned_institutional_candidate(socio, get_padron_repository())
+            if identity is None:
+                raise AmbiguousSocioIdentity
+            history = read_own_points_history(identity.socio_id, socio.pk)
+        except AmbiguousSocioIdentity:
+            return Response(
+                {"detail": "Socio no encontrado en el padrón."},
+                status=status.HTTP_404_NOT_FOUND,
+                headers=headers,
+            )
+        except Exception:
+            logger.error("No fue posible consultar el historial de puntos del socio autenticado.")
+            return Response(
+                {"detail": "No se pudieron consultar los puntos. Intentá nuevamente."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                headers=headers,
+            )
+        return Response(history, headers=headers)
+
+
 class SocioLegajoDetailView(RetrieveAPIView):
     """GET /api/v1/socios/<pk>/legajo/ — detalle integral del legajo (T7 / CA2 / CA4).
 
@@ -120,6 +214,7 @@ class SocioLegajoDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated, CanViewSocioLegajo]
     serializer_class = SocioLegajoSerializer
     queryset = Socio.objects.select_related("subcomision").all()
+    include_points_balance: bool = True
 
     def get_object(self) -> Any:
         pk = self.kwargs.get("pk")
@@ -152,31 +247,73 @@ class SocioLegajoDetailView(RetrieveAPIView):
             raise Http404("Socio no encontrado en el padrón.") from None
         except Exception:
             logger.error("No fue posible verificar la identidad solicitada en el padrón.")
-            raise Http404("Socio no encontrado en el padrón.") from None
+            raise PointsBalanceUnavailable from None
         if local is not None:
             self.check_object_permissions(self.request, local)
+            if self.include_points_balance:
+                try:
+                    balance = (
+                        read_local_points_balance(local, get_padron_repository())
+                        if has_institutional_points_source()
+                        else None
+                    )
+                    local.points_balance = float(balance) if balance is not None else None
+                except Exception:
+                    logger.error("No fue posible consultar los puntos del legajo local.")
+                    raise PointsBalanceUnavailable from None
             return local
         if padron_dto is not None:
             role = local_owner.role if local_owner else Role.SOCIO
-            points_balance = 0.0
-            try:
-                from ranking.models import PuntajeAplicado
-
-                pa_sum = PuntajeAplicado.objects.filter(socio_id=padron_dto.socio_id).aggregate(
-                    total=Sum("puntajeAplicado")
-                )["total"]
-                if pa_sum is not None:
-                    points_balance = float(pa_sum)
-            except Exception:
-                points_balance = 0.0
-
             adapted_socio = InstitutionalSocioAdapter(
                 padron_dto,
                 role=role,
-                points_balance=points_balance,
                 owner_local_id=local_owner.pk if local_owner else None,
             )
             self.check_object_permissions(self.request, adapted_socio)
+            try:
+                if self.include_points_balance and has_institutional_points_source():
+                    adapted_socio.points_balance = float(
+                        read_applied_points_balance(padron_dto.socio_id)
+                    )
+            except Exception:
+                logger.error("No fue posible consultar los puntos del legajo institucional.")
+                raise PointsBalanceUnavailable from None
             return adapted_socio
 
         raise Http404("Socio no encontrado en el padrón.")
+
+
+class SocioPointsHistoryView(SocioLegajoDetailView):
+    """Historial de una ficha autorizada; reutiliza fuente explícita y propiedad del legajo."""
+
+    include_points_balance = False
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        # La resolución y el permiso del objeto preceden a la consulta de sus asientos.
+        target = self.get_object()
+        headers = {"Cache-Control": "no-store"}
+        try:
+            if not has_institutional_points_source():
+                raise PointsBalanceUnavailable
+            if isinstance(target, Socio):
+                identity = resolve_owned_institutional_candidate(target, get_padron_repository())
+                if identity is None:
+                    raise AmbiguousSocioIdentity
+                institutional_number, local_socio_id = identity.socio_id, target.pk
+            else:
+                institutional_number, local_socio_id = target.id, target.owner_local_id
+            history = read_own_points_history(institutional_number, local_socio_id)
+        except AmbiguousSocioIdentity:
+            return Response(
+                {"detail": "Socio no encontrado en el padrón."},
+                status=status.HTTP_404_NOT_FOUND,
+                headers=headers,
+            )
+        except Exception:
+            logger.error("No fue posible consultar el historial de puntos del legajo.")
+            return Response(
+                {"detail": "No se pudieron consultar los puntos. Intentá nuevamente."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                headers=headers,
+            )
+        return Response(history, headers=headers)

@@ -88,6 +88,7 @@ def _load_previous_catalog(seed: Any, monkeypatch: pytest.MonkeyPatch) -> dict[s
         groups=CATALOG.groups[:4],
         members=CATALOG.members[:16],
         accounts=CATALOG.accounts[:6],
+        advanced_causes=(),
     )
     assert {group.number for group in previous.groups} == {57, 58, 59, 60}
     assert len(previous.members) == 16 and len(previous.accounts) == 6
@@ -127,7 +128,13 @@ def test_junior_extension_adds_only_new_rows_and_preserves_previous_edits_and_co
     edited.user.set_password("Synthetic preserved UAT credential")
     edited.user.save(update_fields=["password"])
     before = _all_rows(bootstrap_database)
-    extended = seed.run_demo_seed()
+    from socios.demo_catalog import CATALOG
+
+    # El upgrade Junior original precede a las escenas avanzadas y debe
+    # seguir acreditando que esas cuatro altas por sí solas no aplican puntos.
+    with monkeypatch.context() as original_junior_upgrade:
+        original_junior_upgrade.setattr(seed, "CATALOG", replace(CATALOG, advanced_causes=()))
+        extended = seed.run_demo_seed()
     after = _all_rows(bootstrap_database)
     preserved = all(rows <= after[table] for table, rows in before.items())
     assert preserved, "La ampliación conserva las filas anteriores sin exponer credenciales."
@@ -157,7 +164,9 @@ def test_junior_extension_adds_only_new_rows_and_preserves_previous_edits_and_co
     ):
         assert before[table] == after[table]
     stable = snapshot(bootstrap_database)
-    repeated = seed.run_demo_seed()
+    with monkeypatch.context() as original_junior_upgrade:
+        original_junior_upgrade.setattr(seed, "CATALOG", replace(CATALOG, advanced_causes=()))
+        repeated = seed.run_demo_seed()
     assert repeated == extended
     assert snapshot(bootstrap_database) == stable
 

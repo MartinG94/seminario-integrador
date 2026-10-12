@@ -7,7 +7,7 @@ TS77.12–15. La propiedad, colisiones y PK reales se resuelven en TS77.08–11.
 import re
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from types import MappingProxyType
 
@@ -106,6 +106,37 @@ class HistoricalMovementFixture:
     points: Decimal
 
 
+_ADVANCED_SOURCE = "RF77-16 / historia sintética autorizada; sin firma productiva"
+
+
+@dataclass(frozen=True)
+class AdvancedCauseFixture:
+    """Historia ficticia importada; no acredita un trámite o firma productivos."""
+
+    fixture_key: str
+    creator_account_key: str
+    recipient_member_keys: tuple[str, ...]
+    stage: str
+    urgency: str
+    requested_points: Decimal
+    opened_at: datetime
+    justification_started_at: datetime
+    reviewed_at: datetime
+    signature_pending_at: datetime | None = None
+    dispatch_pending_at: datetime | None = None
+    emitted_at: datetime | None = None
+    source_reference: str = _ADVANCED_SOURCE
+
+    @property
+    def updated_at(self) -> datetime:
+        return (
+            self.emitted_at
+            or self.dispatch_pending_at
+            or self.signature_pending_at
+            or self.reviewed_at
+        )
+
+
 @dataclass(frozen=True)
 class DemoCatalog:
     profile: str
@@ -121,6 +152,7 @@ class DemoCatalog:
     causes: tuple[CauseFixture, ...]
     t01_scenes: tuple[T01Fixture, ...]
     historical_movements: tuple[HistoricalMovementFixture, ...]
+    advanced_causes: tuple[AdvancedCauseFixture, ...] = ()
 
 
 # Rango propio del catálogo; la ausencia de colisiones se comprueba al cargar.
@@ -242,6 +274,29 @@ def _account(suffix: str, role: str, is_enabled: bool = True) -> AccountFixture:
     )
 
 
+def _advanced_scene(
+    key: str, stage: str, members: tuple[str, ...], points: str, *, ordinal: int
+) -> AdvancedCauseFixture:
+    """Fechas constantes del relato sintético; nunca se consulta el reloj."""
+    opened = datetime(2026, 9, 1, 12, ordinal, tzinfo=timezone.utc)
+    stages = ("revision_resolucion", "espera_resolucion", "pendiente_correos", "emitido")
+    index = stages.index(stage)
+    return AdvancedCauseFixture(
+        key,
+        "account.g58.01" if ordinal % 2 else "account.g59.01",
+        members,
+        stage,
+        ("baja", "normal", "urgente")[ordinal % 3],
+        Decimal(points),
+        opened,
+        opened + timedelta(days=1),
+        opened + timedelta(days=15),
+        opened + timedelta(days=16) if index >= 1 else None,
+        opened + timedelta(days=17) if index >= 2 else None,
+        opened + timedelta(days=18) if index >= 3 else None,
+    )
+
+
 CATALOG = DemoCatalog(
     profile="scrum77-g57-g60-v1",
     social_cycle=_CYCLE,
@@ -327,6 +382,34 @@ CATALOG = DemoCatalog(
             "baja",
             Decimal("-1.00"),
         ),
+    ),
+    advanced_causes=(
+        _advanced_scene(
+            "advanced.review.01", "revision_resolucion", ("member.g57.01",), "-1", ordinal=1
+        ),
+        _advanced_scene(
+            "advanced.review.02", "revision_resolucion", ("member.g62.01",), "-2", ordinal=2
+        ),
+        _advanced_scene(
+            "advanced.review.03",
+            "revision_resolucion",
+            ("member.g63.01", "member.g60.01"),
+            "-3",
+            ordinal=3,
+        ),
+        _advanced_scene(
+            "advanced.signature.01", "espera_resolucion", ("member.g58.02",), "-1", ordinal=4
+        ),
+        _advanced_scene(
+            "advanced.dispatch.01", "pendiente_correos", ("member.g59.01",), "-2", ordinal=5
+        ),
+        _advanced_scene(
+            "advanced.dispatch.02", "pendiente_correos", ("member.g62.02",), "-1", ordinal=6
+        ),
+        _advanced_scene("advanced.emitted.01", "emitido", ("member.g62.01",), "2", ordinal=7),
+        _advanced_scene("advanced.emitted.02", "emitido", ("member.g62.02",), "-1", ordinal=8),
+        _advanced_scene("advanced.emitted.03", "emitido", ("member.g63.01",), "-2", ordinal=9),
+        _advanced_scene("advanced.emitted.04", "emitido", ("member.g63.02",), "1", ordinal=10),
     ),
     historical_movements=(
         HistoricalMovementFixture(
@@ -440,6 +523,7 @@ def validate_catalog(catalog: DemoCatalog) -> None:
         catalog.causes,
         catalog.t01_scenes,
         catalog.historical_movements,
+        catalog.advanced_causes,
     )
     for items in collections:
         if not isinstance(items, tuple):
@@ -546,7 +630,7 @@ def validate_catalog(catalog: DemoCatalog) -> None:
             )
     accounts = {a.fixture_key: a for a in catalog.accounts}
     operational_members = {a.member_key for a in catalog.accounts}
-    for scene in (*catalog.causes, *catalog.t01_scenes):
+    for scene in (*catalog.causes, *catalog.t01_scenes, *catalog.advanced_causes):
         creator = accounts.get(scene.creator_account_key)
         if (
             creator is None
@@ -600,6 +684,55 @@ def validate_catalog(catalog: DemoCatalog) -> None:
             raise ValueError("Cada respaldo resolutivo debe conservar su expediente legado.")
     if len(resolution_to_expediente) != 7:
         raise ValueError("Los antecedentes v1 declaran siete respaldos resolutivos.")
+    # La extensión es opcional para importar y verificar el catálogo previo aprobado.
+    # Cuando está presente, debe ser completa: no se aceptan cargas parciales.
+    if catalog.advanced_causes and Counter(scene.stage for scene in catalog.advanced_causes) != {
+        "revision_resolucion": 3,
+        "espera_resolucion": 1,
+        "pendiente_correos": 2,
+        "emitido": 4,
+    }:
+        raise ValueError("Las escenas adicionales requieren la distribución autorizada 3/1/2/4.")
+    stages = ("revision_resolucion", "espera_resolucion", "pendiente_correos", "emitido")
+    for scene in catalog.advanced_causes:
+        _key(scene.fixture_key, "advanced.")
+        if not scene.recipient_member_keys or scene.source_reference != _ADVANCED_SOURCE:
+            raise ValueError(
+                "La historia sintética requiere participantes y procedencia explícitos."
+            )
+        times = (
+            scene.opened_at,
+            scene.justification_started_at,
+            scene.reviewed_at,
+            scene.signature_pending_at,
+            scene.dispatch_pending_at,
+            scene.emitted_at,
+        )
+        length = 3 + stages.index(scene.stage)
+        if any(value is not None for value in times[length:]) or any(
+            not isinstance(value, datetime) or value.utcoffset() is None for value in times[:length]
+        ):
+            raise ValueError(
+                "Las fechas de la historia deben ser aware y coincidir con sus etapas."
+            )
+        ordered = times[:length]
+        if any(left >= right for left, right in zip(ordered, ordered[1:], strict=False)) or (
+            scene.updated_at.date() >= catalog.recorded_on
+        ):
+            raise ValueError(
+                "La historia sintética debe ser cronológica y anterior al corte técnico."
+            )
+        _points(scene.requested_points, nonzero=True)
+    emissions = [scene for scene in catalog.advanced_causes if scene.stage == "emitido"]
+    if catalog.advanced_causes and [
+        (scene.recipient_member_keys, scene.requested_points) for scene in emissions
+    ] != [
+        (("member.g62.01",), Decimal("2")),
+        (("member.g62.02",), Decimal("-1")),
+        (("member.g63.01",), Decimal("-2")),
+        (("member.g63.02",), Decimal("1")),
+    ]:
+        raise ValueError("Los cuatro emitidos deben conservar su atribución Junior individual.")
 
 
 def expected_balances(catalog: DemoCatalog) -> dict[str, Decimal]:
@@ -608,4 +741,7 @@ def expected_balances(catalog: DemoCatalog) -> dict[str, Decimal]:
     balances = {member.fixture_key: Decimal("0.00") for member in catalog.members}
     for movement in catalog.historical_movements:
         balances[movement.member_key] += movement.points
+    for scene in catalog.advanced_causes:
+        if scene.stage == "emitido":
+            balances[scene.recipient_member_keys[0]] += scene.requested_points
     return balances

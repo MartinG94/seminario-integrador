@@ -2,6 +2,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { SocioApiService, SocioLegajoDTO, PaginatedResponse, SocioListItemDTO, SocioIdentitySource } from './socio-api.service';
+import { environment } from '../../environments/environment';
 
 describe('SocioApiService', () => {
   let service: SocioApiService;
@@ -22,6 +23,118 @@ describe('SocioApiService', () => {
 
   it('debe crearse correctamente', () => {
     expect(service).toBeTruthy();
+  });
+
+  const historyEntry = {
+    movement_id: 17, applied_points: 2,
+    historical_case: { id: 101, number: 'HIST-101', recorded_at: '2026-10-01T12:00:00Z', state: 'emitido' },
+    resolution: { id: 201, text: 'VISTO\nCONSIDERANDO\nSE RESUELVE', regulations: ['Art. 93'] },
+    managed_case: null
+  };
+
+  it('consulta saldo e historial propios juntos sin transmitir identidad (TS77.58)', () => {
+    let result: unknown;
+    service.getOwnPointsHistory().subscribe(value => result = value);
+    const request = httpMock.expectOne(`${environment.apiUrl}/socios/me/points-history/`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.body).toBeNull();
+    request.flush({ points_balance: 2, entries: [historyEntry] });
+    expect(result).toEqual({ points_balance: 2, entries: [historyEntry] });
+  });
+
+  it('consulta historial de ficha con el namespace explícito y conserva los permisos HTTP (TS77.58)', () => {
+    let status: number | undefined;
+    service.getPointsHistory(101, 'institutional').subscribe({ error: error => status = error.status });
+    const request = httpMock.expectOne(r => r.url === `${environment.apiUrl}/socios/101/points-history/`);
+    expect(request.request.params.get('identity_source')).toBe('institutional');
+    request.flush({}, { status: 403, statusText: 'Forbidden' });
+    expect(status).toBe(403);
+  });
+
+  it('concilia importes DECIMAL grandes sin rechazar errores normales de coma flotante (TS77.58)', () => {
+    let received = false;
+    service.getOwnPointsHistory().subscribe(() => received = true);
+    httpMock.expectOne(`${environment.apiUrl}/socios/me/points-history/`).flush({
+      points_balance: 99999999.98,
+      entries: [
+        { ...historyEntry, movement_id: 1, applied_points: 99999999.99 },
+        { ...historyEntry, movement_id: 2, applied_points: 99999999.98 },
+        { ...historyEntry, movement_id: 3, applied_points: -99999999.99 }
+      ]
+    });
+    expect(received).toBeTrue();
+  });
+
+  const invalidHistories: readonly unknown[] = [
+    {}, null, { points_balance: '2', entries: [] }, { points_balance: Number.NaN, entries: [] },
+    { points_balance: 0, entries: null }, { points_balance: 2, entries: [] },
+    { points_balance: 2, entries: [{ ...historyEntry, movement_id: 0 }] },
+    { points_balance: 2, entries: [{ ...historyEntry, applied_points: '2' }] },
+    { points_balance: 2, entries: [{ ...historyEntry, applied_points: Number.POSITIVE_INFINITY }] },
+    { points_balance: 2, entries: [{ ...historyEntry, historical_case: { ...historyEntry.historical_case, state: 'creado' } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, historical_case: { ...historyEntry.historical_case, recorded_at: 'invalid' } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, historical_case: { ...historyEntry.historical_case, recorded_at: '0' } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, resolution: null }] },
+    { points_balance: 2, entries: [{ ...historyEntry, resolution: { ...historyEntry.resolution, text: '' } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, resolution: { ...historyEntry.resolution, regulations: [17] } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, resolution: { ...historyEntry.resolution, regulations: [] } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, applied_points: 2.001 }] },
+    { points_balance: 2, entries: [{ ...historyEntry, managed_case: { id: 0, number: 'EXP-1', state: 'emitido' } }] },
+    { points_balance: 2, entries: [{ ...historyEntry, managed_case: { id: 81, number: 'EXP-1', state: 'revision_resolucion' } }] },
+    { points_balance: 4, entries: [historyEntry, historyEntry] }
+  ];
+  invalidHistories.forEach((response, index) => {
+    it(`rechaza el historial malformado ${index} sin confirmar puntos parciales (TS77.58)`, () => {
+      let received = false;
+      let rejected = false;
+      service.getOwnPointsHistory().subscribe({ next: () => received = true, error: () => rejected = true });
+      httpMock.expectOne(`${environment.apiUrl}/socios/me/points-history/`).flush(response);
+      expect(received).toBeFalse();
+      expect(rejected).toBeTrue();
+    });
+  });
+
+  it('consulta el saldo propio sin transmitir un identificador de socio (TS77.49)', () => {
+    let points: number | undefined;
+    service.getOwnPointsBalance().subscribe(result => points = result.points_balance);
+    const request = httpMock.expectOne(`${environment.apiUrl}/socios/me/points-balance/`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.body).toBeNull();
+    request.flush({ points_balance: 2 });
+    expect(points).toBe(2);
+  });
+
+  it('propaga un error de saldo propio sin reemplazarlo por cero (TS77.49)', () => {
+    let points: number | undefined;
+    let status: number | undefined;
+    service.getOwnPointsBalance().subscribe({
+      next: result => points = result.points_balance,
+      error: error => status = error.status
+    });
+    httpMock.expectOne(`${environment.apiUrl}/socios/me/points-balance/`)
+      .flush({}, { status: 403, statusText: 'Forbidden' });
+    expect(status).toBe(403);
+    expect(points).toBeUndefined();
+  });
+
+  const invalidBalanceResponses: readonly unknown[] = [
+    {}, null, { points_balance: null }, { points_balance: '2' },
+    { points_balance: Number.NaN }, { points_balance: Number.POSITIVE_INFINITY }
+  ];
+  invalidBalanceResponses.forEach((response, index) => {
+    it(`rechaza una respuesta de saldo propio malformada ${index} sin confirmar puntos (TS77.51)`, () => {
+      let points: number | undefined;
+      let rejected = false;
+      service.getOwnPointsBalance().subscribe({
+        next: result => points = result?.points_balance,
+        error: () => rejected = true
+      });
+      httpMock.expectOne(`${environment.apiUrl}/socios/me/points-balance/`).flush(response);
+      expect(points).toBeUndefined();
+      expect(rejected).toBeTrue();
+    });
   });
 
   it('searchSocios() debe consultar GET /api/v1/socios/ con query y paginación (CA1 / CA3)', () => {

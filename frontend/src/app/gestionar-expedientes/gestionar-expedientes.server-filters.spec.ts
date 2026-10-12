@@ -31,13 +31,36 @@ describe('SCRUM-77 filtros del tablero confirmados por servidor', () => {
 
   function board(cases: BoardCaseDTO[]): BoardResponseDTO {
     return { columns: [
-      { key: 'creado', label: 'Expediente Creado', cases },
-      { key: 'justificando', label: 'En período de justificaciones', cases: [] },
-      { key: 'revision_resolucion', label: 'En Revisión', cases: [] },
-      { key: 'pendiente_firma', label: 'Pendiente de Firma', cases: [] },
-      { key: 'pendiente_correos', label: 'Pendiente de correos', cases: [] },
-      { key: 'emitido', label: 'Expedientes ya emitidos', cases: [] }
+      { key: 'creado', label: 'Expediente Creado', cases: cases.filter(item => item.estado === 'creado') },
+      { key: 'justificando', label: 'En período de justificaciones', cases: cases.filter(item => item.estado === 'justificando') },
+      { key: 'revision_resolucion', label: 'En Revisión', cases: cases.filter(item => item.estado === 'revision_resolucion') },
+      { key: 'espera_resolucion', label: 'Pendiente de Firma', cases: cases.filter(item => item.estado === 'espera_resolucion') },
+      { key: 'pendiente_correos', label: 'Pendiente de correos', cases: cases.filter(item => item.estado === 'pendiente_correos') },
+      { key: 'emitido', label: 'Expedientes ya emitidos', cases: cases.filter(item => item.estado === 'emitido') }
     ] };
+  }
+
+  const stateDistribution = [
+    { state: 'creado', label: 'Creados', count: 4 },
+    { state: 'justificando', label: 'Justificando', count: 2 },
+    { state: 'revision_resolucion', label: 'En Revisión', count: 3 },
+    { state: 'espera_resolucion', label: 'Pendiente de Firma', count: 1 },
+    { state: 'pendiente_correos', label: 'Pendiente de Envío', count: 2 },
+    { state: 'emitido', label: 'Emitidos', count: 4 }
+  ] as const;
+
+  function allStateCases(): BoardCaseDTO[] {
+    let id = 800;
+    return stateDistribution.flatMap(({ state, label, count }) => Array.from({ length: count }, (): BoardCaseDTO => ({
+      ...multiCase, id: id++, estado: state, estado_display: label, numero: `EXP-${id}/2026`,
+      motivo: `Caso ${state}`, transiciones_permitidas: []
+    })));
+  }
+
+  function loadAllStates(): void {
+    fixture.componentInstance.cargarDatosTablero();
+    http.expectOne('/api/v1/expedientes/board/').flush(board(allStateCases()));
+    fixture.detectChanges();
   }
 
   beforeEach(async () => {
@@ -61,6 +84,60 @@ describe('SCRUM-77 filtros del tablero confirmados por servidor', () => {
   });
 
   afterEach(() => http.verify());
+
+  it('el lector conserva todas las claves de estado recibidas del servidor (TS77.56)', () => {
+    loadAllStates();
+    stateDistribution.forEach(({ state, count }) => {
+      expect(fixture.componentInstance.expedientes.filter(item => item.estado === state).length).toBe(count);
+    });
+    expect(fixture.componentInstance.expedientes.length).toBe(16);
+  });
+
+  it('el DOM muestra seis columnas con los mismos conteos 4/2/3/1/2/4 del servidor (TS77.56)', () => {
+    loadAllStates();
+    const columns: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.kanban-col-mat'));
+    expect(columns.length).toBe(6);
+    stateDistribution.forEach(({ label, count }, index) => {
+      expect(columns[index].getAttribute('aria-label')).toBe(label);
+      expect(columns[index].querySelector('.col-count')?.textContent.trim()).toBe(String(count));
+      expect(columns[index].querySelectorAll('.kanban-card-mat').length).toBe(count);
+    });
+    expect(fixture.nativeElement.querySelectorAll('.kanban-card-mat').length).toBe(16);
+  });
+
+  stateDistribution.forEach(({ state, label, count }) => {
+    it(`filtra ${state} sin fusionar estados ni reclasificar por firmas simuladas (TS77.56)`, () => {
+      const component = fixture.componentInstance;
+      component.filtroEstado = state;
+      component.cargarDatosTablero();
+      http.expectOne(request => request.url === '/api/v1/expedientes/board/' && request.params.get('estado') === state)
+        .flush(board(allStateCases().filter(item => item.estado === state)));
+      fixture.detectChanges();
+      expect(component.columnasKanbanVisibles.map(item => item.estado)).toEqual([state]);
+      expect(component.expedientesFiltrados.length).toBe(count);
+      expect(component.getExpedientesPorEstado(state).length).toBe(count);
+      const column: HTMLElement = fixture.nativeElement.querySelector('.kanban-col-mat');
+      expect(column.getAttribute('aria-label')).toBe(label);
+      expect(column.querySelectorAll('.kanban-card-mat').length).toBe(count);
+    });
+  });
+
+  it('lista y detalle distinguen revisión, firma y envío con las mismas claves del tablero (TS77.56)', () => {
+    loadAllStates();
+    const component = fixture.componentInstance;
+    component.vistaActual = 'tabla';
+    fixture.detectChanges();
+    const rows: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('tbody tr'));
+    expect(rows.length).toBe(16);
+    stateDistribution.forEach(({ state, label, count }) => {
+      expect(rows.filter(row => row.querySelector('td:nth-child(7) .badge-mat')?.textContent.trim() === label).length).toBe(count);
+      expect(component.getEstadoLabel(state)).toBe(label);
+    });
+    const waiting = component.expedientes.find(item => item.estado === 'espera_resolucion')!;
+    component.abrirDetalle(waiting);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')?.textContent).toContain('Pendiente de Firma');
+  });
 
   async function searchByKeyboard(term: string): Promise<void> {
     const input = fixture.nativeElement.querySelector('#filtro-socio') as HTMLInputElement;

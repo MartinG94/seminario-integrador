@@ -1,5 +1,6 @@
 """TS77.15: antecedentes sintéticos respaldados e individualizados en MySQL real."""
 
+from dataclasses import replace
 from decimal import Decimal
 from typing import Any
 
@@ -55,7 +56,7 @@ def test_balance_comes_only_from_individual_history_without_general_score_cache(
 ) -> None:
     scenes, registry, members = prepare_scene_test(bootstrap_database, monkeypatch)
     load_scenes(scenes, registry, members)
-    expected = expected_balances(CATALOG)
+    expected = expected_balances(replace(CATALOG, advanced_causes=()))
     for fixture in CATALOG.members:
         balance = PuntajeAplicado.objects.filter(socio_id=fixture.institutional_number).aggregate(
             balance=Sum("puntajeAplicado")

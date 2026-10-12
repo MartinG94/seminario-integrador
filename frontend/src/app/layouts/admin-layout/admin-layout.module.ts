@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AdminLayoutRoutes } from './admin-layout.routing';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
+import { AppliedResolutionDialogComponent } from '../../mis-expedientes/applied-resolution-dialog/applied-resolution-dialog.component';
+import { AppliedPointsHistoryComponent } from '../../mis-expedientes/applied-points-history/applied-points-history.component';
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
 import { ReportesComponent } from '../../reportes/reportes.component';
@@ -53,6 +55,8 @@ import { CalendarioInstitucionalComponent } from '../../calendario-institucional
   ],
   declarations: [
     MisExpedientesComponent,
+    AppliedResolutionDialogComponent,
+    AppliedPointsHistoryComponent,
     ReglamentosComponent,
     GestionarExpedientesComponent,
     ReportesComponent,

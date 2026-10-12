@@ -1,0 +1,40 @@
+<section class="card applied-history" [attr.aria-labelledby]="headingId">
+          <div class="card-header card-header-primary">
+            <h4 class="card-title" [id]="headingId">Resoluciones aplicadas</h4>
+            <p class="card-category">Puntos individualizados respaldados por resoluciones emitidas.</p>
+          </div>
+          <div class="card-body">
+            <p *ngIf="status === 'loading'" class="text-muted">Cargando resoluciones...</p>
+            <p *ngIf="status === 'error'" class="text-muted">Resoluciones no disponibles.</p>
+            <p *ngIf="status === 'idle'" class="text-muted">Iniciá sesión para consultar las resoluciones.</p>
+            <ng-container *ngIf="status === 'ready'">
+              <p *ngIf="entries.length === 0" class="text-muted">No hay movimientos de puntos aplicados.</p>
+              <div *ngIf="entries.length > 0" class="table-responsive applied-history-scroll" tabindex="0"
+                   role="region" aria-label="Resoluciones aplicadas al saldo del socio">
+                <table class="table table-hover table-mat" data-testid="applied-resolutions">
+                  <thead><tr>
+                    <th scope="col">Expediente</th>
+                    <th scope="col">Resolución</th>
+                    <th scope="col">Puntos aplicados</th>
+                    <th scope="col">Registro histórico</th>
+                    <th scope="col">Acciones</th>
+                  </tr></thead>
+                  <tbody><tr *ngFor="let entry of entries">
+                    <td>
+                      <strong>{{entry.managed_case ? entry.managed_case.number : entry.historical_case.number}}</strong>
+                      <small *ngIf="entry.managed_case" class="d-block text-muted">Antecedente {{entry.historical_case.number}}</small>
+                    </td>
+                    <td>Emitida</td>
+                    <td [ngClass]="entry.applied_points >= 0 ? 'text-success' : 'text-danger'">
+                      {{entry.applied_points > 0 ? '+' : ''}}{{entry.applied_points}} pts
+                    </td>
+                    <td>{{entry.historical_case.recorded_at ? (entry.historical_case.recorded_at | date:'dd/MM/yyyy') : 'Sin fecha de registro'}}</td>
+                    <td><button type="button" class="btn btn-info btn-sm" data-testid="open-applied-resolution"
+                                [attr.aria-label]="'Ver resolución aplicada a ' + (entry.managed_case ? entry.managed_case.number : entry.historical_case.number)"
+                                (click)="openAppliedResolution(entry)">Ver resolución</button></td>
+                  </tr></tbody>
+                </table>
+              </div>
+            </ng-container>
+          </div>
+        </section>

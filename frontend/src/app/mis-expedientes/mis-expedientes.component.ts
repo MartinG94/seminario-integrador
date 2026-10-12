@@ -2,7 +2,9 @@ import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
-import { Subscription, interval } from 'rxjs';
+import { AppliedPointsEntryDTO, SocioApiService } from '../services/socio-api.service';
+import { Subscription, interval, EMPTY } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -13,7 +15,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
   misExpedientes: Expediente[] = [];
   socioActual = '';
-  saldoNeto = 0;
+  saldoNeto: number | null = null;
+  pointsBalanceStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  appliedEntries: AppliedPointsEntryDTO[] = [];
 
   // Ordenamiento de tabla
   columnaOrden = 'numero';
@@ -38,14 +42,35 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     public dataService: TribunalDataService,
     private auth: AuthService,
     private renderer: Renderer2,
-    private notifications: NotificationService
+    private notifications: NotificationService,
+    private socioApi: SocioApiService
   ) {}
 
   ngOnInit(): void {
-    const subPerfil = this.auth.perfil$.subscribe(perfil => {
-      this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
-      this.filtrarMisExpedientes();
-    });
+    const subPerfil = this.auth.perfil$.pipe(
+      switchMap(perfil => {
+        this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
+        this.filtrarMisExpedientes();
+        this.appliedEntries = [];
+        this.saldoNeto = null;
+        this.pointsBalanceStatus = perfil ? 'loading' : 'idle';
+        if (!perfil) {
+          return EMPTY;
+        }
+        return this.socioApi.getOwnPointsHistory().pipe(
+          tap(result => {
+            this.saldoNeto = result.points_balance;
+            this.appliedEntries = result.entries;
+            this.pointsBalanceStatus = 'ready';
+          }),
+          catchError(() => {
+            this.pointsBalanceStatus = 'error';
+            this.notifications.error('No se pudieron consultar tus puntos y resoluciones. Volvé a intentarlo más tarde.');
+            return EMPTY;
+          })
+        );
+      })
+    ).subscribe();
     this.subs.push(subPerfil);
 
     const subExp = this.dataService.expedientes$.subscribe(list => {
@@ -59,12 +84,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       }
     });
     this.subs.push(subExp);
-
-    const subSocios = this.dataService.socios$.subscribe(socios => {
-      const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-      this.saldoNeto = s ? s.saldo : 0;
-    });
-    this.subs.push(subSocios);
 
     // Actualizador dinámico del reloj cada segundo (evita memory leaks desuscribiéndose en ngOnDestroy)
     this.tickerSub = interval(1000).subscribe(() => {
@@ -81,6 +100,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.appliedEntries = [];
+    this.saldoNeto = null;
     if (this.tickerSub) {
       this.tickerSub.unsubscribe();
       this.tickerSub = null;
@@ -332,20 +353,17 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   getEstadoLabel(estado: string, exp?: Expediente): string {
     if (estado === 'justificando' && exp) {
       if (this.esPlazoVencido(exp)) {
-        return 'Resolviendo';
+        return 'Justificando · Plazo vencido';
       }
       const tiempo = this.getCompactCountdownLabel(exp);
       return tiempo ? `Justificando · ${tiempo}` : 'Justificando';
     }
-    if (estado === 'revision_resolucion') {
-      return exp?.descargo ? 'Revisando Justificación' : 'Resolviendo';
-    }
-
     switch (estado) {
       case 'creado': return 'Expediente Creado';
       case 'justificando': return 'Justificando';
-      case 'revision_resolucion': return 'Revisando Justificación';
-      case 'pendiente_firma': return 'Pendiente de firma';
+      case 'revision_resolucion': return 'En Revisión';
+      case 'espera_resolucion': return 'Pendiente de Firma';
+      case 'pendiente_correos': return 'Pendiente de Envío';
       case 'emitido': return 'Emitido';
       default: return estado;
     }
@@ -359,7 +377,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       case 'creado': return 'badge-mat-primary';
       case 'justificando': return 'badge-mat-warning';
       case 'revision_resolucion': return 'badge-mat-info';
-      case 'pendiente_firma': return 'badge-mat-rose';
+      case 'espera_resolucion': return 'badge-mat-primary';
+      case 'pendiente_correos': return 'badge-mat-rose';
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }
@@ -394,7 +413,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
   }
 
-  getColorClasePuntos(puntos: number): string {
+  getColorClasePuntos(puntos: number | null): string {
+    if (puntos === null) {
+      return 'text-muted';
+    }
     if (puntos < -9.0) {
       return 'puntos-rojo';
     }
@@ -407,7 +429,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     return 'puntos-verde';
   }
 
-  getHeaderClassPuntos(puntos: number): string {
+  getHeaderClassPuntos(puntos: number | null): string {
+    if (puntos === null) {
+      return 'card-header-info';
+    }
     if (puntos < -9.0) {
       return 'card-header-danger';
     }

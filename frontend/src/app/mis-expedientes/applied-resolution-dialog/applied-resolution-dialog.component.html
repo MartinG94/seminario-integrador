@@ -1,0 +1,23 @@
+<div class="resolution-dialog">
+  <ng-container *ngIf="entry as movement">
+    <h2 mat-dialog-title id="applied-resolution-title">Resolución aplicada</h2>
+    <div mat-dialog-content class="resolution-content">
+      <dl class="resolution-summary">
+        <div><dt>Expediente histórico</dt><dd>{{movement.historical_case.number}}</dd></div>
+        <div *ngIf="movement.managed_case"><dt>Expediente operativo</dt><dd>{{movement.managed_case.number}}</dd></div>
+        <div><dt>Puntos aplicados al socio</dt><dd>{{movement.applied_points > 0 ? '+' : ''}}{{movement.applied_points}} pts</dd></div>
+        <div><dt>Estado</dt><dd>Emitido</dd></div>
+        <div *ngIf="movement.historical_case.recorded_at"><dt>Registro histórico</dt><dd>{{movement.historical_case.recorded_at | date:'dd/MM/yyyy'}}</dd></div>
+      </dl>
+      <h3>Texto de la resolución</h3>
+      <div class="resolution-text">{{movement.resolution.text}}</div>
+      <ng-container *ngIf="movement.resolution.regulations.length">
+        <h3>Reglamentos respaldantes</h3>
+        <ul><li *ngFor="let regulation of movement.resolution.regulations">{{regulation}}</li></ul>
+      </ng-container>
+    </div>
+  </ng-container>
+  <div mat-dialog-actions align="end">
+    <button type="button" class="btn btn-primary resolution-close" aria-label="Cerrar resolución" (click)="close()">Cerrar</button>
+  </div>
+</div>

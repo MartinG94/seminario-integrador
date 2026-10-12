@@ -20,6 +20,8 @@ def test_local_bigint_identity_is_read_without_advancing_the_parent_sequence(
 ) -> None:
     from socios import views
 
+    # Este escenario sólo prepara el padrón local managed; no acredita saldo institucional.
+    monkeypatch.setenv("PADRON_ADAPTER", "mock")
     executor = MigrationExecutor(bootstrap_database)
     executor.migrate(executor.loader.graph.leaf_nodes())
 
@@ -56,4 +58,5 @@ def test_local_bigint_identity_is_read_without_advancing_the_parent_sequence(
     assert response.status_code == 200
     assert response.data["id"] == 2147483648
     assert response.data["legajo"] == "BIG-43"
+    assert response.data["points_balance"] is None
     assert list(Socio.objects.values()) == before

@@ -29,7 +29,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     { estado: 'creado', titulo: 'Creados', icon: 'file_copy' },
     { estado: 'justificando', titulo: 'Justificando', icon: 'schedule' },
     { estado: 'revision_resolucion', titulo: 'En Revisión', icon: 'gavel' },
-    { estado: 'pendiente_firma', titulo: 'Pendiente de Firma', icon: 'history_edu' },
+    { estado: 'espera_resolucion', titulo: 'Pendiente de Firma', icon: 'history_edu' },
     { estado: 'pendiente_correos', titulo: 'Pendiente de Envío', icon: 'mail_outline' },
     { estado: 'emitido', titulo: 'Emitidos', icon: 'verified' }
   ];
@@ -39,7 +39,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     { key: 'creado', label: 'Creados' },
     { key: 'justificando', label: 'Justificando' },
     { key: 'revision_resolucion', label: 'En Revisión' },
-    { key: 'pendiente_firma', label: 'Pendiente de Firma' },
+    { key: 'espera_resolucion', label: 'Pendiente de Firma' },
     { key: 'pendiente_correos', label: 'Pendiente de Envío' },
     { key: 'emitido', label: 'Emitidos' }
   ];
@@ -132,9 +132,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get columnasKanbanVisibles(): { estado: EstadoExpediente; titulo: string; icon: string; transitoria?: boolean }[] {
     if (this.filtroEstado.trim()) {
       const estadoFiltro = this.filtroEstado.trim();
-      // Si el filtro es revision_resolucion o espera_resolucion, apuntar a revision_resolucion
-      const estadoBuscado = (estadoFiltro === 'espera_resolucion') ? 'revision_resolucion' : estadoFiltro;
-      return this.columnasKanban.filter(col => col.estado === estadoBuscado);
+      return this.columnasKanban.filter(col => col.estado === estadoFiltro);
     }
 
     return this.columnasKanban;
@@ -192,15 +190,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     // Filtro por estado en memoria
     if (this.filtroEstado.trim()) {
       const est = this.filtroEstado.trim();
-      if (est === 'revision_resolucion') {
-        result = result.filter(e => e.estado === 'revision_resolucion' || e.estado === 'espera_resolucion');
-      } else if (est === 'pendiente_firma') {
-        result = result.filter(e => e.estado === 'pendiente_firma' || (e.estado === 'pendiente_correos' && (!e.firmas || !e.firmas.juecesFirmantes || e.firmas.juecesFirmantes.length < 3)));
-      } else if (est === 'pendiente_correos') {
-        result = result.filter(e => (e.estado === 'pendiente_correos' && (!!e.firmas && !!e.firmas.juecesFirmantes && e.firmas.juecesFirmantes.length >= 3)) || (e.estado as string) === 'pendiente_envio');
-      } else {
-        result = result.filter(e => e.estado === est);
-      }
+      result = result.filter(e => e.estado === est);
     }
 
     // Filtro por urgencia en memoria (S3-07)
@@ -232,15 +222,6 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getExpedientesPorEstado(estado: EstadoExpediente): Expediente[] {
-    if (estado === 'revision_resolucion') {
-      return this.expedientesFiltrados.filter(e => e.estado === 'revision_resolucion' || e.estado === 'espera_resolucion');
-    }
-    if (estado === 'pendiente_firma') {
-      return this.expedientesFiltrados.filter(e => e.estado === 'pendiente_firma' || (e.estado === 'pendiente_correos' && (!e.firmas || !e.firmas.juecesFirmantes || e.firmas.juecesFirmantes.length < 3)));
-    }
-    if (estado === 'pendiente_correos') {
-      return this.expedientesFiltrados.filter(e => (e.estado === 'pendiente_correos' && (!!e.firmas && !!e.firmas.juecesFirmantes && e.firmas.juecesFirmantes.length >= 3)) || (e.estado as string) === 'pendiente_envio');
-    }
     return this.expedientesFiltrados.filter(e => e.estado === estado);
   }
 
@@ -427,8 +408,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'creado': return 'Creados';
       case 'justificando': return 'Justificando';
       case 'revision_resolucion': return 'En Revisión';
-      case 'espera_resolucion': return 'En Revisión';
-      case 'pendiente_firma': return 'Pendiente de Firma';
+      case 'espera_resolucion': return 'Pendiente de Firma';
       case 'pendiente_correos': return 'Pendiente de Envío';
       case 'emitido': return 'Emitidos';
       default: return estado;
@@ -440,8 +420,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'creado': return 'badge-mat-primary';
       case 'justificando': return 'badge-mat-warning';
       case 'revision_resolucion': return 'badge-mat-info';
-      case 'espera_resolucion': return 'badge-mat-info';
-      case 'pendiente_firma': return 'badge-mat-primary';
+      case 'espera_resolucion': return 'badge-mat-primary';
       case 'pendiente_correos': return 'badge-mat-rose';
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';

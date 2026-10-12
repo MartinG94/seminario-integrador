@@ -1,4 +1,4 @@
-"""111 oráculos SCRUM-77 contra demo real conservando altas legítimas de UAT.
+"""Oráculos SCRUM-77 y saldo propio contra demo real, conservando las altas de UAT.
 
 Ejecutar por stdin dentro del backend demo, sin pytest ni bases de pruebas:
 Get-Content -Raw docs/gestion-proyecto/evidencias/scrum77-ampliacion/verificar_http.py |
@@ -83,6 +83,9 @@ def main() -> dict[str, Any]:
     } | {
         int(reference(scene.fixture_key + ".expediente", "expedientes_expediente"))
         for scene in CATALOG.t01_scenes if scene.status == "ISSUED"
+    } | {
+        int(reference(scene.fixture_key, "expedientes_expediente"))
+        for scene in CATALOG.advanced_causes
     }
     fixture_request_ids = {
         reference(scene.fixture_key, "expedientes_solicitudt01")
@@ -92,7 +95,7 @@ def main() -> dict[str, Any]:
     all_requests = {str(row.pk): row for row in SolicitudT01.objects.all()}
     assert fixture_case_ids <= set(all_cases)
     assert fixture_request_ids <= set(all_requests)
-    assert len(fixture_case_ids) == 5 and len(fixture_request_ids) == 4
+    assert len(fixture_case_ids) == 15 and len(fixture_request_ids) == 4
     owner_by_token: dict[str, int] = {}
     observations: list[dict[str, Any]] = []
     opener = build_opener(ProxyHandler({}), RejectRedirects())
@@ -223,7 +226,11 @@ def main() -> dict[str, Any]:
     scope.update({"fixture_case_ids": fixture_case_ids, "fixture_request_ids": fixture_request_ids})
     exec(compile(source, "<scrum77-live-fixture-view>", "exec"), scope)
     report = scope["verify_seeded_demo_http"](request_json)
-    assert report["http_checks"] == len(observations) == 111
+    assert report["http_checks"] == len(observations) == (
+        141
+        + 4 * sum(account.is_enabled for account in CATALOG.accounts)
+        + 4 * len(CATALOG.preserved_accounts)
+    )
     after = snapshot()
     assert before == after, "Los GET/login no deben alterar filas persistidas."
     return {

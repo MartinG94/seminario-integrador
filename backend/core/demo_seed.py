@@ -219,6 +219,10 @@ def run_demo_seed(*, profile: str = CATALOG.profile, password: str | None = None
                         "historical_resolutions",
                         "historical_expedientes",
                         "movements",
+                        "advanced_causes",
+                        "advanced_resolutions",
+                        "advanced_expedientes",
+                        "advanced_movements",
                     )
                 }
             )

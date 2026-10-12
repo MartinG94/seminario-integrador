@@ -203,7 +203,7 @@ def test_junior_extension_preserves_the_original_catalog_payload(catalog_module)
     assert fingerprint == "eb2803063850c9873d813118d3bd26dbf8db8a2e278db80111a14db8db3f5b24"
 
 
-def test_juniors_have_distinct_identities_enabled_ordinary_accounts_and_no_points(
+def test_juniors_keep_ordinary_accounts_and_only_the_authorized_advanced_points(
     catalog_module,
 ) -> None:
     catalog = catalog_module.CATALOG
@@ -220,7 +220,13 @@ def test_juniors_have_distinct_identities_enabled_ordinary_accounts_and_no_point
     assert all(account.role == "SOCIO" and account.is_enabled for account in accounts)
     assert all(member.membership_state_code == 1 for member in members)
     balances = catalog_module.expected_balances(catalog)
-    assert all(balances[key] == Decimal("0.00") for key in junior_keys)
+    assert not any(move.member_key in junior_keys for move in catalog.historical_movements)
+    assert {key: balances[key] for key in junior_keys} == {
+        "member.g62.01": Decimal("2"),
+        "member.g62.02": Decimal("-1"),
+        "member.g63.01": Decimal("-2"),
+        "member.g63.02": Decimal("1"),
+    }
     assert not {marker.member_key for marker in catalog.conditions} & junior_keys
 
 
