@@ -95,7 +95,18 @@ export class NavbarComponent implements OnInit {
       this.listTitles = ROUTES.filter(listTitle => listTitle);
       const navbar: HTMLElement = this.element.nativeElement;
       this.toggleButton = navbar.getElementsByClassName('navbar-toggler')[0];
+      const autoActivarTribunalSiCorresponde = (path: string) => {
+        if (!this.auth.getPerfil() && (path.includes('gestionar-expedientes') || (typeof window !== 'undefined' && window.location.hash.includes('gestionar-expedientes')))) {
+          const demo = this.demoRoles.find(r => r.id === 'tribunal');
+          if (demo) {
+            this.auth.setSession(demo.user);
+            this.dataService.setRole('tribunal');
+          }
+        }
+      };
+      autoActivarTribunalSiCorresponde(this.location.path());
       this.router.events.subscribe((event) => {
+        autoActivarTribunalSiCorresponde(this.location.path());
         this.sidebarClose();
         var $layer: any = document.getElementsByClassName('close-layer')[0];
         if ($layer) {

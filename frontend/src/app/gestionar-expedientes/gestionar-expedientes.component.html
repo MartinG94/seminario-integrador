@@ -160,9 +160,40 @@
               <span class="card-points">{{ exp.puntos > 0 ? '+' : '' }}{{ exp.puntos }} pts</span>
             </div>
             <h5 class="card-title-text" [title]="getCaseTitle(exp)">{{ getCaseTitle(exp) }}</h5>
+
+            <div class="card-subcomm text-muted small mb-1">
+              {{exp.socio}} &bull; {{exp.subcomision}} &bull; N° de Socio: {{exp.legajo}}
+              <span *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" class="badge badge-light text-muted ml-1" title="Expediente con múltiples imputados">
+                <i class="material-icons" style="font-size: 11px; vertical-align: middle;">group</i> {{exp.cantidadSocios}} imputados
+              </span>
+            </div>
+            <p class="text-muted small text-truncate mb-2" [title]="exp.motivo">{{exp.motivo}}</p>
             
-            <div class="card-bottom">
-              <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
+            <div class="card-bottom d-flex justify-content-between align-items-center">
+              <div *ngIf="exp.estado === 'justificando'" class="timer-badge" style="font-size: 10px;">
+                <i class="material-icons" style="font-size: 12px;" aria-hidden="true">schedule</i> {{exp.horasRestantes || 74}}h
+              </div>
+              <time *ngIf="exp.estado !== 'justificando'" [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
+
+              <!-- Acciones específicas de etapa según rol TD (votación o firma) -->
+              <div class="d-flex gap-1" (click)="$event.stopPropagation()" *ngIf="puedeVotarOFirmar">
+                <button *ngIf="exp.estado === 'revision_resolucion' || exp.estado === 'espera_resolucion'" 
+                        mat-button 
+                        class="btn btn-info btn-link btn-sm p-1"
+                        title="Votar Dictamen Colegiado"
+                        aria-label="Votar Dictamen Colegiado"
+                        (click)="abrirVotacion(exp)">
+                  <i class="material-icons">how_to_vote</i>
+                </button>
+                <button *ngIf="exp.estado === 'espera_resolucion' || exp.estado === 'pendiente_firma' || (exp.estado === 'pendiente_correos' && (!exp.firmas || !exp.firmas.juecesFirmantes || exp.firmas.juecesFirmantes.length < 3))" 
+                        mat-button 
+                        class="btn btn-success btn-link btn-sm p-1"
+                        title="Firmar Resolución"
+                        aria-label="Firmar Resolución"
+                        (click)="abrirFirma(exp)">
+                  <i class="material-icons">draw</i>
+                </button>
+              </div>
             </div>
           </div>
         </ng-container>
@@ -224,15 +255,15 @@
                   <button mat-button class="btn btn-info btn-link btn-just-icon" (click)="abrirDetalle(exp)" title="Ver Detalle de Expediente" aria-label="Ver Detalle">
                     <i class="material-icons">visibility</i>
                   </button>
-                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'revision_resolucion'" 
+                  <button *ngIf="puedeVotarOFirmar && (exp.estado === 'revision_resolucion' || exp.estado === 'espera_resolucion')" 
                           mat-button 
                           class="btn btn-warning btn-link btn-just-icon" 
                           (click)="abrirVotacion(exp)" 
-                          title="Votar Dictamen"
-                          aria-label="Votar Dictamen">
+                          title="Votar Dictamen Colegiado"
+                          aria-label="Votar Dictamen Colegiado">
                     <i class="material-icons">how_to_vote</i>
                   </button>
-                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'espera_resolucion'"
+                  <button *ngIf="puedeVotarOFirmar && (exp.estado === 'espera_resolucion' || exp.estado === 'pendiente_firma' || (exp.estado === 'pendiente_correos' && (!exp.firmas || !exp.firmas.juecesFirmantes || exp.firmas.juecesFirmantes.length < 3)))"
                           mat-button 
                           class="btn btn-success btn-link btn-just-icon" 
                           (click)="abrirFirma(exp)" 
@@ -378,8 +409,34 @@
           </div>
         </div>
 
+        <!-- Transición rápida desde el modal si corresponde -->
+        <div *ngIf="expedienteSeleccionado.transicionesPermitidas && expedienteSeleccionado.transicionesPermitidas.length > 0" class="mt-3 p-3 bg-light rounded border">
+          <label class="text-muted small font-weight-bold mb-2">Transición Autorizada:</label>
+          <div class="d-flex gap-2 flex-wrap">
+            <button *ngFor="let prox of expedienteSeleccionado.transicionesPermitidas"
+                    mat-raised-button
+                    class="btn btn-primary btn-sm"
+                    (click)="transicionarEstado(expedienteSeleccionado, prox); cerrarModales()">
+              <i class="material-icons" style="font-size: 14px;">arrow_forward</i>
+              Transicionar a {{getEstadoLabel(prox)}}
+            </button>
+          </div>
+        </div>
+
       </div>
-      <div class="card-footer d-flex justify-content-end">
+      <div class="card-footer d-flex justify-content-end align-items-center flex-wrap gap-2">
+        <button *ngIf="puedeVotarOFirmar && (expedienteSeleccionado.estado === 'revision_resolucion' || expedienteSeleccionado.estado === 'espera_resolucion')"
+                mat-raised-button 
+                class="btn btn-warning mr-2"
+                (click)="abrirVotacion(expedienteSeleccionado)">
+          <i class="material-icons mr-1" style="font-size: 16px;">how_to_vote</i> Votar Dictamen Colegiado
+        </button>
+        <button *ngIf="puedeVotarOFirmar && (expedienteSeleccionado.estado === 'espera_resolucion' || expedienteSeleccionado.estado === 'pendiente_firma' || (expedienteSeleccionado.estado === 'pendiente_correos' && (!expedienteSeleccionado.firmas || !expedienteSeleccionado.firmas.juecesFirmantes || expedienteSeleccionado.firmas.juecesFirmantes.length < 3)))"
+                mat-raised-button 
+                class="btn btn-success mr-2"
+                (click)="abrirFirma(expedienteSeleccionado)">
+          <i class="material-icons mr-1" style="font-size: 16px;">draw</i> Firmar Resolución
+        </button>
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>

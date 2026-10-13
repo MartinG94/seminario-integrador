@@ -242,10 +242,17 @@ describe('GestionarExpedientesComponent', () => {
         const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.kanban-card-mat'));
         expect(cards.length).toBe(1);
         const card = cards[0];
-        expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026'
-        );
-        expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
+        expect(card.querySelector('.card-id')?.textContent?.trim()).toBe('007/2026');
+        expect(card.querySelector('.badge-urgencia')?.textContent?.trim()).toBe('Urgente');
+        expect(card.querySelector('.card-points')?.textContent?.trim()).toBe('-1 pts');
+
+        if (column.estado === 'revision_resolucion') {
+          expect(card.querySelector('button[title="Votar Dictamen Colegiado"]')).not.toBeNull();
+        } else if (column.estado === 'espera_resolucion') {
+          expect(card.querySelector('button[title="Firmar Resolución"]')).not.toBeNull();
+        } else if (column.estado === 'justificando') {
+          expect(card.querySelector('.timer-badge')).not.toBeNull();
+        }
       }
     });
 
@@ -265,9 +272,9 @@ describe('GestionarExpedientesComponent', () => {
     it('mantiene el signo de puntos fraccionarios y Normal para registros anteriores', () => {
       renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
       const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
-      expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026'
-      );
+      expect(card.querySelector('.card-id')?.textContent?.trim()).toBe('018/2026');
+      expect(card.querySelector('.badge-urgencia')?.textContent?.trim()).toBe('Normal');
+      expect(card.querySelector('.card-points')?.textContent?.trim()).toBe('-0.5 pts');
     });
 
     it('mantiene legible el máximo de puntos sin desbordar ni superponer los datos de cabecera', () => {

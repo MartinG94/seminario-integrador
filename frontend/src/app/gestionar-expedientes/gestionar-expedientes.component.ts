@@ -366,11 +366,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   abrirVotacion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
   abrirFirma(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
     this.modalFirmaAbierto = true;
   }
 
