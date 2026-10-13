@@ -1,0 +1,55 @@
+{
+  "verified_code_sha": "4b2f077f331f0bafb1b6e2dccef3e300c3dc615e",
+  "pr_url": "https://github.com/MartinG94/seminario-integrador/pull/54",
+  "base": "main",
+  "merged": false,
+  "checks_success": 4,
+  "runs": [
+    {
+      "event": "pull_request",
+      "run_id": 38323245266,
+      "conclusion": "success",
+      "backend": {
+        "job_id": 115055918928,
+        "passed": 1155,
+        "failed": 0,
+        "skipped": 0,
+        "duration_seconds": 1256.04,
+        "ruff": "passed",
+        "formatted_files": 169
+      },
+      "frontend": {
+        "job_id": 115055919019,
+        "passed": 362,
+        "failed": 0,
+        "test_duration_seconds": 2.368,
+        "build_hash": "f650aba676820783",
+        "build_duration_ms": 28740,
+        "headless_step": "success"
+      }
+    },
+    {
+      "event": "push",
+      "run_id": 38323240371,
+      "conclusion": "success",
+      "backend": {
+        "job_id": 115055903185,
+        "passed": 1155,
+        "failed": 0,
+        "skipped": 0,
+        "duration_seconds": 891.8,
+        "ruff": "passed",
+        "formatted_files": 169
+      },
+      "frontend": {
+        "job_id": 115055902999,
+        "passed": 362,
+        "failed": 0,
+        "test_duration_seconds": 2.374,
+        "build_hash": "f650aba676820783",
+        "build_duration_ms": 27640,
+        "headless_step": "success"
+      }
+    }
+  ]
+}

@@ -51,9 +51,9 @@ Primera carga y repetición dejaron 272 referencias, 11 expedientes/resoluciones
 | Regresión backend final y cobertura | 1155 aprobadas, 0 errores/omisiones, 591,78 s; cobertura 94,17% en 25 módulos (2779 sentencias/162 sin cubrir); usuario CI restringido y ocho controles Compose incluidos |
 | Ruff/Django | Lint correcto, 169 archivos formateados; check sin incidencias y sin migraciones nuevas |
 | CI de la corrección de permisos | Cuatro checks de fe468b8 verdes; [registro](VERIFICACION_CI_PR54.md) |
-| CI del commit definitivo | Pendiente |
+| CI del código publicado 4b2f077 | Cuatro checks verdes: runs PR 38323245266 y push 38323240371; cada evento aprobó 1155 backend/362 frontend, Ruff/formato y build f650aba676820783; [registro](evidencias/pr54/ci-correcciones.json) |
 
-TDD reprodujo endpoints ausentes, saldos locales incorrectos, ceros ficticios, lectura previa a permisos, legajos de carreras alternativos, snapshots viejos, respuestas inválidas y errores de carga/propiedad de escenas avanzadas. La lectura de historial se ensayó con respaldos rotos y cadena managed incompleta; el frontend reprodujo 25 fallos propios y 6 de ficha antes de implementar. Auditoría independiente de lectores/SPA, importador y RF77-17 aprobada, sin hallazgos abiertos de código; el cierre integrado depende del CI del commit publicado. [Registro final local](evidencias/pr54/regresion-local.json).
+TDD reprodujo endpoints ausentes, saldos locales incorrectos, ceros ficticios, lectura previa a permisos, legajos de carreras alternativos, snapshots viejos, respuestas inválidas y errores de carga/propiedad de escenas avanzadas. La lectura de historial se ensayó con respaldos rotos y cadena managed incompleta; el frontend reprodujo 25 fallos propios y 6 de ficha antes de implementar. Auditoría independiente de lectores/SPA, importador y documentación aprobada sin hallazgos abiertos. TS77.48–59 y CA77-10–12 cerradas con regresión, HTTP/navegador y CI del código publicado aprobados. [Registro final local](evidencias/pr54/regresion-local.json) refleja el estado previo a su publicación; el resultado remoto está en el registro CI separado.
 
 ## Evidencia visual
 
@@ -62,6 +62,8 @@ TDD reprodujo endpoints ausentes, saldos locales incorrectos, ceros ficticios, l
 El tablero usa desplazamiento horizontal a 1140 px: [primeras tres columnas](evidencias/pr54/tablero-seis-estados.jpg) y [etapas finales](evidencias/pr54/tablero-etapas-finales.jpg). El DOM acreditó los seis conteos. El modal móvil tiene x=16/ancho=328 en viewport de 360, sin overflow global; Escape restaura el foco al botón que lo abrió. El viewport se restauró al concluir.
 
 [Smoke HTTP reproducible y conservación](evidencias/pr54/http-local.json); [verificador](evidencias/scrum77-ampliacion/verificar_http.py). Sólo se invocaron GET y POST de login; sus huellas previas/posteriores de las 52 tablas coinciden.
+
+El control posterior al navegador conservó las 52 huellas completas de esquema/filas y la numeración respecto de la repetición del seed. [Registro final de conservación](evidencias/pr54/conservacion-final.json).
 
 ## Límites conservados
 

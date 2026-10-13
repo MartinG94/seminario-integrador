@@ -4,11 +4,11 @@
 
 **Fecha:** 10/10/2026.
 
-**Estado:** SCRUM-77 y ampliación TS77.44–46 completadas y auditadas, sin hallazgos abiertos. 1064 pruebas backend verificadas y 278 frontend verdes (0 errores), cobertura 93,91% en 22 módulos y build b03663973a049f50 correcto. Veinte fichas con cuatro Juniors; 188 referencias, carga aditiva y repetición estable sobre 52 tablas, conservando las altas de UAT. 111 controles HTTP locales y feedback central de PR #49 verificados. Lint mantiene la limitación TSLint heredada. [Evidencia ampliación](tasks.md#verificación-de-ts774446).
+**Estado:** SCRUM-77 y ampliaciones TS77.01–59 completadas y auditadas, sin hallazgos abiertos. 1155 pruebas backend y 362 frontend verdes, sin errores/omisiones; cobertura local 94,17% en 25 módulos. Veinte fichas, doce asientos respaldados y seis estados visibles; carga/repetición y 197 controles HTTP conservan las 52 tablas y las altas de UAT. Cuatro checks CI del código 4b2f077 verdes, con build f650aba676820783. PR #54 abierta hacia main, sin merge. Lint mantiene la limitación TSLint heredada. [Evidencia actual](../../docs/gestion-proyecto/VERIFICACION_CORRECCIONES_PR54.md); [ampliación anterior](tasks.md#verificación-de-ts774446).
 
 ## Contexto y objetivo
 
-Las correcciones de saldo, escenas de todos los estados y resoluciones visibles RF77-15–17/CA77-10–12 están en verificación integrada mediante TS77.48–59; conservan el cierre histórico de la implementación y ampliación anteriores.
+Las correcciones de saldo, escenas de todos los estados y resoluciones visibles RF77-15–17/CA77-10–12 quedaron verificadas mediante TS77.48–59; conservan el cierre histórico de la implementación y ampliación anteriores.
 
 **Ampliación autorizada el 12/10/2026:** el usuario aprobó la UAT del conjunto original y solicitó sincronizar con `main` (PR #49) e incorporar datos Junior antes de preparar la PR. TS77.01–43 conservan su cierre histórico; TS77.44–46 registran esta ampliación verificada y auditada.
 

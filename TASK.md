@@ -293,15 +293,15 @@ UAT original aprobada por el usuario el 12/10/2026. Sincronización con main y d
 
 - [x] **TS77.48 Leer saldo propio desde el libro mayor:** GET autenticado, identidad institucional y TDD sin escrituras.
 - [x] **TS77.49 Conectar widget de Mis Expedientes:** Lectura por sesión, carga/error y saldo coherente; TDD frontend.
-- [ ] **TS77.50 Verificar corrección integrada:** HTTP/SQL, navegador, regresiones/build, auditoría y CI de PR #54, sin merge.
+- [x] **TS77.50 Verificar corrección integrada:** HTTP/SQL, navegador, regresiones/build, auditoría y CI de PR #54, sin merge.
 - [x] **TS77.51 Unificar saldos de las fichas:** Lector canónico local/institucional, desconocido/error explícitos y modal con saldo actual; TDD y auditoría.
 
 - [x] **TS77.52 Definir catálogo de estados avanzados:** Diez escenas 3/1/2/4, temporalidad y referencias; TDD.
 - [x] **TS77.53 Importar escenas históricas coherentes:** Numeración, calendario, historial y propiedad; TDD MySQL.
 - [x] **TS77.54 Respaldar emitidos y upgrade aditivo:** Cuatro actos/asientos nuevos; conservación, idempotencia y rollback.
-- [ ] **TS77.55 Verificar demo ampliada:** HTTP/SQL, tablero de seis estados, saldos, navegador, suites, auditoría y CI sin merge.
+- [x] **TS77.55 Verificar demo ampliada:** HTTP/SQL, tablero de seis estados, saldos, navegador, suites, auditoría y CI sin merge.
 - [x] **TS77.56 Preservar los seis estados en la SPA:** Conversión canónica, contadores/tabla/detalle coherentes; TDD.
 
-- [x] **TS77.57 Exponer historial propio respaldado:** Lectura consistente de asientos/actos, permisos e identidad; TDD sin escrituras.
+- [x] **TS77.57 Exponer historial respaldado:** Lectura consistente de asientos/actos, permisos e identidad; TDD sin escrituras.
 - [x] **TS77.58 Mostrar resoluciones aplicadas:** Widget/historial coherentes y tabla/modal accesibles, contratos/sesiones; TDD.
-- [ ] **TS77.59 Verificar trazabilidad visible:** HTTP/SQL, navegador, regresiones/cobertura, auditoría y CI final sin merge.
+- [x] **TS77.59 Verificar trazabilidad visible:** HTTP/SQL, navegador, regresiones/cobertura, auditoría y CI final sin merge.
