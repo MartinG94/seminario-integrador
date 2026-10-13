@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, Optional } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
@@ -69,14 +69,17 @@ export class AuthService implements OnDestroy {
     if (token) {
       this.hydrateProfile(token);
     } else if (hadActiveSession) {
-      this.router.navigate(['/login']);
+      this.router?.navigate(['/login']);
     }
   };
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(
+    @Optional() private http?: HttpClient,
+    @Optional() private router?: Router
+  ) {
     window.addEventListener('storage', this.onStorageChange);
     const token = this.getToken();
-    if (token) { this.hydrateProfile(token); }
+    if (token && this.http) { this.hydrateProfile(token); }
   }
 
   ngOnDestroy(): void {
@@ -146,6 +149,19 @@ export class AuthService implements OnDestroy {
   tieneRol(...roles: RolRbac[]): boolean {
     const perfil = this.getPerfil();
     return perfil !== null && roles.includes(perfil.role);
+  }
+
+  setSession(user: PerfilSocio, token: string = 'demo-jwt-token'): void {
+    const confirmedUser: ConfirmedSocioProfile = {
+      ...user,
+      category: user.category ?? 'SENIOR'
+    };
+    const fakeResponse: LoginResponse = {
+      access: token,
+      refresh: 'demo-refresh-token',
+      user: confirmedUser
+    };
+    this.guardarSesion(fakeResponse);
   }
 
   private guardarSesion(respuesta: LoginResponse): void {

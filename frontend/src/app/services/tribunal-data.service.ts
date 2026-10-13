@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Injectable, Optional } from '@angular/core';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -374,14 +374,14 @@ export class TribunalDataService {
   public eventos$ = this.eventosSubject.asObservable();
 
   constructor(
-    private auth: AuthService,
-    private http: HttpClient
+    @Optional() private auth?: AuthService,
+    @Optional() private http?: HttpClient
   ) {
-    const savedDark = localStorage.getItem('aveit_dark_mode') === 'true';
+    const savedDark = typeof localStorage !== 'undefined' && localStorage.getItem('aveit_dark_mode') === 'true';
     if (savedDark) {
       this.setDarkMode(true);
     }
-    this.auth.perfil$.subscribe(perfil => {
+    this.auth?.perfil$.subscribe(perfil => {
       if (!perfil) {
         this.currentRoleSubject.next('socio');
       } else if (perfil.role === 'TD' || perfil.role === 'ADMIN') {
@@ -418,6 +418,24 @@ export class TribunalDataService {
     this.setDarkMode(!this.darkModeSubject.value);
   }
 
+  // --- Métodos Reactivos y Store en Memoria ---
+
+  getSociosSnapshot(): Socio[] {
+    return this.sociosSubject.value;
+  }
+
+  agregarExpediente(expediente: Expediente): void {
+    const current = this.expedientesSubject.value;
+    const idx = current.findIndex(e => e.id === expediente.id || e.numero === expediente.numero);
+    if (idx !== -1) {
+      const copy = [...current];
+      copy[idx] = { ...current[idx], ...expediente };
+      this.expedientesSubject.next(copy);
+    } else {
+      this.expedientesSubject.next([expediente, ...current]);
+    }
+  }
+
   // --- Integración API Tablero de Seis Estados (S2-05) ---
 
   obtenerTablero(filtros?: {
@@ -448,14 +466,33 @@ export class TribunalDataService {
 
     return this.http.get<BoardResponseDTO>(`${environment.apiUrl}/expedientes/board/`, { params }).pipe(
       tap(res => {
-        // Mapear los casos de todas las columnas al formato Expediente para mantener expedientesSubject actualizado
-        const todosLosExpedientes: Expediente[] = [];
+        const currentExpedientes = this.expedientesSubject.value;
+        const mappedBackend: Expediente[] = [];
+
         res.columns.forEach(col => {
           col.cases.forEach(c => {
-            todosLosExpedientes.push(this.mapearBoardCaseAExpediente(c));
+            const exp = this.mapearBoardCaseAExpediente(c);
+            // Preservar estado en memoria enriquecido (descargo, votación, firmas, logs)
+            const existing = currentExpedientes.find(e => e.id === exp.id || e.numero === exp.numero);
+            if (existing) {
+              if (existing.descargo) exp.descargo = existing.descargo;
+              if (existing.descargoPresentado) exp.descargoPresentado = existing.descargoPresentado;
+              if (existing.logsDescargo && existing.logsDescargo.length > 0) exp.logsDescargo = existing.logsDescargo;
+              if (existing.votacion) exp.votacion = existing.votacion;
+              if (existing.firmas) exp.firmas = existing.firmas;
+
+              // Si el estado en memoria avanzó respecto al backend (ej. Paso 2 descargo presentado -> revision_resolucion,
+              // o Paso 3 votado -> pendiente_firma/pendiente_correos, o firmado -> emitido)
+              const estadosAvanzados: EstadoExpediente[] = ['revision_resolucion', 'espera_resolucion', 'pendiente_correos', 'emitido'];
+              if (estadosAvanzados.includes(existing.estado) && (!estadosAvanzados.includes(exp.estado) || existing.estado === 'emitido')) {
+                exp.estado = existing.estado;
+              }
+            }
+            mappedBackend.push(exp);
           });
         });
-        this.expedientesSubject.next(todosLosExpedientes);
+
+        this.expedientesSubject.next(mappedBackend);
       })
     );
   }
@@ -577,7 +614,7 @@ export class TribunalDataService {
     usuarioInfo?: { nombre: string; legajo?: string; esEdicion?: boolean }
   ): boolean {
     const current = this.expedientesSubject.value;
-    const index = current.findIndex(e => e.id === expedienteId);
+    const index = current.findIndex(e => e.id === expedienteId || e.numero === expedienteId);
     if (index === -1) return false;
 
     const updated = { ...current[index] };
@@ -628,7 +665,7 @@ export class TribunalDataService {
     usuarioInfo?: { nombre: string; legajo?: string }
   ): boolean {
     const current = this.expedientesSubject.value;
-    const index = current.findIndex(e => e.id === expedienteId);
+    const index = current.findIndex(e => e.id === expedienteId || e.numero === expedienteId);
     if (index === -1) return false;
 
     const updated = { ...current[index] };
@@ -668,7 +705,7 @@ export class TribunalDataService {
     considerandos: string
   ): boolean {
     const current = this.expedientesSubject.value;
-    const index = current.findIndex(e => e.id === expedienteId);
+    const index = current.findIndex(e => e.id === expedienteId || e.numero === expedienteId);
     if (index === -1) return false;
 
     const exp = { ...current[index] };
@@ -683,7 +720,7 @@ export class TribunalDataService {
     };
 
     if (aprobado) {
-      exp.estado = 'pendiente_correos';
+      exp.estado = 'espera_resolucion';
       exp.firmas = {
         juecesFirmantes: [],
         hashCriptografico: '',
@@ -699,12 +736,17 @@ export class TribunalDataService {
 
   firmarResolucion(expedienteId: string, juezFirmante: string): { completo: boolean; exp?: Expediente } {
     const current = this.expedientesSubject.value;
-    const index = current.findIndex(e => e.id === expedienteId);
+    const index = current.findIndex(e => e.id === expedienteId || e.numero === expedienteId);
     if (index === -1) return { completo: false };
 
     const exp = { ...current[index] };
     if (!exp.firmas) {
       exp.firmas = { juecesFirmantes: [], hashCriptografico: '', timestamp: '' };
+    } else {
+      exp.firmas = {
+        ...exp.firmas,
+        juecesFirmantes: [...exp.firmas.juecesFirmantes]
+      };
     }
 
     if (!exp.firmas.juecesFirmantes.includes(juezFirmante)) {
@@ -718,7 +760,7 @@ export class TribunalDataService {
       exp.firmas.hashCriptografico = 'sha256-' + Math.random().toString(36).substring(2) + Date.now().toString(36);
       exp.firmas.timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-      // Impactar en el saldo del socio
+      // Impactar reactivamente en el saldo del socio (emitiendo en sociosSubject)
       this.actualizarSaldoSocio(exp.socio, exp.puntos);
     }
 
@@ -728,9 +770,15 @@ export class TribunalDataService {
     return { completo, exp };
   }
 
-  private actualizarSaldoSocio(nombreSocio: string, deltaPuntos: number): void {
+  public actualizarSaldoSocio(nombreOLegajo: string, deltaPuntos: number): void {
     const socios = this.sociosSubject.value;
-    const idx = socios.findIndex(s => s.nombre.toLowerCase() === nombreSocio.toLowerCase());
+    const term = (nombreOLegajo || '').trim().toLowerCase();
+    const idx = socios.findIndex(s => 
+      s.nombre.toLowerCase() === term || 
+      s.legajo === nombreOLegajo ||
+      (term.length > 3 && s.nombre.toLowerCase().includes(term))
+    );
+
     if (idx !== -1) {
       const socio = { ...socios[idx] };
       socio.saldo = Math.round((socio.saldo + deltaPuntos) * 10) / 10;
@@ -748,6 +796,19 @@ export class TribunalDataService {
       const newSocios = [...socios];
       newSocios[idx] = socio;
       this.sociosSubject.next(newSocios);
+    } else {
+      const nuevo: Socio = {
+        id: String(socios.length + 1),
+        nombre: nombreOLegajo,
+        legajo: 'LEG-' + Math.floor(1000 + Math.random() * 9000),
+        email: `${term.replace(/\s+/g, '.')}@aveit.test`,
+        subcomision: 'Cómputos',
+        saldo: Math.round(deltaPuntos * 10) / 10,
+        estado: deltaPuntos <= -10 ? 'CESE_ESTATUTARIO' : deltaPuntos <= -7 ? 'ADVERTENCIA' : 'HABILITADO',
+        felicitaciones: deltaPuntos > 0 ? 1 : 0,
+        sanciones: deltaPuntos < 0 ? 1 : 0
+      };
+      this.sociosSubject.next([...socios, nuevo]);
     }
   }
 

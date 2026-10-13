@@ -102,12 +102,12 @@ export class SocioLegajoDialogComponent implements OnInit, OnDestroy {
           }
         }));
       },
-      error: (err) => {
+      error: (err: { status?: number }) => {
         this.cargando = false;
         this.historyStatus = 'error';
-        if (err.status === 403) {
+        if (err?.status === 403) {
           this.errorHttp = 'No posee autorización para consultar este legajo.';
-        } else if (err.status === 404) {
+        } else if (err?.status === 404) {
           this.errorHttp = 'El socio solicitado no fue encontrado en el padrón.';
         } else {
           this.errorHttp = 'Ocurrió un error al cargar la información del legajo. Verifique la conexión.';

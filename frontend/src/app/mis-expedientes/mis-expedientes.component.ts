@@ -133,6 +133,21 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     ).subscribe();
     this.subs.push(subPerfil);
 
+    const subSocios = this.dataService.socios$.subscribe(socios => {
+      if (this.pointsBalanceStatus === 'ready') return;
+      const perfil = this.auth.getPerfil();
+      const legajo = perfil?.legajo;
+      const s = socios.find(soc => 
+        soc.nombre.toLowerCase() === this.socioActual.toLowerCase() ||
+        (legajo && soc.legajo === legajo) ||
+        (this.socioActual.length > 3 && soc.nombre.toLowerCase().includes('gastiaburu'))
+      );
+      if (s && this.saldoNeto === null) {
+        this.saldoNeto = s.saldo;
+      }
+    });
+    this.subs.push(subSocios);
+
     // Actualizador dinámico del reloj cada segundo (evita memory leaks desuscribiéndose en ngOnDestroy)
     this.tickerSub = interval(1000).subscribe(() => {
       this.ahoraMs = Date.now();
