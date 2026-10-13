@@ -524,7 +524,7 @@ Ampliación RF77-18–21/CA77-13–14 autorizada por el usuario el 12/10/2026, i
 - [x] **TS77.61 Corregir sesión y listado propio (25 min):** Autenticación real, lectura de todos los vínculos y ausencia de identidad explícita; TDD de login/recarga/cambio de sesión.
 - [x] **TS77.62 Preparar contenido de presentación (25 min):** Catálogo de títulos/relatos y actualización idempotente auditada de placeholders propios, preservando UAT y documentos emitidos; TDD MySQL.
 - [x] **TS77.63 Mostrar creador e involucrados (25 min):** DTO desde fuentes acreditadas, detalle completo y columnas separadas de estado/urgencia; TDD de permisos/contratos/DOM.
-- [ ] **TS77.64 Verificar y publicar correcciones (25 min):** Base vacía, actualización/repetición, todos los socios, HTTP/UI, suites/build, auditoría, commit/push y CI de PR #54.
+- [x] **TS77.64 Verificar y publicar correcciones (25 min):** Base vacía, actualización/repetición, todos los socios, HTTP/UI, suites/build, auditoría, commit/push y CI de PR #54.
 
 ### Validación local de TS77.60–64
 
@@ -532,4 +532,6 @@ TS77.60–63 implementadas y auditadas. Copia limpia con Docker y base vacía: v
 
 Ambos entornos superan 227 controles HTTP reales con SQL y huellas sin escrituras. Navegador verifica login/recarga, saldos positivo/cero/negativo/no disponible, cierre de sesión en dos pestañas, títulos, columnas, creador e involucrados; modal a 360 px con foco/Escape. Un descargo presentado/editado sólo en la copia aislada persiste tras recargar y mantiene el saldo.
 
-Regresión final: 1173 backend MySQL verdes, cero errores/omisiones, 788,56 s y cobertura 94,11 % en 27 módulos; incluye diez controles Compose. Frontend: 402 verdes, cero errores, build 01b8629428101b11 correcto. Ruff/formato, Django check y ausencia de nuevas migraciones correctos. Auditoría independiente y consistencia PO aprobadas, sin modificar documentos protegidos. TS77.64 conserva pendiente la publicación y CI del nuevo commit. [Evidencia](../../docs/gestion-proyecto/VERIFICACION_PORTABILIDAD_PR54.md).
+Regresión final: 1173 backend MySQL verdes, cero errores/omisiones, 788,56 s y cobertura 94,11 % en 27 módulos; incluye diez controles Compose. Frontend: 402 verdes, cero errores, build 01b8629428101b11 correcto. Ruff/formato, Django check y ausencia de nuevas migraciones correctos. Auditoría independiente y consistencia PO aprobadas, sin modificar documentos protegidos. [Evidencia](../../docs/gestion-proyecto/VERIFICACION_PORTABILIDAD_PR54.md).
+
+Código publicado `c6691252f1e026dbd55f018f475721064e6c3a7b`: cuatro checks verdes en [PR 38335476765](https://github.com/MartinG94/seminario-integrador/actions/runs/38335476765) y [push 38335472937](https://github.com/MartinG94/seminario-integrador/actions/runs/38335472937). Los logs acreditan 1173 pruebas backend y 402 frontend por evento, sin errores/omisiones; build CI `050f04b42bf838fb`. TS77.60–64 y CA77-13–14 cerradas. PR #54 abierta hacia main, sin merge.

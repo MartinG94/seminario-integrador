@@ -69,7 +69,9 @@ TDD acreditó fallos antes de implementar arranque protegido, consulta propia, s
 - Frontend final: 402 pruebas verdes, cero errores; build `01b8629428101b11` correcto, 9589 ms.
 - Ruff global y formato de 174 archivos, `manage.py check` y ausencia de nuevas migraciones: correctos.
 - Auditoría independiente de código, configuración, permisos y conservación: aprobada sin hallazgos abiertos.
-- Publicación y CI del nuevo commit: pendientes de su resultado final.
+- Código publicado `c6691252f1e026dbd55f018f475721064e6c3a7b`: cuatro checks CI verdes en [PR 38335476765](https://github.com/MartinG94/seminario-integrador/actions/runs/38335476765) y [push 38335472937](https://github.com/MartinG94/seminario-integrador/actions/runs/38335472937). Backend: 1173 pruebas por evento, 918,22 s en PR y 1019,76 s en push, sin errores ni omisiones. Frontend: logs reales con 402/402 por evento y build `050f04b42bf838fb` correcto, pese al `continue-on-error` heredado del paso de Karma.
+
+TS77.60–64 y CA77-13–14 cerradas. La PR #54 permanece abierta hacia `main`, sin merge. Este registro acredita el código indicado; el cierre documental no modifica la implementación ni sus pruebas.
 
 Persisten los avisos heredados de Bootstrap y dos archivos TypeScript sin uso. El lint frontend mantiene el builder TSLint heredado ausente; Karma, compilación y controles backend se verifican por separado. No se agregaron dependencias ni cambios de esquema.
 

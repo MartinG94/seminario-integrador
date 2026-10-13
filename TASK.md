@@ -310,4 +310,4 @@ UAT original aprobada por el usuario el 12/10/2026. Sincronización con main y d
 - [x] **TS77.61 Corregir sesión y listado propio:** Autenticación vigente, todos los involucrados y puntos desconocidos explícitos.
 - [x] **TS77.62 Preparar contenido de presentación:** Títulos/relatos verosímiles y actualización protegida sin alterar actos/puntos/UAT.
 - [x] **TS77.63 Mostrar creador e involucrados:** Detalles completos y estado/urgencia separados.
-- [ ] **TS77.64 Verificar y publicar correcciones:** Regresiones, copia limpia, auditoría y CI de PR #54 sin merge.
+- [x] **TS77.64 Verificar y publicar correcciones:** Regresiones, copia limpia, auditoría y cuatro checks CI de c669125 verdes; 1173 backend/402 frontend por evento, PR #54 sin merge.

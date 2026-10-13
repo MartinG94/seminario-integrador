@@ -4,7 +4,7 @@
 
 **Fecha:** 10/10/2026.
 
-**Estado:** ampliación de portabilidad/presentación TS77.60–64 en curso. SCRUM-77 y ampliaciones TS77.01–59 completadas y auditadas, sin hallazgos abiertos. 1155 pruebas backend y 362 frontend verdes, sin errores/omisiones; cobertura local 94,17% en 25 módulos. Veinte fichas, doce asientos respaldados y seis estados visibles; carga/repetición y 197 controles HTTP conservan las 52 tablas y las altas de UAT. Cuatro checks CI del código 4b2f077 verdes, con build f650aba676820783. PR #54 abierta hacia main, sin merge. Lint mantiene la limitación TSLint heredada. [Evidencia actual](../../docs/gestion-proyecto/VERIFICACION_CORRECCIONES_PR54.md); [ampliación anterior](tasks.md#verificación-de-ts774446).
+**Estado:** SCRUM-77 y ampliaciones TS77.01–64 completadas y auditadas, sin hallazgos abiertos. 1173 pruebas backend y 402 frontend verdes, sin errores/omisiones; cobertura local 94,11 % en 27 módulos. Arranque automático desde base vacía con veinte socios, quince causas del catálogo en seis estados y doce asientos respaldados. Actualización/repetición y 227 controles HTTP por entorno conservan las 52 tablas y las altas de UAT. Cuatro checks CI del código c669125 verdes, con build 050f04b42bf838fb. PR #54 abierta hacia main, sin merge. Lint mantiene la limitación TSLint heredada. [Evidencia actual](../../docs/gestion-proyecto/VERIFICACION_PORTABILIDAD_PR54.md); [saldos y resoluciones](../../docs/gestion-proyecto/VERIFICACION_CORRECCIONES_PR54.md); [ampliación anterior](tasks.md#verificación-de-ts774446).
 
 ## Contexto y objetivo
 
