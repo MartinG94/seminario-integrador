@@ -11,6 +11,8 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from types import MappingProxyType
 
+from socios.demo_presentation import SCENE_PRESENTATIONS
+
 
 @dataclass(frozen=True)
 class GroupFixture:
@@ -532,6 +534,19 @@ def validate_catalog(catalog: DemoCatalog) -> None:
         for item in items:
             _key(item.fixture_key)
     _unique(tuple(item for items in collections for item in items), "fixture_key")
+    for scene in (*catalog.causes, *catalog.t01_scenes, *catalog.advanced_causes):
+        presentation = SCENE_PRESENTATIONS.get(scene.fixture_key)
+        if presentation is None:
+            raise ValueError("La escena requiere un título y relato ficticios aprobados.")
+        _text(presentation.title, 255, "Título ficticio")
+        for text in (
+            presentation.reason,
+            presentation.place,
+            presentation.witnesses,
+            presentation.causal,
+        ):
+            if not text.strip():
+                raise ValueError("La presentación de la escena no puede estar vacía.")
     group_counts = {group.fixture_key: 2 if group.category == "JUNIOR" else 4 for group in _GROUPS}
     if Counter(m.group_key for m in catalog.members) != group_counts:
         raise ValueError("Se requieren cuatro identidades G57–G60 y dos por cada grupo Junior.")

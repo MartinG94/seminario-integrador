@@ -10,6 +10,39 @@ El conjunto autorizado está en el [catálogo v1](CATALOGO_DATOS_DEMO_SCRUM-77.m
 
 ## Preparar el entorno y el esquema
 
+### Inicio recomendado desde una copia limpia
+
+Requiere Git para descargar esta rama y Docker Desktop/Engine con Compose v2 funcionando. No requiere Python ni Node instalados en el host:
+
+```sh
+docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml --profile frontend up -d --build
+docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml --profile frontend ps -a
+```
+
+El servicio `demo-setup` espera a que el backend esté sano, ejecuta la preparación protegida del esquema y carga el catálogo. La SPA sólo se inicia cuando esa tarea finaliza correctamente (`Exited (0)`). Abrir **http://127.0.0.1:4202** después de que Angular termine de compilar. La primera descarga/compilación puede tardar varios minutos.
+
+Si faltan datos, comprobar que se abrió el puerto **4202**, que el checkout corresponde a la rama de la PR #54 y que `demo-setup` terminó con código cero. `docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml logs demo-setup` muestra el diagnóstico. El Compose habitual y `npm start` usan otro entorno; no cargan automáticamente esta demo.
+
+Una instalación nueva contiene veinte socios institucionales, quince expedientes operativos (3 creados, 2 justificando, 3 en revisión, 1 pendiente de firma, 2 pendientes de envío y 4 emitidos), cuatro solicitudes T01 y doce asientos con respaldo. Las causas o solicitudes agregadas manualmente durante UAT pertenecen al volumen de esa máquina y no se copian como fixtures. Repetir el arranque conserva esos datos; no usar `down -v` para actualizar la rama.
+
+**Dónde verlos:** el ranking contiene los veinte socios y puede tener varias páginas. TD/CD/Admin consultan el conjunto en Gestionar Expedientes. Mis Expedientes muestra únicamente las causas en las que participa la cuenta ingresada; Solicitudes creadas muestra las iniciadas por esa cuenta. Las cuentas clásicas de acceso rápido no reemplazan a las cuentas `99077...` del catálogo y pueden no tener causas propias.
+
+### Angular en el host, como alternativa
+
+Usar Node 18 y las dependencias existentes del proyecto:
+
+```sh
+docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml up -d --build
+docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml ps -a
+cd frontend
+npm install --legacy-peer-deps
+npm run start:demo
+```
+
+Antes de iniciar Angular, esperar a que `demo-setup` figure como `Exited (0)` en `ps -a`; el comando `up -d` puede retornar mientras termina la carga. El script versionado usa el puerto 4202 y `proxy.scrum77-local.conf.json`, cuyo destino es el backend demo en 8002. No ejecutar a la vez el frontend Docker y el frontend del host sobre el mismo puerto. Las cuentas de prueba se describen más abajo; los accesos rápidos clásicos conservan sus permisos, aunque algunos no tienen ficha institucional y muestran sus puntos como no disponibles.
+
+### Preparación manual para diagnóstico
+
 Ejecutar desde la raíz de este checkout. Usar el archivo demo como único archivo Compose; las credenciales permanecen en la configuración del entorno y no se copian a informes, manifiestos o capturas.
 
 ```powershell

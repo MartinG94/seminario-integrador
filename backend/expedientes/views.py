@@ -35,6 +35,7 @@ from expedientes.permissions import (
     IsImputadoOrTribunal,
     IsTribunalOrDirectiva,
 )
+from expedientes.presentation import request_presentation_overrides
 from expedientes.serializers import (
     AperturaExpedienteSerializer,
     CalcularPlazoSerializer,
@@ -360,7 +361,10 @@ class ExpedienteDetailView(APIView):
 
     def get(self, request: Request, pk: int) -> Response:
         expediente = (
-            Expediente.objects.filter(pk=pk).select_related("socio", "socio__subcomision").first()
+            Expediente.objects.filter(pk=pk)
+            .select_related("socio", "socio__subcomision")
+            .prefetch_related("socios", "cambios_estado", "descargos")
+            .first()
         )
         if not expediente:
             return Response(
@@ -369,7 +373,7 @@ class ExpedienteDetailView(APIView):
             )
 
         self.check_object_permissions(request, expediente)
-        serializer = ExpedienteListSerializer(expediente)
+        serializer = ExpedienteListSerializer(expediente, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request, pk: int) -> Response:
@@ -476,7 +480,7 @@ class BoardExpedientesView(APIView):
     def get(self, request: Request) -> Response:
         qs = (
             Expediente.objects.select_related("socio", "socio__subcomision")
-            .prefetch_related("socios")
+            .prefetch_related("socios", "cambios_estado")
             .all()
         )
         filterset = ExpedienteFilter(request.query_params, queryset=qs)
@@ -564,6 +568,12 @@ class MisSolicitudesT01View(APIView):
         # Búsqueda por texto (título, motivo, causal, número o socios involucrados)
         search = request.query_params.get("search", "").strip()
         if search:
+            projections = request_presentation_overrides(list(queryset))
+            projected_ids = [
+                pk
+                for pk, fields in projections.items()
+                if any(search.casefold() in value.casefold() for value in fields.values())
+            ]
             queryset = queryset.filter(
                 Q(titulo__icontains=search)
                 | Q(motivo__icontains=search)
@@ -571,6 +581,7 @@ class MisSolicitudesT01View(APIView):
                 | Q(numero_expediente__icontains=search)
                 | Q(expediente__numero__icontains=search)
                 | Q(snapshots_destinatarios__icontains=search)
+                | Q(pk__in=projected_ids)
             )
 
         serializer = MisSolicitudesT01Serializer(queryset, many=True, context={"request": request})

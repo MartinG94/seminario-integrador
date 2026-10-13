@@ -74,6 +74,17 @@ describe('SocioLegajoDialogComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('ficha sin vínculo institucional conserva sus datos y muestra puntos no disponibles sin error de sesión', () => {
+    socioApiServiceSpy.getPointsHistory.and.returnValue(throwError(() => ({ status: 404 })));
+    component.cargarLegajo();
+    fixture.detectChanges();
+    expect(component.legajo).toEqual(mockLegajo);
+    expect(component.historyStatus).toBe('unavailable');
+    expect(fixture.nativeElement.textContent).toContain('No disponible');
+    expect(fixture.nativeElement.textContent).toContain('No hay un vínculo institucional confirmado');
+    expect(notifications.error).not.toHaveBeenCalled();
+  });
+
   it('debe cargar los datos del legajo al inicializar (CA2)', () => {
     expect(socioApiServiceSpy.getLegajo).toHaveBeenCalledWith(1, undefined);
     expect(component.cargando).toBeFalse();

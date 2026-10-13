@@ -18,6 +18,20 @@
 
 ---
 
+## Iniciar la demo de la PR #54 en otra máquina
+
+Con Docker Desktop iniciado y esta rama descargada, ejecutar desde la raíz:
+
+```sh
+docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml --profile frontend up -d --build
+```
+
+Abrir **http://127.0.0.1:4202** cuando Angular termine de compilar. El servicio `demo-setup` prepara MySQL y carga automáticamente veinte socios, quince expedientes de ejemplo en los seis estados y sus resoluciones/puntos antes de iniciar la SPA. No es necesario copiar una base local ni ejecutar SQL. `docker compose up` sin el archivo demo inicia el entorno habitual, que es distinto.
+
+Para comprobar el inicio: `docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml --profile frontend ps -a`. `demo-setup` debe quedar en `Exited (0)`; es una tarea de preparación, no un servidor permanente. Si falla, consultar `docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml logs demo-setup` y conservar el volumen.
+
+Las cuentas, la alternativa con Angular en el host y el procedimiento de actualización están en la [guía de carga de la demo](docs/gestion-proyecto/GUIA_CARGA_DEMO_SCRUM-77.md). Repetir el inicio conserva los datos y las altas propias de UAT; estas últimas no se distribuyen como fixtures a otras máquinas.
+
 ## 📋 Tabla de Contenidos
 
 - [Descripción General](#-descripción-general)

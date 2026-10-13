@@ -12,6 +12,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from django.core.exceptions import ValidationError
+from django.core.management.base import CommandError
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
@@ -32,10 +33,17 @@ from socios.demo_catalog import (
     T01Fixture,
     validate_catalog,
 )
+from socios.demo_presentation import legacy_scene_reason, scene_presentation
 
 if TYPE_CHECKING:
     from core.demo_fixtures import DemoFixtureRegistry
     from core.demo_members import DemoMembersResult
+
+_PRESENTATION_ACTOR = "DEMO_PRESENTATION_V1"
+_PRESENTATION_AUDIT_REASON = (
+    "Actualización autorizada del título y relato ficticios de demostración. "
+    "Se conserva el estado, los plazos, los participantes y los actos del expediente."
+)
 
 
 @dataclass
@@ -53,7 +61,87 @@ class DemoScenesResult:
 
 
 def _scene_reason(key: str) -> str:
-    return f"SCRUM-77 [{key}]: causa ficticia para demostrar los recorridos institucionales."
+    return scene_presentation(key).case_text
+
+
+def _check_presentation_collision(
+    registry: "DemoFixtureRegistry",
+    key: str,
+    model: Any,
+    field: str,
+    legacy_value: str,
+    approved_value: str,
+) -> dict[str, str]:
+    """No adoptar ni duplicar una plantilla anterior sin su propiedad acreditada."""
+    record = registry.get(key)
+    manager = model.objects.using(registry.connection.alias)
+    if record is not None:
+        if not record.owned or record.namespace != model._meta.db_table:
+            raise ValidationError("La presentación demo requiere una referencia propia válida.")
+        # Las etiquetas humanas no son únicas. La propiedad física acredita la
+        # fila existente, aun si una causa o solicitud de UAT usa el mismo texto.
+        matches = manager.filter(**{field: legacy_value}).exclude(pk=record.object_key)
+        lookup = {"pk": record.object_key}
+    else:
+        matches = manager.filter(**{f"{field}__in": (legacy_value, approved_value)})
+        lookup = {field: approved_value}
+    if matches.exists():
+        raise CommandError("Existe una presentación coincidente en una fila ajena al perfil.")
+    return lookup
+
+
+def _upgrade_case_presentation(
+    registry: "DemoFixtureRegistry", key: str, case: Expediente, *, scene_key: str | None = None
+) -> None:
+    """Actualizar sólo la plantilla heredada exacta, con auditoría atómica owned."""
+    registry._check_write()
+    record = registry.get(key)
+    if (
+        record is None
+        or not record.owned
+        or record.namespace != Expediente._meta.db_table
+        or record.object_key != str(case.pk)
+    ):
+        raise ValidationError("La actualización de presentación requiere propiedad acreditada.")
+    marker_key = f"{key}.presentation.v1"
+    marker = registry.get(marker_key)
+    if marker is not None:
+        audit = (
+            (
+                CambioEstadoExpediente.objects.using(registry.connection.alias)
+                .filter(pk=marker.object_key)
+                .first()
+            )
+            if marker.namespace == CambioEstadoExpediente._meta.db_table
+            else None
+        )
+        if (
+            not marker.owned
+            or marker.namespace != CambioEstadoExpediente._meta.db_table
+            or audit is None
+            or audit.expediente_id != case.pk
+            or audit.actor != _PRESENTATION_ACTOR
+            or audit.motivo != _PRESENTATION_AUDIT_REASON
+            or audit.estado_anterior != audit.estado_nuevo
+            or audit.estado_nuevo not in EstadoExpedienteEnum.values
+        ):
+            raise ValidationError("La actualización perdió su auditoría; no se reconstruye.")
+        return
+    locked = Expediente.objects.using(registry.connection.alias).select_for_update().get(pk=case.pk)
+    base_key = scene_key or key
+    if locked.motivo != legacy_scene_reason(base_key):
+        return
+    locked.motivo = scene_presentation(base_key).case_text
+    locked.save(using=registry.connection.alias, update_fields=["motivo"])
+    audit = CambioEstadoExpediente.objects.using(registry.connection.alias).create(
+        expediente=locked,
+        estado_anterior=locked.estado,
+        estado_nuevo=locked.estado,
+        actor=_PRESENTATION_ACTOR,
+        motivo=_PRESENTATION_AUDIT_REASON,
+    )
+    registry.record(marker_key, CambioEstadoExpediente._meta.db_table, audit.pk)
+    case.motivo = locked.motivo
 
 
 def _record_case_components(registry: "DemoFixtureRegistry", key: str, case: Expediente) -> None:
@@ -75,20 +163,21 @@ def _record_case_components(registry: "DemoFixtureRegistry", key: str, case: Exp
 
 def _create_t01(fixture: T01Fixture, members: "DemoMembersResult") -> SolicitudT01:
     recipients = [members.institutional_members[key].pk for key in fixture.recipient_member_keys]
-    reason = _scene_reason(fixture.fixture_key)
+    presentation = scene_presentation(fixture.fixture_key)
+    reason = presentation.reason
     payload = {
         "tipo_accion": SolicitudT01.TipoAccion.SANCTION,
         "destinatarios_socios_ids": recipients,
         "urgencia": fixture.urgency,
-        "titulo": f"SCRUM-77 [{fixture.fixture_key}]",
+        "titulo": presentation.title,
         "motivo": reason,
         "razon": reason,
-        "causal": "Escena sintética de demostración",
+        "causal": presentation.causal,
         "puntos": fixture.requested_points if fixture.recipient_member_keys else None,
         "anexo_fecha": timezone.localdate(),
-        "anexo_lugar": "Sede AVEIT — espacio ficticio de demostración",
-        "anexo_relato": "Hecho sintético, sin efectos sobre personas ni actos institucionales.",
-        "anexo_testigos": "No se presentan testigos reales en esta demostración.",
+        "anexo_lugar": presentation.place,
+        "anexo_relato": presentation.reason,
+        "anexo_testigos": presentation.witnesses,
     }
     serializer = SolicitudT01Serializer(data=payload)
     serializer.is_valid(raise_exception=True)
@@ -116,6 +205,9 @@ def _load_operational_scenes(
         key = fixture.fixture_key
         is_new = registry.get(key) is None
         reason = _scene_reason(key)
+        lookup = _check_presentation_collision(
+            registry, key, Expediente, "motivo", legacy_scene_reason(key), reason
+        )
         actor = f"SOLICITANTE_{members.accounts[fixture.creator_account_key].legajo}"
         recipient_ids = [
             members.accounts[account_by_member[member_key]].pk
@@ -125,7 +217,7 @@ def _load_operational_scenes(
         case = registry.ensure_model(
             key,
             Expediente,
-            lookup={"motivo": reason},
+            lookup=lookup,
             defaults={},
             create=lambda reason=reason, actor=actor,
                 recipient_ids=recipient_ids, fixture=fixture: (
@@ -142,13 +234,19 @@ def _load_operational_scenes(
         result.causes[key] = case
         if is_new:
             _record_case_components(registry, key, case)
+        else:
+            _upgrade_case_presentation(registry, key, case)
     for fixture in catalog.t01_scenes:
         key = fixture.fixture_key
         is_new = registry.get(key) is None
+        title = scene_presentation(key).title
+        lookup = _check_presentation_collision(
+            registry, key, SolicitudT01, "titulo", f"SCRUM-77 [{key}]", title
+        )
         request = registry.ensure_model(
             key,
             SolicitudT01,
-            lookup={"titulo": f"SCRUM-77 [{key}]"},
+            lookup=lookup,
             defaults={},
             create=lambda fixture=fixture: _create_t01(fixture, members),
         )
@@ -162,6 +260,8 @@ def _load_operational_scenes(
                 case_key = f"{key}.expediente"
                 registry.record(case_key, Expediente._meta.db_table, case.pk)
                 _record_case_components(registry, case_key, case)
+            else:
+                _upgrade_case_presentation(registry, f"{key}.expediente", case, scene_key=key)
 
 
 def _resolution_text(
@@ -385,10 +485,13 @@ def _load_advanced_cases(
     for fixture in catalog.advanced_causes:
         key = fixture.fixture_key
         is_new = registry.get(key) is None
+        lookup = _check_presentation_collision(
+            registry, key, Expediente, "motivo", legacy_scene_reason(key), _scene_reason(key)
+        )
         case = registry.ensure_model(
             key,
             Expediente,
-            lookup={"motivo": _scene_reason(key)},
+            lookup=lookup,
             defaults={},
             create=lambda fixture=fixture: _create_advanced_case(
                 fixture, members, database_alias=registry.connection.alias
@@ -397,6 +500,8 @@ def _load_advanced_cases(
         result.advanced_causes[key] = case
         if is_new:
             _record_case_components(registry, key, case)
+        else:
+            _upgrade_case_presentation(registry, key, case)
         _validate_advanced_components(fixture, registry, members, case)
 
 

@@ -515,3 +515,21 @@ Código y pruebas finalizados: 1155 backend MySQL verdes sin errores ni omisione
 Carga aditiva/repetición conservó las 52 tablas y las altas de UAT. Dieciséis causas efectivas: 4/2/3/1/2/4 en los seis estados, quince fixtures; once respaldos y doce asientos, agregado +1. HTTP final: 197 controles sobre veinte historiales, nueve cuentas propias y cinco referencias locales sin identidad, con SQL/ranking/fichas y huellas sin escrituras. Navegador confirmó saldos/resoluciones propios, ficha autorizada sin cuenta operativa, seis etapas y modal/Escape/foco a 360 px. Auditoría de código aprobada sin hallazgos abiertos y PO contrastado, sin modificar las notas ni el seguimiento macro.
 
 [Evidencia integrada](../../docs/gestion-proyecto/VERIFICACION_CORRECCIONES_PR54.md). El código publicado 4b2f077f331f0bafb1b6e2dccef3e300c3dc615e aprobó los cuatro checks de los runs PR 38323245266 y push 38323240371: 1155 backend y 362 frontend por evento, cero errores/omisiones, Ruff/formato y build f650aba676820783 correctos. Auditoría integral sin hallazgos; TS77.50/55/59 y CA77-10–12 cerradas. El control posterior al navegador mantuvo las 52 huellas completas y la numeración. PR #54 abierta hacia main, sin merge; las Notas del PO y el seguimiento macro siguen intactos.
+
+## Portabilidad y presentación — PR #54
+
+Ampliación RF77-18–21/CA77-13–14 autorizada por el usuario el 12/10/2026, incluyendo commit y push sin merge.
+
+- [x] **TS77.60 Automatizar el arranque reproducible (25 min):** Preparación y carga protegidas antes de la SPA, documentación y prueba desde archivos versionados/base vacía.
+- [x] **TS77.61 Corregir sesión y listado propio (25 min):** Autenticación real, lectura de todos los vínculos y ausencia de identidad explícita; TDD de login/recarga/cambio de sesión.
+- [x] **TS77.62 Preparar contenido de presentación (25 min):** Catálogo de títulos/relatos y actualización idempotente auditada de placeholders propios, preservando UAT y documentos emitidos; TDD MySQL.
+- [x] **TS77.63 Mostrar creador e involucrados (25 min):** DTO desde fuentes acreditadas, detalle completo y columnas separadas de estado/urgencia; TDD de permisos/contratos/DOM.
+- [ ] **TS77.64 Verificar y publicar correcciones (25 min):** Base vacía, actualización/repetición, todos los socios, HTTP/UI, suites/build, auditoría, commit/push y CI de PR #54.
+
+### Validación local de TS77.60–64
+
+TS77.60–63 implementadas y auditadas. Copia limpia con Docker y base vacía: veinte socios, quince causas del catálogo en seis estados, cuatro T01 y doce asientos respaldados; setup finaliza antes de la SPA. Configuración inválida rechazada sin crear tablas. Repetición conserva las 52 tablas y numeración. Actualización de la demo existente modifica sólo quince motivos originales con sus eventos/referencias de auditoría; preserva UAT, T01, snapshots, personas, puntos y resoluciones. Una segunda carga es idéntica.
+
+Ambos entornos superan 227 controles HTTP reales con SQL y huellas sin escrituras. Navegador verifica login/recarga, saldos positivo/cero/negativo/no disponible, cierre de sesión en dos pestañas, títulos, columnas, creador e involucrados; modal a 360 px con foco/Escape. Un descargo presentado/editado sólo en la copia aislada persiste tras recargar y mantiene el saldo.
+
+Regresión final: 1173 backend MySQL verdes, cero errores/omisiones, 788,56 s y cobertura 94,11 % en 27 módulos; incluye diez controles Compose. Frontend: 402 verdes, cero errores, build 01b8629428101b11 correcto. Ruff/formato, Django check y ausencia de nuevas migraciones correctos. Auditoría independiente y consistencia PO aprobadas, sin modificar documentos protegidos. TS77.64 conserva pendiente la publicación y CI del nuevo commit. [Evidencia](../../docs/gestion-proyecto/VERIFICACION_PORTABILIDAD_PR54.md).

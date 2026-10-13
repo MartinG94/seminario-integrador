@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import { HttpClientTestingModule, HttpTestingController, TestRequest } from '@angular/common/http/testing';
 import { async, ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MisExpedientesComponent } from './mis-expedientes.component';
 import { NotificationService } from '../services/notification.service';
@@ -19,9 +21,10 @@ describe('MisExpedientesComponent', () => {
   let notifications: jasmine.SpyObj<NotificationService>;
 
   beforeEach(async(() => {
-    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'registerDialogContainer']);
+    notifications.registerDialogContainer.and.returnValue(() => undefined);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule, MatDialogModule, NoopAnimationsModule],
+      imports: [A11yModule, HttpClientTestingModule, FormsModule, MatDialogModule, MatButtonModule, NoopAnimationsModule],
       declarations: [MisExpedientesComponent, AppliedPointsHistoryComponent, AppliedResolutionDialogComponent],
       providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
     }).compileComponents();
@@ -410,13 +413,14 @@ describe('MisExpedientesComponent — saldo propio confirmado (TS77.49)', () => 
     profiles = new BehaviorSubject<PerfilSocio | null>(null);
     cases = new BehaviorSubject<Expediente[]>([]);
     mockBalances = new BehaviorSubject([{ nombre: 'Ámbar Faro Demo', saldo: 99 }]);
-    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'registerDialogContainer']);
+    notifications.registerDialogContainer.and.returnValue(() => undefined);
     TestBed.configureTestingModule({
-      imports: [CommonModule, HttpClientTestingModule, FormsModule, MatDialogModule, NoopAnimationsModule],
+      imports: [A11yModule, CommonModule, HttpClientTestingModule, FormsModule, MatDialogModule, MatButtonModule, NoopAnimationsModule],
       declarations: [MisExpedientesComponent, AppliedPointsHistoryComponent, AppliedResolutionDialogComponent],
       providers: [
         { provide: AuthService, useValue: { perfil$: profiles.asObservable(), getPerfil: () => profiles.value } },
-        { provide: TribunalDataService, useValue: { socios$: mockBalances.asObservable(), expedientes$: cases.asObservable() } },
+        { provide: TribunalDataService, useValue: { socios$: mockBalances.asObservable(), expedientes$: cases.asObservable(), getOwnCases: () => cases.asObservable() } },
         { provide: NotificationService, useValue: notifications }
       ]
     }).compileComponents();
@@ -590,7 +594,7 @@ describe('MisExpedientesComponent — saldo propio confirmado (TS77.49)', () => 
     });
   });
 
-  [0, 403, 404, 503].forEach(status => {
+  [0, 403, 503].forEach(status => {
     it(`distingue el error HTTP ${status} de cero y usa la notificación central`, () => {
       profiles.next(profile);
       const request = currentRequest();
@@ -605,6 +609,16 @@ describe('MisExpedientesComponent — saldo propio confirmado (TS77.49)', () => 
       expect(balanceWidget().textContent).not.toMatch(/\b0\s*pts\b/);
       expect(notifications.error).toHaveBeenCalledWith('No se pudieron consultar tus puntos y resoluciones. Volvé a intentarlo más tarde.');
     });
+  });
+
+  it('una identidad institucional no acreditada mantiene puntos no disponibles sin aviso de autenticación (TS77.61)', () => {
+    profiles.next(profile);
+    currentRequest().flush({}, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(component.saldoNeto).toBeNull();
+    expect(balanceWidget().textContent).toContain('No disponible');
+    expect(fixture.nativeElement.textContent).toContain('No hay un vínculo institucional confirmado');
+    expect(notifications.error).not.toHaveBeenCalled();
   });
 
   const invalidResponses: readonly unknown[] = [

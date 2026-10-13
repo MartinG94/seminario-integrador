@@ -15,7 +15,7 @@
                 [attr.aria-busy]="pointsBalanceStatus === 'loading'">
               <ng-container *ngIf="saldoNeto !== null">{{saldoNeto > 0 ? '+' : ''}}{{saldoNeto}} <small>pts</small></ng-container>
               <span *ngIf="pointsBalanceStatus === 'loading'">Cargando...</span>
-              <span *ngIf="pointsBalanceStatus === 'error'">No disponible</span>
+              <span *ngIf="pointsBalanceStatus === 'error' || pointsBalanceStatus === 'unavailable'">No disponible</span>
               <span *ngIf="pointsBalanceStatus === 'idle'">Iniciá sesión para ver tus puntos</span>
             </h3>
           </div>
@@ -44,10 +44,15 @@
             <p class="card-category">Registro formal de causas disciplinarias y reconocimientos institucionales asignados a tu número de socio.</p>
           </div>
           <div class="card-body">
-            <div *ngIf="misExpedientes.length === 0" class="text-center py-5">
+            <p *ngIf="ownCasesStatus === 'loading'" role="status">Cargando tus expedientes...</p>
+            <div *ngIf="ownCasesStatus === 'error'" class="text-center py-4">
+              <p>No se pudieron consultar tus expedientes.</p>
+              <button mat-button class="btn btn-info" (click)="reloadOwnCases()">Volver a intentar</button>
+            </div>
+            <div *ngIf="ownCasesStatus === 'ready' && misExpedientes.length === 0" class="text-center py-5">
               <i class="material-icons text-muted" style="font-size: 56px;">verified</i>
               <h4 class="text-muted mt-2">No registras causas ni expedientes en trámite</h4>
-              <p class="text-muted small">Tu número de socio se encuentra en orden estatutario regular.</p>
+              <p class="text-muted small">No hay expedientes asignados a tu cuenta.</p>
             </div>
 
             <div *ngIf="misExpedientes.length > 0" class="table-responsive">
@@ -56,8 +61,8 @@
                   <th class="sortable-th" (click)="cambiarOrden('numero')" title="Ordenar por N° Expediente">
                     N° Expediente <i class="material-icons">{{getIconoOrden('numero')}}</i>
                   </th>
-                  <th class="sortable-th" (click)="cambiarOrden('motivo')" title="Ordenar por Motivo">
-                    Motivo de la Causa <i class="material-icons">{{getIconoOrden('motivo')}}</i>
+                  <th class="sortable-th" (click)="cambiarOrden('title')" title="Ordenar por Título">
+                    Título <i class="material-icons">{{getIconoOrden('title')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('fechaCreacion')" title="Ordenar por Fecha">
                     Fecha de Apertura <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
@@ -74,7 +79,7 @@
                   <tr *ngFor="let exp of expedientesOrdenados">
                     <td class="font-weight-bold text-dark">{{exp.numero}}</td>
                     <td>
-                      <div>{{exp.motivo}}</div>
+                      <div>{{getCaseTitle(exp)}}</div>
                       <small class="text-muted">Subcomisión: {{exp.subcomision}}</small>
                     </td>
                     <td>{{exp.fechaCreacion}}</td>
@@ -115,18 +120,36 @@
 
 <!-- Modal Ver Detalle del Expediente -->
 <div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom" (click)="cerrarModalDetalle()" (wheel)="$event.stopPropagation()">
-  <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
+  <div #ownCaseDialog class="modal-dialog-custom" data-testid="own-case-detail" (click)="$event.stopPropagation()"
+       role="dialog" aria-modal="true" aria-labelledby="own-case-title" tabindex="-1"
+       [cdkTrapFocus]="!modalAbierto" [cdkTrapFocusAutoCapture]="true"
+       (keydown.escape)="cerrarModalDetalle(); $event.stopPropagation()">
     <div class="card">
       <div class="card-header card-header-info d-flex justify-content-between align-items-center">
         <div>
-          <h4 class="card-title">Detalle del Expediente</h4>
-          <p class="card-category">{{expedienteDetalle?.numero}} &bull; Socio: {{socioActual}}</p>
+          <h4 class="card-title" id="own-case-title">Detalle del Expediente</h4>
+          <p class="card-category">{{expedienteDetalle?.numero}}</p>
+          <p class="card-category" data-testid="case-creator">Creador: {{expedienteDetalle?.creator?.full_name || 'No disponible'}}
+            <span *ngIf="expedienteDetalle?.creator?.institutional_number != null"> · N.º institucional: {{expedienteDetalle?.creator?.institutional_number}}</span>
+            <span *ngIf="expedienteDetalle?.creator?.academic_number"> · Legajo: {{expedienteDetalle?.creator?.academic_number}}</span>
+          </p>
         </div>
-        <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModalDetalle()" title="Cerrar modal">
+        <button mat-icon-button cdkFocusInitial class="btn btn-link text-white p-0 m-0" (click)="cerrarModalDetalle()" title="Cerrar modal" aria-label="Cerrar detalle del expediente">
           <i class="material-icons">close</i>
         </button>
       </div>
       <div class="card-body">
+        <section aria-label="Socios involucrados" data-testid="case-involved-members" class="mb-4">
+          <h5 class="font-weight-bold text-dark">Socios involucrados</h5>
+          <div class="table-responsive" *ngIf="expedienteDetalle?.involvedMembers?.length; else unknownInvolved">
+            <table class="table table-sm"><thead><tr><th>Nombre</th><th>N.º institucional</th><th>Legajo</th></tr></thead>
+              <tbody><tr *ngFor="let member of expedienteDetalle?.involvedMembers">
+                <td>{{member.full_name}}</td><td>{{member.institutional_number ?? 'No disponible'}}</td><td>{{member.academic_number || 'Sin legajo'}}</td>
+              </tr></tbody>
+            </table>
+          </div>
+          <ng-template #unknownInvolved><p class="text-muted">No disponible</p></ng-template>
+        </section>
         <div class="table-responsive">
           <table class="table table-borderless">
             <tbody>
@@ -135,8 +158,12 @@
                 <td class="font-weight-bold text-dark">{{expedienteDetalle?.numero}}</td>
               </tr>
               <tr>
-                <th class="text-muted">Motivo / Causa:</th>
-                <td>{{expedienteDetalle?.motivo}}</td>
+                <th class="text-muted">Título:</th>
+                <td>{{expedienteDetalle?.title || 'No disponible'}}</td>
+              </tr>
+              <tr>
+                <th class="text-muted">Motivo:</th>
+                <td class="case-reason">{{expedienteDetalle?.motivo}}</td>
               </tr>
               <tr>
                 <th class="text-muted">Subcomisión de Origen:</th>
@@ -224,10 +251,21 @@
           <h5 class="font-weight-bold text-dark d-flex align-items-center mb-1">
             <i class="material-icons text-info mr-2">history</i> Registro de Operaciones y Auditoría
           </h5>
-          <p class="text-muted small mb-3">Trazabilidad de acciones de justificación, usuario interviniente y marcas de tiempo.</p>
+          <p class="text-muted small mb-3">Trazabilidad de acciones registradas, usuario interviniente y marcas de tiempo.</p>
 
-          <div *ngIf="!expedienteDetalle?.logsDescargo || expedienteDetalle?.logsDescargo?.length === 0" class="text-muted small italic p-2 bg-light rounded text-center">
+          <p *ngIf="expedienteDetalle?.isPersisted && expedienteDetalle?.stateChanges == null" class="text-muted">Historial no disponible.</p>
+          <div *ngIf="!expedienteDetalle?.logsDescargo?.length && !expedienteDetalle?.stateChanges?.length && (!expedienteDetalle?.isPersisted || expedienteDetalle?.stateChanges != null)" class="text-muted small italic p-2 bg-light rounded text-center">
             Sin operaciones registradas para este expediente.
+          </div>
+
+          <div *ngIf="expedienteDetalle?.stateChanges?.length" class="table-responsive">
+            <table class="table table-sm table-striped">
+              <thead><tr><th>Estado anterior</th><th>Estado registrado</th><th>Quién</th><th>Cuándo</th><th>Detalle</th></tr></thead>
+              <tbody><tr *ngFor="let change of expedienteDetalle?.stateChanges">
+                <td>{{getEstadoLabel(change.estado_anterior)}}</td><td>{{getEstadoLabel(change.estado_nuevo)}}</td>
+                <td>{{change.actor}}</td><td>{{change.fecha_hora | date:'dd/MM/yyyy HH:mm'}}</td><td>{{change.motivo}}</td>
+              </tr></tbody>
+            </table>
           </div>
 
           <div *ngIf="expedienteDetalle?.logsDescargo && expedienteDetalle?.logsDescargo?.length > 0" class="table-responsive">
@@ -261,23 +299,23 @@
 
         <div class="d-flex align-items-center gap-2">
           <!-- Si no tiene justificativo: botón Añadir -->
-          <button *ngIf="!expedienteDetalle?.descargo && !esPlazoVencido(expedienteDetalle)" 
+          <button *ngIf="!expedienteDetalle?.descargo && (!expedienteDetalle?.isPersisted || expedienteDetalle?.estado === 'justificando') && !esPlazoVencido(expedienteDetalle)"
                   mat-raised-button 
                   color="primary" 
                   class="btn btn-primary"
                   (click)="abrirModalDescargo(expedienteDetalle)">
-            <i class="material-icons" style="font-size: 16px;">add_circle</i> Añadir Justificativo
+            <i class="material-icons" style="font-size: 16px;">add_circle</i> Descargo
           </button>
 
           <!-- Si ya tiene justificativo: botones Editar y Eliminar -->
           <ng-container *ngIf="expedienteDetalle?.descargo">
-            <button *ngIf="!esPlazoVencido(expedienteDetalle)" 
+            <button *ngIf="(!expedienteDetalle?.isPersisted || expedienteDetalle?.estado === 'justificando') && !esPlazoVencido(expedienteDetalle)"
                     mat-raised-button 
                     class="btn btn-warning mr-2"
                     (click)="abrirModalEditarDescargo(expedienteDetalle)">
               <i class="material-icons" style="font-size: 16px;">edit</i> Editar Justificativo
             </button>
-            <button *ngIf="!esPlazoVencido(expedienteDetalle)" 
+            <button *ngIf="!expedienteDetalle?.isPersisted && !esPlazoVencido(expedienteDetalle)"
                     mat-raised-button 
                     class="btn btn-danger"
                     (click)="eliminarDescargo(expedienteDetalle)">
@@ -286,7 +324,7 @@
           </ng-container>
 
           <!-- Si el plazo expiró -->
-          <button *ngIf="esPlazoVencido(expedienteDetalle)" 
+          <button *ngIf="(!expedienteDetalle?.isPersisted || expedienteDetalle?.estado === 'justificando') && esPlazoVencido(expedienteDetalle)"
                   mat-button 
                   class="btn btn-danger"
                   disabled
@@ -301,14 +339,17 @@
 
 <!-- Modal Unificado de Justificaciones T02 / T03 -->
 <div *ngIf="modalAbierto" class="modal-backdrop-custom" style="z-index: 1060;" (click)="cerrarModal()" (wheel)="$event.stopPropagation()">
-  <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
+  <div #ownDefenseDialog class="modal-dialog-custom" (click)="$event.stopPropagation()"
+       role="dialog" aria-modal="true" aria-labelledby="own-defense-title" tabindex="-1"
+       [cdkTrapFocus]="true" [cdkTrapFocusAutoCapture]="true"
+       (keydown.escape)="cerrarModal(); $event.stopPropagation()">
     <div class="card">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <div>
-          <h4 class="card-title">{{esEdicion ? 'Editar Justificación Reglamentaria' : 'Añadir Justificación Reglamentaria'}}</h4>
+          <h4 class="card-title" id="own-defense-title">{{esEdicion ? 'Editar Justificación Reglamentaria' : 'Añadir Justificación Reglamentaria'}}</h4>
           <p class="card-category">Expediente: {{expedienteSeleccionado?.numero}} &bull; Socio: {{socioActual}}</p>
         </div>
-        <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModal()" title="Cerrar ventana">
+        <button mat-icon-button cdkFocusInitial class="btn btn-link text-white p-0 m-0" (click)="cerrarModal()" title="Cerrar ventana" aria-label="Cerrar formulario de descargo">
           <i class="material-icons">close</i>
         </button>
       </div>
@@ -318,6 +359,7 @@
           <i class="material-icons" style="vertical-align: middle;">info</i>
           <span>El justificativo debe respetar las formalidades del reglamento institucional. Dispone de un plazo improrrogable de 5 días hábiles desde la notificación.</span>
         </div>
+        <p class="text-muted">Podés corregir tu descargo mientras el plazo esté abierto.</p>
 
         <div class="form-group">
           <label class="font-weight-bold text-dark mb-2">Modalidad de Justificación:</label>
@@ -354,9 +396,9 @@
           <div class="form-group mt-3">
             <label class="text-dark font-weight-bold">Adjuntar Comprobante o Constancia Digital (* Requerido):</label>
             <input type="file" class="form-control-file" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
-            <small class="text-muted d-block mt-1">Formatos admitidos: PDF, JPG, PNG (hasta 10MB). Debe contener firma, sello o código de validación digital.</small>
+            <small class="text-muted d-block mt-1">Se registra el nombre del comprobante seleccionado. Debe contener firma, sello o código de validación digital.</small>
             <div *ngIf="nombreArchivo" class="mt-2 text-success font-weight-bold">
-              <i class="material-icons" style="font-size: 16px; vertical-align: middle;">check_circle</i> Archivo cargado: {{nombreArchivo}}
+              <i class="material-icons" style="font-size: 16px; vertical-align: middle;">check_circle</i> Comprobante seleccionado: {{nombreArchivo}}
             </div>
           </div>
         </div>
@@ -373,8 +415,8 @@
       </div>
       <div class="card-footer d-flex justify-content-end gap-2">
         <button mat-button class="btn btn-default" (click)="cerrarModal()">Cancelar</button>
-        <button mat-raised-button color="primary" class="btn btn-primary" (click)="enviarDescargo()">
-          <i class="material-icons" style="font-size: 16px;">save</i> {{esEdicion ? 'Guardar Cambios' : 'Enviar Justificación Formal'}}
+        <button mat-raised-button color="primary" class="btn btn-primary" (click)="enviarDescargo()" [disabled]="submittingDefense">
+          <i class="material-icons" style="font-size: 16px;">save</i> {{submittingDefense ? 'Guardando...' : esEdicion ? 'Guardar Cambios' : 'Enviar Justificación Formal'}}
         </button>
       </div>
     </div>

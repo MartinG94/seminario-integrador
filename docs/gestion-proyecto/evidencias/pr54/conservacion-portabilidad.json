@@ -1,0 +1,47 @@
+{
+  "status": "ok",
+  "local_updated_cases": 15,
+  "local_uat_case_ids": [
+    6
+  ],
+  "all_other_case_fields_unchanged": true,
+  "all_previous_audits_and_owners_preserved": true,
+  "all_52_table_schemas_unchanged": true,
+  "local_sequence": [
+    {
+      "id": 1,
+      "year": 2026,
+      "last_value": 16
+    }
+  ],
+  "changed_tables": [
+    {
+      "table": "core_demofixtureownership",
+      "before": 272,
+      "after": 287
+    },
+    {
+      "table": "expedientes_cambio_estado",
+      "before": 55,
+      "after": 70
+    },
+    {
+      "table": "expedientes_expediente",
+      "before": 16,
+      "after": 16
+    }
+  ],
+  "all_other_49_tables_identical": true,
+  "local_repeat_52_tables_identical": true,
+  "clean_repeat_52_tables_identical": true,
+  "clean_sequence": [
+    {
+      "id": 1,
+      "year": 2026,
+      "last_value": 15
+    }
+  ],
+  "before_utc": "2026-10-13T00:45:36.324362+00:00",
+  "after_utc": "2026-10-13T01:26:45.212200+00:00",
+  "repeat_utc": "2026-10-13T01:29:56.008196+00:00"
+}

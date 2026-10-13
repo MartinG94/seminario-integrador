@@ -6,6 +6,7 @@
           <div class="card-body">
             <p *ngIf="status === 'loading'" class="text-muted">Cargando resoluciones...</p>
             <p *ngIf="status === 'error'" class="text-muted">Resoluciones no disponibles.</p>
+            <p *ngIf="status === 'unavailable'" class="text-muted">No hay un vínculo institucional confirmado para consultar los puntos.</p>
             <p *ngIf="status === 'idle'" class="text-muted">Iniciá sesión para consultar las resoluciones.</p>
             <ng-container *ngIf="status === 'ready'">
               <p *ngIf="entries.length === 0" class="text-muted">No hay movimientos de puntos aplicados.</p>

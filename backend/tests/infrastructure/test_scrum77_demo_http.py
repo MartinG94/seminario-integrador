@@ -15,6 +15,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 import pytest
 from django.db import connection
+from django.db.models import Q
 
 from expedientes.models import EstadoExpedienteEnum, Expediente, SolicitudT01
 from padron.models import Socio as InstitutionalSocio
@@ -183,6 +184,17 @@ def verify_seeded_demo_http(request_json: JSONRequest) -> dict[str, Any]:
             f"/api/v1/socios/{profile.pk}/points-history/?identity_source=local", token=token
         )
         assert local_history == own_history
+        own_cases = call("/api/v1/expedientes/mis-expedientes/", token=token)
+        assert {row["id"] for row in own_cases} == set(
+            Expediente.objects.filter(Q(socio=profile) | Q(socios=profile))
+            .distinct()
+            .values_list("pk", flat=True)
+        )
+        assert len(own_cases) == len({row["id"] for row in own_cases})
+        assert all(
+            profile.pk in {member["local_socio_id"] for member in row["involved_members"]}
+            for row in own_cases
+        )
     for account in CATALOG.preserved_accounts:
         profile = Socio.objects.get(legajo=account.legajo)
         body = call("/api/v1/auth/login/", payload={"identifier": account.legajo})
@@ -191,6 +203,12 @@ def verify_seeded_demo_http(request_json: JSONRequest) -> dict[str, Any]:
         assert me["role"] == preserved_roles[account.legajo]
         assert me["category"] == profile.category
         tokens[account.fixture_key] = body["access"]
+        own_cases = call("/api/v1/expedientes/mis-expedientes/", token=body["access"])
+        assert {row["id"] for row in own_cases} == set(
+            Expediente.objects.filter(Q(socio=profile) | Q(socios=profile))
+            .distinct()
+            .values_list("pk", flat=True)
+        )
         # Las cinco referencias locales preservadas no tienen identidad en este padrón.
         assert not InstitutionalSocio.objects.filter(user_id=profile.user_id).exists()
         assert not SocioEstudio.objects.filter(nroLegajo=int(account.legajo)).exists()
@@ -223,6 +241,7 @@ def verify_seeded_demo_http(request_json: JSONRequest) -> dict[str, Any]:
     call("/api/v1/auth/me/", expected_status=401)
     call("/api/v1/socios/me/points-balance/", expected_status=401)
     call("/api/v1/socios/me/points-history/", expected_status=401)
+    call("/api/v1/expedientes/mis-expedientes/", expected_status=401)
     call("/api/v1/socios/770001/points-history/?identity_source=institutional", expected_status=401)
 
     cd_token = tokens["account.g58.01"]
@@ -450,6 +469,36 @@ def verify_seeded_demo_http(request_json: JSONRequest) -> dict[str, Any]:
         assert ids == set(queryset.values_list("pk", flat=True))
     collection = call("/api/v1/expedientes/gestion/", token=cd_token)
     assert {row["id"] for row in collection} == set(all_cases)
+    case_scenes = {
+        int(owned_key(scene.fixture_key, "expedientes_expediente")): scene
+        for scene in (*CATALOG.causes, *CATALOG.advanced_causes)
+    }
+    case_scenes.update(
+        {
+            int(owned_key(scene.fixture_key + ".expediente", "expedientes_expediente")): scene
+            for scene in CATALOG.t01_scenes
+            if scene.status == "ISSUED"
+        }
+    )
+    for row in collection:
+        stored = all_cases[row["id"]]
+        scene = case_scenes[stored.pk]
+        creator = profiles[scene.creator_account_key]
+        assert row["title"].strip() and "SCRUM-77" not in row["title"]
+        assert row["motivo"].strip() and "SCRUM-77" not in row["motivo"]
+        assert scene.fixture_key not in row["title"] + row["motivo"]
+        assert row["creator"]["local_socio_id"] == creator.pk
+        assert row["creator"]["full_name"] == f"{creator.first_name} {creator.last_name}"
+        assert row["creator"]["login_identifier"] == creator.legajo
+        assert {member["local_socio_id"] for member in row["involved_members"]} == set(
+            stored.socios.values_list("pk", flat=True)
+        )
+        assert {member["institutional_number"] for member in row["involved_members"]} == {
+            members[key].institutional_number for key in scene.recipient_member_keys
+        }
+        detail = call(f"/api/v1/expedientes/{stored.pk}/", token=cd_token)
+        for field in ("title", "motivo", "creator", "involved_members"):
+            assert detail[field] == row[field]
     call("/api/v1/expedientes/board/", token=ordinary_token, expected_status=403)
     call("/api/v1/expedientes/board/", expected_status=401)
     return {
@@ -539,7 +588,8 @@ def test_catalog_http_profiles_ranking_requests_and_board_match_real_mysql(
     assert Decimal(result["catalog_balance"]) == Decimal(1)
     assert result["junior_ids"] == [770017, 770018, 770019, 770020]
     assert result["http_checks"] == (
-        141
-        + 4 * sum(account.is_enabled for account in CATALOG.accounts)
-        + 4 * len(CATALOG.preserved_accounts)
+        142
+        + 5 * sum(account.is_enabled for account in CATALOG.accounts)
+        + 5 * len(CATALOG.preserved_accounts)
+        + len(result["managed_case_ids"])
     )

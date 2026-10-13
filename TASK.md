@@ -305,3 +305,9 @@ UAT original aprobada por el usuario el 12/10/2026. Sincronización con main y d
 - [x] **TS77.57 Exponer historial respaldado:** Lectura consistente de asientos/actos, permisos e identidad; TDD sin escrituras.
 - [x] **TS77.58 Mostrar resoluciones aplicadas:** Widget/historial coherentes y tabla/modal accesibles, contratos/sesiones; TDD.
 - [x] **TS77.59 Verificar trazabilidad visible:** HTTP/SQL, navegador, regresiones/cobertura, auditoría y CI final sin merge.
+
+- [x] **TS77.60 Automatizar el arranque reproducible:** Preparación/carga y SPA desde copia limpia.
+- [x] **TS77.61 Corregir sesión y listado propio:** Autenticación vigente, todos los involucrados y puntos desconocidos explícitos.
+- [x] **TS77.62 Preparar contenido de presentación:** Títulos/relatos verosímiles y actualización protegida sin alterar actos/puntos/UAT.
+- [x] **TS77.63 Mostrar creador e involucrados:** Detalles completos y estado/urgencia separados.
+- [ ] **TS77.64 Verificar y publicar correcciones:** Regresiones, copia limpia, auditoría y CI de PR #54 sin merge.

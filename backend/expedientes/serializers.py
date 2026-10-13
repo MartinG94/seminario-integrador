@@ -21,6 +21,12 @@ from expedientes.models import (
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
+from expedientes.presentation import (
+    CaseMember,
+    build_case_read_metadata,
+    case_members,
+    request_presentation_overrides,
+)
 from expedientes.services.solicitud_t01_service import (
     canonical_t01_classification,
     materialize_t01_recipient,
@@ -31,7 +37,57 @@ from padron.factory import get_padron_repository
 from socios.models import Socio
 
 
-class ExpedienteListSerializer(serializers.ModelSerializer):
+class CaseReadListSerializer(serializers.ListSerializer):
+    def to_representation(self, data: Any) -> list[dict[str, Any]]:
+        cases = list(data.all() if hasattr(data, "all") else data)
+        self.context["case_metadata"] = build_case_read_metadata(cases)
+        return super().to_representation(cases)
+
+
+class CaseReadSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+    creator = serializers.SerializerMethodField()
+    involved_members = serializers.SerializerMethodField()
+    motivo = serializers.SerializerMethodField()
+
+    def to_representation(self, instance: Expediente) -> dict[str, Any]:
+        if instance.pk not in self.context.get("case_metadata", {}):
+            self.context.setdefault("case_metadata", {}).update(
+                build_case_read_metadata([instance])
+            )
+        return super().to_representation(instance)
+
+    def get_title(self, obj: Expediente) -> str:
+        return self.context["case_metadata"][obj.pk]["title"]
+
+    def get_motivo(self, obj: Expediente) -> str:
+        return self.context["case_metadata"][obj.pk]["motivo"]
+
+    def get_creator(self, obj: Expediente) -> CaseMember | None:
+        return self.context["case_metadata"][obj.pk]["creator"]
+
+    def get_involved_members(self, obj: Expediente) -> list[CaseMember]:
+        return self.context["case_metadata"][obj.pk]["involved_members"]
+
+
+class RequestPresentationListSerializer(serializers.ListSerializer):
+    def to_representation(self, data: Any) -> list[dict[str, Any]]:
+        requests = list(data.all() if hasattr(data, "all") else data)
+        self.context["request_presentation"] = request_presentation_overrides(requests)
+        return super().to_representation(requests)
+
+
+class RequestPresentationSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance: SolicitudT01) -> dict[str, Any]:
+        overrides = self.context.get("request_presentation")
+        if overrides is None:
+            overrides = request_presentation_overrides([instance])
+        payload = super().to_representation(instance)
+        payload.update(overrides.get(instance.pk, {}))
+        return payload
+
+
+class ExpedienteListSerializer(CaseReadSerializer):
     """Serializador para listado y detalle de expedientes."""
 
     socio_nombre = serializers.SerializerMethodField()
@@ -51,10 +107,14 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expediente
+        list_serializer_class = CaseReadListSerializer
         fields = [
             "id",
             "numero",
             "motivo",
+            "title",
+            "creator",
+            "involved_members",
             "puntos",
             "estado",
             "urgencia",
@@ -150,7 +210,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 "legajo": socio.legajo,
                 "nombre": f"{socio.first_name} {socio.last_name}",
             }
-            for socio in obj.socios.all()
+            for socio in case_members(obj)
         ]
 
     def get_historial(self, obj: Expediente) -> list[dict[str, str]]:
@@ -272,7 +332,7 @@ class CaseNotificationAuditSerializer(serializers.ModelSerializer):
 ExpedienteNotificationAuditSerializer = CaseNotificationAuditSerializer
 
 
-class SolicitudT01Serializer(serializers.ModelSerializer):
+class SolicitudT01Serializer(RequestPresentationSerializer):
     urgencia = serializers.ChoiceField(
         choices=UrgenciaExpedienteEnum.choices,
         required=False,
@@ -281,6 +341,7 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = SolicitudT01
+        list_serializer_class = RequestPresentationListSerializer
         fields = "__all__"
         read_only_fields = (
             "id",
@@ -462,7 +523,7 @@ ALLOWED_TRANSITIONS: dict[str, list[str]] = {
 }
 
 
-class BoardExpedienteSerializer(serializers.ModelSerializer):
+class BoardExpedienteSerializer(CaseReadSerializer):
     """Tarjeta compacta de expediente para el tablero Kanban del TD (S2-05 CA1 / S3-07)."""
 
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
@@ -475,6 +536,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expediente
+        list_serializer_class = CaseReadListSerializer
         fields = [
             "id",
             "numero",
@@ -488,6 +550,9 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "urgencia_display",
             "puntos",
             "motivo",
+            "title",
+            "creator",
+            "involved_members",
             "created_at",
             "plazo_limite_at",
             "transiciones_permitidas",
@@ -498,8 +563,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
     def get_cantidad_socios(self, obj: Expediente) -> int:
-        count = obj.socios.count()
-        return count if count > 0 else 1
+        return len(case_members(obj))
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])
@@ -528,7 +592,7 @@ class TransicionarExpedienteSerializer(serializers.Serializer):
         return value
 
 
-class MisSolicitudesT01Serializer(serializers.ModelSerializer):
+class MisSolicitudesT01Serializer(RequestPresentationSerializer):
     """Serializador sanitizado para monitoreo de solicitudes T01 (CA2 y CA3)."""
 
     numero = serializers.SerializerMethodField()
@@ -542,6 +606,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = SolicitudT01
+        list_serializer_class = RequestPresentationListSerializer
         fields = [
             "id",
             "numero",

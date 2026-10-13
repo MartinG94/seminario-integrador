@@ -173,6 +173,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.cargarDatosTablero();
   }
 
+  getCaseTitle(exp: Expediente): string {
+    return exp.title || exp.motivo;
+  }
+
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
@@ -208,8 +212,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
 
     result.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA = this.columnaOrden === 'title' ? this.getCaseTitle(a) : (a as any)[this.columnaOrden];
+      let valB = this.columnaOrden === 'title' ? this.getCaseTitle(b) : (b as any)[this.columnaOrden];
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 

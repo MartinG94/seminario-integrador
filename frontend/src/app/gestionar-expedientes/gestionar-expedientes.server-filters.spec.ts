@@ -21,7 +21,16 @@ describe('SCRUM-77 filtros del tablero confirmados por servidor', () => {
     socio_legajo: '99077001', subcomision: 'Cómputos', estado: 'creado',
     estado_display: 'Expediente Creado', urgencia: 'urgente', puntos: -3,
     motivo: 'SCRUM-77 [cause.created.urgent.multi]', created_at: '2026-10-12T12:00:00Z',
-    plazo_limite_at: null, transiciones_permitidas: [], cantidad_socios: 2
+    plazo_limite_at: null, transiciones_permitidas: [], cantidad_socios: 2,
+    title: 'Ingreso fuera del horario acordado',
+    creator: { local_socio_id: 5, full_name: 'Elena Estrella Demo', login_identifier: '99077005',
+      institutional_number: 770005, academic_number: '99077005' },
+    involved_members: [
+      { local_socio_id: 6, full_name: 'Ámbar Faro Demo', login_identifier: '99077001',
+        institutional_number: 770001, academic_number: '99077001' },
+      { local_socio_id: 11, full_name: 'Malena Marea Demo', login_identifier: '99077013',
+        institutional_number: 770013, academic_number: '99077013' }
+    ]
   };
   const primaryCase: BoardCaseDTO = {
     ...multiCase, id: 775, numero: 'EXP-0005/2026', socio: 11,
@@ -84,6 +93,61 @@ describe('SCRUM-77 filtros del tablero confirmados por servidor', () => {
   });
 
   afterEach(() => http.verify());
+
+  it('detalle distingue creador real, ambos involucrados y título de la causa (TS77.63)', () => {
+    fixture.componentInstance.abrirDetalle(fixture.componentInstance.expedientes[0]);
+    fixture.detectChanges();
+    const dialog: HTMLElement = fixture.nativeElement.querySelector('[role="dialog"]');
+    expect(dialog.querySelector('[data-testid="case-creator"]')?.textContent).toContain('Elena Estrella Demo');
+    expect(dialog.querySelector('[data-testid="case-creator"]')?.textContent).not.toContain('Ámbar Faro Demo');
+    expect(dialog.querySelector('[data-testid="case-involved-members"]')?.textContent).toContain('Ámbar Faro Demo');
+    expect(dialog.querySelector('[data-testid="case-involved-members"]')?.textContent).toContain('Malena Marea Demo');
+    expect(dialog.querySelector('[data-testid="case-involved-members"]')?.textContent).toContain('770013');
+    expect(dialog.textContent).toContain('Ingreso fuera del horario acordado');
+    expect(dialog.textContent).toContain(multiCase.motivo);
+  });
+
+  ['kanban', 'tabla'].forEach(view => {
+    it(`${view} muestra títulos descriptivos y usa motivo cuando falta título`, () => {
+      fixture.componentInstance.cargarDatosTablero();
+      http.expectOne('/api/v1/expedientes/board/').flush(board([
+        multiCase, { ...primaryCase, title: '', motivo: 'Antecedente sin título separado' }
+      ]));
+      fixture.componentInstance.vistaActual = view as 'kanban' | 'tabla';
+      fixture.detectChanges();
+      const selector = view === 'kanban' ? '.card-title-text' : '.table-mat tbody tr td:nth-child(4) div';
+      const titles = Array.from(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>);
+      expect(titles.map(item => item.textContent?.trim())).toEqual([
+        multiCase.title!, 'Antecedente sin título separado'
+      ]);
+      expect(titles[0].getAttribute('title')).toBe(multiCase.title!);
+      expect(titles[0].textContent).not.toContain(multiCase.motivo);
+      if (view === 'tabla') expect(fixture.nativeElement.querySelector('thead')?.textContent).toContain('Título');
+    });
+  });
+
+  it('tabla ordena por el mismo título visible y conserva el relato del detalle', () => {
+    const component = fixture.componentInstance;
+    component.cargarDatosTablero();
+    http.expectOne('/api/v1/expedientes/board/').flush(board([
+      { ...multiCase, id: 773, title: 'Zeta', motivo: 'Alfa relato' },
+      { ...multiCase, id: 774, title: '', motivo: 'Beta sin título' },
+      { ...multiCase, id: 775, title: 'Alfa', motivo: 'Zeta relato completo' }
+    ]));
+    component.vistaActual = 'tabla';
+    fixture.detectChanges();
+    const header: HTMLElement | undefined = Array.from(fixture.nativeElement.querySelectorAll('th') as NodeListOf<HTMLElement>)
+      .find(item => item.textContent?.includes('Título'));
+    expect(header).toBeTruthy();
+    header?.click();
+    fixture.detectChanges();
+    expect(component.expedientesFiltrados.map(item => item.id)).toEqual(['775', '774', '773']);
+    header?.click();
+    expect(component.expedientesFiltrados.map(item => item.id)).toEqual(['773', '774', '775']);
+    component.abrirDetalle(component.expedientes.find(item => item.id === '775')!);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="dialog"] .case-reason')?.textContent).toBe('Zeta relato completo');
+  });
 
   it('el lector conserva todas las claves de estado recibidas del servidor (TS77.56)', () => {
     loadAllStates();

@@ -159,7 +159,7 @@
               </span>
               <span class="card-points">{{ exp.puntos > 0 ? '+' : '' }}{{ exp.puntos }} pts</span>
             </div>
-            <h5 class="card-title-text" [title]="exp.motivo">{{ exp.motivo }}</h5>
+            <h5 class="card-title-text" [title]="getCaseTitle(exp)">{{ getCaseTitle(exp) }}</h5>
             
             <div class="card-bottom">
               <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
@@ -182,7 +182,7 @@
               <th (click)="cambiarOrden('numero')" style="cursor: pointer;">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('socio')" style="cursor: pointer;">Socio / N° de Socio <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('subcomision')" style="cursor: pointer;">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('motivo')" style="cursor: pointer;">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('title')" style="cursor: pointer;">Título <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('urgencia')" style="cursor: pointer;">Urgencia <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
@@ -203,7 +203,7 @@
                 </td>
                 <td>{{exp.subcomision}}</td>
                 <td style="max-width: 300px;">
-                  <div class="text-truncate" title="{{exp.motivo}}">{{exp.motivo}}</div>
+                  <div class="text-truncate" [title]="getCaseTitle(exp)">{{getCaseTitle(exp)}}</div>
                 </td>
                 <td>
                   <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
@@ -262,11 +262,31 @@
        [cdkTrapFocusAutoCapture]="true"
        (keydown.escape)="cerrarModales(); $event.stopPropagation()">
     <div class="card" *ngIf="expedienteSeleccionado">
-      <div class="card-header card-header-primary">
-        <h4 class="card-title" id="case-detail-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
-        <p class="card-category">Socio: {{expedienteSeleccionado.socio}} &bull; N° de Socio: {{expedienteSeleccionado.legajo}}</p>
+      <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="card-title" id="case-detail-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
+          <p class="card-category" data-testid="case-creator">Creador: {{expedienteSeleccionado.creator?.full_name || 'No disponible'}}
+            <span *ngIf="expedienteSeleccionado.creator?.institutional_number != null"> · N.º institucional: {{expedienteSeleccionado.creator?.institutional_number}}</span>
+            <span *ngIf="expedienteSeleccionado.creator?.academic_number"> · Legajo: {{expedienteSeleccionado.creator?.academic_number}}</span>
+          </p>
+        </div>
+        <button mat-icon-button type="button" cdkFocusInitial class="btn btn-link text-white p-0 m-0"
+                (click)="cerrarModales()" title="Cerrar detalle" aria-label="Cerrar detalle del expediente">
+          <i class="material-icons">close</i>
+        </button>
       </div>
       <div class="card-body">
+        <section aria-label="Socios involucrados" data-testid="case-involved-members" class="mb-4">
+          <h5 class="font-weight-bold text-dark">Socios involucrados</h5>
+          <div class="table-responsive" *ngIf="expedienteSeleccionado.involvedMembers?.length; else unknownInvolved">
+            <table class="table table-sm"><thead><tr><th>Nombre</th><th>N.º institucional</th><th>Legajo</th></tr></thead>
+              <tbody><tr *ngFor="let member of expedienteSeleccionado.involvedMembers">
+                <td>{{member.full_name}}</td><td>{{member.institutional_number ?? 'No disponible'}}</td><td>{{member.academic_number || 'Sin legajo'}}</td>
+              </tr></tbody>
+            </table>
+          </div>
+          <ng-template #unknownInvolved><p class="text-muted">No disponible</p></ng-template>
+        </section>
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="text-muted small">Subcomisión Asignada:</label>
@@ -309,8 +329,12 @@
             </div>
           </div>
           <div class="col-md-12 mb-3">
+            <label class="text-muted small">Título de la Causa:</label>
+            <div class="font-weight-bold">{{expedienteSeleccionado.title || 'No disponible'}}</div>
+          </div>
+          <div class="col-md-12 mb-3">
             <label class="text-muted small">Motivo de la Causa Reglamentaria:</label>
-            <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.motivo}}</div>
+            <div class="case-reason p-2 bg-light rounded border">{{expedienteSeleccionado.motivo}}</div>
           </div>
         </div>
 
@@ -356,7 +380,7 @@
 
       </div>
       <div class="card-footer d-flex justify-content-end">
-        <button mat-button class="btn btn-default" cdkFocusInitial (click)="cerrarModales()">Cerrar</button>
+        <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>
   </div>

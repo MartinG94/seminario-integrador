@@ -360,6 +360,7 @@
                       <th>Reglamento</th>
                       <th style="width: 115px;">Sanción / Mérito</th>
                       <th style="width: 120px;">Estado</th>
+                      <th>Urgencia</th>
                       <th style="width: 150px;">Involucrados</th>
                       <th class="text-right" style="width: 100px;">Acciones</th>
                     </tr>
@@ -411,13 +412,15 @@
                         </small>
                       </td>
 
-                      <!-- Estado y Urgencia -->
+                      <!-- Estado -->
                       <td>
                         <div>
                           <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
                             {{ obtenerTextoEstado(s) }}
                           </span>
                         </div>
+                      </td>
+                      <td>
                         <!-- Indicador visual de Urgencia (SCRUM-78) -->
                         <div class="mt-1" *ngIf="s.estado === 'ISSUED' && s.urgencia">
                           <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(s.urgencia)">
@@ -425,6 +428,7 @@
                             {{ s.urgencia_display || s.urgencia }}
                           </span>
                         </div>
+                        <span *ngIf="s.estado !== 'ISSUED' || !s.urgencia" class="text-muted">Sin asignar</span>
                       </td>
 
                       <!-- Involucrados (1 a Muchos con Botón "VER SOCIOS") -->

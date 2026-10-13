@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -50,36 +51,60 @@ function isCachedProfile(value: unknown): value is Omit<PerfilSocio, 'category' 
 }
 
 @Injectable({ providedIn: 'root' })
-export class AuthService {
+export class AuthService implements OnDestroy {
   private perfilSubject = new BehaviorSubject<PerfilSocio | null>(this.leerPerfil());
   private profileHydration: Subscription | null = null;
   private sessionGeneration = 0;
+  private observedSessionToken = this.getToken();
   perfil$ = this.perfilSubject.asObservable();
-
-  constructor(private http: HttpClient) {
-    const token = this.getToken();
-    const generation = this.sessionGeneration;
-    if (token) {
-      // El interceptor depende de este servicio: la petición empieza cuando
-      // su construcción ya terminó y conserva el manejo HTTP vigente.
-      Promise.resolve().then(() => {
-        if (generation !== this.sessionGeneration || token !== this.getToken()) {
-          return;
-        }
-        this.profileHydration = this.http
-          .get<ConfirmedSocioProfile>(`${environment.apiUrl}/auth/me/`)
-          .subscribe({
-            next: profile => {
-              if (generation === this.sessionGeneration && token === this.getToken()) {
-                this.persistProfile(profile);
-              }
-            },
-            // El interceptor resuelve 401. Red y otros errores no confirman
-            // categoría ni cambian la sesión o el rol cacheado.
-            error: () => {}
-          });
-      });
+  private readonly onStorageChange = (event: StorageEvent): void => {
+    if (event.storageArea !== localStorage || (event.key !== null && ![ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, PROFILE_KEY].includes(event.key))) {
+      return;
     }
+    const hadActiveSession = this.observedSessionToken !== null;
+    const token = this.getToken();
+    this.observedSessionToken = token;
+    this.cancelProfileHydration();
+    this.perfilSubject.next(null);
+    if (token) {
+      this.hydrateProfile(token);
+    } else if (hadActiveSession) {
+      this.router.navigate(['/login']);
+    }
+  };
+
+  constructor(private http: HttpClient, private router: Router) {
+    window.addEventListener('storage', this.onStorageChange);
+    const token = this.getToken();
+    if (token) { this.hydrateProfile(token); }
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('storage', this.onStorageChange);
+    this.cancelProfileHydration();
+  }
+
+  private hydrateProfile(token: string): void {
+    const generation = this.sessionGeneration;
+    // El interceptor depende de este servicio: la petición empieza cuando
+    // su construcción ya terminó y conserva el manejo HTTP vigente.
+    Promise.resolve().then(() => {
+      if (generation !== this.sessionGeneration || token !== this.getToken()) {
+        return;
+      }
+      this.profileHydration = this.http
+        .get<ConfirmedSocioProfile>(`${environment.apiUrl}/auth/me/`)
+        .subscribe({
+          next: profile => {
+            if (generation === this.sessionGeneration && token === this.getToken()) {
+              this.persistProfile(profile);
+            }
+          },
+          // El interceptor resuelve 401. Red y otros errores no confirman
+          // categoría ni cambian la sesión o el rol cacheado.
+          error: () => {}
+        });
+    });
   }
 
   login(identifier: string, password?: string): Observable<LoginResponse> {
@@ -94,6 +119,7 @@ export class AuthService {
 
   logout(): void {
     this.cancelProfileHydration();
+    this.observedSessionToken = null;
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(PROFILE_KEY);
@@ -125,6 +151,7 @@ export class AuthService {
   private guardarSesion(respuesta: LoginResponse): void {
     this.cancelProfileHydration();
     localStorage.setItem(ACCESS_TOKEN_KEY, respuesta.access);
+    this.observedSessionToken = respuesta.access;
     localStorage.setItem(REFRESH_TOKEN_KEY, respuesta.refresh);
     this.persistProfile(respuesta.user);
   }

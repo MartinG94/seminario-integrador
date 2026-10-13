@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, Renderer2, ViewChild } from '@angular/core';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
-import { NotificationService } from '../services/notification.service';
+import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import { AppliedPointsEntryDTO, SocioApiService } from '../services/socio-api.service';
-import { Subscription, interval, EMPTY } from 'rxjs';
-import { catchError, switchMap, tap } from 'rxjs/operators';
+import { PointsHistoryStatus } from './applied-points-history/applied-points-history.component';
+import { Subscription, interval, EMPTY, merge, Subject } from 'rxjs';
+import { catchError, startWith, switchMap, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -16,8 +17,33 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   misExpedientes: Expediente[] = [];
   socioActual = '';
   saldoNeto: number | null = null;
-  pointsBalanceStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  pointsBalanceStatus: PointsHistoryStatus = 'idle';
   appliedEntries: AppliedPointsEntryDTO[] = [];
+  ownCasesStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  private reloadCases = new Subject<void>();
+  private defenseSubscription: Subscription | null = null;
+  submittingDefense = false;
+  private detailContainer: HTMLElement | null = null;
+  private defenseContainer: HTMLElement | null = null;
+  private releaseNotifications: (() => void) | null = null;
+
+  @ViewChild('ownCaseDialog')
+  set ownCaseDialog(ref: ElementRef<HTMLElement> | undefined) {
+    this.detailContainer = ref?.nativeElement || null;
+    this.registerActiveDialog();
+  }
+
+  @ViewChild('ownDefenseDialog')
+  set ownDefenseDialog(ref: ElementRef<HTMLElement> | undefined) {
+    this.defenseContainer = ref?.nativeElement || null;
+    this.registerActiveDialog();
+  }
+
+  private registerActiveDialog(): void {
+    this.releaseNotifications?.();
+    const container = this.defenseContainer || this.detailContainer;
+    this.releaseNotifications = container ? this.notifications.registerDialogContainer(container) : null;
+  }
 
   // Ordenamiento de tabla
   columnaOrden = 'numero';
@@ -50,40 +76,62 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const subPerfil = this.auth.perfil$.pipe(
       switchMap(perfil => {
         this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
-        this.filtrarMisExpedientes();
+        this.expedientes = [];
+        this.misExpedientes = [];
+        this.defenseSubscription?.unsubscribe();
+        this.defenseSubscription = null;
+        this.submittingDefense = false;
+        this.cerrarModal();
+        this.cerrarModalDetalle();
         this.appliedEntries = [];
         this.saldoNeto = null;
         this.pointsBalanceStatus = perfil ? 'loading' : 'idle';
+        this.ownCasesStatus = perfil ? 'loading' : 'idle';
         if (!perfil) {
           return EMPTY;
         }
-        return this.socioApi.getOwnPointsHistory().pipe(
+        const history = this.socioApi.getOwnPointsHistory().pipe(
           tap(result => {
             this.saldoNeto = result.points_balance;
             this.appliedEntries = result.entries;
             this.pointsBalanceStatus = 'ready';
           }),
-          catchError(() => {
+          catchError((error: unknown) => {
+            if ((error as { status?: number } | null)?.status === 404) {
+              this.pointsBalanceStatus = 'unavailable';
+              return EMPTY;
+            }
             this.pointsBalanceStatus = 'error';
             this.notifications.error('No se pudieron consultar tus puntos y resoluciones. Volvé a intentarlo más tarde.');
             return EMPTY;
           })
         );
+        const cases = this.reloadCases.pipe(
+          startWith(undefined),
+          switchMap(() => {
+            this.ownCasesStatus = 'loading';
+            return this.dataService.getOwnCases().pipe(
+              tap(list => {
+                this.expedientes = list;
+                this.misExpedientes = list;
+                this.ownCasesStatus = 'ready';
+                if (this.expedienteDetalle) {
+                  this.expedienteDetalle = list.find(item => item.id === this.expedienteDetalle!.id) || null;
+                  if (!this.expedienteDetalle) this.cerrarModalDetalle();
+                }
+              }),
+              catchError(() => {
+                this.ownCasesStatus = 'error';
+                this.notifications.error('No se pudieron consultar tus expedientes. Volvé a intentarlo.');
+                return EMPTY;
+              })
+            );
+          })
+        );
+        return merge(history, cases);
       })
     ).subscribe();
     this.subs.push(subPerfil);
-
-    const subExp = this.dataService.expedientes$.subscribe(list => {
-      this.expedientes = list;
-      this.filtrarMisExpedientes();
-      if (this.expedienteDetalle) {
-        const actualizado = list.find(e => e.id === this.expedienteDetalle!.id);
-        if (actualizado) {
-          this.expedienteDetalle = actualizado;
-        }
-      }
-    });
-    this.subs.push(subExp);
 
     // Actualizador dinámico del reloj cada segundo (evita memory leaks desuscribiéndose en ngOnDestroy)
     this.tickerSub = interval(1000).subscribe(() => {
@@ -91,12 +139,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
-  private filtrarMisExpedientes(): void {
-    const nombre = this.socioActual.trim().toLowerCase();
-    this.misExpedientes = nombre
-      ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
-      : [];
+  reloadOwnCases(): void {
+    this.reloadCases.next();
   }
 
   ngOnDestroy(): void {
@@ -107,6 +151,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.tickerSub = null;
     }
     this.subs.forEach(s => s.unsubscribe());
+    this.defenseSubscription?.unsubscribe();
+    this.reloadCases.complete();
+    this.releaseNotifications?.();
     this.removerScrollBloqueo();
   }
 
@@ -249,7 +296,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   eliminarDescargo(exp: Expediente): void {
-    if (!exp.descargo) return;
+    if (!exp.descargo || exp.isPersisted) return;
     const confirma = confirm(`¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`);
     if (!confirma) return;
 
@@ -261,8 +308,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   cerrarModal(): void {
+    this.defenseSubscription?.unsubscribe();
+    this.defenseSubscription = null;
+    this.submittingDefense = false;
     this.modalAbierto = false;
     this.expedienteSeleccionado = null;
+    this.nombreArchivo = '';
+    this.relatoTexto = '';
     this.actualizarScrollBloqueo();
   }
 
@@ -305,7 +357,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   enviarDescargo(): void {
-    if (!this.expedienteSeleccionado) return;
+    if (!this.expedienteSeleccionado || this.submittingDefense) return;
 
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
       if (!this.nombreArchivo) {
@@ -319,26 +371,22 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       }
     }
 
-    const perfil = this.auth.getPerfil();
-    const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
-    const legajo = perfil?.legajo || '';
-
-    this.dataService.enviarDescargo(
-      this.expedienteSeleccionado.id, 
-      this.tipoDescargo, 
-      {
-        causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
-        archivo: this.nombreArchivo,
-        texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`
+    const payload = this.tipoDescargo === 'T02_CERTIFICADO'
+      ? { tipo: this.tipoDescargo, causal: this.causalSeleccionada, archivo: this.nombreArchivo, texto: this.relatoTexto.trim() }
+      : { tipo: this.tipoDescargo, texto: this.relatoTexto.trim() };
+    const editing = this.esEdicion;
+    this.submittingDefense = true;
+    this.defenseSubscription = this.dataService.presentDefense(this.expedienteSeleccionado.id, payload).subscribe({
+      next: () => {
+        this.cerrarModal();
+        this.notifications.success(editing ? 'El descargo se actualizó correctamente.' : 'El descargo se presentó correctamente.');
+        this.reloadOwnCases();
       },
-      {
-        nombre,
-        legajo,
-        esEdicion: this.esEdicion
+      error: (error: unknown) => {
+        this.submittingDefense = false;
+        this.notifications.error(httpErrorMessage(error, 'No se pudo registrar el descargo. Volvé a intentarlo.'));
       }
-    );
-
-    this.cerrarModal();
+    });
   }
 
   getBadgeClaseOperacion(operacion: string): string {
@@ -384,11 +432,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  getCaseTitle(exp: Expediente): string {
+    return exp.title || exp.motivo;
+  }
+
   get expedientesOrdenados(): Expediente[] {
     const lista = [...this.misExpedientes];
     lista.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA = this.columnaOrden === 'title' ? this.getCaseTitle(a) : (a as any)[this.columnaOrden];
+      let valB = this.columnaOrden === 'title' ? this.getCaseTitle(b) : (b as any)[this.columnaOrden];
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 

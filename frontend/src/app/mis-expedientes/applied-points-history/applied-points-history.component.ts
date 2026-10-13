@@ -3,7 +3,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AppliedPointsEntryDTO } from '../../services/socio-api.service';
 import { AppliedResolutionDialogComponent } from '../applied-resolution-dialog/applied-resolution-dialog.component';
 
-export type PointsHistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type PointsHistoryStatus = 'idle' | 'loading' | 'ready' | 'error' | 'unavailable';
 let nextHistoryId = 0;
 
 @Component({

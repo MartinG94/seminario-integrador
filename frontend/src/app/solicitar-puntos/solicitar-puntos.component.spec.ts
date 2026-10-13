@@ -478,6 +478,22 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.tabActiva).toBe('nueva');
   });
 
+  it('presenta Estado y Urgencia en columnas independientes en Solicitudes Creadas (TS77.63)', () => {
+    component.tabActiva = 'creadas';
+    component.misSolicitudes = [{ ...mockSolicitudes[1], urgencia: 'urgente', urgencia_display: 'Urgente' }];
+    fixture.detectChanges();
+    const headers: string[] = Array.from(fixture.nativeElement.querySelectorAll('.table-mat thead th'))
+      .map((item: HTMLElement) => item.textContent.trim());
+    const stateIndex = headers.indexOf('Estado');
+    const urgencyIndex = headers.indexOf('Urgencia');
+    expect(stateIndex).toBeGreaterThanOrEqual(0);
+    expect(urgencyIndex).toBe(stateIndex + 1);
+    const cells: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.table-mat tbody tr td'));
+    expect(fixture.nativeElement.querySelector('.table-mat tbody')?.textContent).toContain(mockSolicitudes[1].titulo);
+    expect(cells[stateIndex]?.textContent).not.toContain('Urgente');
+    expect(cells[urgencyIndex]?.textContent).toContain('Urgente');
+  });
+
   it('no ejecuta continuarEdicion si la solicitud ya está en estado ISSUED', () => {
     const emitida = mockSolicitudes[1];
     component.borradorId = null;

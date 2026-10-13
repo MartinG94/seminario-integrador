@@ -38,19 +38,23 @@ describe('SCRUM-77 detalle de expediente con teclado', () => {
     fixture.detectChanges();
   });
 
-  async function openWithKeyboard(): Promise<HTMLElement> {
+  async function openWithKeyboard(size?: { width: number; height: number }): Promise<HTMLElement> {
     const card = fixture.nativeElement.querySelector('.kanban-card-mat') as HTMLElement;
     card.focus();
     card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     fixture.detectChanges();
+    if (size) {
+      const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+      dialog.style.width = `${size.width}px`;
+      dialog.style.maxHeight = `${size.height}px`;
+    }
     await fixture.whenStable();
     fixture.detectChanges();
     return card;
   }
 
   function closeButton(): HTMLButtonElement {
-    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.modal-backdrop-custom button');
-    return Array.from(buttons).find(button => button.textContent?.trim() === 'Cerrar') as HTMLButtonElement;
+    return fixture.nativeElement.querySelector('[aria-label="Cerrar detalle del expediente"]') as HTMLButtonElement;
   }
 
   it('identifica el detalle abierto como diálogo modal con título accesible', async () => {
@@ -83,5 +87,31 @@ describe('SCRUM-77 detalle de expediente con teclado', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.modal-backdrop-custom')).toBeNull();
     expect(document.activeElement).toBe(origin);
+  });
+
+  [{ width: 800, height: 600 }, { width: 360, height: 480 }].forEach(size => {
+    it(`abre el detalle con overflow real ${size.width}px sin desplazar Número y Creador fuera de vista`, async () => {
+      fixture.componentInstance.expedientes = [{ ...caseFixture,
+        creator: { local_socio_id: 5, full_name: 'Creador confirmado', login_identifier: '99077005',
+          institutional_number: 770005, academic_number: '99077005' },
+        involvedMembers: Array.from({ length: 30 }, (_, index) => ({ local_socio_id: index + 1,
+          full_name: `Socio de ensayo ${index + 1}`, login_identifier: String(99077001 + index),
+          institutional_number: 770001 + index, academic_number: String(99077001 + index) }))
+      }];
+      fixture.detectChanges();
+      const origin = await openWithKeyboard(size);
+      const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+      expect(dialog.scrollHeight).withContext('Debe existir contenido que exceda el área visible').toBeGreaterThan(dialog.clientHeight);
+      expect(dialog.scrollTop).withContext('El foco inicial debe conservar la cabecera visible').toBe(0);
+      const headerClose = closeButton();
+      expect(headerClose.closest('.card-header')).not.toBeNull();
+      expect(document.activeElement).toBe(headerClose);
+      expect(fixture.nativeElement.querySelector('.modal-backdrop-custom .card-footer [cdkFocusInitial]')).toBeNull();
+      headerClose.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+      expect(document.activeElement).toBe(origin);
+    });
   });
 });

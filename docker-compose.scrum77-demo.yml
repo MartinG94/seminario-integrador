@@ -25,18 +25,18 @@ services:
       start_period: 20s
 
   backend:
-    build:
+    build: &demo-backend-build
       context: ./backend
       dockerfile: Dockerfile
     container_name: sgd_aveit_scrum77_demo_backend
     restart: unless-stopped
     command: python manage.py runserver 0.0.0.0:8000
-    volumes:
+    volumes: &demo-backend-volumes
       - ./backend:/app
       - ./docs:/docs:ro
     ports:
       - "127.0.0.1:8002:8000"
-    environment:
+    environment: &demo-backend-environment
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "True"
       DJANGO_SECRET_KEY: ${SCRUM77_DJANGO_SECRET_KEY:-django-insecure-scrum77-demo-only}
@@ -58,6 +58,23 @@ services:
       retries: 5
       start_period: 15s
 
+  # Usa el mismo checkout, conexión y espacio de red que el backend verificado.
+  # La comprobación HTTP existente sigue consultando 127.0.0.1:8000.
+  demo-setup:
+    build: *demo-backend-build
+    container_name: sgd_aveit_scrum77_demo_setup
+    restart: "no"
+    network_mode: service:backend
+    command:
+      - sh
+      - -c
+      - python manage.py prepare_demo_schema && python manage.py seed_expedientes --profile scrum77-g57-g60-v1
+    volumes: *demo-backend-volumes
+    environment: *demo-backend-environment
+    depends_on:
+      backend:
+        condition: service_healthy
+
   frontend:
     profiles: [frontend]
     build:
@@ -76,6 +93,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      demo-setup:
+        condition: service_completed_successfully
 
 volumes:
   mysql_data:

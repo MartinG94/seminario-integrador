@@ -15,6 +15,14 @@ export type EstadoExpediente =
 
 export type NivelUrgencia = 'baja' | 'normal' | 'urgente';
 
+export interface CaseMemberDTO {
+  local_socio_id: number;
+  full_name: string;
+  login_identifier: string;
+  institutional_number: number | null;
+  academic_number: string | null;
+}
+
 export interface BoardCaseDTO {
   id: number;
   numero: string;
@@ -32,6 +40,43 @@ export interface BoardCaseDTO {
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
   cantidad_socios?: number;
+  title?: string;
+  creator?: CaseMemberDTO | null;
+  involved_members?: CaseMemberDTO[];
+}
+
+export interface OwnCaseDTO extends Omit<BoardCaseDTO, 'socio' | 'estado_display' | 'transiciones_permitidas' | 'puntos'> {
+  puntos: number | string;
+  plazo_inicio_at?: string | null;
+  horas_restantes?: number;
+  descargo_presentado?: boolean;
+  descargo_tipo?: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO' | null;
+  descargo_causal?: string | null;
+  descargo_archivo?: string | null;
+  descargo_texto?: string | null;
+  descargo_presentado_at?: string | null;
+  historial?: CaseStateChangeDTO[];
+}
+
+export interface CaseStateChangeDTO {
+  estado_anterior: string;
+  estado_nuevo: string;
+  actor: string;
+  fecha_hora: string;
+  motivo: string;
+}
+
+export interface DefensePayload {
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal?: string;
+  archivo?: string;
+  texto?: string;
+}
+
+export interface DefenseResponse {
+  detail: string;
+  expediente_id: number;
+  descargo_presentado_at: string;
 }
 
 export interface BoardColumnDTO {
@@ -58,6 +103,10 @@ export interface LogJustificativo {
 export interface Expediente {
   id: string;
   numero: string;
+  title?: string;
+  creator?: CaseMemberDTO | null;
+  involvedMembers?: CaseMemberDTO[];
+  isPersisted?: boolean;
   socio: string;
   legajo: string;
   subcomision: string;
@@ -83,6 +132,7 @@ export interface Expediente {
     fecha: string;
   };
   logsDescargo?: LogJustificativo[];
+  stateChanges?: CaseStateChangeDTO[];
   votacion?: {
     votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
     considerandos?: string;
@@ -465,6 +515,10 @@ export class TribunalDataService {
     return {
       id: String(c.id),
       numero: c.numero,
+      title: c.title,
+      creator: c.creator || null,
+      involvedMembers: c.involved_members || [],
+      isPersisted: true,
       socio: c.socio_nombre,
       legajo: c.socio_legajo,
       subcomision: c.subcomision,
@@ -481,6 +535,37 @@ export class TribunalDataService {
       cantidadSocios: c.cantidad_socios || 1,
       plazoLimiteAt: c.plazo_limite_at || undefined
     };
+  }
+
+  getOwnCases(): Observable<Expediente[]> {
+    return this.http.get<OwnCaseDTO[]>(`${environment.apiUrl}/expedientes/mis-expedientes/`).pipe(
+      map(cases => cases.map(item => {
+        const mapped = this.mapearBoardCaseAExpediente({
+          ...item,
+          socio: 0,
+          puntos: Number(item.puntos),
+          estado_display: '',
+          transiciones_permitidas: []
+        });
+        mapped.plazoInicioAt = item.plazo_inicio_at || undefined;
+        mapped.descargoPresentado = item.descargo_presentado;
+        mapped.stateChanges = item.historial;
+        if (item.descargo_presentado && item.descargo_tipo) {
+          mapped.descargo = {
+            tipo: item.descargo_tipo,
+            causal: item.descargo_causal || undefined,
+            archivo: item.descargo_archivo || undefined,
+            texto: item.descargo_texto || '',
+            fecha: item.descargo_presentado_at || ''
+          };
+        }
+        return mapped;
+      }))
+    );
+  }
+
+  presentDefense(caseId: string, payload: DefensePayload): Observable<DefenseResponse> {
+    return this.http.post<DefenseResponse>(`${environment.apiUrl}/expedientes/${caseId}/descargo/`, payload);
   }
 
   // --- Operaciones de Dominio de Expedientes ---

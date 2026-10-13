@@ -291,3 +291,13 @@ La identidad/permisos se reutilizan del saldo propio. Un SELECT enlaza libro may
 El widget y la nueva sección de resoluciones aplicadas usan el mismo DTO, con cancelación por sesión y validación de contrato. La tabla muestra importes individuales y expediente histórico/operativo acreditado; el detalle presenta texto y reglamentos con modal accesible. Cero sin movimientos se distingue del saldo cero compensado con +3/-3, y de desconocido/error. No se modifica ni duplica el listado operativo, ni se añade un motor de firma/emisión.
 
 TDD, HTTP/SQL y navegador verifican los doce asientos del conjunto por destinatario: +2 original, mérito compartido, compensación cero y cuatro actos Junior nuevos. Se conservan todas las filas y los cuatro emitidos operativos. Regresión de identidad BIGINT declara fuente mock explícita cuando acredita un perfil exclusivamente local, con saldo desconocido en el nuevo contrato.
+
+## Portabilidad y presentación RF77-18–21
+
+La demo incorpora una preparación explícita en Compose, posterior a la salud del backend y previa al inicio de la SPA. Reutiliza preflight, preparación y seed con sus guardias; los archivos versionados permiten iniciar desde una base vacía. El entorno habitual permanece separado. La prueba de copia limpia no transporta datos del volumen local ni altas de UAT.
+
+La SPA usa el endpoint propio ya existente, con sesión autenticada y vínculos reales. Los puntos sin identidad institucional se muestran como no disponibles. Estado y urgencia se presentan en columnas separadas.
+
+Un catálogo de presentación proporciona títulos breves y relatos coherentes. Para las causas operativas nuevas se almacena título/relato dentro del motivo existente; la lectura expone ambos sin añadir un modelo productivo de resolución. El upgrade reconoce solamente placeholders exactos registrados como propios, utiliza ORM con auditoría e idempotencia y conserva ediciones del usuario. Las solicitudes ya emitidas y sus snapshots no se reescriben: una proyección de lectura acreditada presenta el catálogo cuando aún contienen el placeholder original. Claves técnicas, resoluciones y libro mayor permanecen intactos. El creador procede del solicitante T01 o del actor de apertura confirmado; los involucrados proceden de todos los vínculos M2M, manteniendo separados números institucionales, académicos e IDs locales.
+
+Al conectar la lectura propia, las acciones existentes de descargo consumen el endpoint POST ya implementado; se conserva su validación de titularidad/plazo y se vuelve a consultar la colección. No se elimina una acción existente ni se muestra como persistido un cambio sólo local. Esta integración mantiene el formulario y los permisos vigentes, sin añadir servicios ni reglas procesales.

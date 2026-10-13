@@ -34,6 +34,7 @@ from django.db.models import Q
 from core.demo_fixtures import DemoFixtureRegistry
 from expedientes.models import Expediente, SolicitudT01
 from socios.demo_catalog import CATALOG
+from socios.demo_presentation import SCENE_PRESENTATIONS, legacy_scene_reason
 from tests.infrastructure import test_scrum77_demo_http as original
 
 
@@ -96,6 +97,23 @@ def main() -> dict[str, Any]:
     assert fixture_case_ids <= set(all_cases)
     assert fixture_request_ids <= set(all_requests)
     assert len(fixture_case_ids) == 15 and len(fixture_request_ids) == 4
+    # Oráculo independiente: sólo los placeholders originales de una solicitud
+    # owned permiten buscar también el texto aprobado sin alterar el acto fuente.
+    projected_search_values: dict[str, list[str]] = {}
+    for scene in CATALOG.t01_scenes:
+        ref = registry.get(scene.fixture_key)
+        assert ref.owned and ref.namespace == SolicitudT01._meta.db_table
+        stored = all_requests[ref.object_key]
+        presentation = SCENE_PRESENTATIONS[scene.fixture_key]
+        originals = {
+            "titulo": (f"SCRUM-77 [{scene.fixture_key}]", presentation.title),
+            "motivo": (legacy_scene_reason(scene.fixture_key), presentation.reason),
+            "causal": ("Escena sintética de demostración", presentation.causal),
+        }
+        projected_search_values[ref.object_key] = [
+            approved for field, (old, approved) in originals.items()
+            if getattr(stored, field) == old
+        ]
     owner_by_token: dict[str, int] = {}
     observations: list[dict[str, Any]] = []
     opener = build_opener(ProxyHandler({}), RejectRedirects())
@@ -182,6 +200,10 @@ def main() -> dict[str, Any]:
                     expected_query = expected_query.filter(expediente__estado=state)
             search = params.get("search", [""])[0].strip()
             if search:
+                projected_matches = [
+                    pk for pk, values in projected_search_values.items()
+                    if any(search.casefold() in value.casefold() for value in values)
+                ]
                 expected_query = expected_query.filter(
                     Q(titulo__icontains=search)
                     | Q(motivo__icontains=search)
@@ -189,6 +211,7 @@ def main() -> dict[str, Any]:
                     | Q(numero_expediente__icontains=search)
                     | Q(expediente__numero__icontains=search)
                     | Q(snapshots_destinatarios__icontains=search)
+                    | Q(pk__in=projected_matches)
                 )
             expected = {str(pk) for pk in expected_query.values_list("pk", flat=True)}
             assert ids == expected
@@ -227,9 +250,10 @@ def main() -> dict[str, Any]:
     exec(compile(source, "<scrum77-live-fixture-view>", "exec"), scope)
     report = scope["verify_seeded_demo_http"](request_json)
     assert report["http_checks"] == len(observations) == (
-        141
-        + 4 * sum(account.is_enabled for account in CATALOG.accounts)
-        + 4 * len(CATALOG.preserved_accounts)
+        142
+        + 5 * sum(account.is_enabled for account in CATALOG.accounts)
+        + 5 * len(CATALOG.preserved_accounts)
+        + len(report["managed_case_ids"])
     )
     after = snapshot()
     assert before == after, "Los GET/login no deben alterar filas persistidas."

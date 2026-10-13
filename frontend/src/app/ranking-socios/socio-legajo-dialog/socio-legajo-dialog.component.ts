@@ -91,8 +91,12 @@ export class SocioLegajoDialogComponent implements OnInit, OnDestroy {
             this.history = history;
             this.historyStatus = 'ready';
           },
-          error: () => {
+          error: (error: unknown) => {
             this.history = null;
+            if ((error as { status?: number } | null)?.status === 404) {
+              this.historyStatus = 'unavailable';
+              return;
+            }
             this.historyStatus = 'error';
             this.notifications.error('No se pudieron consultar los puntos y las resoluciones de este socio.');
           }

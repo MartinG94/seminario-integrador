@@ -1,0 +1,681 @@
+{
+  "status": "ok",
+  "verified_at_utc": "2026-10-13T01:29:59.647456+00:00",
+  "database": "aveit_tribunal_scrum77_demo",
+  "source_helper_sha256": "d58a350aa8b0a5557ca45a7ddef377a5dc750a068aa54984c783c870653d9072",
+  "mode": "live_fixture_subset_plus_complete_collection_checks",
+  "http_checks": 227,
+  "http_status_counts": {
+    "200": 183,
+    "401": 7,
+    "404": 16,
+    "403": 21
+  },
+  "fixture_report": {
+    "http_checks": 227,
+    "institutional_ids": [
+      770001,
+      770002,
+      770003,
+      770004,
+      770005,
+      770006,
+      770007,
+      770008,
+      770009,
+      770010,
+      770011,
+      770012,
+      770013,
+      770014,
+      770015,
+      770016,
+      770017,
+      770018,
+      770019,
+      770020
+    ],
+    "catalog_balance": "1.00",
+    "junior_ids": [
+      770017,
+      770018,
+      770019,
+      770020
+    ],
+    "own_balances": {
+      "770001": "2.0",
+      "770005": "0.0",
+      "770006": "1.0",
+      "770009": "2.0",
+      "770013": "1.0",
+      "770017": "2.0",
+      "770018": "-1.0",
+      "770019": "-2.0",
+      "770020": "1.0"
+    },
+    "historical_movement_ids": {
+      "770001": [
+        1
+      ],
+      "770002": [
+        4
+      ],
+      "770003": [],
+      "770004": [],
+      "770005": [
+        5,
+        6
+      ],
+      "770006": [
+        2
+      ],
+      "770007": [],
+      "770008": [],
+      "770009": [
+        3
+      ],
+      "770010": [
+        7
+      ],
+      "770011": [],
+      "770012": [],
+      "770013": [
+        8
+      ],
+      "770014": [],
+      "770015": [],
+      "770016": [],
+      "770017": [
+        9
+      ],
+      "770018": [
+        10
+      ],
+      "770019": [
+        11
+      ],
+      "770020": [
+        12
+      ]
+    },
+    "request_ids_by_actor": {
+      "account.g58.01": [
+        "8a5220d6-cdac-4e66-a891-0774f799b255",
+        "da90879c-d00c-4ce2-89b8-b41d5737be60"
+      ],
+      "account.g59.01": [
+        "6bc79c7e-7187-4732-bac9-05fc18f82124",
+        "7b2958f9-7681-4ac6-b524-206fa0b872bb"
+      ]
+    },
+    "managed_case_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "case_numbers": [
+      "EXP-0001/2026",
+      "EXP-0002/2026",
+      "EXP-0003/2026",
+      "EXP-0004/2026",
+      "EXP-0005/2026",
+      "EXP-0007/2026",
+      "EXP-0008/2026",
+      "EXP-0009/2026",
+      "EXP-0010/2026",
+      "EXP-0011/2026",
+      "EXP-0012/2026",
+      "EXP-0013/2026",
+      "EXP-0014/2026",
+      "EXP-0015/2026",
+      "EXP-0016/2026"
+    ]
+  },
+  "observed_counts": {
+    "managed_cases_total": 16,
+    "managed_cases_fixture": 15,
+    "requests_total": 5,
+    "requests_fixture": 4,
+    "tables": 52,
+    "ownership_references": 287
+  },
+  "preserved_uat_case_ids": [
+    6
+  ],
+  "preserved_uat_request_ids": [
+    "ca7b08a7-ed4f-4edd-9413-34014f2165fe"
+  ],
+  "all_table_rows_unchanged": true,
+  "table_counts": {
+    "auth_group": 0,
+    "auth_group_permissions": 0,
+    "auth_permission": 112,
+    "auth_user": 15,
+    "auth_user_groups": 0,
+    "auth_user_user_permissions": 0,
+    "core_demofixtureownership": 287,
+    "django_admin_log": 0,
+    "django_content_type": 28,
+    "django_migrations": 39,
+    "django_session": 0,
+    "expedientes_calendario_version": 1,
+    "expedientes_cambio_estado": 70,
+    "expedientes_descargo": 0,
+    "expedientes_expediente": 16,
+    "expedientes_expediente_socios": 19,
+    "expedientes_feriado_excepcion": 16,
+    "expedientes_institutional_holiday": 16,
+    "expedientes_numero_secuencia": 1,
+    "expedientes_solicitudt01": 5,
+    "grupo_lista": 6,
+    "notifications_email_attachment": 0,
+    "notifications_email_outbox": 0,
+    "socio_email": 20,
+    "socio_especialidad": 1,
+    "socio_estado": 2,
+    "socio_estadoHistorial": 20,
+    "socio_estadocivil": 0,
+    "socio_estudio": 20,
+    "socio_lista": 20,
+    "socio_motivoCambioEstado": 1,
+    "socio_sexo": 1,
+    "socio_tipoEstudioTurno": 0,
+    "socio_tipoSocio": 1,
+    "socio_tipodocumento": 1,
+    "socio_tiposubcomision": 4,
+    "socios_institutionalmembershipcondition": 4,
+    "socios_socio": 15,
+    "socios_subcomision": 3,
+    "tribunal_afectados": 0,
+    "tribunal_datosresolucion": 11,
+    "tribunal_estadoevento": 0,
+    "tribunal_estadoexpediente": 1,
+    "tribunal_evento": 0,
+    "tribunal_expediente": 11,
+    "tribunal_puntajeaplicado": 12,
+    "tribunal_puntajegeneral": 0,
+    "tribunal_sancionpersonalizadaeventos": 0,
+    "tribunal_solicitud": 0,
+    "tribunal_tipoevento": 0,
+    "tribunal_tiposancion": 0,
+    "tribunal_valorsancion": 11
+  },
+  "table_hashes_before": {
+    "auth_group": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "auth_group_permissions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "auth_permission": "6c08c8b27413c47eea17b8bcffe07b694a1ddc896e13c1be902999a08f0ab9f0",
+    "auth_user": "6f88329b05115c643e2545219ae3ba3239c7138e82bae017d460407e2373d5e1",
+    "auth_user_groups": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "auth_user_user_permissions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "core_demofixtureownership": "2c52a749e2d2cab839890822f8dfe3b7e5a0b6ec60cf7ecacd247e6447fd4d42",
+    "django_admin_log": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "django_content_type": "6bc99f5535b226b2bdb3115405a8763afe7cbf09215ed271c3a63880b717610c",
+    "django_migrations": "1dc09559106f5e6293fbb77d70f8cf7aec8eafa25ae747466bcd85437e02f74c",
+    "django_session": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "expedientes_calendario_version": "55419e687132c5a71a720608143962f10a52279feb88c094c3d4c700bcef2092",
+    "expedientes_cambio_estado": "73a268d23b45b5cb43eb6ebade3a93a599ece845a6a6033f0b460741a76b66eb",
+    "expedientes_descargo": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "expedientes_expediente": "f60e2dcad04f3316e4ea8030cdfcf6a82c2debf8a53d9b48425c0b4a149ed59b",
+    "expedientes_expediente_socios": "93cbc23ae7fa186d02defa11f0db40123012c73f6a2c168d4627fab02d60c4fa",
+    "expedientes_feriado_excepcion": "49c42341a264931800763d8ed98044cc01934e777f3ed64d7f058d62fb8bdc82",
+    "expedientes_institutional_holiday": "2198c4b130f80a9fa9f74549aba71e6c59953638c9d0e743bc67a88d8b97f330",
+    "expedientes_numero_secuencia": "4302de48fc7d9c9169ff7d3418e4232325f2fc43feb01f64c140a898e9cd5265",
+    "expedientes_solicitudt01": "2cc7e4fe167a1fee9381e4c11319b0060613f7a7122e88f688a9db3c26b3a782",
+    "grupo_lista": "1cbffb32c821fa2107c26335f8c609f6d094c19a0e6c5ac4a8b5db375a4c2f0f",
+    "notifications_email_attachment": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "notifications_email_outbox": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "socio_email": "9191284dab9781695f6bebc97d809baaf4ab7d1f95bb447a9a7f85e199b7d64f",
+    "socio_especialidad": "e7e34f9f8c7878b5058f3c5164a84498095edaadfa302a3d95bdd7f5f545bd65",
+    "socio_estado": "5229222d5cdd72c72c66a5ef336c20aa568b2e855cd9204bbd2692dea19c42b3",
+    "socio_estadoHistorial": "74e50a1257ded1a252d3c6dffa0d576c27ac2c3732333935aad773bbf2267379",
+    "socio_estadocivil": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "socio_estudio": "680514d9098b37607eb33d3b4d3efc2e8dd62f94d3831ee9c48b741e20429364",
+    "socio_lista": "24cc75efe31e172655e8571f005c9175a3d735162dacb9771c1928cec30283db",
+    "socio_motivoCambioEstado": "2c50708d7dae81a54c74a69b48cce09d410a95b4f1404619f7cd6866ef8ad420",
+    "socio_sexo": "a4e223c762eb3aa0ef195edb887e2d1aff7304ce15059310f300cd12bd41e592",
+    "socio_tipoEstudioTurno": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "socio_tipoSocio": "0c6c5e4bdfdefd93af41ee8ce79c4124d800f9f05e5df6a83d6d1bc111d2fd7f",
+    "socio_tipodocumento": "fb8b6049a16a8d8de2b029a745d0ef479d2fe818151a6a01ea8ad7ac571a9ee4",
+    "socio_tiposubcomision": "a1110dc18a2fe7a57e242ca4629a791d879fa3acffb709fee54163984d952cd4",
+    "socios_institutionalmembershipcondition": "8142e178ad3d2d5d9f1a0559e14f80d03ce1ac1e08afdb9e3a284859850dead8",
+    "socios_socio": "e1ca00d3c3ef93534558fc4cd82593668d74e37b40b6d702e6a7e86a654f8277",
+    "socios_subcomision": "3466c1872b82a85be4c1e6ea65fad0928c9ce023862ceb80265f2a0ea2a60342",
+    "tribunal_afectados": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_datosresolucion": "36f078751e58fdc97b4950088b7bdc76bb7a632a577ca53689f42b896f637ec8",
+    "tribunal_estadoevento": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_estadoexpediente": "74289e9ec9539b9f2a7df5dff58e0628d323c70eb651b381187054b47b50594e",
+    "tribunal_evento": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_expediente": "c5033dbfca79fb01e525a190d9fcb90a24c88efed869553daadccf1592367b9a",
+    "tribunal_puntajeaplicado": "522463086b3e511ca4d50480e80d8498c63453c2a4c094c883d25ceee402bc8b",
+    "tribunal_puntajegeneral": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_sancionpersonalizadaeventos": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_solicitud": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_tipoevento": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_tiposancion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_valorsancion": "cdd31bde3535eebe6e88938d9b4e594d6ef81c2b3955f15aab4ddcb71e3103aa"
+  },
+  "table_hashes_after": {
+    "auth_group": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "auth_group_permissions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "auth_permission": "6c08c8b27413c47eea17b8bcffe07b694a1ddc896e13c1be902999a08f0ab9f0",
+    "auth_user": "6f88329b05115c643e2545219ae3ba3239c7138e82bae017d460407e2373d5e1",
+    "auth_user_groups": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "auth_user_user_permissions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "core_demofixtureownership": "2c52a749e2d2cab839890822f8dfe3b7e5a0b6ec60cf7ecacd247e6447fd4d42",
+    "django_admin_log": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "django_content_type": "6bc99f5535b226b2bdb3115405a8763afe7cbf09215ed271c3a63880b717610c",
+    "django_migrations": "1dc09559106f5e6293fbb77d70f8cf7aec8eafa25ae747466bcd85437e02f74c",
+    "django_session": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "expedientes_calendario_version": "55419e687132c5a71a720608143962f10a52279feb88c094c3d4c700bcef2092",
+    "expedientes_cambio_estado": "73a268d23b45b5cb43eb6ebade3a93a599ece845a6a6033f0b460741a76b66eb",
+    "expedientes_descargo": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "expedientes_expediente": "f60e2dcad04f3316e4ea8030cdfcf6a82c2debf8a53d9b48425c0b4a149ed59b",
+    "expedientes_expediente_socios": "93cbc23ae7fa186d02defa11f0db40123012c73f6a2c168d4627fab02d60c4fa",
+    "expedientes_feriado_excepcion": "49c42341a264931800763d8ed98044cc01934e777f3ed64d7f058d62fb8bdc82",
+    "expedientes_institutional_holiday": "2198c4b130f80a9fa9f74549aba71e6c59953638c9d0e743bc67a88d8b97f330",
+    "expedientes_numero_secuencia": "4302de48fc7d9c9169ff7d3418e4232325f2fc43feb01f64c140a898e9cd5265",
+    "expedientes_solicitudt01": "2cc7e4fe167a1fee9381e4c11319b0060613f7a7122e88f688a9db3c26b3a782",
+    "grupo_lista": "1cbffb32c821fa2107c26335f8c609f6d094c19a0e6c5ac4a8b5db375a4c2f0f",
+    "notifications_email_attachment": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "notifications_email_outbox": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "socio_email": "9191284dab9781695f6bebc97d809baaf4ab7d1f95bb447a9a7f85e199b7d64f",
+    "socio_especialidad": "e7e34f9f8c7878b5058f3c5164a84498095edaadfa302a3d95bdd7f5f545bd65",
+    "socio_estado": "5229222d5cdd72c72c66a5ef336c20aa568b2e855cd9204bbd2692dea19c42b3",
+    "socio_estadoHistorial": "74e50a1257ded1a252d3c6dffa0d576c27ac2c3732333935aad773bbf2267379",
+    "socio_estadocivil": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "socio_estudio": "680514d9098b37607eb33d3b4d3efc2e8dd62f94d3831ee9c48b741e20429364",
+    "socio_lista": "24cc75efe31e172655e8571f005c9175a3d735162dacb9771c1928cec30283db",
+    "socio_motivoCambioEstado": "2c50708d7dae81a54c74a69b48cce09d410a95b4f1404619f7cd6866ef8ad420",
+    "socio_sexo": "a4e223c762eb3aa0ef195edb887e2d1aff7304ce15059310f300cd12bd41e592",
+    "socio_tipoEstudioTurno": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "socio_tipoSocio": "0c6c5e4bdfdefd93af41ee8ce79c4124d800f9f05e5df6a83d6d1bc111d2fd7f",
+    "socio_tipodocumento": "fb8b6049a16a8d8de2b029a745d0ef479d2fe818151a6a01ea8ad7ac571a9ee4",
+    "socio_tiposubcomision": "a1110dc18a2fe7a57e242ca4629a791d879fa3acffb709fee54163984d952cd4",
+    "socios_institutionalmembershipcondition": "8142e178ad3d2d5d9f1a0559e14f80d03ce1ac1e08afdb9e3a284859850dead8",
+    "socios_socio": "e1ca00d3c3ef93534558fc4cd82593668d74e37b40b6d702e6a7e86a654f8277",
+    "socios_subcomision": "3466c1872b82a85be4c1e6ea65fad0928c9ce023862ceb80265f2a0ea2a60342",
+    "tribunal_afectados": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_datosresolucion": "36f078751e58fdc97b4950088b7bdc76bb7a632a577ca53689f42b896f637ec8",
+    "tribunal_estadoevento": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_estadoexpediente": "74289e9ec9539b9f2a7df5dff58e0628d323c70eb651b381187054b47b50594e",
+    "tribunal_evento": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_expediente": "c5033dbfca79fb01e525a190d9fcb90a24c88efed869553daadccf1592367b9a",
+    "tribunal_puntajeaplicado": "522463086b3e511ca4d50480e80d8498c63453c2a4c094c883d25ceee402bc8b",
+    "tribunal_puntajegeneral": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_sancionpersonalizadaeventos": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_solicitud": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_tipoevento": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_tiposancion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "tribunal_valorsancion": "cdd31bde3535eebe6e88938d9b4e594d6ef81c2b3955f15aab4ddcb71e3103aa"
+  },
+  "collection_observations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 0,
+      "all_ids": [],
+      "fixture_count": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 16,
+      "all_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "fixture_count": 15
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 0,
+      "all_ids": [],
+      "fixture_count": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 16,
+      "all_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "fixture_count": 15
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 1,
+      "all_ids": [
+        "ca7b08a7-ed4f-4edd-9413-34014f2165fe"
+      ],
+      "fixture_count": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 16,
+      "all_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "fixture_count": 15
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 2,
+      "all_ids": [
+        "8a5220d6-cdac-4e66-a891-0774f799b255",
+        "da90879c-d00c-4ce2-89b8-b41d5737be60"
+      ],
+      "fixture_count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 1,
+      "all_ids": [
+        "da90879c-d00c-4ce2-89b8-b41d5737be60"
+      ],
+      "fixture_count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [
+        "search"
+      ],
+      "status": 200,
+      "all_count": 1,
+      "all_ids": [
+        "da90879c-d00c-4ce2-89b8-b41d5737be60"
+      ],
+      "fixture_count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 2,
+      "all_ids": [
+        "6bc79c7e-7187-4732-bac9-05fc18f82124",
+        "7b2958f9-7681-4ac6-b524-206fa0b872bb"
+      ],
+      "fixture_count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 1,
+      "all_ids": [
+        "7b2958f9-7681-4ac6-b524-206fa0b872bb"
+      ],
+      "fixture_count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/mis-solicitudes/",
+      "query_keys": [
+        "search"
+      ],
+      "status": 200,
+      "all_count": 1,
+      "all_ids": [
+        "7b2958f9-7681-4ac6-b524-206fa0b872bb"
+      ],
+      "fixture_count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 16,
+      "all_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "fixture_count": 15
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 4,
+      "all_ids": [
+        1,
+        2,
+        3,
+        6
+      ],
+      "fixture_count": 3
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 2,
+      "all_ids": [
+        4,
+        5
+      ],
+      "fixture_count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 3,
+      "all_ids": [
+        7,
+        8,
+        9
+      ],
+      "fixture_count": 3
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 1,
+      "all_ids": [
+        10
+      ],
+      "fixture_count": 1
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 2,
+      "all_ids": [
+        11,
+        12
+      ],
+      "fixture_count": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "estado"
+      ],
+      "status": 200,
+      "all_count": 4,
+      "all_ids": [
+        13,
+        14,
+        15,
+        16
+      ],
+      "fixture_count": 4
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "urgencia"
+      ],
+      "status": 200,
+      "all_count": 5,
+      "all_ids": [
+        3,
+        4,
+        8,
+        11,
+        14
+      ],
+      "fixture_count": 5
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/board/",
+      "query_keys": [
+        "socio"
+      ],
+      "status": 200,
+      "all_count": 4,
+      "all_ids": [
+        1,
+        3,
+        4,
+        7
+      ],
+      "fixture_count": 4
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/expedientes/gestion/",
+      "query_keys": [],
+      "status": 200,
+      "all_count": 16,
+      "all_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "fixture_count": 15
+    }
+  ]
+}

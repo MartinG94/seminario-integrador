@@ -139,8 +139,11 @@ def test_demo_publications_are_loopback_and_do_not_inherit_base_ports(
         for port in service.get("ports", [])
     }
     demo_ports = set()
-    for service in compose_models["demo"]["services"].values():
-        ports = service["ports"]
+    for name, service in compose_models["demo"]["services"].items():
+        ports = service.get("ports", [])
+        if name == "demo-setup":
+            assert not ports
+            continue
         assert len(ports) == 1
         assert ports[0]["host_ip"] == "127.0.0.1"
         demo_ports.add(str(ports[0]["published"]))
@@ -149,7 +152,10 @@ def test_demo_publications_are_loopback_and_do_not_inherit_base_ports(
     assert demo_ports.isdisjoint(base_ports)
 
 
-@pytest.mark.parametrize("service,directory", [("backend", "backend"), ("frontend", "frontend")])
+@pytest.mark.parametrize(
+    "service,directory",
+    [("backend", "backend"), ("demo-setup", "backend"), ("frontend", "frontend")],
+)
 def test_application_mounts_use_the_checkout_containing_the_compose_file(
     compose_models: dict[str, Any], service: str, directory: str
 ) -> None:
@@ -188,6 +194,27 @@ def test_demo_spa_uses_its_backend_and_matching_origin(compose_models: dict[str,
     command = frontend["command"]
     assert command[command.index("--proxy-config") + 1] == "proxy.docker.conf.json"
     assert services["backend"]["networks"].keys() == frontend["networks"].keys()
+
+
+def test_demo_initializes_data_before_exposing_the_spa(compose_models: dict[str, Any]) -> None:
+    """Una copia sin volumen debe cargar el catálogo sin una intervención local oculta."""
+    services = compose_models["demo"]["services"]
+    assert "demo-setup" in services, "El arranque todavía omite preparar/cargar la demo."
+    setup = services["demo-setup"]
+    assert setup["depends_on"]["backend"]["condition"] == "service_healthy"
+    assert setup["network_mode"] == "service:backend"
+    assert setup["environment"] == services["backend"]["environment"]
+    assert setup["volumes"] == services["backend"]["volumes"]
+    assert setup.get("restart", "no") == "no"
+    assert not setup.get("ports")
+    assert not setup.get("healthcheck")
+    assert services["frontend"]["depends_on"]["demo-setup"]["condition"] == (
+        "service_completed_successfully"
+    )
+    command = setup["command"]
+    assert command[:2] == ["sh", "-c"]
+    assert "python manage.py prepare_demo_schema &&" in command[2]
+    assert "python manage.py seed_expedientes --profile scrum77-g57-g60-v1" in command[2]
 
 
 def test_generic_environment_does_not_redirect_demo(compose_models: dict[str, Any]) -> None:

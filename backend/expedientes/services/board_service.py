@@ -17,8 +17,11 @@ def build_board_payload(qs: QuerySet) -> dict:
     uno por cada estado reglamentario, en el orden oficial del Art. 12.
     """
     board: dict[str, list] = {s.value: [] for s in EstadoExpedienteEnum}
-    for expediente in qs:
-        board[expediente.estado].append(BoardExpedienteSerializer(expediente).data)
+    cases = list(qs)
+    for expediente, payload in zip(
+        cases, BoardExpedienteSerializer(cases, many=True).data, strict=True
+    ):
+        board[expediente.estado].append(payload)
     return {
         "columns": [
             {

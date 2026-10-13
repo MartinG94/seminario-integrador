@@ -4,6 +4,8 @@
 
 ## Resolver la configuración
 
+**Arranque automático de la PR #54:** `docker compose -p sgd-aveit-scrum77-demo -f docker-compose.scrum77-demo.yml --profile frontend up -d --build`. `demo-setup` prepara y carga el catálogo después del health del backend; la SPA espera a su finalización exitosa. Comparte la red del backend para conservar la comprobación HTTP local del preflight, sin exponer puertos adicionales. El procedimiento manual de este documento sigue disponible para diagnosticar un rechazo. Ver [guía de carga](GUIA_CARGA_DEMO_SCRUM-77.md#inicio-recomendado-desde-una-copia-limpia).
+
 Usar [docker-compose.scrum77-demo.yml](../../docker-compose.scrum77-demo.yml) como archivo autónomo. El nombre de proyecto se fija con `-p`. Los binds relativos se resuelven desde el directorio del archivo, aunque la terminal esté en otro directorio.
 
 Desde la raíz de este checkout:

@@ -5,6 +5,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:demo": "ng serve --host 127.0.0.1 --port 4202 --proxy-config proxy.scrum77-local.conf.json",
     "build": "ng build",
     "test": "ng test",
     "lint": "ng lint",
