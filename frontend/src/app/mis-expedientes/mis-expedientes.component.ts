@@ -79,9 +79,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     });
     this.subs.push(subExp);
 
-    const subSocios = this.dataService.socios$.subscribe(socios => {
-      const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-      this.saldoNeto = s ? s.saldo : 0;
+    const subSocios = this.dataService.socios$.subscribe(() => {
+      this.actualizarSaldoNeto();
     });
     this.subs.push(subSocios);
 
@@ -98,6 +97,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       next: (expedientesApi) => {
         if (expedientesApi && Array.isArray(expedientesApi) && expedientesApi.length > 0) {
           this.misExpedientes = expedientesApi.map(e => this.mapearExpedienteApi(e));
+          this.actualizarSaldoNeto();
         } else {
           this.filtrarMisExpedientes();
         }
@@ -140,12 +140,29 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     };
   }
 
-  /** Los expedientes del socio en sesión; respaldo si no hay conexión al backend. */
+  /** Los expedientes del socio en sesión y cálculo de saldo neto de expedientes emitidos. */
   private filtrarMisExpedientes(): void {
+    const perfil = this.auth.getPerfil();
     const nombre = this.socioActual.trim().toLowerCase();
-    this.misExpedientes = nombre
-      ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
+    const legajo = perfil?.legajo ? String(perfil.legajo).trim().toLowerCase() : '';
+
+    this.misExpedientes = (nombre || legajo)
+      ? this.expedientes.filter(e => {
+          const matchNombre = !!(nombre && e.socio.trim().toLowerCase() === nombre);
+          const matchLegajo = !!(legajo && e.legajo && String(e.legajo).trim().toLowerCase() === legajo);
+          return matchNombre || matchLegajo;
+        })
       : [];
+    this.actualizarSaldoNeto();
+  }
+
+  /**
+   * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
+   * Los expedientes en trámite (creado, justificando, espera_resolucion, etc.) no impactan el saldo.
+   */
+  public actualizarSaldoNeto(): void {
+    const emitidos = this.misExpedientes.filter(e => e.estado === 'emitido');
+    this.saldoNeto = emitidos.reduce((acc, exp) => acc + Number(exp.puntos || 0), 0);
   }
 
   ngOnDestroy(): void {
