@@ -1,7 +1,7 @@
 # Implementación de IA en SGD-AVEIT — Documento 02: Entrenamiento, Datos y Hardware
 
 **Código de Tarea:** SCRUM-76 (Investigación I+D para PO — Clasificación y Asistencia de IA)  
-**Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148)  
+**Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148)  
 **Fecha:** Octubre 2026  
 **Estado:** Guía Metodológica de Curaduría, Entrenamiento y Requisitos de Infraestructura  
 
@@ -117,7 +117,7 @@ Laya emplea un esquema de optimización basado en **RLCD (Reinforcement Learning
   * **Shuffle Options:** Activado para evitar sesgos posicionales en la presentación de criterios de opción múltiple.
 
 ### 3.1. Métricas de Aprobación y Calibración
-Antes de promover un modelo a producción, debe superar los umbrales exigidos en [`laya-evals`](file:///C:/git/laya/docs/evals.md):
+Antes de promover un modelo a producción, debe superar los umbrales exigidos en [`laya-evals`](../laya/docs/evals.md):
 * **Choice Accuracy:** $\ge 75\%$ sobre el conjunto de test.
 * **Score Accuracy (MAE $\le 0.25$):** $\ge 80\%$.
 * **Expected Calibration Error (ECE):** $\le 0.10$. (Garantiza que si el modelo dice "80% de certeza", la probabilidad empírica real de acierto sea efectivamente del 80%).

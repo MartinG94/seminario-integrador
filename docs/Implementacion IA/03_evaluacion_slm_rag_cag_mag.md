@@ -1,7 +1,7 @@
 # Implementación de IA en SGD-AVEIT — Documento 03: Evaluación de SLMs (<4B), RAG, CAG y MAG
 
 **Código de Tarea:** SCRUM-76 (Investigación I+D para PO — Clasificación y Asistencia de IA)  
-**Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md) y [`docs/constitution.md`](file:///c:/git/seminario-integrador/docs/constitution.md)  
+**Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md) y [`docs/constitution.md`](docs/constitution.md)  
 **Fecha:** Octubre 2026  
 **Estado:** Dictamen Técnico sobre Modelos Autorregresivos Compactos y Paradigmas de Aumento Contextual  
 
@@ -58,7 +58,7 @@ flowchart LR
 ```
 
 ### 4.1. Borrador Asistido de Resoluciones Colegiadas (VISTO y CONSIDERANDO)
-* **Contexto:** Según el formato oficial del TD ([`notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md), Ref. Imagen 3), toda resolución emitida exige una estructura jurídica formal:
+* **Contexto:** Según el formato oficial del TD ([`notasPO.md`](docs/gestion-proyecto/notasPO.md), Ref. Imagen 3), toda resolución emitida exige una estructura jurídica formal:
   - **VISTO:** El número de expediente, los socios imputados y las denuncias acumuladas.
   - **CONSIDERANDO:** Los hechos acreditados, la valoración de las pruebas y testimonios, y los artículos reglamentarios violados.
   - **SE RESUELVE:** La sanción individualizada y el cómputo neto de puntos.
@@ -93,7 +93,7 @@ flowchart LR
 ```
 
 * **Pipeline Técnico en SGD-AVEIT:**
-  1. *Segmentación del Corpus:* Los documentos en [`docs/analisis-proceso-actual/reglamentos-aveit/`](file:///c:/git/seminario-integrador/docs/analisis-proceso-actual/reglamentos-aveit/) se dividen en fragmentos lógicos respetando la jerarquía de Títulos, Capítulos y Artículos.
+  1. *Segmentación del Corpus:* Los documentos en [`docs/analisis-proceso-actual/reglamentos-aveit/`](docs/analisis-proceso-actual/reglamentos-aveit/) se dividen en fragmentos lógicos respetando la jerarquía de Títulos, Capítulos y Artículos.
   2. *Indexación Híbrida:* Búsqueda semántica densa (embeddings) combinada con búsqueda léxica BM25 (para capturar números exactos de artículos como "Art. 12 Inc. b").
   3. *Inyección en Prompt:* Solo se inyectan al SLM los 3 o 4 artículos relevantes para responder la consulta, eliminando la posibilidad de invocar normativas inexistentes.
 
@@ -152,7 +152,7 @@ flowchart LR
 ## 6. Dictamen y Hoja de Ruta de Adopción
 
 ### 6.1. Dictamen Técnico
-* **Para el MVP y Corto Plazo (Sprint 3 / Actual):** La prioridad absoluta debe ser **Laya (System 1)**. Resuelve los requerimientos inmediatos del Product Owner ([`notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md)) sobre urgencia y tipificación no vinculante, con cero sobrecarga de infraestructura y sin riesgos de alucinación.
+* **Para el MVP y Corto Plazo (Sprint 3 / Actual):** La prioridad absoluta debe ser **Laya (System 1)**. Resuelve los requerimientos inmediatos del Product Owner ([`notasPO.md`](docs/gestion-proyecto/notasPO.md)) sobre urgencia y tipificación no vinculante, con cero sobrecarga de infraestructura y sin riesgos de alucinación.
 * **Para Etapas Posteriores (Mediano y Largo Plazo):** La incorporación de un SLM <4B (preferentemente **Qwen 2.5 3B** o **Llama 3.2 3B**) bajo la arquitectura híbrida **Model-Augmented Generation** combinada con **CAG** representa el camino de mayor valor agregado para automatizar la confección de proyectos de resolución colegiada.
 
 ### 6.2. Hoja de Ruta Propuesta

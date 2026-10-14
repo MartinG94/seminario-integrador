@@ -1,7 +1,7 @@
 # Implementación de IA en SGD-AVEIT — Documento 01: Escenarios y Casos de Uso
 
 **Código de Tarea:** SCRUM-76 (Investigación I+D para PO — Clasificación y Asistencia de IA)  
-**Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148)  
+**Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148)  
 **Fecha:** Octubre 2026  
 **Estado:** Propuesta Técnica y Arquitectura de Integración  
 
@@ -36,7 +36,7 @@ flowchart LR
 
 ## 2. Casos de Uso Funcionales en SGD-AVEIT
 
-Alineado estrictamente a las necesidades operativas fijadas por el Product Owner en [`notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md), se identifican cuatro casos de uso prioritarios:
+Alineado estrictamente a las necesidades operativas fijadas por el Product Owner en [`notasPO.md`](docs/gestion-proyecto/notasPO.md), se identifican cuatro casos de uso prioritarios:
 
 ### Caso de Uso 1: Clasificador y Sugerencia de Grado de Urgencia (`score`)
 
@@ -231,7 +231,7 @@ services:
 
 ## 4. Política y Gobernanza Ética Institucional
 
-Conforme a las directivas innegociables de [`notasPO.md`](file:///c:/git/seminario-integrador/docs/gestion-proyecto/notasPO.md) y [`docs/constitution.md`](file:///c:/git/seminario-integrador/docs/constitution.md):
+Conforme a las directivas innegociables de [`notasPO.md`](docs/gestion-proyecto/notasPO.md) y [`docs/constitution.md`](docs/constitution.md):
 
 1. **Carácter Estrictamente No Vinculante:** Todas las predicciones de urgencia, tipificación o consistencia son meras **asistencias consultivas**. El modelo no dicta sentencias ni computa puntos automáticamente.
 2. **Principio de Soberanía Colegiada (Human-in-the-Loop):** La decisión de tipificación, juzgamiento y ponderación de puntos corresponde exclusivamente a los miembros titulares o suplentes del Tribunal de Disciplina y a las autoridades de Comisión Directiva.
