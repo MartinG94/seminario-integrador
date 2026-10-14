@@ -227,7 +227,10 @@ INSERT INTO `socio_lista` (`nroSocio`, `apellido`, `nombre`, `fechaIngreso`, `co
 (408917, 'Rosales', 'Nicolás', '2019-03-01', 1, 40408917, '1998-11-20', 1, 10, 1, NULL, 6, 0, 10, NULL, 0),
 (403655, 'Villegas', 'Axel René', '2020-03-01', 1, 40403655, '1999-07-25', 1, 1, 1, NULL, 5, 0, 12, NULL, 0),
 (409953, 'Urviola', 'Luis', '2021-03-01', 1, 40409953, '2000-12-05', 1, 1, 1, NULL, 4, 0, 12, NULL, 0),
-(415327, 'Quiroz', 'Tomas Augusto', '2022-03-01', 1, 40415327, '2001-08-30', 1, 1, 1, NULL, 3, 0, 12, NULL, 0)
+(415327, 'Quiroz', 'Tomas Augusto', '2022-03-01', 1, 40415327, '2001-08-30', 1, 1, 1, NULL, 3, 0, 12, NULL, 0),
+(1001, 'Pérez', 'Esteban', '2021-03-15', 1, 41234567, '2000-05-10', 1, 10, 1, NULL, 4, 0, 10, NULL, 0),
+(1002, 'Gómez', 'Lucía', '2022-03-15', 1, 42345678, '2001-07-12', 2, 1, 1, NULL, 3, 0, 12, NULL, 0),
+(1003, 'Rossi', 'Martín', '2023-03-15', 1, 43456789, '2002-11-23', 1, 1, 1, NULL, 2, 0, 12, NULL, 0)
 ON DUPLICATE KEY UPDATE `apellido`=VALUES(`apellido`), `nombre`=VALUES(`nombre`), `codSubcomision`=VALUES(`codSubcomision`), `anoSocial`=VALUES(`anoSocial`);
 
 INSERT INTO `socio_estudio` (`compositeKey`, `nroSocio`, `nroLegajo`, `codEspecialidad`, `curso`, `aula`, `codTurno`) VALUES
@@ -237,7 +240,10 @@ INSERT INTO `socio_estudio` (`compositeKey`, `nroSocio`, `nroLegajo`, `codEspeci
 (40891701, 408917, 408917, 1, '6K1', 'Aula 20', 3),
 (40365501, 403655, 403655, 1, '5K2', 'Aula 11', 2),
 (40995301, 409953, 409953, 1, '4K1', 'Aula 09', 1),
-(41532701, 415327, 415327, 1, '3K3', 'Aula 08', 2)
+(41532701, 415327, 415327, 1, '3K3', 'Aula 08', 2),
+(100101, 1001, 85421, 1, '5K1', 'Aula 12', 3),
+(100201, 1002, 89123, 1, '4K1', 'Aula 09', 2),
+(100301, 1003, 90455, 1, '3K1', 'Aula 06', 1)
 ON DUPLICATE KEY UPDATE `nroLegajo`=VALUES(`nroLegajo`);
 
 INSERT INTO `socio_email` (`compositeKey`, `nroSocio`, `idEmail`, `email`, `comprobado`, `habilitado`) VALUES
@@ -247,7 +253,10 @@ INSERT INTO `socio_email` (`compositeKey`, `nroSocio`, `idEmail`, `email`, `comp
 (40891700, 408917, 0, '408917@aveit.test', 1, 1),
 (40365500, 403655, 0, '403655@aveit.test', 1, 1),
 (40995300, 409953, 0, '409953@aveit.test', 1, 1),
-(41532700, 415327, 0, '415327@aveit.test', 1, 1)
+(41532700, 415327, 0, '415327@aveit.test', 1, 1),
+(100100, 1001, 0, 'esteban.perez@aveit.utn.edu.ar', 1, 1),
+(100200, 1002, 0, 'lucia.gomez@aveit.utn.edu.ar', 1, 1),
+(100300, 1003, 0, 'martin.rossi@aveit.utn.edu.ar', 1, 1)
 ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `habilitado`=1;
 
 INSERT INTO `socio_estadoHistorial` (`idEstadoHistorial`, `idGrupo`, `nroSocio`, `fechaHora`, `codEstadoSocio`, `socio_motivoCambioEstado`) VALUES
@@ -257,7 +266,10 @@ INSERT INTO `socio_estadoHistorial` (`idEstadoHistorial`, `idGrupo`, `nroSocio`,
 (4089171, 58, 408917, '2019-03-01 10:00:00.000000', 1, 1),
 (4036551, 59, 403655, '2020-03-01 10:00:00.000000', 1, 1),
 (4099531, 60, 409953, '2021-03-01 10:00:00.000000', 1, 1),
-(4153271, 62, 415327, '2022-03-01 10:00:00.000000', 1, 1)
+(4153271, 62, 415327, '2022-03-01 10:00:00.000000', 1, 1),
+(10011, 58, 1001, '2021-03-15 10:00:00.000000', 1, 1),
+(10021, 60, 1002, '2022-03-15 10:00:00.000000', 1, 1),
+(10031, 62, 1003, '2023-03-15 10:00:00.000000', 1, 1)
 ON DUPLICATE KEY UPDATE `codEstadoSocio`=1;
 
 -- --------------------------------------------------------------------------------------
@@ -294,26 +306,26 @@ INSERT INTO `socio_lista` (`nroSocio`, `apellido`, `nombre`, `fechaIngreso`, `co
 ON DUPLICATE KEY UPDATE `apellido`=VALUES(`apellido`), `nombre`=VALUES(`nombre`), `anoSocial`=VALUES(`anoSocial`);
 
 INSERT INTO `socio_estudio` (`compositeKey`, `nroSocio`, `nroLegajo`, `codEspecialidad`, `curso`, `aula`, `codTurno`) VALUES
-(1770001, 770001, 99077001, 1, '5K1', 'Aula 12', 1),
-(1770002, 770002, 99077002, 1, '5K1', 'Aula 12', 1),
-(1770003, 770003, 99077003, 1, '5K1', 'Aula 12', 1),
-(1770004, 770004, 99077004, 1, '5K1', 'Aula 12', 1),
-(1770005, 770005, 99077005, 1, '6K1', 'Aula 20', 2),
-(1770006, 770006, 99077006, 1, '6K1', 'Aula 20', 2),
-(1770007, 770007, 99077007, 1, '6K1', 'Aula 20', 2),
-(1770008, 770008, 99077008, 1, '6K1', 'Aula 20', 2),
-(1770009, 770009, 99077009, 1, '5K2', 'Aula 15', 3),
-(1770010, 770010, 99077010, 1, '5K2', 'Aula 15', 3),
-(1770011, 770011, 99077011, 1, '5K2', 'Aula 15', 3),
-(1770012, 770012, 99077012, 1, '5K2', 'Aula 15', 3),
-(1770013, 770013, 99077013, 1, '4K1', 'Aula 09', 1),
-(1770014, 770014, 99077014, 1, '4K1', 'Aula 09', 1),
-(1770015, 770015, 99077015, 1, '4K1', 'Aula 09', 1),
-(1770016, 770016, 99077016, 1, '4K1', 'Aula 09', 1),
-(1770017, 770017, 99077017, 1, '2K1', 'Aula 05', 2),
-(1770018, 770018, 99077018, 1, '2K1', 'Aula 05', 2),
-(1770019, 770019, 99077019, 1, '1K1', 'Aula 02', 1),
-(1770020, 770020, 99077020, 1, '1K1', 'Aula 02', 1)
+(1770001, 770001, 770001, 1, '5K1', 'Aula 12', 1),
+(1770002, 770002, 770002, 1, '5K1', 'Aula 12', 1),
+(1770003, 770003, 770003, 1, '5K1', 'Aula 12', 1),
+(1770004, 770004, 770004, 1, '5K1', 'Aula 12', 1),
+(1770005, 770005, 770005, 1, '6K1', 'Aula 20', 2),
+(1770006, 770006, 770006, 1, '6K1', 'Aula 20', 2),
+(1770007, 770007, 770007, 1, '6K1', 'Aula 20', 2),
+(1770008, 770008, 770008, 1, '6K1', 'Aula 20', 2),
+(1770009, 770009, 770009, 1, '5K2', 'Aula 15', 3),
+(1770010, 770010, 770010, 1, '5K2', 'Aula 15', 3),
+(1770011, 770011, 770011, 1, '5K2', 'Aula 15', 3),
+(1770012, 770012, 770012, 1, '5K2', 'Aula 15', 3),
+(1770013, 770013, 770013, 1, '4K1', 'Aula 09', 1),
+(1770014, 770014, 770014, 1, '4K1', 'Aula 09', 1),
+(1770015, 770015, 770015, 1, '4K1', 'Aula 09', 1),
+(1770016, 770016, 770016, 1, '4K1', 'Aula 09', 1),
+(1770017, 770017, 770017, 1, '2K1', 'Aula 05', 2),
+(1770018, 770018, 770018, 1, '2K1', 'Aula 05', 2),
+(1770019, 770019, 770019, 1, '1K1', 'Aula 02', 1),
+(1770020, 770020, 770020, 1, '1K1', 'Aula 02', 1)
 ON DUPLICATE KEY UPDATE `nroLegajo`=VALUES(`nroLegajo`);
 
 INSERT INTO `socio_email` (`compositeKey`, `nroSocio`, `idEmail`, `email`, `comprobado`, `habilitado`) VALUES
@@ -341,7 +353,7 @@ ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `habilitado`=1;
 
 INSERT INTO `socio_estadoHistorial` (`idEstadoHistorial`, `idGrupo`, `nroSocio`, `fechaHora`, `codEstadoSocio`, `socio_motivoCambioEstado`) VALUES
 (7700011, 57, 770001, '2019-03-01 10:00:00.000000', 1, 1),
-(7700021, 57, 770002, '2019-03-01 10:00:00.000000', 2, 1),
+(7700021, 57, 770002, '2019-03-01 10:00:00.000000', 1, 1),
 (7700031, 57, 770003, '2019-03-01 10:00:00.000000', 1, 1),
 (7700041, 57, 770004, '2019-03-01 10:00:00.000000', 1, 1),
 (7700051, 58, 770005, '2020-03-01 10:00:00.000000', 1, 1),
@@ -355,7 +367,7 @@ INSERT INTO `socio_estadoHistorial` (`idEstadoHistorial`, `idGrupo`, `nroSocio`,
 (7700131, 60, 770013, '2022-03-01 10:00:00.000000', 1, 1),
 (7700141, 60, 770014, '2022-03-01 10:00:00.000000', 1, 1),
 (7700151, 60, 770015, '2022-03-01 10:00:00.000000', 1, 1),
-(7700161, 60, 770016, '2022-03-01 10:00:00.000000', 2, 1),
+(7700161, 60, 770016, '2022-03-01 10:00:00.000000', 1, 1),
 (7700171, 62, 770017, '2024-03-01 10:00:00.000000', 1, 1),
 (7700181, 62, 770018, '2024-03-01 10:00:00.000000', 1, 1),
 (7700191, 63, 770019, '2025-03-01 10:00:00.000000', 1, 1),
@@ -428,16 +440,19 @@ INSERT INTO `tribunal_puntajeaplicado` (`idPuntajeAplicado`, `puntajeAplicado`, 
 ON DUPLICATE KEY UPDATE `puntajeAplicado`=VALUES(`puntajeAplicado`), `socio_id`=VALUES(`socio_id`), `expediente_id`=VALUES(`expediente_id`);
 
 -- Caché general estrictamente coincidente con la suma del libro mayor
-INSERT INTO `tribunal_puntajegeneral` (`idPuntajeGeneral`, `socio_id`, `puntos`, `felicitaciones`, `llamadosAtencion`) VALUES
-(1, 74907,  1.00, 1, 1), -- -1.00 + 2.00 = 1.00 pts (1 felicitación, 1 llamado)
-(2, 85194,  0.00, 0, 0), -- Sin sanciones emitidas
-(3, 87414,  1.00, 1, 0), -- +1.00 pt (1 felicitación)
-(4, 408917, 0.00, 0, 0), -- Sin sanciones emitidas
-(5, 403655, 0.00, 0, 0), -- Sin sanciones emitidas
-(6, 409953, 0.00, 0, 0), -- Sin sanciones emitidas
-(7, 415327, 0.00, 0, 0), -- Sin sanciones emitidas
-(8, 770005, 3.00, 1, 0), -- +3.00 pts (1 felicitación)
-(9, 770013,-2.00, 0, 1)  -- -2.00 pts (1 llamado)
+INSERT INTO `tribunal_puntajegeneral` (`socio_id`, `puntos`, `felicitaciones`, `llamadosAtencion`) VALUES
+(74907,  1.00, 1, 1), -- -1.00 + 2.00 = 1.00 pts (1 felicitación, 1 llamado)
+(85194,  0.00, 0, 0), -- Sin sanciones emitidas
+(87414,  1.00, 1, 0), -- +1.00 pt (1 felicitación)
+(408917, 0.00, 0, 0), -- Sin sanciones emitidas
+(403655, 0.00, 0, 0), -- Sin sanciones emitidas
+(409953, 0.00, 0, 0), -- Sin sanciones emitidas
+(415327, 0.00, 0, 0), -- Sin sanciones emitidas
+(1001,   0.00, 0, 0), -- Sin sanciones emitidas
+(1002,   0.00, 0, 0), -- Sin sanciones emitidas
+(1003,   0.00, 0, 0), -- Sin sanciones emitidas
+(770005, 3.00, 1, 0), -- +3.00 pts (1 felicitación)
+(770013,-2.00, 0, 1)  -- -2.00 pts (1 llamado)
 ON DUPLICATE KEY UPDATE `puntos`=VALUES(`puntos`), `felicitaciones`=VALUES(`felicitaciones`), `llamadosAtencion`=VALUES(`llamadosAtencion`);
 
 SET FOREIGN_KEY_CHECKS = 1;

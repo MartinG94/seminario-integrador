@@ -61,8 +61,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.subs.push(subExp);
 
     const subSocios = this.dataService.socios$.subscribe(socios => {
-      const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-      this.saldoNeto = s ? s.saldo : 0;
+      if (this.misExpedientes.length > 0) {
+        this.actualizarSaldoNeto();
+      } else {
+        const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
+        this.saldoNeto = s ? s.saldo : 0;
+      }
     });
     this.subs.push(subSocios);
 
@@ -72,12 +76,22 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
+  /** Los expedientes del socio en sesión y cálculo de saldo neto de expedientes emitidos. */
   private filtrarMisExpedientes(): void {
     const nombre = this.socioActual.trim().toLowerCase();
     this.misExpedientes = nombre
       ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
       : [];
+    this.actualizarSaldoNeto();
+  }
+
+  /**
+   * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
+   * Los expedientes en trámite (creado, justificando, espera_resolucion, etc.) no impactan el saldo.
+   */
+  public actualizarSaldoNeto(): void {
+    const emitidos = this.misExpedientes.filter(e => e.estado === 'emitido');
+    this.saldoNeto = emitidos.reduce((acc, exp) => acc + Number(exp.puntos || 0), 0);
   }
 
   ngOnDestroy(): void {

@@ -165,6 +165,100 @@ def test_expedientes_cerrados_saldos_consistency():
 
 
 @pytest.mark.django_db
+def test_all_socios_can_login_with_demo_password():
+    """Verifica que TODOS los socios del padrón institucional (30 socios)
+    tienen una cuenta de usuario y pueden autenticarse con la contraseña DEMO_PASSWORD.
+    """
+    client = APIClient()
+    socios = Socio.objects.all()
+    assert socios.count() == 30, (
+        f"Se esperaban 30 socios en total, se encontraron {socios.count()}."
+    )
+
+    for socio in socios:
+        # Autenticación por legajo
+        res = client.post(
+            "/api/v1/auth/login/",
+            {"identifier": socio.legajo, "password": "Aveit-Demo-2026!"},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK, (
+            f"Fallo de login para socio legajo {socio.legajo}: {res.data}"
+        )
+        assert "access" in res.data
+        assert res.data["user"]["legajo"] == socio.legajo
+
+        # Si el username es distinto al legajo (ej. nroSocio 1001 vs legajo 85421),
+        # verificar que también puede autenticarse por username
+        if socio.user.username != socio.legajo:
+            res_user = client.post(
+                "/api/v1/auth/login/",
+                {"identifier": socio.user.username, "password": "Aveit-Demo-2026!"},
+                format="json",
+            )
+            assert res_user.status_code == status.HTTP_200_OK, (
+                f"Fallo de login para socio username {socio.user.username}: {res_user.data}"
+            )
+
+
+@pytest.mark.django_db
+def test_all_socios_eligible_for_direct_expediente():
+    """Verifica que todos los socios en el sistema son individualmente elegibles
+    para que se les abra un expediente disciplinario directo.
+    """
+    for socio in Socio.objects.all():
+        data = {
+            "motivo": f"Causa disciplinaria preventiva para socio {socio.legajo}.",
+            "socios": [socio.id],
+            "urgencia": "normal",
+        }
+        serializer = AperturaExpedienteSerializer(data=data)
+        assert serializer.is_valid(), (
+            f"Socio {socio.legajo} no resultó elegible para apertura directa: {serializer.errors}"
+        )
+
+
+@pytest.mark.django_db
+def test_nicolas_rosales_open_expediente_does_not_affect_zero_saldo():
+    """Verifica que si un socio (ej. Nicolás Rosales 408917) tiene expedientes
+    en trámite (ESPERA_RESOLUCION por -1.00 pt) pero NINGUNO emitido/cerrado,
+    su saldo de puntos es estrictamente 0.00 pts en libro mayor, caché y ranking.
+    """
+    socio_nr = Socio.objects.get(legajo="408917")
+    expedientes_nr = Expediente.objects.filter(socio=socio_nr)
+    assert expedientes_nr.count() >= 1
+    assert all(e.estado != EstadoExpedienteEnum.EMITIDO for e in expedientes_nr), (
+        "Nicolás Rosales no debe tener expedientes emitidos."
+    )
+
+    # 1. No debe tener asientos en el libro mayor
+    asientos = PuntajeAplicado.objects.filter(socio_id=408917)
+    assert asientos.count() == 0, (
+        "No debe haber asientos en el libro mayor para causas no emitidas."
+    )
+
+    # 2. En el caché tribunal_puntajegeneral debe ser estrictamente 0.00
+    pg = PuntajeGeneral.objects.get(socio_id=408917)
+    assert pg.puntos == Decimal("0.00")
+    assert pg.felicitaciones == 0
+    assert pg.llamadosAtencion == 0
+
+    # 3. En la API de ranking debe reflejar saldo 0.00 y reconciliado True
+    client = APIClient()
+    client.force_authenticate(user=socio_nr.user)
+    response = client.get("/api/v1/ranking/?search=408917")
+    assert response.status_code == status.HTTP_200_OK
+
+    results = response.data if isinstance(response.data, list) else response.data.get("results", [])
+    assert len(results) > 0
+    ranking_nr = results[0]
+    assert Decimal(str(ranking_nr["saldo"])) == Decimal("0.00")
+    assert Decimal(str(ranking_nr["saldoPuntajeGeneral"])) == Decimal("0.00")
+    assert Decimal(str(ranking_nr["diferencia"])) == Decimal("0.00")
+    assert ranking_nr["reconciliado"] is True
+
+
+@pytest.mark.django_db
 def test_seed_production_data_idempotency():
     """Verifica que ejecutar seed_production_data de manera repetida
     es seguro y no genera duplicados.
