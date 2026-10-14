@@ -286,9 +286,9 @@ export class TribunalDataService {
   public expedientes$ = this.expedientesSubject.asObservable();
 
   private sociosSubject = new BehaviorSubject<Socio[]>([
-    { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907', email: '74907@aveit.test', subcomision: 'Cómputos', saldo: 1.0, estado: 'HABILITADO', felicitaciones: 1, sanciones: 1 },
+    { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907', email: '74907@aveit.test', subcomision: 'Cómputos', saldo: 0.0, estado: 'HABILITADO', felicitaciones: 0, sanciones: 0 },
     { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194', email: '85194@aveit.test', subcomision: 'Recursos Humanos', saldo: 0.0, estado: 'HABILITADO', felicitaciones: 0, sanciones: 0 },
-    { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414', email: '87414@aveit.test', subcomision: 'Comisión Directiva', saldo: 1.0, estado: 'HABILITADO', felicitaciones: 1, sanciones: 0 },
+    { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414', email: '87414@aveit.test', subcomision: 'Comisión Directiva', saldo: 0.0, estado: 'HABILITADO', felicitaciones: 0, sanciones: 0 },
     { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', email: '408917@aveit.test', subcomision: 'Tribunal de Disciplina', saldo: 0.0, estado: 'HABILITADO', felicitaciones: 0, sanciones: 0 },
     { id: '5', nombre: 'Axel René Villegas', legajo: '403655', email: '403655@aveit.test', subcomision: 'Cómputos', saldo: 0.0, estado: 'HABILITADO', felicitaciones: 0, sanciones: 0 },
     { id: '6', nombre: 'Luis Urviola', legajo: '409953', email: '409953@aveit.test', subcomision: 'Cómputos', saldo: 0.0, estado: 'HABILITADO', felicitaciones: 0, sanciones: 0 },

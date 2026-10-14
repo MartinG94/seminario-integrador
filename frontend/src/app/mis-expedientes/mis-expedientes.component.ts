@@ -60,13 +60,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     });
     this.subs.push(subExp);
 
-    const subSocios = this.dataService.socios$.subscribe(socios => {
-      if (this.misExpedientes.length > 0) {
-        this.actualizarSaldoNeto();
-      } else {
-        const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-        this.saldoNeto = s ? s.saldo : 0;
-      }
+    const subSocios = this.dataService.socios$.subscribe(() => {
+      this.actualizarSaldoNeto();
     });
     this.subs.push(subSocios);
 
@@ -78,9 +73,16 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   /** Los expedientes del socio en sesión y cálculo de saldo neto de expedientes emitidos. */
   private filtrarMisExpedientes(): void {
+    const perfil = this.auth.getPerfil();
     const nombre = this.socioActual.trim().toLowerCase();
-    this.misExpedientes = nombre
-      ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
+    const legajo = perfil?.legajo ? String(perfil.legajo).trim().toLowerCase() : '';
+
+    this.misExpedientes = (nombre || legajo)
+      ? this.expedientes.filter(e => {
+          const matchNombre = !!(nombre && e.socio.trim().toLowerCase() === nombre);
+          const matchLegajo = !!(legajo && e.legajo && String(e.legajo).trim().toLowerCase() === legajo);
+          return matchNombre || matchLegajo;
+        })
       : [];
     this.actualizarSaldoNeto();
   }

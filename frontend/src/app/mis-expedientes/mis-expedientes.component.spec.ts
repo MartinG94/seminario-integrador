@@ -353,4 +353,108 @@ describe('MisExpedientesComponent', () => {
       expect(document.body.style.overflow).toBe('');
     });
   });
+
+  describe('Cálculo Estricto de Saldo Neto desde Expedientes Emitidos', () => {
+    it('computa saldo 0 cuando el socio no tiene expedientes registrados', () => {
+      component.misExpedientes = [];
+      component.actualizarSaldoNeto();
+      expect(component.saldoNeto).toBe(0);
+    });
+
+    it('computa saldo 0 cuando el socio tiene expedientes pero ninguno está emitido/cerrado', () => {
+      component.misExpedientes = [
+        {
+          id: 'EXP-1',
+          numero: 'EXP-001/2026',
+          tipo: 'falta',
+          socio: 'Diego Gabriel Sánchez',
+          legajo: '87414',
+          motivo: 'Inasistencia',
+          subcomision: 'Cómputos',
+          puntos: -1,
+          estado: 'justificando',
+          fechaCreacion: '2026-10-08',
+          horasRestantes: 48
+        },
+        {
+          id: 'EXP-2',
+          numero: 'EXP-002/2026',
+          tipo: 'falta',
+          socio: 'Diego Gabriel Sánchez',
+          legajo: '87414',
+          motivo: 'Falta informe',
+          subcomision: 'Cómputos',
+          puntos: -2,
+          estado: 'revision_resolucion',
+          fechaCreacion: '2026-10-09',
+          horasRestantes: 0
+        }
+      ];
+
+      component.actualizarSaldoNeto();
+      expect(component.saldoNeto).toBe(0);
+    });
+
+    it('computa estrictamente la sumatoria de puntos de expedientes en estado emitido', () => {
+      component.misExpedientes = [
+        {
+          id: 'EXP-1',
+          numero: 'EXP-001/2026',
+          tipo: 'merito',
+          socio: 'Diego Gabriel Sánchez',
+          legajo: '87414',
+          motivo: 'Colaboración destacada',
+          subcomision: 'CD',
+          puntos: 3,
+          estado: 'emitido',
+          fechaCreacion: '2026-10-01',
+          horasRestantes: 0
+        },
+        {
+          id: 'EXP-2',
+          numero: 'EXP-002/2026',
+          tipo: 'falta',
+          socio: 'Diego Gabriel Sánchez',
+          legajo: '87414',
+          motivo: 'Inasistencia',
+          subcomision: 'CD',
+          puntos: -1,
+          estado: 'justificando',
+          fechaCreacion: '2026-10-05',
+          horasRestantes: 24
+        },
+        {
+          id: 'EXP-3',
+          numero: 'EXP-003/2026',
+          tipo: 'merito',
+          socio: 'Diego Gabriel Sánchez',
+          legajo: '87414',
+          motivo: 'Organización aniversario',
+          subcomision: 'CD',
+          puntos: 2,
+          estado: 'emitido',
+          fechaCreacion: '2026-10-06',
+          horasRestantes: 0
+        }
+      ];
+
+      component.actualizarSaldoNeto();
+      // Solo suman los emitidos: 3 + 2 = 5 (el de -1 en justificando no se computa)
+      expect(component.saldoNeto).toBe(5);
+    });
+
+    it('no sobreescribe el saldo con mocks estáticos al emitir socios$', () => {
+      component.misExpedientes = [];
+      component.actualizarSaldoNeto();
+      expect(component.saldoNeto).toBe(0);
+
+      // Simular emisión de socios
+      (component.dataService as any).sociosSubject?.next?.([
+        { id: '1', nombre: 'Diego Gabriel Sánchez', legajo: '87414', saldo: 10.0 }
+      ]);
+
+      // Debe mantenerse en 0 porque no tiene expedientes emitidos
+      expect(component.saldoNeto).toBe(0);
+    });
+  });
 });
