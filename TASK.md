@@ -222,6 +222,8 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
       *Hecho cuando:* `docs/Implementacion IA/02_entrenamiento_datos_y_hardware.md` redactado con comandos reproducibles CLI y ONNX.
 - [x] **TS-76.3 Evaluación de SLMs (<4B), RAG, CAG y MAG:** Comparativa multidimensional de SLMs (Qwen 2.5, Llama 3.2, Phi-3.5-mini), matriz Laya vs. SLMs, casos de uso viables (borrador de considerandos, síntesis de expedientes, asistente estatutario) y análisis en profundidad de RAG, CAG (context caching de reglamentos) y las 3 vertientes de MAG (Memory, Multi-Agent y Model-Augmented híbrido System 1 + System 2).  
       *Hecho cuando:* `docs/Implementacion IA/03_evaluacion_slm_rag_cag_mag.md` consolidado con dictamen y hoja de ruta.
+- [x] **TS-76.4 Memos Ejecutivos de Propuesta y Persuasión Institucional:** Redacción de 3 propuestas de valor estructuradas bajo PNL y redacción humanizada para la toma de decisión: Cómputos (Ing. en Sistemas/Electrónica — arquitectura sidecar, ONNX INT8, CPU pura, observabilidad), Tribunal de Disciplina (Ing. Industrial — optimización de procesos, reducción de lead time, soberanía judicial humana estricta) y Comisión Directiva (multidisciplinar — gobernanza, paz social, salvaguarda patrimonial temprana, costo operativo $0).  
+      *Hecho cuando:* `docs/Implementacion IA/presentacion/` completo con los 3 memos y sección de objeciones.
 
 ---
 
