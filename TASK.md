@@ -239,7 +239,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
   - Regla de apercibimientos 3:1 inmutable (sin fracciones ±0,33 ni ±0,5).
   - Inmutabilidad estricta de las notas del PO.
 - [x] **TS3-06.21 Preparación de Documento UAT y Smoke Test en Localhost:** Redactar guía UAT en `docs/gestion-proyecto/` con los 5 casos de prueba ejecutables en localhost:4200.
-- [x] **TS3-06.22 Resolver conflictos y corregir CI de PR #56:** Integrar `main` conservando SCRUM-50 y SCRUM-76; derivar la base temporal desde la configuración de MySQL y conservar `TEST_DATABASE_NAME` explícito. Cinco regresiones de configuración y 252 pruebas frontend en verde; Ruff, build y control de migraciones correctos. La suite MySQL se verifica en CI tras publicar el commit.
+- [x] **TS3-06.22 Resolver conflictos y corregir CI de PR #56:** Integrar `main` conservando SCRUM-50 y SCRUM-76; derivar la base temporal desde la configuración de MySQL y conservar `TEST_DATABASE_NAME` explícito. Completar las tablas externas requeridas por el seed antes de las transacciones de prueba, sin cargar datos ni alterar tablas existentes. Siete regresiones de configuración/esquema y 252 pruebas frontend en verde; Ruff, build y control de migraciones correctos. La suite MySQL se verifica en CI tras publicar el commit.
 
 **Pendientes detectados en la revisión de PR #56:** El acceso a eventos admite roles adicionales a los previstos por el PO; el procesamiento por grupo incluye socios habilitados sin filtrar la cohorte; repetir un cierre puede volver a generar actuaciones disciplinarias. Requieren corrección funcional y pruebas específicas antes de dar la feature por validada contra el PO.
 
