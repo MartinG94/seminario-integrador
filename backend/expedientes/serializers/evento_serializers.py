@@ -1,0 +1,580 @@
+"""Serializadores para Eventos Institucionales, Asistencias y Apercibimientos (CA1 a CA10).
+
+Implementa:
+- EventoInstitucionalSerializer: Serialización completa con totales y convocados.
+- EventoInstitucionalCreateSerializer: Validación de categorías, coherencia de subtipos,
+  modalidad, ubicación requerida según modalidad, fecha fin opcional >= fecha programada,
+  y despacho transaccional de convocatorias y notificaciones outbox.
+- AsistenciaEventoSerializer: Serialización individual con motivo circunstanciado (CA10).
+- AsistenciaEventoBulkUpdateSerializer / ReportarAsistenciaSerializer: Validación de motivo
+  obligatorio/editable por convocado y procesamiento con AttendanceProcessingService.
+- RegistroApercibimientoSerializer: Serialización del libro mayor de apercibimientos y regla 3:1.
+"""
+
+import logging
+from typing import Any
+
+from django.utils import timezone
+from rest_framework import serializers
+
+from expedientes.models import (
+    AsistenciaEvento,
+    CategoriaEventoEnum,
+    EstadoAsistenciaEventoEnum,
+    EventoInstitucional,
+    MetodoCapturaAsistenciaEnum,
+    ModalidadEventoEnum,
+    ModoConvocatoriaEnum,
+    RegistroApercibimiento,
+    SubtipoActividadEnum,
+    SubtipoReunionEnum,
+)
+from expedientes.services.meeting_compliance_service import MeetingComplianceService
+from expedientes.services.meeting_notice_notification_service import (
+    MeetingNoticeNotificationService,
+)
+from socios.models import Role, Socio
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Asistencias Serializers
+# ---------------------------------------------------------------------------
+
+
+class AsistenciaEventoSerializer(serializers.ModelSerializer):
+    """Serializador para registros individuales de asistencia con motivo circunstanciado (CA10)."""
+
+    evento_id = serializers.IntegerField(source="evento.id", read_only=True)
+    evento_titulo = serializers.CharField(source="evento.titulo", read_only=True)
+    socio_id = serializers.IntegerField(source="socio.id", read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+    socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
+    socio_email = serializers.EmailField(source="socio.email", read_only=True)
+    socio_subcomision = serializers.CharField(
+        source="socio.subcomision.name", default="", read_only=True
+    )
+    estado_asistencia_display = serializers.CharField(
+        source="get_estado_asistencia_display", read_only=True
+    )
+    metodo_captura_display = serializers.CharField(
+        source="get_metodo_captura_display", read_only=True
+    )
+    expediente_generado_numero = serializers.CharField(
+        source="expediente_generado.numero", default=None, read_only=True
+    )
+    apercibimiento_generado_id = serializers.IntegerField(
+        source="apercibimiento_generado.id", default=None, read_only=True
+    )
+
+    class Meta:
+        model = AsistenciaEvento
+        fields = [
+            "id",
+            "evento_id",
+            "evento_titulo",
+            "socio_id",
+            "socio_nombre",
+            "socio_legajo",
+            "socio_email",
+            "socio_subcomision",
+            "estado_asistencia",
+            "estado_asistencia_display",
+            "hora_registro",
+            "hora_salida",
+            "minutos_tardanza",
+            "minutos_retiro_anticipado",
+            "metodo_captura",
+            "metodo_captura_display",
+            "dispositivo_id",
+            "motivo",
+            "observaciones",
+            "procesado_disciplinario",
+            "expediente_generado",
+            "expediente_generado_numero",
+            "apercibimiento_generado",
+            "apercibimiento_generado_id",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "evento_id",
+            "evento_titulo",
+            "socio_id",
+            "socio_nombre",
+            "socio_legajo",
+            "socio_email",
+            "socio_subcomision",
+            "estado_asistencia_display",
+            "metodo_captura_display",
+            "procesado_disciplinario",
+            "expediente_generado",
+            "expediente_generado_numero",
+            "apercibimiento_generado",
+            "apercibimiento_generado_id",
+            "created_at",
+        ]
+
+    def get_socio_nombre(self, obj: AsistenciaEvento) -> str:
+        socio = obj.socio
+        return f"{socio.first_name} {socio.last_name}".strip()
+
+
+class AsistenciaItemInputSerializer(serializers.Serializer):
+    """Valida cada registro de asistencia con motivo circunstanciado obligatorio (CA10)."""
+
+    socio_id = serializers.IntegerField(
+        required=True,
+        help_text="ID del socio convocado.",
+    )
+    estado_asistencia = serializers.ChoiceField(
+        choices=EstadoAsistenciaEventoEnum.choices,
+        required=True,
+        help_text="Estado tipificado de la asistencia.",
+    )
+    motivo = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        trim_whitespace=True,
+        help_text=(
+            "Motivo u observación circunstanciada obligatoria para justificar o explicar "
+            "el estado (CA10)."
+        ),
+    )
+    hora_registro = serializers.DateTimeField(required=False, allow_null=True)
+    hora_salida = serializers.DateTimeField(required=False, allow_null=True)
+    minutos_tardanza = serializers.IntegerField(required=False, default=0, min_value=0)
+    minutos_retiro_anticipado = serializers.IntegerField(required=False, default=0, min_value=0)
+    observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_socio_id(self, value: int) -> int:
+        if not Socio.objects.filter(pk=value).exists():
+            raise serializers.ValidationError(
+                f"El socio con ID {value} no existe en el padrón institucional."
+            )
+        return value
+
+    def validate_motivo(self, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError(
+                "El motivo circunstanciado es obligatorio para cada convocado (CA10)."
+            )
+        return cleaned
+
+
+class AsistenciaEventoBulkUpdateSerializer(serializers.Serializer):
+    """Payload para cargar, actualizar o reportar asistencias masivamente en un evento."""
+
+    asistencias = AsistenciaItemInputSerializer(
+        many=True,
+        required=True,
+        allow_empty=False,
+        help_text="Lista de asistencias con motivo circunstanciado por socio convocado.",
+    )
+    metodo_captura = serializers.ChoiceField(
+        choices=MetodoCapturaAsistenciaEnum.choices,
+        default=MetodoCapturaAsistenciaEnum.MANUAL,
+        required=False,
+        help_text="Estrategia de captura empleada.",
+    )
+    fecha_reporte = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+        help_text="Timestamp formal del reporte (opcional, default ahora).",
+    )
+    fecha_hora_cierre_efectivo = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+        help_text="Timestamp real de finalización efectiva de la reunión.",
+    )
+    cerrar_evento = serializers.BooleanField(
+        required=False,
+        default=True,
+        help_text="Indica si debe marcarse el evento como CERRADO tras el procesamiento.",
+    )
+
+
+ReportarAsistenciaSerializer = AsistenciaEventoBulkUpdateSerializer
+
+
+# ---------------------------------------------------------------------------
+# Evento Institucional Serializers
+# ---------------------------------------------------------------------------
+
+
+class EventoInstitucionalSerializer(serializers.ModelSerializer):
+    """Serializador para listado y detalle exhaustivo de eventos institucionales."""
+
+    categoria_display = serializers.CharField(source="get_categoria_display", read_only=True)
+    modalidad_display = serializers.CharField(source="get_modalidad_display", read_only=True)
+    estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    modo_convocatoria_display = serializers.CharField(
+        source="get_modo_convocatoria_display", read_only=True
+    )
+    convocante_nombre = serializers.SerializerMethodField()
+    convocante_legajo = serializers.CharField(source="convocante.legajo", read_only=True)
+    subcomision_nombre = serializers.CharField(
+        source="subcomision.name", default=None, read_only=True
+    )
+    reportado_por_nombre = serializers.SerializerMethodField()
+
+    total_convocados = serializers.SerializerMethodField()
+    total_presentes = serializers.SerializerMethodField()
+    total_ausentes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventoInstitucional
+        fields = [
+            "id",
+            "titulo",
+            "descripcion",
+            "categoria",
+            "categoria_display",
+            "tipo",
+            "modalidad",
+            "modalidad_display",
+            "ubicacion",
+            "lugar",
+            "fecha_publicacion",
+            "fecha_programada",
+            "fecha_fin",
+            "fecha_hora_cierre_efectivo",
+            "fecha_reporte",
+            "tolerancia_tardanza_minutos",
+            "tolerancia_retiro_minutos",
+            "estado",
+            "estado_display",
+            "modo_convocatoria",
+            "modo_convocatoria_display",
+            "grupo_convocado",
+            "subcomision",
+            "subcomision_nombre",
+            "convocante",
+            "convocante_nombre",
+            "convocante_legajo",
+            "reportado_por",
+            "reportado_por_nombre",
+            "es_obligatoria",
+            "es_sancionable",
+            "motivo_no_sancionable",
+            "total_convocados",
+            "total_presentes",
+            "total_ausentes",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "categoria_display",
+            "modalidad_display",
+            "estado_display",
+            "modo_convocatoria_display",
+            "convocante_nombre",
+            "convocante_legajo",
+            "subcomision_nombre",
+            "reportado_por_nombre",
+            "total_convocados",
+            "total_presentes",
+            "total_ausentes",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_convocante_nombre(self, obj: EventoInstitucional) -> str:
+        if not obj.convocante:
+            return ""
+        return f"{obj.convocante.first_name} {obj.convocante.last_name}".strip()
+
+    def get_reportado_por_nombre(self, obj: EventoInstitucional) -> str | None:
+        if not obj.reportado_por:
+            return None
+        return f"{obj.reportado_por.first_name} {obj.reportado_por.last_name}".strip()
+
+    def get_total_convocados(self, obj: EventoInstitucional) -> int:
+        return obj.asistencias.count()
+
+    def get_total_presentes(self, obj: EventoInstitucional) -> int:
+        return obj.asistencias.filter(
+            estado_asistencia__in=[
+                EstadoAsistenciaEventoEnum.PRESENTE,
+                EstadoAsistenciaEventoEnum.TARDE_LEVE,
+                EstadoAsistenciaEventoEnum.TARDE_GRAVE,
+            ]
+        ).count()
+
+    def get_total_ausentes(self, obj: EventoInstitucional) -> int:
+        return obj.asistencias.filter(estado_asistencia=EstadoAsistenciaEventoEnum.AUSENTE).count()
+
+
+class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
+    """Serializador para dar de alta y publicar eventos institucionales (CA1, CA8, CA9, CA10)."""
+
+    convocante = serializers.PrimaryKeyRelatedField(
+        queryset=Socio.objects.all(),
+        required=False,
+        allow_null=True,
+        help_text="Socio organizador convocante (si se omite, se infiere del usuario autenticado).",
+    )
+    fecha_fin = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Fecha y hora de finalización estrictamente opcional (CA8).",
+    )
+    fecha_publicacion = serializers.DateTimeField(
+        required=False,
+        help_text="Timestamp de publicación. Si se omite, se asigna ahora.",
+    )
+    socios_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text="Lista ad-hoc de IDs de socios a convocar para modo PERSONALIZADA.",
+    )
+
+    class Meta:
+        model = EventoInstitucional
+        fields = [
+            "id",
+            "titulo",
+            "descripcion",
+            "categoria",
+            "tipo",
+            "modalidad",
+            "ubicacion",
+            "lugar",
+            "fecha_publicacion",
+            "fecha_programada",
+            "fecha_fin",
+            "tolerancia_tardanza_minutos",
+            "tolerancia_retiro_minutos",
+            "modo_convocatoria",
+            "grupo_convocado",
+            "subcomision",
+            "convocante",
+            "es_obligatoria",
+            "es_sancionable",
+            "motivo_no_sancionable",
+            "socios_ids",
+        ]
+        read_only_fields = ["id", "es_sancionable", "motivo_no_sancionable"]
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        categoria = attrs.get("categoria")
+        tipo = attrs.get("tipo")
+        modalidad = attrs.get("modalidad")
+        ubicacion = attrs.get("ubicacion")
+        fecha_programada = attrs.get("fecha_programada")
+        fecha_fin = attrs.get("fecha_fin")
+        fecha_publicacion = attrs.get("fecha_publicacion") or timezone.now()
+        modo_convocatoria = attrs.get("modo_convocatoria", ModoConvocatoriaEnum.PERSONALIZADA)
+        grupo_convocado = attrs.get("grupo_convocado")
+        subcomision = attrs.get("subcomision")
+
+        errors: dict[str, str] = {}
+
+        # 1. Coherencia categoría vs tipo (CA9)
+        if categoria == CategoriaEventoEnum.REUNION:
+            if tipo not in SubtipoReunionEnum.values:
+                errors["tipo"] = (
+                    f"El subtipo '{tipo}' no corresponde a una REUNION. "
+                    f"Opciones: {SubtipoReunionEnum.values}"
+                )
+        elif categoria == CategoriaEventoEnum.ACTIVIDAD:
+            if tipo not in SubtipoActividadEnum.values:
+                errors["tipo"] = (
+                    f"El subtipo '{tipo}' no corresponde a una ACTIVIDAD. "
+                    f"Opciones: {SubtipoActividadEnum.values}"
+                )
+
+        # 2. Coherencia cronológica (CA8)
+        if fecha_fin is not None and fecha_programada is not None and fecha_fin < fecha_programada:
+            errors["fecha_fin"] = (
+                "La fecha de finalización no puede ser anterior a la fecha programada."
+            )
+
+        if (
+            fecha_publicacion is not None
+            and fecha_programada is not None
+            and fecha_publicacion > fecha_programada
+        ):
+            errors["fecha_publicacion"] = (
+                "La fecha de publicación no puede ser posterior a la fecha programada."
+            )
+
+        # 3. Modalidad y ubicación/enlace (CA10)
+        if modalidad == ModalidadEventoEnum.PRESENCIAL_EXTERNA and not (
+            ubicacion and ubicacion.strip()
+        ):
+            errors["ubicacion"] = (
+                "Para la modalidad presencial externa es obligatorio indicar la ubicación o "
+                "dirección."
+            )
+        elif modalidad == ModalidadEventoEnum.VIRTUAL and not (ubicacion and ubicacion.strip()):
+            errors["ubicacion"] = (
+                "Para la modalidad virtual es obligatorio indicar el enlace de videoconferencia."
+            )
+
+        # 4. Validación de convocatoria
+        if modo_convocatoria == ModoConvocatoriaEnum.GRUPO and not (
+            grupo_convocado and grupo_convocado.strip()
+        ):
+            errors["grupo_convocado"] = "Debe indicar el grupo social convocado (ej. G58)."
+        elif modo_convocatoria == ModoConvocatoriaEnum.SUBCOMISION and subcomision is None:
+            errors["subcomision"] = "Debe indicar la subcomisión convocada."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
+    def create(self, validated_data: dict[str, Any]) -> EventoInstitucional:
+        socios_ids: list[int] = validated_data.pop("socios_ids", [])
+        request = self.context.get("request")
+
+        # Asignar convocante si no viene en el payload
+        if "convocante" not in validated_data or validated_data.get("convocante") is None:
+            if request and hasattr(request.user, "socio"):
+                validated_data["convocante"] = request.user.socio
+            else:
+                primer_cd = Socio.objects.filter(role__in=[Role.CD, Role.ADMIN]).first()
+                if primer_cd:
+                    validated_data["convocante"] = primer_cd
+                else:
+                    raise serializers.ValidationError(
+                        {"convocante": "No se pudo inferir el convocante del evento."}
+                    )
+
+        # Fecha de publicación por defecto
+        if (
+            "fecha_publicacion" not in validated_data
+            or validated_data.get("fecha_publicacion") is None
+        ):
+            validated_data["fecha_publicacion"] = timezone.now()
+
+        # Lugar por defecto según modalidad
+        modalidad = validated_data.get("modalidad")
+        if modalidad == ModalidadEventoEnum.PRESENCIAL_SEDE and not validated_data.get("lugar"):
+            validated_data["lugar"] = "Sede Central AVEIT"
+        elif modalidad == ModalidadEventoEnum.VIRTUAL and not validated_data.get("lugar"):
+            validated_data["lugar"] = "Plataforma Virtual"
+        elif modalidad == ModalidadEventoEnum.PRESENCIAL_EXTERNA and not validated_data.get(
+            "lugar"
+        ):
+            validated_data["lugar"] = validated_data.get("ubicacion") or "Ubicación Externa"
+
+        # Evaluar plazo de preaviso para determinar sancionabilidad (CA1 / CA2)
+        fecha_pub = validated_data["fecha_publicacion"]
+        fecha_prog = validated_data["fecha_programada"]
+        es_sancionable, motivo_no = MeetingComplianceService.validate_notice_period(
+            fecha_publicacion=fecha_pub,
+            fecha_programada=fecha_prog,
+        )
+        validated_data["es_sancionable"] = es_sancionable
+        validated_data["motivo_no_sancionable"] = motivo_no
+
+        evento = EventoInstitucional.objects.create(**validated_data)
+
+        # Resolver e instanciar asistencias iniciales para convocados (CA6)
+        convocados = MeetingNoticeNotificationService.resolve_convocados(
+            evento, socios_ids=socios_ids
+        )
+        for socio in convocados:
+            AsistenciaEvento.objects.get_or_create(
+                evento=evento,
+                socio=socio,
+                defaults={
+                    "estado_asistencia": EstadoAsistenciaEventoEnum.AUSENTE,
+                    "motivo": "Convocado al evento",
+                    "metodo_captura": MetodoCapturaAsistenciaEnum.MANUAL,
+                },
+            )
+
+        # Despachar notificaciones de convocatoria al Outbox (CA7)
+        try:
+            MeetingNoticeNotificationService.enqueue_meeting_notices(
+                evento=evento,
+                socios_ids=socios_ids,
+                auto_dispatch=True,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Error encolando notificaciones de convocatoria para evento %s: %s",
+                evento.id,
+                exc,
+            )
+
+        return evento
+
+    def to_representation(self, instance: EventoInstitucional) -> dict[str, Any]:
+        """Devuelve la representación canónica completa del evento institucional."""
+        return EventoInstitucionalSerializer(instance, context=self.context).data
+
+
+# ---------------------------------------------------------------------------
+# Registro de Apercibimientos Serializers
+# ---------------------------------------------------------------------------
+
+
+class RegistroApercibimientoSerializer(serializers.ModelSerializer):
+    """Serializador para consulta del libro mayor de apercibimientos (CA4)."""
+
+    socio_id = serializers.IntegerField(source="socio.id", read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+    socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
+    estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    asistencia_id = serializers.IntegerField(source="asistencia.id", default=None, read_only=True)
+    expediente_origen_numero = serializers.CharField(
+        source="expediente_origen.numero", default=None, read_only=True
+    )
+    expediente_sancion_id = serializers.IntegerField(
+        source="expediente_sancion.id", default=None, read_only=True
+    )
+    expediente_sancion_numero = serializers.CharField(
+        source="expediente_sancion.numero", default=None, read_only=True
+    )
+
+    class Meta:
+        model = RegistroApercibimiento
+        fields = [
+            "id",
+            "socio_id",
+            "socio_nombre",
+            "socio_legajo",
+            "origen_tipo",
+            "asistencia",
+            "asistencia_id",
+            "expediente_origen",
+            "expediente_origen_numero",
+            "solicitud_t01",
+            "fecha_hecho",
+            "motivo",
+            "articulo_reglamento",
+            "estado",
+            "estado_display",
+            "lote_consolidacion",
+            "expediente_sancion",
+            "expediente_sancion_id",
+            "expediente_sancion_numero",
+            "fecha_consolidacion",
+            "actor_registro",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "socio_id",
+            "socio_nombre",
+            "socio_legajo",
+            "estado_display",
+            "asistencia_id",
+            "expediente_origen_numero",
+            "expediente_sancion_id",
+            "expediente_sancion_numero",
+            "created_at",
+        ]
+
+    def get_socio_nombre(self, obj: RegistroApercibimiento) -> str:
+        socio = obj.socio
+        return f"{socio.first_name} {socio.last_name}".strip()

@@ -58,6 +58,11 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
+from expedientes.views.evento_views import (
+    EventoInstitucionalViewSet,
+    RegistroApercibimientoViewSet,
+    SocioApercibimientosView,
+)
 
 
 def _actor_for_user(user) -> str:
@@ -663,3 +668,10 @@ class CalcularPlazoView(APIView):
                 "dias_excluidos": excluded_days,
             }
         )
+
+
+__all__ = [
+    "EventoInstitucionalViewSet",
+    "RegistroApercibimientoViewSet",
+    "SocioApercibimientosView",
+]
