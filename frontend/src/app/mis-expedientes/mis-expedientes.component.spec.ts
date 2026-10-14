@@ -41,6 +41,11 @@ describe('MisExpedientesComponent', () => {
     component.relatoTexto = '';
     component.enviarDescargo();
     expect(notifications.error).toHaveBeenCalledWith('Por favor ingrese el motivo de la justificación.');
+    
+    // Validar límite superior de 2000 caracteres
+    component.relatoTexto = 'X'.repeat(2001);
+    component.enviarDescargo();
+    expect(notifications.error).toHaveBeenCalledWith('El motivo o justificación no puede superar los 2000 caracteres.');
     expect(submit).not.toHaveBeenCalled();
   });
 
@@ -526,6 +531,38 @@ describe('MisExpedientesComponent', () => {
       component.ngOnDestroy();
       expect(document.body.classList.contains('modal-open')).toBeFalse();
       expect(document.body.style.overflow).toBe('');
+    });
+  });
+
+  describe('Interacción Drag and Drop y Carga API', () => {
+    it('maneja eventos dragover y dragleave alternando isDragging', () => {
+      const eventMock = {
+        preventDefault: jasmine.createSpy('preventDefault'),
+        stopPropagation: jasmine.createSpy('stopPropagation')
+      } as any;
+
+      component.onDragOver(eventMock);
+      expect(component.isDragging).toBeTrue();
+      expect(eventMock.preventDefault).toHaveBeenCalled();
+
+      component.onDragLeave(eventMock);
+      expect(component.isDragging).toBeFalse();
+    });
+
+    it('procesa archivos arrojados en onFileDropped', () => {
+      const dropSpy = spyOn(component, 'procesarArchivos');
+      const testFile = new File(['content'], 'prueba.pdf', { type: 'application/pdf' });
+      const eventMock = {
+        preventDefault: jasmine.createSpy('preventDefault'),
+        stopPropagation: jasmine.createSpy('stopPropagation'),
+        dataTransfer: {
+          files: [testFile]
+        }
+      } as any;
+
+      component.onFileDropped(eventMock);
+      expect(component.isDragging).toBeFalse();
+      expect(dropSpy).toHaveBeenCalledWith([testFile]);
     });
   });
 });

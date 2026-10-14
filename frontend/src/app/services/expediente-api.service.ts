@@ -183,6 +183,10 @@ export class ExpedienteApiService {
     return this.http.post(`${this.apiUrl}/${expedienteId}/descargo/`, payload);
   }
 
+  listarMisExpedientes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/mis-expedientes/`);
+  }
+
   eliminarDescargo(expedienteId: number | string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
   }

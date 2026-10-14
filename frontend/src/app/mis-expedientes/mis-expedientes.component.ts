@@ -32,8 +32,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   readonly LIMITE_T02 = 3;
   readonly LIMITE_T03 = 5;
   readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  readonly MAX_CARACTERES_JUSTIFICACION = 2000;
   relatoTexto = '';
   esEdicion = false;
+
+  isDragging = false;
 
   // Modal propio de Confirmación
   modalConfirmacionAbierto = false;
@@ -58,13 +61,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const subPerfil = this.auth.perfil$.subscribe(perfil => {
       this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
-      this.filtrarMisExpedientes();
+      this.cargarMisExpedientes();
     });
     this.subs.push(subPerfil);
 
     const subExp = this.dataService.expedientes$.subscribe(list => {
       this.expedientes = list;
-      this.filtrarMisExpedientes();
+      if (!this.misExpedientes || this.misExpedientes.length === 0) {
+        this.filtrarMisExpedientes();
+      }
       if (this.expedienteDetalle) {
         const actualizado = list.find(e => e.id === this.expedienteDetalle!.id);
         if (actualizado) {
@@ -84,9 +89,58 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.tickerSub = interval(1000).subscribe(() => {
       this.ahoraMs = Date.now();
     });
+
+    this.cargarMisExpedientes();
   }
 
-  /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
+  cargarMisExpedientes(): void {
+    this.expedienteApi.listarMisExpedientes().subscribe({
+      next: (expedientesApi) => {
+        if (expedientesApi && Array.isArray(expedientesApi) && expedientesApi.length > 0) {
+          this.misExpedientes = expedientesApi.map(e => this.mapearExpedienteApi(e));
+        } else {
+          this.filtrarMisExpedientes();
+        }
+      },
+      error: () => {
+        this.filtrarMisExpedientes();
+      }
+    });
+  }
+
+  private mapearExpedienteApi(raw: any): Expediente {
+    const descargoObj = raw.descargo_presentado ? {
+      tipo: raw.descargo_tipo || 'T02_CERTIFICADO',
+      causal: raw.descargo_causal,
+      archivo: raw.descargo_archivo,
+      texto: raw.descargo_texto || '',
+      fecha: raw.descargo_presentado_at || raw.created_at || '',
+      evidencias: raw.evidencias || []
+    } : undefined;
+
+    return {
+      id: String(raw.id),
+      numero: raw.numero,
+      socio: raw.socio_nombre || '',
+      legajo: raw.socio_legajo || '',
+      subcomision: raw.subcomision || 'General',
+      motivo: raw.motivo || '',
+      fechaCreacion: raw.created_at || '',
+      estado: raw.estado,
+      urgencia: raw.urgencia,
+      horasRestantes: raw.horas_restantes ?? 0,
+      tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
+      puntos: raw.puntos || 0,
+      plazoInicioAt: raw.plazo_inicio_at,
+      plazoLimiteAt: raw.plazo_limite_at,
+      descargoPresentado: raw.descargo_presentado,
+      descargo: descargoObj,
+      evidencias: raw.evidencias || [],
+      cantidadSocios: raw.socios ? raw.socios.length : 1
+    };
+  }
+
+  /** Los expedientes del socio en sesión; respaldo si no hay conexión al backend. */
   private filtrarMisExpedientes(): void {
     const nombre = this.socioActual.trim().toLowerCase();
     this.misExpedientes = nombre
@@ -261,11 +315,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         
         // Sincronizar con backend: dar de baja el descargo y sus evidencias (es_vigente = false)
         this.expedienteApi.eliminarDescargo(exp.id).subscribe({
-          next: () => {},
+          next: () => {
+            this.cargarMisExpedientes();
+          },
           error: () => {}
         });
 
         this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
+        this.cargarMisExpedientes();
         this.notifications.info(`Justificativo del expediente ${exp.numero} eliminado.`);
       }
     );
@@ -351,30 +408,52 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onFileDropped(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      this.procesarArchivos(Array.from(event.dataTransfer.files));
+    }
+  }
+
   onFileSelected(event: any): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
+    this.procesarArchivos(Array.from(input.files));
+    input.value = '';
+  }
 
-    const nuevos = Array.from(input.files);
+  procesarArchivos(nuevos: File[]): void {
+    if (!nuevos || nuevos.length === 0) return;
     const limite = this.limiteActual;
     const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length + nuevos.length;
 
     if (totalComprobantes > limite) {
       this.notifications.error(`Solo se admite un máximo de ${limite} documentos en total.`);
-      input.value = '';
       return;
     }
 
     for (const f of nuevos) {
       if (f.size > this.MAX_BYTES) {
         this.notifications.error(`El archivo "${f.name}" supera el límite de 5 MB.`);
-        input.value = '';
         return;
       }
       const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
       if (!['.pdf', '.jpg', '.jpeg', '.png'].includes(ext)) {
         this.notifications.error(`El archivo "${f.name}" no tiene un formato válido (PDF, JPG, PNG).`);
-        input.value = '';
         return;
       }
 
@@ -384,7 +463,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       );
       if (yaExisteEnCustodia) {
         this.notifications.error(`El documento "${f.name}" ya se encuentra adjunto.`);
-        input.value = '';
         return;
       }
 
@@ -394,14 +472,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       );
       if (yaSeleccionado) {
         this.notifications.error(`El archivo "${f.name}" ya está seleccionado.`);
-        input.value = '';
         return;
       }
 
       this.archivosSeleccionados.push(f);
     }
     this.nombreArchivo = this.archivosSeleccionados.map(f => f.name).join(', ');
-    input.value = '';
   }
 
   removerArchivo(index: number): void {
@@ -476,6 +552,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error('Por favor ingrese el motivo de la justificación.');
         return;
       }
+      if (this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+        this.notifications.error(
+          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
+        );
+        return;
+      }
       if (totalComprobantes > this.LIMITE_T03) {
         this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T03} documentos.`);
         return;
@@ -507,6 +589,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.notifications.success('Justificación y documentos registrados correctamente.');
       this.subiendoArchivos = false;
       this.cerrarModal();
+      this.cargarMisExpedientes();
     };
 
     if (this.archivosSeleccionados.length > 0) {

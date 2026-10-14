@@ -270,39 +270,42 @@
         <button mat-button class="btn btn-default" (click)="cerrarModalDetalle()">Cerrar</button>
 
         <div class="d-flex align-items-center gap-2">
-          <!-- Si no tiene justificativo: botón Añadir -->
-          <button *ngIf="!expedienteDetalle?.descargo && !esPlazoVencido(expedienteDetalle)" 
-                  mat-raised-button 
-                  color="primary" 
-                  class="btn btn-primary"
-                  (click)="abrirModalDescargo(expedienteDetalle)">
-            <i class="material-icons" style="font-size: 16px;">add_circle</i> Añadir Justificativo
-          </button>
-
-          <!-- Si ya tiene justificativo: botones Editar y Eliminar -->
-          <ng-container *ngIf="expedienteDetalle?.descargo">
-            <button *ngIf="!esPlazoVencido(expedienteDetalle)" 
+          <!-- Si la causa está en período de justificaciones -->
+          <ng-container *ngIf="expedienteDetalle?.estado === 'justificando'">
+            <!-- Si no tiene justificativo: botón Añadir -->
+            <button *ngIf="!expedienteDetalle?.descargo && !esPlazoVencido(expedienteDetalle)" 
                     mat-raised-button 
-                    class="btn btn-warning mr-2"
-                    (click)="abrirModalEditarDescargo(expedienteDetalle)">
-              <i class="material-icons" style="font-size: 16px;">edit</i> Editar Justificativo
+                    color="primary" 
+                    class="btn btn-primary"
+                    (click)="abrirModalDescargo(expedienteDetalle)">
+              <i class="material-icons" style="font-size: 16px;">add_circle</i> Añadir Justificativo
             </button>
-            <button *ngIf="!esPlazoVencido(expedienteDetalle)" 
-                    mat-raised-button 
+
+            <!-- Si ya tiene justificativo: botones Editar y Eliminar -->
+            <ng-container *ngIf="expedienteDetalle?.descargo">
+              <button *ngIf="!esPlazoVencido(expedienteDetalle)" 
+                      mat-raised-button 
+                      class="btn btn-warning mr-2"
+                      (click)="abrirModalEditarDescargo(expedienteDetalle)">
+                <i class="material-icons" style="font-size: 16px;">edit</i> Editar Justificativo
+              </button>
+              <button *ngIf="!esPlazoVencido(expedienteDetalle)" 
+                      mat-raised-button 
+                      class="btn btn-danger"
+                      (click)="eliminarDescargo(expedienteDetalle)">
+                <i class="material-icons" style="font-size: 16px;">delete</i> Eliminar Justificativo
+              </button>
+            </ng-container>
+
+            <!-- Si el plazo expiró -->
+            <button *ngIf="esPlazoVencido(expedienteDetalle)" 
+                    mat-button 
                     class="btn btn-danger"
-                    (click)="eliminarDescargo(expedienteDetalle)">
-              <i class="material-icons" style="font-size: 16px;">delete</i> Eliminar Justificativo
+                    disabled
+                    title="El plazo de 5 días hábiles ha expirado">
+              <i class="material-icons" style="font-size: 16px;">timer_off</i> Plazo Expirado
             </button>
           </ng-container>
-
-          <!-- Si el plazo expiró -->
-          <button *ngIf="esPlazoVencido(expedienteDetalle)" 
-                  mat-button 
-                  class="btn btn-danger"
-                  disabled
-                  title="El plazo de 5 días hábiles ha expirado">
-            <i class="material-icons" style="font-size: 16px;">timer_off</i> Plazo Expirado
-          </button>
         </div>
       </div>
     </div>
@@ -352,8 +355,20 @@
 
         <!-- Campo de texto si elige Otro -->
         <div *ngIf="causalSeleccionada === 'Otro'" class="form-group mb-3">
-          <label class="text-dark font-weight-bold">Motivo o justificación</label>
-          <textarea class="form-control" rows="3" placeholder="Describe brevemente los motivos..." [(ngModel)]="relatoTexto"></textarea>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="text-dark font-weight-bold mb-0">Motivo o justificación</label>
+            <small [ngClass]="(relatoTexto?.length || 0) > MAX_CARACTERES_JUSTIFICACION ? 'text-danger font-weight-bold' : 'text-muted'">
+              {{relatoTexto?.length || 0}} / {{MAX_CARACTERES_JUSTIFICACION}} caracteres
+            </small>
+          </div>
+          <textarea class="form-control"
+                    rows="4"
+                    [attr.maxlength]="MAX_CARACTERES_JUSTIFICACION"
+                    placeholder="Describe detalladamente los motivos y fundamentos de la justificación extraordinaria..."
+                    [(ngModel)]="relatoTexto"></textarea>
+          <small class="form-text text-muted">
+            Expone los hechos y fundamentos de tu justificación extraordinaria (máximo {{MAX_CARACTERES_JUSTIFICACION}} caracteres).
+          </small>
         </div>
 
         <!-- Adjuntar documentos -->
@@ -362,10 +377,17 @@
           
           <!-- Selector visible únicamente si no se alcanzó el cupo máximo -->
           <div *ngIf="puedeSubirMas" class="file-upload-wrapper mt-1">
-            <input type="file" multiple class="form-control custom-file-input-visible" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
-            <small class="text-muted d-block mt-1">
-              Formatos admitidos: PDF, JPG, PNG (hasta 5 MB por archivo, máximo {{limiteActual}} documentos).
-            </small>
+            <input #fileInput type="file" multiple class="d-none" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
+            <div class="dropzone-container"
+                 [class.dragging]="isDragging"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (drop)="onFileDropped($event)"
+                 (click)="fileInput.click()">
+              <i class="material-icons dropzone-icon">cloud_upload</i>
+              <div class="dropzone-text">Arrastrá y soltá tus comprobantes acá o hacé clic para explorar</div>
+              <div class="dropzone-hint">Formatos admitidos: PDF, JPG, PNG (hasta 5 MB por archivo, máximo {{limiteActual}} documentos).</div>
+            </div>
           </div>
 
           <!-- Aviso cuando ya se alcanzó el cupo máximo -->

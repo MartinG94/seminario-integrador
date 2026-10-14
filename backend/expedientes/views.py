@@ -74,7 +74,12 @@ class ExpedienteCollectionView(APIView):
     def get(self, request: Request) -> Response:
         queryset = Expediente.objects.select_related(
             "socio", "socio__subcomision"
-        ).prefetch_related("socios", "cambios_estado", "descargos", "evidencias")
+        ).prefetch_related(
+            "socios",
+            "cambios_estado",
+            "descargos__socio",
+            "evidencias__socio",
+        )
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -143,7 +148,12 @@ class MisExpedientesView(APIView):
             Expediente.objects.filter(Q(socio=socio) | Q(socios=socio))
             .distinct()
             .select_related("socio", "socio__subcomision")
-            .prefetch_related("socios", "cambios_estado", "descargos", "evidencias")
+            .prefetch_related(
+                "socios",
+                "cambios_estado",
+                "descargos__socio",
+                "evidencias__socio",
+            )
         )
         serializer = ExpedienteListSerializer(queryset, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -417,9 +427,22 @@ class EvidenciaUploadView(APIView):
             )
 
         tipo_descargo = request.data.get("tipo_descargo")
+        if not tipo_descargo:
+            descargo_existente = DescargoExpediente.objects.filter(
+                expediente=expediente, socio=socio
+            ).first()
+            if descargo_existente:
+                tipo_descargo = descargo_existente.tipo
+            elif expediente.descargo_tipo:
+                tipo_descargo = expediente.descargo_tipo
+
         if tipo_descargo:
+            vigentes_count = EvidenciaDescargo.objects.filter(
+                expediente=expediente, socio=socio, es_vigente=True
+            ).count()
+            total_count = vigentes_count + len(files)
             try:
-                EvidenceValidator.validate_quota(tipo_descargo, len(files))
+                EvidenceValidator.validate_quota(tipo_descargo, total_count)
             except EvidenceValidationError as exc:
                 return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -573,7 +596,15 @@ class ExpedienteDetailView(APIView):
 
     def get(self, request: Request, pk: int) -> Response:
         expediente = (
-            Expediente.objects.filter(pk=pk).select_related("socio", "socio__subcomision").first()
+            Expediente.objects.filter(pk=pk)
+            .select_related("socio", "socio__subcomision")
+            .prefetch_related(
+                "socios",
+                "cambios_estado",
+                "descargos__socio",
+                "evidencias__socio",
+            )
+            .first()
         )
         if not expediente:
             return Response(
@@ -582,12 +613,15 @@ class ExpedienteDetailView(APIView):
             )
 
         self.check_object_permissions(request, expediente)
-        serializer = ExpedienteListSerializer(expediente)
+        serializer = ExpedienteListSerializer(expediente, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request, pk: int) -> Response:
         expediente = (
-            Expediente.objects.filter(pk=pk).select_related("socio", "socio__subcomision").first()
+            Expediente.objects.filter(pk=pk)
+            .select_related("socio", "socio__subcomision")
+            .prefetch_related("socios", "cambios_estado", "descargos", "evidencias")
+            .first()
         )
         if not expediente:
             return Response(
@@ -605,7 +639,10 @@ class ExpedienteDetailView(APIView):
         expediente.urgencia = serializer.validated_data["urgencia"]
         expediente.save(update_fields=["urgencia", "updated_at"])
 
-        return Response(ExpedienteListSerializer(expediente).data, status=status.HTTP_200_OK)
+        return Response(
+            ExpedienteListSerializer(expediente, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 REGLAMENTOS_VIGENTES = (

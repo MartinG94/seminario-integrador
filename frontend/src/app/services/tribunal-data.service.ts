@@ -500,7 +500,6 @@ export class TribunalDataService {
 
     const updated = { ...current[index] };
     const esEdicion = usuarioInfo?.esEdicion !== undefined ? usuarioInfo.esEdicion : !!updated.descargo;
-    updated.estado = 'revision_resolucion';
     updated.descargoPresentado = true;
     updated.descargo = {
       tipo,
