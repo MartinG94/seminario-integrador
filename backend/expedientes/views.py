@@ -322,13 +322,11 @@ class PresentarDescargoView(APIView):
             descargo.delete()
 
         # Dar de baja evidencias vigentes de este socio (preservación histórica, es_vigente=False)
-        EvidenciaDescargo.objects.filter(
-            expediente=expediente, socio=socio
-        ).update(es_vigente=False)
-
-        expediente.descargo_presentado = (
-            expediente.descargos.count() >= expediente.socios.count()
+        EvidenciaDescargo.objects.filter(expediente=expediente, socio=socio).update(
+            es_vigente=False
         )
+
+        expediente.descargo_presentado = expediente.descargos.count() >= expediente.socios.count()
         fields_to_update = ["descargo_presentado"]
         if expediente.socio_id == socio.id:
             expediente.descargo_tipo = ""
