@@ -396,6 +396,73 @@ class DescargoExpediente(models.Model):
         ]
 
 
+class EvidenciaDescargo(models.Model):
+    """Comprobante probatorio protegido y serializado en base de datos (Directiva PO)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+        db_index=True,
+    )
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+        null=True,
+        blank=True,
+    )
+    socio = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.PROTECT,
+        related_name="evidencias_aportadas",
+        db_index=True,
+    )
+    contenido_blob = models.BinaryField(
+        help_text="Contenido binario serializado del archivo probatorio (hasta 5 MB)."
+    )
+    nombre_original = models.CharField(max_length=255)
+    extension = models.CharField(
+        max_length=20, help_text="Extensión original extraída (ej. .pdf, .jpg)"
+    )
+    mime_type = models.CharField(max_length=100, help_text="Tipo MIME validado por magic bytes")
+    tamanio_bytes = models.PositiveIntegerField()
+    sha256_hash = models.CharField(max_length=64, db_index=True)
+    es_vigente = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_evidencia_descargo"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.nombre_original} ({self.expediente.numero})"
+
+
+class AuditoriaDescargaEvidencia(models.Model):
+    """Pista de auditoría inmutable de accesos y descargas de evidencia (CA4)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    evidencia = models.ForeignKey(
+        EvidenciaDescargo,
+        on_delete=models.CASCADE,
+        related_name="descargas_auditadas",
+    )
+    usuario = models.CharField(max_length=150)
+    rol = models.CharField(max_length=50)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_descarga"
+        ordering = ["-fecha_hora"]
+
+    def __str__(self) -> str:
+        return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
+
+
 class SolicitudT01(models.Model):
     class Estado(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"

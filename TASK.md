@@ -210,7 +210,26 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 9. Sprint 3 — Investigación I+D: SCRUM-76 (Investigación y Especificación de IA — Laya System 1, Datos, Hardware y SLMs)
+## 9. Sprint 3 — Desglose Atómico: S3-04 / SCRUM-48 (Adjuntar y Custodiar Evidencia Protegida)
+
+> **Historia de Usuario:** S3-04 / SCRUM-48: Adjuntar y custodiar evidencia protegida.  
+> **Criterios de Aceptación:** CA1 (Límites y formatos: PDF/JPG/PNG <= 5MB; T02 1-3 docs, T03 0-5 docs), CA2 (Validación real magic bytes, hash SHA-256, extensión y sanitización), CA3 (Custodia en BD BLOB MySQL y RBAC por objeto IsImputadoOrTribunal), CA4 (Auditoría inmutable de descargas con nosniff), CA5 (Advertencia estatutaria Art. 102 en Frontend y notificaciones globales 10s), CA6 (Preservación histórica en base de datos es_vigente=False), CA7 (Suites de pruebas en verde).
+
+- [x] **TS3-04.1 Dominio y Validación Binaria (Magic Bytes, Hash, Sanitización) [TDD]:** Implementar `backend/expedientes/domain/evidence_validator.py` con validación de magic bytes (PDF, JPEG, PNG), límite de 5 MB, sanitización de nombre contra path traversal, cálculo SHA-256 y control de cupos (T02 máx 3, T03 máx 5).
+- [x] **TS3-04.2 Modelos ORM, Persistencia BLOB y Auditoría de Descargas [TDD]:** Implementar `EvidenciaDescargo` y `AuditoriaDescargaEvidencia` en `backend/expedientes/models.py`. Generar migración Django.
+- [x] **TS3-04.3 Servicio de Aplicación y Serializadores:** Implementar `EvidenceService` en `backend/expedientes/services/evidence_service.py` y serializadores `EvidenciaMetadataSerializer` en `backend/expedientes/serializers.py`. Adaptar `PresentarDescargoSerializer`.
+- [x] **TS3-04.4 Endpoints REST de Carga y Descarga Segura Auditada [TDD]:** Implementar `EvidenciaUploadView` y `EvidenciaDownloadView` en `backend/expedientes/views.py`, registrar rutas en `backend/expedientes/urls.py`, aplicar permiso por objeto `IsImputadoOrTribunal`, auditoría de descargas y headers `nosniff`.
+- [x] **TS3-04.5 Servicio Frontend y DTOs (`ExpedienteApiService`) [TDD]:** Agregar métodos `subirEvidencias` y `descargarEvidencia` con DTOs en `frontend/src/app/services/expediente-api.service.ts`.
+- [x] **TS3-04.6 Componente Frontend `MisExpedientes` (Adjuntos Múltiples, Art. 102 y Descarga Segura):** Integrar en `mis-expedientes.component.html` y `.ts`: selector múltiple con límites de 3 (T02) y 5 (T03), advertencia estatutaria visible Art. 102, previsualización/eliminación de adjuntos, visualización en modal de detalle de causa con descarga directa y notificaciones globales de 10s.
+- [x] **TS3-04.7 Verificación Integral, Cobertura, Linters y Consistencia PO:** Ejecutar suite completa de backend (`pytest`) y frontend (`Karma`), linters (`ruff check/format`), verificar inmutabilidad de `notasPO.md` y consistencia con las directivas del PO.
+
+### Observaciones del Revisor en PR — S3-04 / SCRUM-48
+
+- [x] **TS3-04.8 Simplificación de Modal y Unificación de Justificativos:** Eliminar bloque "Modalidad de Justificación Asignada", modelar descargo extraordinario como opción "Otro" en combobox "Tipo de Justificación", renombrar a "Adjuntar documentos", unificar sección de carga y eliminar jerga técnica y referencias a "T0". 218 tests unitarios de frontend en Karma y 569 tests de backend en Pytest en verde (0 errores).
+
+---
+
+## 10. Sprint 3 — Investigación I+D: SCRUM-76 (Investigación y Especificación de IA — Laya System 1, Datos, Hardware y SLMs)
 
 > **Tarea de I+D:** SCRUM-76: Investigar Laya (System 1), requerimientos de fine-tuning/datos/hardware y evaluación de SLMs (<4B) con RAG, CAG y MAG.  
 > **Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148).  
@@ -227,7 +246,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 10. Instrucciones para la Actualización de este Archivo
+## 11. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

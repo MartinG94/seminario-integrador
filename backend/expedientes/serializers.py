@@ -12,6 +12,7 @@ from rest_framework.validators import UniqueValidator
 from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
+    EvidenciaDescargo,
     Expediente,
     Holiday,
     SolicitudT01,
@@ -22,6 +23,34 @@ from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
 
 logger = logging.getLogger(__name__)
+
+
+class EvidenciaMetadataSerializer(serializers.ModelSerializer):
+    """Metadatos de un comprobante probatorio (sin contenido binario)."""
+
+    socio_id = serializers.IntegerField(read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EvidenciaDescargo
+        fields = [
+            "id",
+            "socio_id",
+            "socio_nombre",
+            "nombre_original",
+            "extension",
+            "mime_type",
+            "tamanio_bytes",
+            "sha256_hash",
+            "es_vigente",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_socio_nombre(self, obj: EvidenciaDescargo) -> str:
+        if obj.socio:
+            return f"{obj.socio.first_name} {obj.socio.last_name}".strip()
+        return ""
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
@@ -41,6 +70,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     horas_restantes = serializers.SerializerMethodField()
     socios = serializers.SerializerMethodField()
     historial = serializers.SerializerMethodField()
+    evidencias = serializers.SerializerMethodField()
+    descargos = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -68,25 +99,47 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "horas_restantes",
             "created_at",
             "historial",
+            "evidencias",
+            "descargos",
         ]
 
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
+        descargos = list(obj.descargos.all())
+        if not descargos:
+            return None
         request = self.context.get("request")
-        socio = getattr(request.user, "socio", None) if request else None
+        if not request:
+            return descargos[0]
+        user = getattr(request, "user", None)
+        socio = getattr(user, "socio", None) if user else None
+        role = getattr(socio, "role", "")
+        # Si es TD/CD/Admin o staff, puede consultar los descargos de la causa
+        if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
+            user and user.is_staff
+        ):
+            return next(
+                (d for d in descargos if d.socio_id == obj.socio_id),
+                descargos[0],
+            )
         if socio is None:
             return None
-        # Se recorre la colección precargada para no consultar una vez por campo y fila.
-        return next((d for d in obj.descargos.all() if d.socio_id == socio.pk), None)
+        return next((d for d in descargos if d.socio_id == socio.pk), None)
 
     def get_descargo_presentado(self, obj: Expediente) -> bool:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        socio = getattr(user, "socio", None) if user else None
+        role = getattr(socio, "role", "")
+        if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
+            user and user.is_staff
+        ):
+            return bool(len(obj.descargos.all()) > 0 or obj.descargo_presentado)
         descargo = self._descargo_for_requester(obj)
         if descargo:
             return True
-        request = self.context.get("request")
-        socio = getattr(request.user, "socio", None) if request else None
         return bool(obj.descargo_presentado and obj.socio_id == getattr(socio, "id", None))
 
     def get_descargo_tipo(self, obj: Expediente) -> str | None:
@@ -146,6 +199,24 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             for socio in obj.socios.all()
         ]
 
+    def get_evidencias(self, obj: Expediente) -> list[dict]:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return []
+        socio = getattr(user, "socio", None)
+        role = getattr(socio, "role", "")
+        # Usar .all() precargado por prefetch_related para no disparar
+        # queries adicionales por cada expediente
+        todas = obj.evidencias.all()
+        if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or user.is_staff:
+            vigentes = [ev for ev in todas if ev.es_vigente]
+        elif socio and socio.is_enabled:
+            vigentes = [ev for ev in todas if ev.es_vigente and ev.socio_id == socio.pk]
+        else:
+            return []
+        return EvidenciaMetadataSerializer(vigentes, many=True).data
+
     def get_historial(self, obj: Expediente) -> list[dict[str, str]]:
         changes = sorted(obj.cambios_estado.all(), key=lambda c: (c.fecha_hora, c.id))
         return [
@@ -158,6 +229,50 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             }
             for change in changes
         ]
+
+    def get_descargos(self, obj: Expediente) -> list[dict]:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return []
+        socio = getattr(user, "socio", None)
+        role = getattr(socio, "role", "")
+        is_authority = (
+            socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
+        ) or user.is_staff
+
+        descargos_list = list(obj.descargos.all())
+        if not is_authority and socio:
+            descargos_list = [d for d in descargos_list if d.socio_id == socio.pk]
+        elif not is_authority:
+            return []
+
+        evidencias_por_descargo: dict[int, list] = {}
+        for ev in obj.evidencias.all():
+            if ev.es_vigente:
+                k = ev.descargo_id or ev.socio_id
+                evidencias_por_descargo.setdefault(k, []).append(ev)
+
+        result = []
+        for d in descargos_list:
+            evs = evidencias_por_descargo.get(d.id, evidencias_por_descargo.get(d.socio_id, []))
+            result.append(
+                {
+                    "id": d.id,
+                    "socio_id": d.socio_id,
+                    "socio_legajo": d.socio.legajo if d.socio else "",
+                    "socio_nombre": f"{d.socio.first_name} {d.socio.last_name}".strip()
+                    if d.socio
+                    else "",
+                    "tipo": d.tipo,
+                    "causal": d.causal,
+                    "archivo": d.archivo,
+                    "texto": d.texto,
+                    "presentado_at": d.presentado_at.isoformat() if d.presentado_at else None,
+                    "evidencias": EvidenciaMetadataSerializer(evs, many=True).data,
+                }
+            )
+        return result
 
 
 class AperturaExpedienteSerializer(serializers.Serializer):
@@ -194,19 +309,46 @@ class PresentarDescargoSerializer(serializers.Serializer):
     tipo = serializers.ChoiceField(choices=TipoDescargoEnum.choices)
     causal = serializers.CharField(max_length=255, required=False, allow_blank=True)
     archivo = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    texto = serializers.CharField(required=False, allow_blank=True)
+    texto = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        error_messages={
+            "max_length": "El motivo o justificación no puede superar los 2000 caracteres.",
+        },
+    )
+    evidencia_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
 
     def validate(self, attrs: dict) -> dict:
         tipo = attrs.get("tipo")
+        evidencia_ids = attrs.get("evidencia_ids", [])
         if tipo == TipoDescargoEnum.T02_CERTIFICADO:
-            if not attrs.get("archivo"):
+            if not attrs.get("archivo") and not evidencia_ids:
                 raise serializers.ValidationError(
                     {"archivo": "Es obligatorio adjuntar comprobante para justificaciones T02."}
                 )
+            if len(evidencia_ids) > 3:
+                raise serializers.ValidationError(
+                    {"evidencia_ids": "El Formulario T02 admite un máximo de 3 comprobantes."}
+                )
         elif tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
-            if not attrs.get("texto", "").strip():
+            texto = attrs.get("texto", "").strip()
+            if not texto:
                 raise serializers.ValidationError(
                     {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
+                )
+            if len(texto) > 2000:
+                raise serializers.ValidationError(
+                    {"texto": "El motivo o justificación no puede superar los 2000 caracteres."}
+                )
+            if len(evidencia_ids) > 5:
+                raise serializers.ValidationError(
+                    {"evidencia_ids": "El Formulario T03 admite un máximo de 5 comprobantes."}
                 )
         return attrs
 
