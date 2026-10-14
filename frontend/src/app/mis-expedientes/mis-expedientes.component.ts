@@ -221,13 +221,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   abrirModalDescargo(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.esEdicion = false;
-    // Respetar trazabilidad: si el expediente ya tiene un tipo asignado o descargo previo, preservarlo; por defecto T02
-    this.tipoDescargo = exp.descargo?.tipo || (exp as any).descargo_tipo || 'T02_CERTIFICADO';
-    this.causalSeleccionada = exp.descargo?.causal || 'Examen Académico Universitario en UTN FRC';
+    this.tipoDescargo = 'T02_CERTIFICADO';
+    this.causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = '';
     this.archivosSeleccionados = [];
-    this.evidenciasExistentes = exp.descargo?.evidencias ? [...exp.descargo.evidencias] : (exp.evidencias ? [...exp.evidencias] : []);
-    this.relatoTexto = exp.descargo?.texto || '';
+    this.evidenciasExistentes = [];
+    this.relatoTexto = '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
   }
@@ -237,10 +236,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteSeleccionado = exp;
     this.esEdicion = true;
     this.tipoDescargo = exp.descargo.tipo;
-    this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
+    if (this.tipoDescargo === 'T03_EXTRAORDINARIO') {
+      this.causalSeleccionada = 'Otro';
+    } else {
+      this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
+    }
     this.nombreArchivo = exp.descargo.archivo || '';
     this.archivosSeleccionados = [];
-    this.evidenciasExistentes = exp.descargo.evidencias ? [...exp.descargo.evidencias] : (exp.evidencias ? [...exp.evidencias] : []);
+    this.evidenciasExistentes = exp.descargo.evidencias ? [...exp.descargo.evidencias] : [];
     this.relatoTexto = exp.descargo.texto || '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
@@ -249,19 +252,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   eliminarDescargo(exp: Expediente): void {
     if (!exp.descargo) return;
     this.abrirConfirmacion(
-      'Eliminar Justificativo Reglamentario',
+      'Eliminar Justificativo',
       `¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`,
       () => {
         const perfil = this.auth.getPerfil();
         const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
         const legajo = perfil?.legajo || '';
         
-        // Sincronizar con backend: dar de baja las evidencias activas (es_vigente = false)
-        this.expedienteApi.presentarDescargo(exp.id, {
-          tipo: exp.descargo?.tipo || 'T02_CERTIFICADO',
-          texto: '',
-          evidencia_ids: []
-        }).subscribe({
+        // Sincronizar con backend: dar de baja el descargo y sus evidencias (es_vigente = false)
+        this.expedienteApi.eliminarDescargo(exp.id).subscribe({
           next: () => {},
           error: () => {}
         });
@@ -323,9 +322,20 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     return this.evidenciasExistentes.length + this.archivosSeleccionados.length;
   }
 
+  get limiteActual(): number {
+    return this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+  }
+
   get puedeSubirMas(): boolean {
-    const limite = this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
-    return this.totalComprobantes < limite;
+    return this.totalComprobantes < this.limiteActual;
+  }
+
+  onCausalChange(): void {
+    if (this.causalSeleccionada === 'Otro') {
+      this.tipoDescargo = 'T03_EXTRAORDINARIO';
+    } else {
+      this.tipoDescargo = 'T02_CERTIFICADO';
+    }
   }
 
   private removerScrollBloqueo(): void {
@@ -346,11 +356,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     if (!input.files || input.files.length === 0) return;
 
     const nuevos = Array.from(input.files);
-    const limite = this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+    const limite = this.limiteActual;
     const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length + nuevos.length;
 
     if (totalComprobantes > limite) {
-      this.notifications.error(`El Formulario ${this.tipoDescargo === 'T02_CERTIFICADO' ? 'T02' : 'T03'} admite un máximo de ${limite} comprobantes en total.`);
+      this.notifications.error(`Solo se admite un máximo de ${limite} documentos en total.`);
       input.value = '';
       return;
     }
@@ -368,12 +378,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Validación de duplicados: chequear contra archivos ya guardados en custodia
+      // Validación de duplicados: chequear contra archivos ya guardados
       const yaExisteEnCustodia = this.evidenciasExistentes.some(
         ev => (ev.nombre_original || ev.name || '').toLowerCase() === f.name.toLowerCase()
       );
       if (yaExisteEnCustodia) {
-        this.notifications.error(`El comprobante "${f.name}" ya se encuentra incorporado en custodia.`);
+        this.notifications.error(`El documento "${f.name}" ya se encuentra adjunto.`);
         input.value = '';
         return;
       }
@@ -383,7 +393,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         sel => sel.name.toLowerCase() === f.name.toLowerCase() && sel.size === f.size
       );
       if (yaSeleccionado) {
-        this.notifications.error(`El archivo "${f.name}" ya está seleccionado para adjuntar.`);
+        this.notifications.error(`El archivo "${f.name}" ya está seleccionado.`);
         input.value = '';
         return;
       }
@@ -398,8 +408,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const archivo = this.archivosSeleccionados[index];
     const nombre = archivo ? archivo.name : 'este archivo';
     this.abrirConfirmacion(
-      'Quitar archivo de la selección',
-      `¿Confirmas que deseas eliminar el archivo "${nombre}" de la selección?`,
+      'Quitar archivo',
+      `¿Confirmas que deseas quitar el archivo "${nombre}" de la selección?`,
       () => {
         this.archivosSeleccionados.splice(index, 1);
         this.nombreArchivo = this.archivosSeleccionados.map(f => f.name).join(', ');
@@ -409,13 +419,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   removerEvidenciaExistente(index: number): void {
     const ev = this.evidenciasExistentes[index];
-    const nombre = ev ? (ev.nombre_original || ev.name) : 'este comprobante';
+    const nombre = ev ? (ev.nombre_original || ev.name) : 'este documento';
     this.abrirConfirmacion(
-      'Eliminar comprobante custodiado',
-      `¿Confirmas que deseas eliminar el comprobante ya custodiado "${nombre}"?`,
+      'Eliminar documento',
+      `¿Confirmas que deseas eliminar el documento "${nombre}"?`,
       () => {
         this.evidenciasExistentes.splice(index, 1);
-        this.notifications.info(`Comprobante "${nombre}" eliminado del justificativo.`);
+        this.notifications.info(`Documento "${nombre}" eliminado del justificativo.`);
       }
     );
   }
@@ -454,20 +464,20 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
       if (totalComprobantes === 0 && !this.nombreArchivo) {
-        this.notifications.error('Debe adjuntar al menos 1 comprobante para la causal tipificada (Formulario T02).');
+        this.notifications.error('Debe adjuntar al menos un documento.');
         return;
       }
       if (totalComprobantes > this.LIMITE_T02) {
-        this.notifications.error(`El Formulario T02 admite un máximo de ${this.LIMITE_T02} comprobantes.`);
+        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T02} documentos.`);
         return;
       }
     } else {
       if (!this.relatoTexto.trim()) {
-        this.notifications.error('Por favor expone detalladamente los hechos y motivos extraordinarios.');
+        this.notifications.error('Por favor ingrese el motivo de la justificación.');
         return;
       }
       if (totalComprobantes > this.LIMITE_T03) {
-        this.notifications.error(`El Formulario T03 admite un máximo de ${this.LIMITE_T03} comprobantes.`);
+        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T03} documentos.`);
         return;
       }
     }
@@ -482,10 +492,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         expId,
         this.tipoDescargo,
         {
-          causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
+          causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : 'Otro',
           archivo: this.nombreArchivo || (todasLasEvidencias.length > 0 ? todasLasEvidencias[0].nombre_original : undefined),
-          archivos: todasLasEvidencias.map(e => e.nombre_original || e.name || 'comprobante'),
-          texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`,
+          archivos: todasLasEvidencias.map(e => e.nombre_original || e.name || 'documento'),
+          texto: this.relatoTexto || `Justificación presentada bajo causal: ${this.causalSeleccionada}.`,
           evidencias: todasLasEvidencias
         },
         {
@@ -494,7 +504,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
           esEdicion: this.esEdicion
         }
       );
-      this.notifications.success('Justificación y documentación probatoria registradas correctamente.');
+      this.notifications.success('Justificación y documentos registrados correctamente.');
       this.subiendoArchivos = false;
       this.cerrarModal();
     };
@@ -517,7 +527,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.subiendoArchivos = false;
-          const msg = err?.error?.detail || 'Error al custodiar la documentación probatoria.';
+          const msg = err?.error?.detail || 'Error al guardar los documentos.';
           this.notifications.error(msg);
         }
       });

@@ -556,6 +556,12 @@ export class TribunalDataService {
     const updated = { ...current[index] };
     const descargoAnterior = updated.descargo;
     delete updated.descargo;
+    delete updated.evidencias;
+    delete (updated as any).descargo_tipo;
+    delete (updated as any).descargo_causal;
+    delete (updated as any).descargo_archivo;
+    delete (updated as any).descargo_texto;
+    delete (updated as any).descargo_presentado_at;
     updated.descargoPresentado = false;
     updated.estado = 'justificando';
 

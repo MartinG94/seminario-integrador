@@ -223,6 +223,10 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS3-04.6 Componente Frontend `MisExpedientes` (Adjuntos Múltiples, Art. 102 y Descarga Segura):** Integrar en `mis-expedientes.component.html` y `.ts`: selector múltiple con límites de 3 (T02) y 5 (T03), advertencia estatutaria visible Art. 102, previsualización/eliminación de adjuntos, visualización en modal de detalle de causa con descarga directa y notificaciones globales de 10s.
 - [x] **TS3-04.7 Verificación Integral, Cobertura, Linters y Consistencia PO:** Ejecutar suite completa de backend (`pytest`) y frontend (`Karma`), linters (`ruff check/format`), verificar inmutabilidad de `notasPO.md` y consistencia con las directivas del PO.
 
+### Observaciones del Revisor en PR — S3-04 / SCRUM-48
+
+- [x] **TS3-04.8 Simplificación de Modal y Unificación de Justificativos:** Eliminar bloque "Modalidad de Justificación Asignada", modelar descargo extraordinario como opción "Otro" en combobox "Tipo de Justificación", renombrar a "Adjuntar documentos", unificar sección de carga y eliminar jerga técnica y referencias a "T0". 218 tests unitarios de frontend en Karma y 569 tests de backend en Pytest en verde (0 errores).
+
 ---
 
 ## 10. Instrucciones para la Actualización de este Archivo

@@ -175,7 +175,7 @@
               <i class="material-icons text-success mr-2">verified</i> Justificativo Presentado
             </h5>
             <span class="badge" [ngClass]="expedienteDetalle?.descargo?.tipo === 'T02_CERTIFICADO' ? 'badge-info' : 'badge-primary'">
-              {{expedienteDetalle?.descargo?.tipo === 'T02_CERTIFICADO' ? 'T02 · Con Certificado' : 'T03 · Extraordinario'}}
+              {{expedienteDetalle?.descargo?.tipo === 'T02_CERTIFICADO' ? 'Con Certificado' : 'Otro'}}
             </span>
           </div>
 
@@ -193,17 +193,17 @@
 
             <!-- Lista de Evidencias Protegidas Digitales -->
             <div *ngIf="expedienteDetalle?.descargo?.evidencias && expedienteDetalle?.descargo?.evidencias?.length > 0" class="mb-3">
-              <strong class="text-dark d-block mb-1">Documentación Probatoria Adjunta (Custodia Digital):</strong>
+              <strong class="text-dark d-block mb-1">Documentos Adjuntos:</strong>
               <div class="list-group list-group-flush border rounded bg-white">
                 <div *ngFor="let ev of expedienteDetalle?.descargo?.evidencias" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
                   <div class="d-flex align-items-center">
                     <i class="material-icons text-primary mr-2" style="font-size: 20px;">insert_drive_file</i>
                     <div>
-                      <span class="font-weight-bold text-dark">{{ev.nombre_original}}</span>
-                      <small class="text-muted d-block">{{formatFileSize(ev.tamano_bytes)}} &bull; Hash: <code class="small">{{ev.hash_sha256 ? ev.hash_sha256.substring(0, 10) + '...' : 'N/A'}}</code></small>
+                      <span class="font-weight-bold text-dark">{{ev.nombre_original || ev.name}}</span>
+                      <small class="text-muted d-block">{{formatFileSize(ev.tamanio_bytes || ev.tamano_bytes || ev.size)}}</small>
                     </div>
                   </div>
-                  <button type="button" class="btn btn-sm btn-outline-info" (click)="descargarEvidencia(ev)" title="Descargar documento probatorio">
+                  <button type="button" class="btn btn-sm btn-outline-info" (click)="descargarEvidencia(ev)" title="Descargar documento">
                     <i class="material-icons" style="font-size: 16px; vertical-align: middle;">cloud_download</i> Descargar
                   </button>
                 </div>
@@ -309,13 +309,13 @@
   </div>
 </div>
 
-<!-- Modal Unificado de Justificaciones T02 / T03 -->
+<!-- Modal de Justificativo -->
 <div *ngIf="modalAbierto" class="modal-backdrop-custom" style="z-index: 1060;" (click)="cerrarModal()" (wheel)="$event.stopPropagation()">
   <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
     <div class="card">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <div>
-          <h4 class="card-title">{{esEdicion ? 'Editar Justificación Reglamentaria' : 'Añadir Justificación Reglamentaria'}}</h4>
+          <h4 class="card-title">{{esEdicion ? 'Editar Justificativo' : 'Añadir Justificativo'}}</h4>
           <p class="card-category">Expediente: {{expedienteSeleccionado?.numero}} &bull; Socio: {{socioActual}}</p>
         </div>
         <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModal()" title="Cerrar ventana">
@@ -324,174 +324,100 @@
       </div>
       <div class="card-body">
         
-        <div class="alert alert-info">
-          <i class="material-icons" style="vertical-align: middle;">info</i>
-          <span>El justificativo debe respetar las formalidades del reglamento institucional. Dispone de un plazo improrrogable de 5 días hábiles desde la notificación.</span>
-        </div>
-
-        <!-- Notificación Reglamentaria Art. 102 -->
-        <div class="alert alert-warning d-flex align-items-start mt-2 mb-3">
-          <i class="material-icons mr-2 text-warning" style="font-size: 22px; line-height: 1.2;">gavel</i>
-          <span class="small font-weight-bold" style="line-height: 1.4; color: #664d03;">
-            Aviso Reglamentario (Art. 102): La aceptación digital de esta constancia certifica su recepción en término, pero no exime de la obligación de presentar el certificado médico original físico cuando sea requerido formalmente por el Tribunal de Disciplina.
+        <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center">
+          <i class="material-icons mr-2 text-info" style="font-size: 20px;">info</i>
+          <span class="small font-weight-bold">
+            Dispone de un plazo de 5 días hábiles desde la notificación para presentar su justificación.
           </span>
         </div>
 
         <div class="form-group mb-3">
-          <label class="font-weight-bold text-dark mb-1">Modalidad de Justificación Asignada:</label>
-          <div class="p-2 bg-light rounded border d-flex align-items-center">
-            <span class="badge mr-2" [ngClass]="tipoDescargo === 'T02_CERTIFICADO' ? 'badge-info' : 'badge-primary'">
-              {{tipoDescargo === 'T02_CERTIFICADO' ? 'Formulario T02' : 'Formulario T03'}}
-            </span>
-            <span class="text-dark font-weight-bold small">
-              {{tipoDescargo === 'T02_CERTIFICADO' ? 'Causal Reglamentaria con Certificado' : 'Descargo Extraordinario'}}
-            </span>
-          </div>
+          <label class="text-dark font-weight-bold">Tipo de Justificación</label>
+          <select class="form-control" [(ngModel)]="causalSeleccionada" (ngModelChange)="onCausalChange()">
+            <option value="Examen Académico Universitario en UTN FRC">Examen Académico Universitario en UTN FRC</option>
+            <option value="Enfermedad o Problema de Salud con Certificado Médico">Enfermedad o Problema de Salud con Certificado Médico</option>
+            <option value="Compromiso Laboral Comprobable">Compromiso Laboral Comprobable</option>
+            <option value="Fuerza Mayor o Incidente Familiar Urgente">Fuerza Mayor o Incidente Familiar Urgente</option>
+            <option value="Otro">Otro</option>
+          </select>
         </div>
 
-        <!-- Opción A: Con Certificado Obligatorio (máximo 3 comprobantes) -->
-        <div *ngIf="tipoDescargo === 'T02_CERTIFICADO'" class="mt-3 p-3 bg-light rounded border">
-          <div class="form-group">
-            <label class="text-dark font-weight-bold">Causal Justificatoria Tipificada (Requerido):</label>
-            <select class="form-control" [(ngModel)]="causalSeleccionada">
-              <option value="Examen Académico Universitario en UTN FRC">Examen Académico Universitario en UTN FRC</option>
-              <option value="Enfermedad o Problema de Salud con Certificado Médico">Enfermedad o Problema de Salud con Certificado Médico</option>
-              <option value="Compromiso Laboral Comprobable">Compromiso Laboral Comprobable</option>
-              <option value="Fuerza Mayor o Incidente Familiar Urgente">Fuerza Mayor o Incidente Familiar Urgente</option>
-            </select>
-          </div>
-
-          <div class="form-group mt-3">
-            <label class="text-dark font-weight-bold d-block">Adjuntar Documentación Probatoria (Requerido):</label>
-            
-            <!-- Selector visible únicamente si no se alcanzó el cupo máximo -->
-            <div *ngIf="puedeSubirMas" class="file-upload-wrapper mt-2">
-              <input type="file" multiple class="form-control custom-file-input-visible" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
-              <small class="text-muted d-block mt-1">Formatos admitidos: PDF, JPG, PNG (hasta 5 MB por archivo, máximo 3 comprobantes permitidos). Se guardan en custodia digital.</small>
-            </div>
-
-            <!-- Aviso cuando ya se alcanzó el cupo máximo -->
-            <div *ngIf="!puedeSubirMas" class="alert alert-info py-2 px-3 mt-2 mb-2 d-flex align-items-center">
-              <i class="material-icons mr-2 text-info" style="font-size: 20px;">info</i>
-              <span class="small font-weight-bold">
-                Has alcanzado el límite máximo de 3 comprobantes permitidos. Para subir un archivo diferente, debes eliminar alguno de los existentes.
-              </span>
-            </div>
-
-            <!-- Comprobantes ya guardados / en custodia -->
-            <div *ngIf="evidenciasExistentes.length > 0" class="mt-3">
-              <label class="small font-weight-bold text-dark d-flex align-items-center">
-                <i class="material-icons text-success mr-1" style="font-size: 16px;">verified</i>
-                Comprobantes ya adjuntos / en custodia ({{evidenciasExistentes.length}}):
-              </label>
-              <ul class="list-group list-group-flush bg-white rounded border">
-                <li *ngFor="let ev of evidenciasExistentes; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="material-icons text-info mr-2" style="font-size: 18px;">description</i>
-                    <span class="small font-weight-bold text-dark">{{ev.nombre_original || ev.name}}</span>
-                    <span class="badge badge-light text-muted ml-2">{{formatFileSize(ev.tamano_bytes || ev.size)}}</span>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerEvidenciaExistente(i)" title="Eliminar comprobante guardado">
-                    <i class="material-icons" style="font-size: 18px;">delete</i>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <!-- Nuevos archivos seleccionados -->
-            <div *ngIf="archivosSeleccionados.length > 0" class="mt-3">
-              <label class="small font-weight-bold text-dark d-flex align-items-center">
-                <i class="material-icons text-primary mr-1" style="font-size: 16px;">add_circle</i>
-                Nuevos archivos a incorporar ({{archivosSeleccionados.length}}):
-              </label>
-              <ul class="list-group list-group-flush bg-white rounded border">
-                <li *ngFor="let file of archivosSeleccionados; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="material-icons text-primary mr-2" style="font-size: 18px;">description</i>
-                    <span class="small font-weight-bold text-dark">{{file.name}}</span>
-                    <span class="badge badge-light text-muted ml-2">{{formatFileSize(file.size)}}</span>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerArchivo(i)" title="Quitar archivo seleccionado">
-                    <i class="material-icons" style="font-size: 18px;">delete</i>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <div class="mt-2 text-muted small font-weight-bold">
-              Total comprobantes: {{evidenciasExistentes.length + archivosSeleccionados.length}} de {{LIMITE_T02}} permitidos.
-            </div>
-          </div>
+        <!-- Notificación médica cuando corresponda -->
+        <div *ngIf="causalSeleccionada === 'Enfermedad o Problema de Salud con Certificado Médico'" class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center">
+          <i class="material-icons mr-2 text-warning" style="font-size: 20px;">gavel</i>
+          <span class="small font-weight-bold" style="color: #664d03;">
+            Conserve el certificado original en caso de ser requerido formalmente.
+          </span>
         </div>
 
-        <!-- Opción B: Exposición Libre Extraordinaria (máximo 5 comprobantes) -->
-        <div *ngIf="tipoDescargo === 'T03_EXTRAORDINARIO'" class="mt-3 p-3 bg-light rounded border">
-          <div class="form-group">
-            <label class="text-dark font-weight-bold">Exposición Fáctica Circunstanciada (Requerido):</label>
-            <textarea class="form-control" rows="4" placeholder="Detalla los hechos, causas imprevistas o circunstancias excepcionales no tipificadas..." [(ngModel)]="relatoTexto"></textarea>
-            <small class="text-muted">La deliberación colegiada del Tribunal evaluará la admisibilidad de los motivos expuestos.</small>
+        <!-- Campo de texto si elige Otro -->
+        <div *ngIf="causalSeleccionada === 'Otro'" class="form-group mb-3">
+          <label class="text-dark font-weight-bold">Motivo o justificación</label>
+          <textarea class="form-control" rows="3" placeholder="Describe brevemente los motivos..." [(ngModel)]="relatoTexto"></textarea>
+        </div>
+
+        <!-- Adjuntar documentos -->
+        <div class="form-group mb-3">
+          <label class="text-dark font-weight-bold d-block">Adjuntar documentos</label>
+          
+          <!-- Selector visible únicamente si no se alcanzó el cupo máximo -->
+          <div *ngIf="puedeSubirMas" class="file-upload-wrapper mt-1">
+            <input type="file" multiple class="form-control custom-file-input-visible" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
+            <small class="text-muted d-block mt-1">
+              Formatos admitidos: PDF, JPG, PNG (hasta 5 MB por archivo, máximo {{limiteActual}} documentos).
+            </small>
           </div>
 
-          <div class="form-group mt-3">
-            <label class="text-dark font-weight-bold d-block">Adjuntar Documentación Probatoria:</label>
-            
-            <!-- Selector visible únicamente si no se alcanzó el cupo máximo -->
-            <div *ngIf="puedeSubirMas" class="file-upload-wrapper mt-2">
-              <input type="file" multiple class="form-control custom-file-input-visible" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
-              <small class="text-muted d-block mt-1">Formatos admitidos: PDF, JPG, PNG (hasta 5 MB por archivo, máximo 5 comprobantes permitidos).</small>
-            </div>
+          <!-- Aviso cuando ya se alcanzó el cupo máximo -->
+          <div *ngIf="!puedeSubirMas" class="alert alert-info py-2 px-3 mt-2 mb-2 d-flex align-items-center">
+            <i class="material-icons mr-2 text-info" style="font-size: 20px;">info</i>
+            <span class="small font-weight-bold">
+              Has alcanzado el límite de {{limiteActual}} documentos. Para subir otro, primero elimina alguno de los existentes.
+            </span>
+          </div>
 
-            <!-- Aviso cuando ya se alcanzó el cupo máximo -->
-            <div *ngIf="!puedeSubirMas" class="alert alert-info py-2 px-3 mt-2 mb-2 d-flex align-items-center">
-              <i class="material-icons mr-2 text-info" style="font-size: 20px;">info</i>
-              <span class="small font-weight-bold">
-                Has alcanzado el límite máximo de 5 comprobantes permitidos. Para subir un archivo diferente, debes eliminar alguno de los existentes.
-              </span>
-            </div>
+          <!-- Documentos ya guardados -->
+          <div *ngIf="evidenciasExistentes.length > 0" class="mt-3">
+            <label class="small font-weight-bold text-dark d-flex align-items-center">
+              <i class="material-icons text-success mr-1" style="font-size: 16px;">verified</i>
+              Documentos adjuntos ({{evidenciasExistentes.length}}):
+            </label>
+            <ul class="list-group list-group-flush bg-white rounded border">
+              <li *ngFor="let ev of evidenciasExistentes; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                <div class="d-flex align-items-center">
+                  <i class="material-icons text-info mr-2" style="font-size: 18px;">description</i>
+                  <span class="small font-weight-bold text-dark">{{ev.nombre_original || ev.name}}</span>
+                  <span class="badge badge-light text-muted ml-2">{{formatFileSize(ev.tamano_bytes || ev.size)}}</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerEvidenciaExistente(i)" title="Eliminar documento">
+                  <i class="material-icons" style="font-size: 18px;">delete</i>
+                </button>
+              </li>
+            </ul>
+          </div>
 
-            <!-- Comprobantes ya guardados / en custodia -->
-            <div *ngIf="evidenciasExistentes.length > 0" class="mt-3">
-              <label class="small font-weight-bold text-dark d-flex align-items-center">
-                <i class="material-icons text-success mr-1" style="font-size: 16px;">verified</i>
-                Comprobantes ya adjuntos / en custodia ({{evidenciasExistentes.length}}):
-              </label>
-              <ul class="list-group list-group-flush bg-white rounded border">
-                <li *ngFor="let ev of evidenciasExistentes; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="material-icons text-info mr-2" style="font-size: 18px;">description</i>
-                    <span class="small font-weight-bold text-dark">{{ev.nombre_original || ev.name}}</span>
-                    <span class="badge badge-light text-muted ml-2">{{formatFileSize(ev.tamano_bytes || ev.size)}}</span>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerEvidenciaExistente(i)" title="Eliminar comprobante guardado">
-                    <i class="material-icons" style="font-size: 18px;">delete</i>
-                  </button>
-                </li>
-              </ul>
-            </div>
+          <!-- Nuevos archivos seleccionados -->
+          <div *ngIf="archivosSeleccionados.length > 0" class="mt-3">
+            <label class="small font-weight-bold text-dark d-flex align-items-center">
+              <i class="material-icons text-primary mr-1" style="font-size: 16px;">add_circle</i>
+              Archivos seleccionados ({{archivosSeleccionados.length}}):
+            </label>
+            <ul class="list-group list-group-flush bg-white rounded border">
+              <li *ngFor="let file of archivosSeleccionados; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                <div class="d-flex align-items-center">
+                  <i class="material-icons text-primary mr-2" style="font-size: 18px;">description</i>
+                  <span class="small font-weight-bold text-dark">{{file.name}}</span>
+                  <span class="badge badge-light text-muted ml-2">{{formatFileSize(file.size)}}</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerArchivo(i)" title="Quitar archivo">
+                  <i class="material-icons" style="font-size: 18px;">delete</i>
+                </button>
+              </li>
+            </ul>
+          </div>
 
-            <!-- Nuevos archivos seleccionados -->
-            <div *ngIf="archivosSeleccionados.length > 0" class="mt-3">
-              <label class="small font-weight-bold text-dark d-flex align-items-center">
-                <i class="material-icons text-primary mr-1" style="font-size: 16px;">add_circle</i>
-                Nuevos archivos a incorporar ({{archivosSeleccionados.length}}):
-              </label>
-              <ul class="list-group list-group-flush bg-white rounded border">
-                <li *ngFor="let file of archivosSeleccionados; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="material-icons text-primary mr-2" style="font-size: 18px;">description</i>
-                    <span class="small font-weight-bold text-dark">{{file.name}}</span>
-                    <span class="badge badge-light text-muted ml-2">{{formatFileSize(file.size)}}</span>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerArchivo(i)" title="Quitar archivo seleccionado">
-                    <i class="material-icons" style="font-size: 18px;">delete</i>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <div class="mt-2 text-muted small font-weight-bold">
-              Total comprobantes: {{evidenciasExistentes.length + archivosSeleccionados.length}} de {{LIMITE_T03}} permitidos.
-            </div>
+          <div class="mt-2 text-muted small font-weight-bold">
+            Total: {{totalComprobantes}} de {{limiteActual}} documentos permitidos.
           </div>
         </div>
 
@@ -499,7 +425,7 @@
       <div class="card-footer d-flex justify-content-end gap-2">
         <button mat-button class="btn btn-default" (click)="cerrarModal()" [disabled]="subiendoArchivos">Cancelar</button>
         <button mat-raised-button color="primary" class="btn btn-primary" (click)="enviarDescargo()" [disabled]="subiendoArchivos">
-          <i class="material-icons" style="font-size: 16px;">save</i> {{subiendoArchivos ? 'Subiendo archivos...' : (esEdicion ? 'Guardar Cambios' : 'Enviar Justificación Formal')}}
+          <i class="material-icons" style="font-size: 16px;">save</i> {{subiendoArchivos ? 'Guardando...' : (esEdicion ? 'Guardar Cambios' : 'Enviar Justificativo')}}
         </button>
       </div>
     </div>

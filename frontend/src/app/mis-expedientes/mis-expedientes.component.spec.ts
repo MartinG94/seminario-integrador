@@ -29,23 +29,35 @@ describe('MisExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('notifica validaciones de T02/T03 sin enviar un descargo inválido', () => {
+  it('notifica validaciones de justificativo sin enviar un descargo inválido', () => {
     const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
     component.expedienteSeleccionado = { id: 'test' } as Expediente;
     component.tipoDescargo = 'T02_CERTIFICADO';
     component.nombreArchivo = '';
     component.archivosSeleccionados = [];
     component.enviarDescargo();
-    expect(notifications.error).toHaveBeenCalledWith('Debe adjuntar al menos 1 comprobante para la causal tipificada (Formulario T02).');
+    expect(notifications.error).toHaveBeenCalledWith('Debe adjuntar al menos un documento.');
     component.tipoDescargo = 'T03_EXTRAORDINARIO';
     component.relatoTexto = '';
     component.enviarDescargo();
-    expect(notifications.error).toHaveBeenCalledWith('Por favor expone detalladamente los hechos y motivos extraordinarios.');
+    expect(notifications.error).toHaveBeenCalledWith('Por favor ingrese el motivo de la justificación.');
     expect(submit).not.toHaveBeenCalled();
   });
 
+  it('permite alternar causal a Otro y modela descargo como extraordinario', () => {
+    component.causalSeleccionada = 'Otro';
+    component.onCausalChange();
+    expect(component.tipoDescargo).toBe('T03_EXTRAORDINARIO');
+    expect(component.limiteActual).toBe(5);
+
+    component.causalSeleccionada = 'Compromiso Laboral Comprobable';
+    component.onCausalChange();
+    expect(component.tipoDescargo).toBe('T02_CERTIFICADO');
+    expect(component.limiteActual).toBe(3);
+  });
+
   describe('Custodia de Evidencias Protegidas (US S3-04)', () => {
-    it('valida límite de hasta 3 comprobantes para T02 considerando evidencias existentes y nuevas', () => {
+    it('valida límite de hasta 3 comprobantes para causal tipificada considerando evidencias existentes y nuevas', () => {
       component.tipoDescargo = 'T02_CERTIFICADO';
       component.evidenciasExistentes = [{ id: 10, nombre_original: 'previo.pdf', tamano_bytes: 1024 }];
       const file1 = new File(['1'], 'doc1.pdf', { type: 'application/pdf' });
@@ -54,7 +66,7 @@ describe('MisExpedientesComponent', () => {
 
       // 1 existente + 3 nuevos = 4 > 3
       component.onFileSelected({ target: { files: [file1, file2, file3] } });
-      expect(notifications.error).toHaveBeenCalledWith('El Formulario T02 admite un máximo de 3 comprobantes en total.');
+      expect(notifications.error).toHaveBeenCalledWith('Solo se admite un máximo de 3 documentos en total.');
       expect(component.archivosSeleccionados.length).toBe(0);
     });
 
@@ -83,7 +95,7 @@ describe('MisExpedientesComponent', () => {
       const dupFile = new File(['test'], 'comprobante_duplicado.pdf', { type: 'application/pdf' });
 
       component.onFileSelected({ target: { files: [dupFile] } });
-      expect(notifications.error).toHaveBeenCalledWith('El comprobante "comprobante_duplicado.pdf" ya se encuentra incorporado en custodia.');
+      expect(notifications.error).toHaveBeenCalledWith('El documento "comprobante_duplicado.pdf" ya se encuentra adjunto.');
       expect(component.archivosSeleccionados.length).toBe(0);
     });
 
@@ -94,7 +106,7 @@ describe('MisExpedientesComponent', () => {
 
       const dupFile = new File(['test'], 'repetido.pdf', { type: 'application/pdf' });
       component.onFileSelected({ target: { files: [dupFile] } });
-      expect(notifications.error).toHaveBeenCalledWith('El archivo "repetido.pdf" ya está seleccionado para adjuntar.');
+      expect(notifications.error).toHaveBeenCalledWith('El archivo "repetido.pdf" ya está seleccionado.');
       expect(component.archivosSeleccionados.length).toBe(1);
     });
 
@@ -106,7 +118,7 @@ describe('MisExpedientesComponent', () => {
 
       component.removerArchivo(0);
       expect(component.modalConfirmacionAbierto).toBeTrue();
-      expect(component.modalConfirmacionTitulo).toBe('Quitar archivo de la selección');
+      expect(component.modalConfirmacionTitulo).toBe('Quitar archivo');
 
       component.confirmarAccion();
       expect(component.modalConfirmacionAbierto).toBeFalse();
@@ -131,12 +143,12 @@ describe('MisExpedientesComponent', () => {
 
       component.removerEvidenciaExistente(0);
       expect(component.modalConfirmacionAbierto).toBeTrue();
-      expect(component.modalConfirmacionTitulo).toBe('Eliminar comprobante custodiado');
+      expect(component.modalConfirmacionTitulo).toBe('Eliminar documento');
 
       component.confirmarAccion();
       expect(component.modalConfirmacionAbierto).toBeFalse();
       expect(component.evidenciasExistentes.length).toBe(0);
-      expect(notifications.info).toHaveBeenCalledWith('Comprobante "doc_custodia.pdf" eliminado del justificativo.');
+      expect(notifications.info).toHaveBeenCalledWith('Documento "doc_custodia.pdf" eliminado del justificativo.');
     });
 
     it('controla puedeSubirMas ocultando subida al alcanzar límite (3 para T02, 5 para T03)', () => {
@@ -167,7 +179,7 @@ describe('MisExpedientesComponent', () => {
 
       component.eliminarDescargo(expMock);
       expect(component.modalConfirmacionAbierto).toBeTrue();
-      expect(component.modalConfirmacionTitulo).toBe('Eliminar Justificativo Reglamentario');
+      expect(component.modalConfirmacionTitulo).toBe('Eliminar Justificativo');
       expect(eliminarSpy).not.toHaveBeenCalled();
 
       component.confirmarAccion();
@@ -391,6 +403,22 @@ describe('MisExpedientesComponent', () => {
       expect(component.causalSeleccionada).toBe('Examen Académico Universitario en UTN FRC');
       expect(component.nombreArchivo).toBe('comprobante.pdf');
       expect(component.relatoTexto).toBe('Certificado de examen rendido');
+    });
+
+    it('abre el modal de editar justificativo extraordinario precargando causal como Otro', () => {
+      const expExtraordinario: Expediente = {
+        ...expConDescargo,
+        descargo: {
+          tipo: 'T03_EXTRAORDINARIO',
+          texto: 'Motivos imprevistos',
+          fecha: '2026-10-02'
+        }
+      };
+      component.abrirModalEditarDescargo(expExtraordinario);
+      expect(component.modalAbierto).toBeTrue();
+      expect(component.tipoDescargo).toBe('T03_EXTRAORDINARIO');
+      expect(component.causalSeleccionada).toBe('Otro');
+      expect(component.relatoTexto).toBe('Motivos imprevistos');
     });
 
     it('elimina el justificativo al confirmar en el diálogo propio', () => {

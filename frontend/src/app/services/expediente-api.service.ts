@@ -182,5 +182,9 @@ export class ExpedienteApiService {
   presentarDescargo(expedienteId: number | string, payload: PresentarDescargoPayload): Observable<any> {
     return this.http.post(`${this.apiUrl}/${expedienteId}/descargo/`, payload);
   }
+
+  eliminarDescargo(expedienteId: number | string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
+  }
 }
 

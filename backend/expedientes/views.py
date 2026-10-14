@@ -289,6 +289,77 @@ class PresentarDescargoView(APIView):
                 status=status.HTTP_200_OK if es_correccion else status.HTTP_201_CREATED,
             )
 
+    def delete(self, request: Request, pk: int) -> Response:
+        socio = getattr(request.user, "socio", None)
+        if not socio:
+            raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
+
+        expediente = Expediente.objects.filter(id=pk).first()
+        if not expediente:
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not expediente.socios.filter(pk=socio.pk).exists() and expediente.socio_id != socio.id:
+            raise PermissionDenied(
+                "No tiene autorización para gestionar el descargo de este expediente."
+            )
+
+        now = timezone.now()
+        if not expediente.esta_en_plazo(ahora=now):
+            return Response(
+                {
+                    "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                    "plazo_limite_at": expediente.plazo_limite_at,
+                    "server_time": now,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        descargo = DescargoExpediente.objects.filter(expediente=expediente, socio=socio).first()
+        if descargo:
+            descargo.delete()
+
+        # Dar de baja evidencias vigentes de este socio (preservación histórica, es_vigente=False)
+        EvidenciaDescargo.objects.filter(
+            expediente=expediente, socio=socio
+        ).update(es_vigente=False)
+
+        expediente.descargo_presentado = (
+            expediente.descargos.count() >= expediente.socios.count()
+        )
+        fields_to_update = ["descargo_presentado"]
+        if expediente.socio_id == socio.id:
+            expediente.descargo_tipo = ""
+            expediente.descargo_causal = ""
+            expediente.descargo_archivo = ""
+            expediente.descargo_texto = ""
+            expediente.descargo_presentado_at = None
+            fields_to_update.extend(
+                [
+                    "descargo_tipo",
+                    "descargo_causal",
+                    "descargo_archivo",
+                    "descargo_texto",
+                    "descargo_presentado_at",
+                ]
+            )
+        expediente.save(update_fields=fields_to_update)
+
+        CambioEstadoExpediente.objects.create(
+            expediente=expediente,
+            estado_anterior=expediente.estado,
+            estado_nuevo=expediente.estado,
+            actor=f"SOCIO_{socio.legajo}",
+            motivo="Eliminación de descargo dentro del plazo reglamentario.",
+        )
+
+        return Response(
+            {"detail": "Justificativo eliminado correctamente."},
+            status=status.HTTP_200_OK,
+        )
+
 
 class EvidenciaUploadView(APIView):
     """Endpoint para carga multipart protegida de comprobantes probatorios (CA1, CA2, CA3).
