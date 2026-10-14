@@ -239,13 +239,34 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
   - Regla de apercibimientos 3:1 inmutable (sin fracciones ±0,33 ni ±0,5).
   - Inmutabilidad estricta de las notas del PO.
 - [x] **TS3-06.21 Preparación de Documento UAT y Smoke Test en Localhost:** Redactar guía UAT en `docs/gestion-proyecto/` con los 5 casos de prueba ejecutables en localhost:4200.
+- [x] **TS3-06.22 Resolver conflictos y corregir CI de PR #56:** Integrar `main` conservando SCRUM-50 y SCRUM-76; derivar la base temporal desde la configuración de MySQL y conservar `TEST_DATABASE_NAME` explícito. Cinco regresiones de configuración y 252 pruebas frontend en verde; Ruff, build y control de migraciones correctos. La suite MySQL se verifica en CI tras publicar el commit.
+
+**Pendientes detectados en la revisión de PR #56:** El acceso a eventos admite roles adicionales a los previstos por el PO; el procesamiento por grupo incluye socios habilitados sin filtrar la cohorte; repetir un cierre puede volver a generar actuaciones disciplinarias. Requieren corrección funcional y pruebas específicas antes de dar la feature por validada contra el PO.
 
 ---
 
-## 9. Instrucciones para la Actualización de este Archivo
+## 9. Sprint 3 — Investigación I+D: SCRUM-76 (Investigación y Especificación de IA — Laya System 1, Datos, Hardware y SLMs)
+
+> **Tarea de I+D:** SCRUM-76: Investigar Laya (System 1), requerimientos de fine-tuning/datos/hardware y evaluación de SLMs (<4B) con RAG, CAG y MAG.  
+> **Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148).  
+> **Entregables:** Documentos técnicos modulares en [`docs/Implementacion IA/`](docs/Implementacion%20IA/).
+
+- [x] **TS-76.1 Escenarios y Casos de Uso (Laya System 1):** Documentación técnica de primitivas `score` (urgencia procesal), `choice` (sugerencias reglamentarias no vinculantes) y `noul` (consistencia en descargos y flagrancia) junto con la arquitectura desacoplada en contenedor sidecar (`laya-service` en Docker Compose).  
+      *Hecho cuando:* `docs/Implementacion IA/01_escenarios_y_casos_de_uso.md` generado y alineado a directivas del PO.
+- [x] **TS-76.2 Metodología de Entrenamiento, Datos y Hardware:** Esquema del dataset en JSONL con soft targets, pipeline de Teacher Distillation a partir de resoluciones históricas del TD, algoritmo RLCD con ECE $\le 0.10$ y perfiles cuantitativos agnósticos de hardware (GPU local 8–16 GB VRAM para fine-tuning vs. CPU pura <1.5 GB RAM para inferencia en oficina).  
+      *Hecho cuando:* `docs/Implementacion IA/02_entrenamiento_datos_y_hardware.md` redactado con comandos reproducibles CLI y ONNX.
+- [x] **TS-76.3 Evaluación de SLMs (<4B), RAG, CAG y MAG:** Comparativa multidimensional de SLMs (Qwen 2.5, Llama 3.2, Phi-3.5-mini), matriz Laya vs. SLMs, casos de uso viables (borrador de considerandos, síntesis de expedientes, asistente estatutario) y análisis en profundidad de RAG, CAG (context caching de reglamentos) y las 3 vertientes de MAG (Memory, Multi-Agent y Model-Augmented híbrido System 1 + System 2).  
+      *Hecho cuando:* `docs/Implementacion IA/03_evaluacion_slm_rag_cag_mag.md` consolidado con dictamen y hoja de ruta.
+- [x] **TS-76.4 Memos Ejecutivos de Propuesta y Persuasión Institucional:** Redacción de 3 propuestas de valor estructuradas bajo PNL y redacción humanizada para la toma de decisión: Cómputos (Ing. en Sistemas/Electrónica — arquitectura sidecar, ONNX INT8, CPU pura, observabilidad), Tribunal de Disciplina (Ing. Industrial — optimización de procesos, reducción de lead time, soberanía judicial humana estricta) y Comisión Directiva (multidisciplinar — gobernanza, paz social, salvaguarda patrimonial temprana, costo operativo $0).  
+      *Hecho cuando:* `docs/Implementacion IA/presentacion/` completo con los 3 memos y sección de objeciones.
+
+---
+
+## 10. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.
 3. Sincroniza simultáneamente el archivo `specs/<spec>/tasks.md`.
 4. Al culminar la totalidad de las tareas de una spec, actualiza la tabla del **Roadmap Macro** indicando el estado `Completado` y avanza a la siguiente fase.
+
 

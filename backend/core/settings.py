@@ -117,7 +117,7 @@ else:
                 "read_timeout": int(os.getenv("DB_READ_TIMEOUT", "60")),
             },
             "TEST": {
-                "NAME": os.getenv("TEST_DATABASE_NAME", "test_aveit_tribunal_dev"),
+                "NAME": os.getenv("TEST_DATABASE_NAME"),
             },
         }
     }
