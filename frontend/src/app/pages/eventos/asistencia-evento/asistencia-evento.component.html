@@ -1,0 +1,338 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <!-- Barra Superior: Selector de Evento y Acciones Principales -->
+    <div class="card mb-4 shadow-sm border-0">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-lg-6 col-md-12 mb-2 mb-lg-0">
+            <div class="d-flex align-items-center">
+              <div class="icon-circle bg-primary text-white mr-3 d-flex align-items-center justify-content-center">
+                <i class="material-icons">event_note</i>
+              </div>
+              <div>
+                <h4 class="card-title font-weight-bold mb-1">
+                  {{ eventoActivo ? eventoActivo.titulo : 'Convocatorias Institucionales' }}
+                </h4>
+                <p class="card-category text-muted mb-0" *ngIf="eventoActivo">
+                  <span class="badge badge-primary mr-1">{{ eventoActivo.categoria }}</span>
+                  <span class="badge badge-info mr-1">{{ eventoActivo.tipo }}</span>
+                  <span class="badge badge-secondary mr-1">{{ eventoActivo.modalidad }}</span>
+                  <span class="badge" [ngClass]="{
+                    'badge-success': eventoActivo.estado === 'EN_CURSO',
+                    'badge-dark': eventoActivo.estado === 'CERRADA',
+                    'badge-warning': eventoActivo.estado === 'PROGRAMADA'
+                  }">
+                    {{ eventoActivo.estado }}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6 col-md-12 text-lg-right">
+            <!-- Alternancia de Estrategia de Captura (Manual vs Biométrica) -->
+            <div class="btn-group mr-2 mb-1" role="group">
+              <button
+                type="button"
+                class="btn btn-sm"
+                [class.btn-primary]="estrategiaActual === 'MANUAL'"
+                [class.btn-outline-primary]="estrategiaActual !== 'MANUAL'"
+                (click)="cambiarEstrategia('MANUAL')"
+              >
+                <i class="material-icons mr-1" style="font-size: 16px;">edit</i> Modo Manual
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                [class.btn-info]="estrategiaActual === 'BIOMETRICO'"
+                [class.btn-outline-info]="estrategiaActual !== 'BIOMETRICO'"
+                (click)="cambiarEstrategia('BIOMETRICO')"
+              >
+                <i class="material-icons mr-1" style="font-size: 16px;">fingerprint</i> Modo Biométrico
+              </button>
+            </div>
+
+            <!-- Botón Programar Nueva Convocatoria -->
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-success mr-2 mb-1"
+              (click)="abrirDialogoCrearEvento()"
+            >
+              <i class="material-icons mr-1" style="font-size: 16px;">add_circle</i> Nueva Convocatoria
+            </button>
+          </div>
+        </div>
+
+        <!-- Selector dropdown de evento si hay múltiples -->
+        <div class="row mt-3" *ngIf="eventos.length > 1">
+          <div class="col-md-6">
+            <label for="selectEvento" class="small text-muted mb-1">Seleccionar Convocatoria Activa:</label>
+            <select
+              id="selectEvento"
+              class="form-control form-control-sm"
+              [(ngModel)]="eventoSeleccionadoId"
+              (change)="onSeleccionarEvento()"
+            >
+              <option *ngFor="let ev of eventos" [value]="ev.id">
+                {{ ev.titulo }} ({{ ev.fecha_programada | date:'dd/MM/yyyy HH:mm' }}) - {{ ev.estado }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end" *ngIf="eventoActivo">
+            <div class="small text-muted">
+              <strong>Inicio:</strong> {{ eventoActivo.fecha_programada | date:'dd/MM/yyyy HH:mm' }}
+              <span *ngIf="eventoActivo.fecha_fin"> • <strong>Fin:</strong> {{ eventoActivo.fecha_fin | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span *ngIf="!eventoActivo.fecha_fin" class="text-secondary"> • (Duración abierta)</span>
+              <span *ngIf="eventoActivo.ubicacion"> • <strong>Lugar:</strong> {{ eventoActivo.ubicacion }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner Semántico de Validez Procesal (CA1 / CA2) -->
+    <div
+      class="alert alert-warning py-3 px-4 mb-4 shadow-sm d-flex align-items-center"
+      *ngIf="eventoActivo && !eventoActivo.es_sancionable"
+    >
+      <i class="material-icons mr-3 text-warning" style="font-size: 32px;">warning_amber</i>
+      <div>
+        <h5 class="alert-heading font-weight-bold mb-1">Aviso: Evento Convocado con Carácter NO SANCIONABLE</h5>
+        <p class="mb-0 small">
+          {{ eventoActivo.motivo_no_sancionable || 'Esta convocatoria no cumplió con el preaviso estatutario mínimo de 2 días hábiles (CA1) o el plazo de reporte de 72 hs (CA2). El registro de asistencia se mantiene con fines informativos, pero no derivará en expedientes disciplinarios ni deducción de puntos.' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Resumen Métrico de la Convocatoria -->
+    <div class="row mb-4" *ngIf="eventoActivo">
+      <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+        <div class="card card-stats shadow-sm border-0">
+          <div class="card-header card-header-info card-header-icon py-2">
+            <div class="card-icon"><i class="material-icons">people</i></div>
+            <p class="card-category">Convocados</p>
+            <h3 class="card-title font-weight-bold">{{ convocados.length }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+        <div class="card card-stats shadow-sm border-0">
+          <div class="card-header card-header-success card-header-icon py-2">
+            <div class="card-icon"><i class="material-icons">how_to_reg</i></div>
+            <p class="card-category">Presentes</p>
+            <h3 class="card-title font-weight-bold text-success">{{ totalPresentes }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+        <div class="card card-stats shadow-sm border-0">
+          <div class="card-header card-header-warning card-header-icon py-2">
+            <div class="card-icon"><i class="material-icons">hourglass_top</i></div>
+            <p class="card-category">Tardanzas (3:1)</p>
+            <h3 class="card-title font-weight-bold text-warning">{{ totalTardanzas }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+        <div class="card card-stats shadow-sm border-0">
+          <div class="card-header card-header-danger card-header-icon py-2">
+            <div class="card-icon"><i class="material-icons">person_off</i></div>
+            <p class="card-category">Ausentes</p>
+            <h3 class="card-title font-weight-bold text-danger">{{ totalAusentes }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Planilla Interactiva de Asistencia con Motivos Circunstanciados -->
+    <div class="card shadow-sm border-0 mb-4" *ngIf="eventoActivo">
+      <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="card-title mb-0">Planilla Nominal de Asistencia</h4>
+          <p class="card-category mb-0 small">
+            Modo Activo: <strong>{{ estrategiaActual === 'BIOMETRICO' ? 'Biométrico (Simulación de huella)' : 'Manual (Carga de planilla)' }}</strong>
+          </p>
+        </div>
+
+        <!-- Filtro Rápido de Socios -->
+        <div class="d-flex align-items-center">
+          <input
+            type="text"
+            class="form-control form-control-sm text-dark bg-white mr-2"
+            style="width: 220px;"
+            placeholder="Filtrar por nombre o legajo..."
+            [(ngModel)]="filtroTexto"
+          />
+          <select class="form-control form-control-sm text-dark bg-white" style="width: 160px;" [(ngModel)]="filtroEstado">
+            <option value="TODOS">Todos los estados</option>
+            <option value="PRESENTE">Solo Presentes</option>
+            <option value="AUSENTE_INJUSTIFICADO">Solo Ausentes</option>
+            <option value="TARDANZAS">Tardanzas (Leve/Grave)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Modo Biométrico Alerta/Banner -->
+        <div class="alert alert-info py-2 px-3 mb-3 d-flex justify-content-between align-items-center" *ngIf="estrategiaActual === 'BIOMETRICO'">
+          <div>
+            <i class="material-icons align-middle mr-1">touch_app</i>
+            <strong>Modo Biométrico Activo:</strong> Haga clic en "Simular Huella" en la fila del socio para registrar la marcación con marca horaria automática y confirmación sonora.
+          </div>
+          <span class="badge badge-light" *ngIf="escaneandoHuella">
+            <i class="material-icons align-middle spin">sync</i> Verificando huella...
+          </span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="text-primary font-weight-bold">
+              <tr>
+                <th style="width: 25%;">Socio Convocado</th>
+                <th style="width: 20%;">Estado de Asistencia</th>
+                <th style="width: 35%;">Motivo / Observación Circunstanciada (Editable)</th>
+                <th style="width: 20%;" class="text-center">Acción / Registro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let socio of convocadosFiltrados" [class.table-light]="socio.estado_asistencia === 'PRESENTE'">
+                <!-- Socio Convocado -->
+                <td>
+                  <strong>{{ socio.socio_nombre }}</strong>
+                  <div class="small text-muted">
+                    Legajo: <strong>{{ socio.socio_legajo }}</strong>
+                    <span *ngIf="socio.socio_subcomision"> • {{ socio.socio_subcomision }}</span>
+                  </div>
+                </td>
+
+                <!-- Selector de Estado de Asistencia -->
+                <td>
+                  <select
+                    class="form-control form-control-sm font-weight-bold"
+                    [disabled]="eventoActivo.estado === 'CERRADA'"
+                    [(ngModel)]="socio.estado_asistencia"
+                    (change)="onCambiarEstadoSocio(socio)"
+                    [ngClass]="{
+                      'text-success': socio.estado_asistencia === 'PRESENTE',
+                      'text-danger': socio.estado_asistencia === 'AUSENTE_INJUSTIFICADO' || socio.estado_asistencia === 'TARDANZA_GRAVE',
+                      'text-warning': socio.estado_asistencia === 'TARDANZA_LEVE',
+                      'text-secondary': socio.estado_asistencia === 'JUSTIFICADO'
+                    }"
+                  >
+                    <option value="PRESENTE">Presente</option>
+                    <option value="AUSENTE_INJUSTIFICADO">Ausente Injustificado</option>
+                    <option value="TARDANZA_LEVE">Tardanza Leve (15-30 min)</option>
+                    <option value="TARDANZA_GRAVE">Tardanza Grave (> 30 min)</option>
+                    <option value="JUSTIFICADO">Ausencia Justificada</option>
+                  </select>
+                </td>
+
+                <!-- Campo de Motivo Circunstanciado Individual -->
+                <td>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    [disabled]="eventoActivo.estado === 'CERRADA'"
+                    [(ngModel)]="socio.motivo"
+                    placeholder="Ej: En sede a tiempo, Justificó por examen universitario, etc."
+                  />
+                  <!-- Badges rápidos para setear motivo común -->
+                  <div class="mt-1" *ngIf="eventoActivo.estado !== 'CERRADA'">
+                    <a
+                      href="javascript:void(0)"
+                      class="badge badge-light border mr-1 text-muted small"
+                      (click)="socio.motivo = 'En sede a tiempo'"
+                    >En sede</a>
+                    <a
+                      href="javascript:void(0)"
+                      class="badge badge-light border mr-1 text-muted small"
+                      (click)="socio.motivo = 'Justificó con certificado de examen'"
+                    >Examen</a>
+                    <a
+                      href="javascript:void(0)"
+                      class="badge badge-light border text-muted small"
+                      (click)="socio.motivo = 'Sin aviso ni justificación'"
+                    >Sin justif.</a>
+                  </div>
+                </td>
+
+                <!-- Acción: Biometría o Estado Actual -->
+                <td class="text-center">
+                  <div *ngIf="estrategiaActual === 'BIOMETRICO' && eventoActivo.estado !== 'CERRADA'">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-info py-1 px-2"
+                      (click)="simularHuellaSocio(socio)"
+                      [disabled]="escaneandoHuella"
+                    >
+                      <i class="material-icons align-middle" style="font-size: 16px;">fingerprint</i>
+                      Simular Huella
+                    </button>
+                  </div>
+
+                  <div *ngIf="estrategiaActual === 'MANUAL' || eventoActivo.estado === 'CERRADA'">
+                    <span class="small text-muted" *ngIf="socio.hora_registro">
+                      Reg: {{ socio.hora_registro | date:'HH:mm:ss' }}
+                    </span>
+                    <span class="small text-muted" *ngIf="!socio.hora_registro">
+                      Planilla manual
+                    </span>
+                    <div *ngIf="socio.apercibimiento_generado_id" class="badge badge-warning d-block mt-1">
+                      Apercibimiento #{{ socio.apercibimiento_generado_id }}
+                    </div>
+                    <div *ngIf="socio.expediente_generado_id" class="badge badge-danger d-block mt-1">
+                      Expediente Abierto
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-secondary py-2 px-3 text-center" *ngIf="convocadosFiltrados.length === 0">
+          No se encontraron socios convocados con los criterios de búsqueda.
+        </div>
+      </div>
+
+      <!-- Barra de Acciones del Panel: Guardar y Procesar / Cerrar -->
+      <div class="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+        <div>
+          <span class="small text-muted mr-3">
+            Última actualización: <strong>{{ ultimaModificacion | date:'HH:mm:ss' }}</strong>
+          </span>
+          <span class="badge badge-outline-dark" *ngIf="eventoActivo.estado === 'CERRADA'">
+            Convocatoria Formalmente Cerrada (Solo Lectura)
+          </span>
+        </div>
+
+        <div class="d-flex" *ngIf="eventoActivo.estado !== 'CERRADA'">
+          <!-- Botón Guardar Planilla -->
+          <button
+            type="button"
+            class="btn btn-secondary mr-2"
+            (click)="guardarPlanilla()"
+            [disabled]="guardando"
+          >
+            <i class="material-icons mr-1">save</i>
+            {{ guardando ? 'Guardando...' : 'Guardar Planilla' }}
+          </button>
+
+          <!-- Botón Procesar Asistencias / Cerrar Convocatoria con Modal -->
+          <button
+            type="button"
+            class="btn btn-danger font-weight-bold"
+            (click)="abrirModalProcesarYCerrar()"
+            [disabled]="procesando"
+          >
+            <i class="material-icons mr-1">verified_user</i>
+            {{ procesando ? 'Procesando...' : 'Procesar Asistencias & Cierre' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

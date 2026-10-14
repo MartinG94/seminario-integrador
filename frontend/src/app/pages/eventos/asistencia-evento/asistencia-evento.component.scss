@@ -1,0 +1,22 @@
+.icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+}
+
+.spin {
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

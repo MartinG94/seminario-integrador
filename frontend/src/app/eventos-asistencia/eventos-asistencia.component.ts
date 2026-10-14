@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TribunalDataService, EventoAsistencia, Socio } from '../services/tribunal-data.service';
 import { Subscription } from 'rxjs';
+import { NotificationService } from '../services/notification.service';
+import { TribunalDataService, EventoAsistencia, Socio } from '../services/tribunal-data.service';
 
 @Component({
   selector: 'app-eventos-asistencia',
@@ -16,7 +17,10 @@ export class EventosAsistenciaComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
-  constructor(public dataService: TribunalDataService, private notifications: NotificationService) {}
+  constructor(
+    public dataService: TribunalDataService,
+    private notifications: NotificationService
+  ) {}
 
   ngOnInit(): void {
     const subEvt = this.dataService.eventos$.subscribe(list => {
@@ -72,4 +76,3 @@ export class EventosAsistenciaComponent implements OnInit, OnDestroy {
     this.notifications.show(tipo === 'danger' ? 'error' : tipo, msg);
   }
 }
-import { NotificationService } from '../services/notification.service';

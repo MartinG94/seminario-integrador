@@ -142,4 +142,35 @@ export class ExpedienteApiService {
   eliminarBorrador(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}/`);
   }
+
+  // --- Endpoints de Eventos, Asistencias y Apercibimientos (Spec 005) ---
+
+  getEventos(params?: Record<string, string>): Observable<any[]> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach(k => {
+        if (params[k]) {
+          httpParams = httpParams.set(k, params[k]);
+        }
+      });
+    }
+    return this.http.get<any[]>(`${this.apiUrl}/eventos/`, { params: httpParams });
+  }
+
+  getEvento(id: number | string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/eventos/${id}/`);
+  }
+
+  crearEvento(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/eventos/`, payload);
+  }
+
+  reportarAsistencia(eventoId: number | string, payload: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/eventos/${eventoId}/reportar-asistencia/`, payload);
+  }
+
+  obtenerApercibimientosSocio(socioId: number | string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/socios/${socioId}/apercibimientos/`);
+  }
 }
+
