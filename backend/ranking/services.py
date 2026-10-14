@@ -22,7 +22,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Abs, Cast, Coalesce, Concat, Round
 
-from padron.models import Socio, SocioEstudio, Subcomision
+from padron.models import Socio, SocioEstadoHistorial, SocioEstudio, Subcomision
 from ranking.models import PuntajeAplicado, PuntajeGeneral
 
 
@@ -89,6 +89,12 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
         .values("legajo_str")[:1]
     )
 
+    grupo_subquery = (
+        SocioEstadoHistorial.objects.filter(socio_id=OuterRef("pk"))
+        .order_by("-fechaHora", "-idEstadoHistorial")
+        .values("idGrupo")[:1]
+    )
+
     # padron declara la FK no nullable; select_related produciría un INNER JOIN
     # que excluiría socios sin subcomisión. La subconsulta preserva esos casos
     # legados sin modificar padron ni agregar consultas por socio.
@@ -115,6 +121,15 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
             Subquery(legajo_subquery, output_field=CharField()),
             Cast("nroSocio", output_field=CharField()),
             output_field=CharField(),
+        ),
+        grupo_id_calc=Subquery(
+            grupo_subquery,
+            output_field=IntegerField(),
+        ),
+        grupo_sort_calc=Coalesce(
+            Subquery(grupo_subquery, output_field=IntegerField()),
+            Value(2147483647),
+            output_field=IntegerField(),
         ),
         subcomision_nombre_calc=Coalesce(
             "_subcomision_nombre",
@@ -259,6 +274,9 @@ def order_ranking_queryset(
         "subcomision": ("subcomision_nombre_calc", "apellido", "nombre"),
         "+subcomision": ("subcomision_nombre_calc", "apellido", "nombre"),
         "-subcomision": ("-subcomision_nombre_calc", "apellido", "nombre"),
+        "grupo": ("grupo_sort_calc", "apellido", "nombre"),
+        "+grupo": ("grupo_sort_calc", "apellido", "nombre"),
+        "-grupo": ("-grupo_sort_calc", "apellido", "nombre"),
         "diferencia": ("_signed_diff", "apellido", "nombre"),
         "+diferencia": ("_signed_diff", "apellido", "nombre"),
         "-diferencia": ("-_signed_diff", "apellido", "nombre"),

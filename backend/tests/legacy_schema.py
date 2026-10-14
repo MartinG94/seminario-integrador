@@ -2,10 +2,10 @@
 
 from datetime import date
 
-from padron.models import Socio, SocioEstado, SocioEstudio, Subcomision
+from padron.models import Socio, SocioEstado, SocioEstadoHistorial, SocioEstudio, Subcomision
 from ranking.models import PuntajeAplicado, PuntajeGeneral
 
-LEGACY_MODELS = (Subcomision, SocioEstado, Socio, SocioEstudio, PuntajeGeneral, PuntajeAplicado)
+LEGACY_MODELS = (Subcomision, SocioEstado, Socio, SocioEstudio, SocioEstadoHistorial, PuntajeGeneral, PuntajeAplicado)
 
 
 def create_legacy_record(model, **kwargs):

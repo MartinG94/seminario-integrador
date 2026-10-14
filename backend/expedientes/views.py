@@ -71,6 +71,14 @@ class ExpedienteCollectionView(APIView):
         queryset = Expediente.objects.select_related(
             "socio", "socio__subcomision"
         ).prefetch_related("socios", "cambios_estado", "descargos")
+
+        legajo = request.query_params.get("legajo")
+        if legajo is not None and legajo.strip():
+            legajo = legajo.strip()
+            queryset = queryset.filter(
+                Q(socio__legajo=legajo) | Q(socios__legajo=legajo)
+            ).distinct()
+
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )

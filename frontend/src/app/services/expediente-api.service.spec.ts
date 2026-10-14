@@ -76,6 +76,34 @@ describe('ExpedienteApiService', () => {
     ]);
   });
 
+  it('consulta las causas de un socio filtrando por legajo', () => {
+    service.listarPorLegajo('74907').subscribe(expedientes => {
+      expect(expedientes.length).toBe(1);
+      expect(expedientes[0].numero).toBe('EXP-0001/2026');
+    });
+
+    const req = http.expectOne(
+      r =>
+        r.url === `${environment.apiUrl}/expedientes/gestion/` &&
+        r.params.get('legajo') === '74907'
+    );
+
+    expect(req.request.method).toBe('GET');
+
+    req.flush([
+      {
+        id: 1,
+        numero: 'EXP-0001/2026',
+        motivo: 'Motivo de prueba',
+        puntos: '-2.00',
+        estado: 'creado',
+        urgencia: 'normal',
+        urgencia_display: 'Normal',
+        created_at: '2026-10-11T08:00:00Z'
+      }
+    ]);
+  });
+
   it('elimina un borrador existente mediante DELETE', () => {
     let completed = false;
     service.eliminarBorrador('draft-123').subscribe(() => {

@@ -518,3 +518,52 @@ def test_t01_rejects_invalid_urgency_on_create_and_update(
     assert response.status_code == 400
     assert "urgencia" in response.data
     assert SolicitudT01.objects.get(pk=data["id"]).urgencia == "urgente"
+
+@pytest.mark.django_db
+def test_gestion_expedientes_filtra_por_legajo_principal_y_adicional(
+    make_socio, authenticate
+):
+    operador = make_socio(legajo="82000", role=Role.CD)
+    client = authenticate(operador)
+
+    socio_buscado = make_socio(legajo="82001", role=Role.SOCIO)
+    socio_otro = make_socio(legajo="82002", role=Role.SOCIO)
+
+    principal = Expediente.objects.create(
+        numero="EXP-8201/2026",
+        socio=socio_buscado,
+        motivo="Causa principal del socio buscado",
+        puntos=-2,
+    )
+    principal.socios.add(socio_buscado)
+
+    adicional = Expediente.objects.create(
+        numero="EXP-8202/2026",
+        socio=socio_otro,
+        motivo="Causa compartida",
+        puntos=-1,
+    )
+    adicional.socios.add(socio_otro, socio_buscado)
+
+    ajeno = Expediente.objects.create(
+        numero="EXP-8203/2026",
+        socio=socio_otro,
+        motivo="Causa ajena",
+        puntos=-3,
+    )
+    ajeno.socios.add(socio_otro)
+
+    response = client.get(
+        "/api/v1/expedientes/gestion/",
+        {"legajo": socio_buscado.legajo},
+    )
+
+    assert response.status_code == 200
+
+    numeros = {item["numero"] for item in response.data}
+
+    assert numeros == {
+        principal.numero,
+        adicional.numero,
+    }
+    assert ajeno.numero not in numeros
