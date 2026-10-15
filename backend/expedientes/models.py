@@ -589,15 +589,24 @@ class ModoConvocatoriaEnum(models.TextChoices):
 
     GRUPO = "GRUPO", "Por Grupo Social Completo"
     SUBCOMISION = "SUBCOMISION", "Por Subcomisión Completa"
+    ESTADO_SOCIAL = "ESTADO_SOCIAL", "Por Estado Social (Juniors / Seniors)"
     PERSONALIZADA = "PERSONALIZADA", "Lista Personalizada de Socios"
 
 
 class EstadoEventoEnum(models.TextChoices):
     """Ciclo de vida del evento institucional."""
 
-    PROGRAMADA = "PROGRAMADA", "Programada"
+    CREADO = "CREADO", "Creado"
+    NOTIFICADO = "NOTIFICADO", "Notificado"
     EN_CURSO = "EN_CURSO", "En Curso"
-    CERRADA = "CERRADA", "Cerrada"
+    ABIERTO = "ABIERTO", "Abierto"
+    FINALIZADO = "FINALIZADO", "Finalizado"
+    ANULADO = "ANULADO", "Anulado"
+
+
+# Aliases de compatibilidad histórica
+EstadoEventoEnum.PROGRAMADA = EstadoEventoEnum.CREADO
+EstadoEventoEnum.CERRADA = EstadoEventoEnum.FINALIZADO
 
 
 class EstadoAsistenciaEventoEnum(models.TextChoices):
@@ -744,7 +753,7 @@ class EventoInstitucional(models.Model):
     estado = models.CharField(
         max_length=30,
         choices=EstadoEventoEnum.choices,
-        default=EstadoEventoEnum.PROGRAMADA,
+        default=EstadoEventoEnum.CREADO,
         db_column="estado",
     )
     estadoEvento_id = models.IntegerField(default=1, db_column="estadoEvento_id")
@@ -760,6 +769,37 @@ class EventoInstitucional(models.Model):
         null=True,
         blank=True,
         db_column="grupo_convocado",
+    )
+    estado_social_convocado = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=[("JUNIORS", "Juniors"), ("SENIORS", "Seniors")],
+        db_column="estado_social_convocado",
+        help_text="Filtro de cohorte social cuando modo_convocatoria es ESTADO_SOCIAL.",
+    )
+    detalle_tarea = models.TextField(
+        blank=True,
+        default="",
+        db_column="detalle_tarea",
+        help_text="Instrucciones concretas y especificación de la tarea para Actividades.",
+    )
+    puntos_sancion = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        db_column="puntos_sancion",
+        help_text=(
+            "Puntos de penalidad por inasistencia o incumplimiento personalizables para "
+            "Actividades."
+        ),
+    )
+    motivo_cancelacion = models.TextField(
+        null=True,
+        blank=True,
+        db_column="motivo_cancelacion",
+        help_text="Fundamento formal de anulación del evento.",
     )
     es_obligatoria = models.BooleanField(
         default=True,
@@ -915,6 +955,10 @@ class EventoInstitucional(models.Model):
                     f"El subtipo '{self.tipo}' no corresponde a una ACTIVIDAD. "
                     f"Opciones: {SubtipoActividadEnum.values}"
                 )
+            if not (self.detalle_tarea and self.detalle_tarea.strip()):
+                errors["detalle_tarea"] = (
+                    "Para actividades operativas es obligatorio detallar la tarea asignada."
+                )
 
         if errors:
             raise ValidationError(errors)
@@ -978,12 +1022,8 @@ class AsistenciaEvento(models.Model):
         default=EstadoAsistenciaEventoEnum.PRESENTE,
         db_column="estado_asistencia",
     )
-    hora_registro = models.DateTimeField(
-        null=True, blank=True, db_column="fechaHoraLlegada"
-    )
-    hora_salida = models.DateTimeField(
-        null=True, blank=True, db_column="fechaHoraSalida"
-    )
+    hora_registro = models.DateTimeField(null=True, blank=True, db_column="fechaHoraLlegada")
+    hora_salida = models.DateTimeField(null=True, blank=True, db_column="fechaHoraSalida")
     notificado = models.BooleanField(default=False, db_column="notificado")
     fechaNotificacion = models.DateField(null=True, blank=True, db_column="fechaNotificacion")
     minutos_tardanza = models.PositiveIntegerField(default=0, db_column="minutos_tardanza")
@@ -1003,7 +1043,9 @@ class AsistenciaEvento(models.Model):
         blank=True,
         default="",
         db_column="motivo",
-        help_text="Motivo u observación explicativa circunstanciada registrada por el organizador (CA10).",
+        help_text=(
+            "Motivo u observación explicativa circunstanciada registrada por el organizador (CA10)."
+        ),
     )
     observaciones = models.TextField(blank=True, default="", db_column="observaciones")
     procesado_disciplinario = models.BooleanField(
@@ -1116,11 +1158,13 @@ class AtencionFelicitacion(models.Model):
         verbose_name_plural = "Atenciones y Felicitaciones"
 
     def __str__(self) -> str:
-        return f"Socio {self.socio_id}: {self.llamadosAtencion} llamados, {self.felicitaciones} felicitaciones"
+        return (
+            f"Socio {self.socio_id}: {self.llamadosAtencion} llamados, "
+            f"{self.felicitaciones} felicitaciones"
+        )
 
 
 # Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy
 Reunion = EventoInstitucional
 AsistenciaReunion = AsistenciaEvento
 RegistroApercibimiento = AtencionFelicitacion
-

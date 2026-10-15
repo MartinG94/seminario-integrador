@@ -135,4 +135,48 @@ describe('EventoService', () => {
     expect(req.request.method).toBe('GET');
     req.flush([{ id: 1, socio_id: 88, origen_tipo: 'REUNION_TARDANZA_LEVE', estado: 'PENDIENTE', motivo: 'Tardanza 20 min' }]);
   });
+
+  it('getMisEventos debe solicitar GET con mis_eventos=true', () => {
+    service.getMisEventos().subscribe(res => {
+      expect(res.length).toBe(1);
+    });
+
+    const req = httpMock.expectOne(request =>
+      request.url === `${baseUrl}/` && request.params.get('mis_eventos') === 'true'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 1, titulo: 'Mi Convocatoria', categoria: 'REUNION' }]);
+  });
+
+  it('notificarEvento debe emitir POST a /{id}/notificar/', () => {
+    service.notificarEvento(10).subscribe(res => {
+      expect(res.detail).toContain('notificada');
+    });
+
+    const req = httpMock.expectOne(`${baseUrl}/10/notificar/`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ detail: 'Convocatoria notificada formalmente.', evento: { id: 10, estado: 'NOTIFICADO' } });
+  });
+
+  it('anularEvento debe emitir POST a /{id}/anular/ con motivo opcional', () => {
+    service.anularEvento(10, 'Inclemencias climáticas').subscribe(res => {
+      expect(res.detail).toContain('anulado');
+    });
+
+    const req = httpMock.expectOne(`${baseUrl}/10/anular/`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ motivo: 'Inclemencias climáticas' });
+    req.flush({ detail: 'Evento anulado correctamente.', evento: { id: 10, estado: 'ANULADO' } });
+  });
+
+  it('fijarHoraFin debe emitir POST a /{id}/fijar-hora-fin/ con fecha_fin', () => {
+    service.fijarHoraFin(10, '2026-10-15T20:00:00Z').subscribe(res => {
+      expect(res.detail).toContain('Fecha');
+    });
+
+    const req = httpMock.expectOne(`${baseUrl}/10/fijar-hora-fin/`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ fecha_fin: '2026-10-15T20:00:00Z' });
+    req.flush({ detail: 'Fecha de finalización registrada exitosamente.', evento: { id: 10, estado: 'FINALIZADO' } });
+  });
 });

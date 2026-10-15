@@ -14,6 +14,8 @@ from typing import Any
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -23,9 +25,9 @@ from rest_framework.views import APIView
 
 from expedientes.models import (
     AtencionFelicitacion,
+    EstadoEventoEnum,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
-    RegistroApercibimiento,
 )
 from expedientes.permissions import CanManageEventos
 from expedientes.serializers.evento_serializers import (
@@ -38,6 +40,10 @@ from expedientes.serializers.evento_serializers import (
 )
 from expedientes.services.attendance_processing_service import (
     AttendanceProcessingService,
+)
+from expedientes.services.meeting_compliance_service import MeetingComplianceService
+from expedientes.services.meeting_notice_notification_service import (
+    MeetingNoticeNotificationService,
 )
 from socios.models import Role, Socio
 
@@ -126,6 +132,42 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
         fecha_hasta = params.get("fecha_hasta")
         if fecha_hasta:
             qs = qs.filter(fecha_programada__lte=fecha_hasta)
+
+        mis_eventos = params.get("mis_eventos")
+        if mis_eventos and mis_eventos.lower() in ("true", "1", "yes"):
+            if hasattr(self.request.user, "socio"):
+                qs = qs.filter(convocante=self.request.user.socio)
+
+        # Transiciones automáticas de ciclo de vida
+        ahora = timezone.now()
+        limite_preaviso = ahora + timezone.timedelta(days=2)
+
+        # 1. Anulación automática: Si estaba en CREADO y falta menos de 2 días hábiles (o ya inició)
+        qs.filter(
+            estado=EstadoEventoEnum.CREADO,
+            fecha_programada__lte=limite_preaviso,
+        ).update(
+            estado=EstadoEventoEnum.ANULADO,
+            motivo_cancelacion=(
+                "Anulado automáticamente por falta de notificación dentro del plazo "
+                "mínimo reglamentario de 2 días hábiles."
+            ),
+        )
+
+        # 2. Apertura automática: Si estaba notificado y pasó la hora de inicio sin tener fecha fin
+        qs.filter(
+            estado=EstadoEventoEnum.NOTIFICADO,
+            fecha_fin__isnull=True,
+            fecha_programada__lte=ahora,
+        ).update(estado=EstadoEventoEnum.ABIERTO)
+
+        # 3. En curso automático: Si estaba notificado y pasó inicio pero fecha fin es futura
+        qs.filter(
+            estado=EstadoEventoEnum.NOTIFICADO,
+            fecha_fin__isnull=False,
+            fecha_programada__lte=ahora,
+            fecha_fin__gt=ahora,
+        ).update(estado=EstadoEventoEnum.EN_CURSO)
 
         search = params.get("search")
         if search:
@@ -269,6 +311,148 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
 
         return Response(resultado, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["post"], url_path="notificar")
+    def notificar(self, request: Request, pk: str | None = None) -> Response:
+        """
+        Despacha las notificaciones formales por correo a los citados y pasa de CREADO a NOTIFICADO.
+        """
+        evento = self.get_object()
+        if evento.estado not in [EstadoEventoEnum.CREADO]:
+            return Response(
+                {
+                    "detail": (
+                        "El evento no puede notificarse porque se encuentra en estado "
+                        f"'{evento.get_estado_display()}'."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ahora = timezone.now()
+        es_sancionable, motivo_no = MeetingComplianceService.validate_notice_period(
+            fecha_publicacion=ahora,
+            fecha_programada=evento.fecha_programada,
+        )
+        evento.fecha_publicacion = ahora
+        evento.es_sancionable = es_sancionable
+        evento.motivo_no_sancionable = motivo_no
+        evento.estado = EstadoEventoEnum.NOTIFICADO
+        evento.save()
+
+        outbox_items = MeetingNoticeNotificationService.enqueue_meeting_notices(
+            evento=evento, auto_dispatch=True
+        )
+        return Response(
+            {
+                "detail": (
+                    f"Convocatoria notificada formalmente. Se encolaron {len(outbox_items)} avisos."
+                ),
+                "evento": EventoInstitucionalSerializer(
+                    evento, context=self.get_serializer_context()
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="anular")
+    def anular(self, request: Request, pk: str | None = None) -> Response:
+        """
+        Anula un evento. Si ya estaba NOTIFICADO, despacha avisos de disculpas a los citados.
+        """
+        evento = self.get_object()
+        if evento.estado in [EstadoEventoEnum.FINALIZADO, EstadoEventoEnum.ANULADO]:
+            return Response(
+                {
+                    "detail": (
+                        f"No se puede anular un evento en estado '{evento.get_estado_display()}'."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        motivo = (request.data.get("motivo") or "").strip() or None
+        estaba_notificado = evento.estado in [
+            EstadoEventoEnum.NOTIFICADO,
+            EstadoEventoEnum.EN_CURSO,
+            EstadoEventoEnum.ABIERTO,
+        ]
+
+        evento.estado = EstadoEventoEnum.ANULADO
+        evento.motivo_cancelacion = (
+            motivo or "Cancelación formal dispuesta por la autoridad convocante."
+        )
+        evento.save()
+
+        if estaba_notificado:
+            MeetingNoticeNotificationService.send_cancellation_notices(
+                evento=evento, motivo=motivo, auto_dispatch=True
+            )
+
+        return Response(
+            {
+                "detail": "Evento anulado correctamente.",
+                "evento": EventoInstitucionalSerializer(
+                    evento, context=self.get_serializer_context()
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="fijar-hora-fin")
+    def fijar_hora_fin(self, request: Request, pk: str | None = None) -> Response:
+        """
+        Registra la fecha y hora de finalización para eventos en estado ABIERTO o sin fin.
+        """
+        evento = self.get_object()
+        fecha_fin_str = request.data.get("fecha_fin")
+        if not fecha_fin_str:
+            return Response(
+                {"fecha_fin": "La fecha y hora de finalización es obligatoria."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fecha_fin = parse_datetime(fecha_fin_str)
+        if not fecha_fin:
+            return Response(
+                {"fecha_fin": "Formato de fecha y hora inválido. Use formato ISO 8601."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if timezone.is_naive(fecha_fin):
+            fecha_fin = timezone.make_aware(fecha_fin)
+
+        if fecha_fin < evento.fecha_programada:
+            return Response(
+                {
+                    "fecha_fin": (
+                        "La fecha y hora de finalización no puede ser anterior a la hora de inicio."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        evento.fecha_fin = fecha_fin
+        evento.tieneHoraFin = True
+        if not evento.fecha_hora_cierre_efectivo:
+            evento.fecha_hora_cierre_efectivo = fecha_fin
+
+        ahora = timezone.now()
+        if fecha_fin <= ahora:
+            evento.estado = EstadoEventoEnum.FINALIZADO
+        else:
+            evento.estado = EstadoEventoEnum.EN_CURSO
+        evento.save()
+
+        return Response(
+            {
+                "detail": "Fecha de finalización registrada exitosamente.",
+                "evento": EventoInstitucionalSerializer(
+                    evento, context=self.get_serializer_context()
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 class RegistroApercibimientoViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -340,4 +524,3 @@ class SocioApercibimientosView(APIView):
         atencion, _ = AtencionFelicitacion.objects.get_or_create(socio=socio_solicitado)
         serializer = RegistroApercibimientoSerializer(atencion)
         return Response([serializer.data], status=status.HTTP_200_OK)
-

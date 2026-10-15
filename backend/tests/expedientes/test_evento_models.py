@@ -7,9 +7,7 @@ Cubre:
 - Aliases retrocompatibles: Reunion y AsistenciaReunion.
 """
 
-import uuid
 from datetime import timedelta
-from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -22,13 +20,10 @@ from expedientes.models import (
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
-    EstadoExpedienteEnum,
     EventoInstitucional,
-    Expediente,
     MetodoCapturaAsistenciaEnum,
     ModalidadEventoEnum,
     ModoConvocatoriaEnum,
-    RegistroApercibimiento,
     Reunion,
     SubtipoActividadEnum,
     SubtipoReunionEnum,
@@ -96,6 +91,7 @@ class TestEventoInstitucionalModel:
             fecha_publicacion=ahora,
             fecha_programada=inicio,
             fecha_fin=fin,
+            detalle_tarea="Pintura de gradas y reparación de cercos perimetrales",
             convocante=socio_organizador,
             modo_convocatoria=ModoConvocatoriaEnum.SUBCOMISION,
         )
@@ -290,8 +286,9 @@ class TestEventoConvocadoModel:
 
     def test_convocar_socio_a_evento_y_unicidad(self, socio_organizador, socio_asistente):
         """Verifica que un socio pueda ser convocado y no duplicarse en el mismo evento."""
-        from expedientes.models import EventoConvocado
         from django.db import IntegrityError
+
+        from expedientes.models import EventoConvocado
 
         ahora = timezone.now()
         evento = EventoInstitucional.objects.create(
@@ -316,4 +313,3 @@ class TestEventoConvocadoModel:
             dup = EventoConvocado(evento=evento, socio=socio_asistente)
             dup.full_clean()
             dup.save()
-

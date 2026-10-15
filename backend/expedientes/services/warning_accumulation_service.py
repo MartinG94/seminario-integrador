@@ -1,11 +1,13 @@
-"""Servicio de acumulación y consolidación atómica 3:1 de llamados de atención y felicitaciones (CA4).
+"""Servicio de acumulación y consolidación atómica 3:1 de llamados de atención
+y felicitaciones (CA4).
 
 Implementa:
 - Control de contadores sobre la tabla legacy atencionFelicitacion (PK nroSocio).
 - Bloqueo pesimista con select_for_update() sobre el socio y su registro de atencionFelicitacion.
 - Regla 3:1 inmutable: cada 3 llamados de atención consolidan en un único expediente
   formal por -1.00 punto neto (Art. 83 / Art. 100 R.I.) y descuentan 3 llamados.
-- Regla 3:1 de felicitaciones: cada 3 felicitaciones acreditan +1.00 punto neto y descuentan 3 felicitaciones.
+- Regla 3:1 de felicitaciones: cada 3 felicitaciones acreditan +1.00 punto neto y descuentan
+  3 felicitaciones.
 - Cero alteraciones directas sobre el saldo de puntos del socio (Regla Innegociable 3).
 """
 

@@ -39,6 +39,9 @@ export class EventoService {
       if (filtros.modo_convocatoria) {
         params = params.set('modo_convocatoria', filtros.modo_convocatoria);
       }
+      if (filtros.mis_eventos) {
+        params = params.set('mis_eventos', 'true');
+      }
       if (filtros.search) {
         params = params.set('search', filtros.search.trim());
       }
@@ -47,6 +50,49 @@ export class EventoService {
       }
     }
     return this.http.get<EventoInstitucional[]>(`${this.baseUrl}/`, { params });
+  }
+
+  /**
+   * Obtiene la lista de eventos creados por el usuario logueado.
+   */
+  getMisEventos(): Observable<EventoInstitucional[]> {
+    return this.getEventos({ mis_eventos: true });
+  }
+
+  /**
+   * Notifica formalmente un evento en estado CREADO y despacha avisos por correo.
+   */
+  notificarEvento(id: number | string): Observable<{ detail: string; evento: EventoInstitucional }> {
+    return this.http.post<{ detail: string; evento: EventoInstitucional }>(
+      `${this.baseUrl}/${id}/notificar/`,
+      {}
+    );
+  }
+
+  /**
+   * Anula un evento. Si estaba notificado, despacha aviso formal pidiendo disculpas a convocados.
+   */
+  anularEvento(
+    id: number | string,
+    motivo?: string
+  ): Observable<{ detail: string; evento: EventoInstitucional }> {
+    return this.http.post<{ detail: string; evento: EventoInstitucional }>(
+      `${this.baseUrl}/${id}/anular/`,
+      { motivo }
+    );
+  }
+
+  /**
+   * Registra la fecha y hora de finalización para eventos en estado ABIERTO o sin fin.
+   */
+  fijarHoraFin(
+    id: number | string,
+    fechaFin: string
+  ): Observable<{ detail: string; evento: EventoInstitucional }> {
+    return this.http.post<{ detail: string; evento: EventoInstitucional }>(
+      `${this.baseUrl}/${id}/fijar-hora-fin/`,
+      { fecha_fin: fechaFin }
+    );
   }
 
   /**

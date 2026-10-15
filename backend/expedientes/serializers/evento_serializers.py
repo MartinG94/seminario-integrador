@@ -22,12 +22,12 @@ from expedientes.models import (
     AtencionFelicitacion,
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
+    EstadoEventoEnum,
     EventoConvocado,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
     ModalidadEventoEnum,
     ModoConvocatoriaEnum,
-    RegistroApercibimiento,
     SubtipoActividadEnum,
     SubtipoReunionEnum,
 )
@@ -260,6 +260,10 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
             "es_obligatoria",
             "es_sancionable",
             "motivo_no_sancionable",
+            "detalle_tarea",
+            "puntos_sancion",
+            "motivo_cancelacion",
+            "estado_social_convocado",
             "total_convocados",
             "total_presentes",
             "total_ausentes",
@@ -276,6 +280,10 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
             "convocante_legajo",
             "subcomision_nombre",
             "reportado_por_nombre",
+            "detalle_tarea",
+            "puntos_sancion",
+            "motivo_cancelacion",
+            "estado_social_convocado",
             "total_convocados",
             "total_presentes",
             "total_ausentes",
@@ -334,6 +342,36 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
         default=list,
         help_text="Lista ad-hoc de IDs de socios a convocar para modo PERSONALIZADA.",
     )
+    notificar = serializers.BooleanField(
+        required=False,
+        default=False,
+        write_only=True,
+        help_text="Indica si debe despacharse la notificación formal inmediatamente al crear.",
+    )
+    detalle_tarea = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Instrucciones concretas y especificación de la tarea para Actividades.",
+    )
+    puntos_sancion = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text=(
+            "Puntaje de penalidad por inasistencia o incumplimiento personalizables "
+            "para Actividades."
+        ),
+    )
+    estado_social_convocado = serializers.ChoiceField(
+        choices=[("JUNIORS", "Juniors"), ("SENIORS", "Seniors")],
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Filtro de cohorte social cuando modo_convocatoria es ESTADO_SOCIAL.",
+    )
 
     class Meta:
         model = EventoInstitucional
@@ -353,12 +391,16 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
             "tolerancia_retiro_minutos",
             "modo_convocatoria",
             "grupo_convocado",
+            "estado_social_convocado",
             "subcomision",
             "convocante",
             "es_obligatoria",
             "es_sancionable",
             "motivo_no_sancionable",
+            "detalle_tarea",
+            "puntos_sancion",
             "socios_ids",
+            "notificar",
         ]
         read_only_fields = ["id", "es_sancionable", "motivo_no_sancionable"]
 
@@ -425,6 +467,24 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
             errors["grupo_convocado"] = "Debe indicar el grupo social convocado (ej. G58)."
         elif modo_convocatoria == ModoConvocatoriaEnum.SUBCOMISION and subcomision is None:
             errors["subcomision"] = "Debe indicar la subcomisión convocada."
+        elif modo_convocatoria == ModoConvocatoriaEnum.ESTADO_SOCIAL and not attrs.get(
+            "estado_social_convocado"
+        ):
+            errors["estado_social_convocado"] = (
+                "Debe indicar el estado social convocado (JUNIORS o SENIORS)."
+            )
+
+        # 5. Validación de detalle de tarea para actividades
+        if categoria == CategoriaEventoEnum.ACTIVIDAD:
+            detalle = attrs.get("detalle_tarea", "")
+            if not (detalle and detalle.strip()):
+                errors["detalle_tarea"] = (
+                    "Para actividades operativas es obligatorio detallar la tarea asignada."
+                )
+
+        # 6. Normalización de puntos de sanción
+        if attrs.get("puntos_sancion") is not None:
+            attrs["puntos_sancion"] = -abs(attrs["puntos_sancion"])
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -433,6 +493,7 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict[str, Any]) -> EventoInstitucional:
         socios_ids: list[int] = validated_data.pop("socios_ids", [])
+        notificar: bool = validated_data.pop("notificar", False)
         request = self.context.get("request")
 
         # Asignar convocante si no viene en el payload
@@ -448,12 +509,17 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
                         {"convocante": "No se pudo inferir el convocante del evento."}
                     )
 
-        # Fecha de publicación por defecto
+        # Fecha de publicación y estado inicial
         if (
             "fecha_publicacion" not in validated_data
             or validated_data.get("fecha_publicacion") is None
         ):
             validated_data["fecha_publicacion"] = timezone.now()
+
+        if notificar:
+            validated_data["estado"] = EstadoEventoEnum.NOTIFICADO
+        else:
+            validated_data["estado"] = EstadoEventoEnum.CREADO
 
         # Lugar por defecto según modalidad
         modalidad = validated_data.get("modalidad")
@@ -478,41 +544,42 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
 
         evento = EventoInstitucional.objects.create(**validated_data)
 
-        # Registrar nómina en EventoConvocado (tribunal_evento_convocado)
-        if socios_ids:
-            EventoConvocado.objects.bulk_create(
-                [EventoConvocado(evento=evento, socio_id=sid) for sid in socios_ids],
-                ignore_conflicts=True,
-            )
-
-        # Resolver e instanciar asistencias iniciales para convocados (CA6)
+        # Resolver e instanciar convocados y asistencias iniciales
         convocados = MeetingNoticeNotificationService.resolve_convocados(
             evento, socios_ids=socios_ids
         )
-        for socio in convocados:
-            AsistenciaEvento.objects.get_or_create(
-                evento=evento,
-                socio=socio,
-                defaults={
-                    "estado_asistencia": EstadoAsistenciaEventoEnum.AUSENTE,
-                    "motivo": "Convocado al evento",
-                    "metodo_captura": MetodoCapturaAsistenciaEnum.MANUAL,
-                },
+        if convocados:
+            EventoConvocado.objects.bulk_create(
+                [EventoConvocado(evento=evento, socio_id=s.id) for s in convocados],
+                ignore_conflicts=True,
             )
+            for socio in convocados:
+                AsistenciaEvento.objects.get_or_create(
+                    evento=evento,
+                    socio=socio,
+                    defaults={
+                        "estado_asistencia": EstadoAsistenciaEventoEnum.AUSENTE,
+                        "motivo": "Convocado al evento",
+                        "metodo_captura": MetodoCapturaAsistenciaEnum.MANUAL,
+                    },
+                )
 
-        # Despachar notificaciones de convocatoria al Outbox (CA7)
-        try:
-            MeetingNoticeNotificationService.enqueue_meeting_notices(
-                evento=evento,
-                socios_ids=socios_ids,
-                auto_dispatch=True,
-            )
-        except Exception as exc:
-            logger.warning(
-                "Error encolando notificaciones de convocatoria para evento %s: %s",
-                evento.id,
-                exc,
-            )
+        # Despachar notificaciones al Outbox si se solicitó notificar inmediatamente (CA7)
+        if notificar:
+            try:
+                MeetingNoticeNotificationService.enqueue_meeting_notices(
+                    evento=evento,
+                    socios_ids=socios_ids,
+                    auto_dispatch=True,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Error encolando notificaciones de convocatoria para evento %s: %s",
+                    evento.id,
+                    exc,
+                )
+
+        return evento
 
         return evento
 
@@ -555,4 +622,3 @@ class AtencionFelicitacionSerializer(serializers.ModelSerializer):
 
 # Alias retrocompatible
 RegistroApercibimientoSerializer = AtencionFelicitacionSerializer
-

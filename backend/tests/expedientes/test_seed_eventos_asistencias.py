@@ -19,12 +19,10 @@ from expedientes.models import (
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
-    EstadoRegistroApercibimientoEnum,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
     ModalidadEventoEnum,
     ModoConvocatoriaEnum,
-    RegistroApercibimiento,
     SubtipoActividadEnum,
     SubtipoReunionEnum,
 )
@@ -155,4 +153,3 @@ class TestSeedEventosYAsistencias:
         assert EventoInstitucional.objects.count() >= 3
         assert AsistenciaEvento.objects.count() >= 8
         assert AtencionFelicitacion.objects.count() >= 3
-

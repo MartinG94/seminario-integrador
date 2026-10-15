@@ -8,7 +8,6 @@ Garantiza:
 """
 
 import datetime
-import uuid
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -27,13 +26,11 @@ from expedientes.models import (
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
     EstadoExpedienteEnum,
-    EstadoRegistroApercibimientoEnum,
     EventoInstitucional,
     Expediente,
     MetodoCapturaAsistenciaEnum,
     ModalidadEventoEnum,
     ModoConvocatoriaEnum,
-    RegistroApercibimiento,
     SubtipoActividadEnum,
     SubtipoReunionEnum,
     UrgenciaExpedienteEnum,
@@ -804,7 +801,9 @@ class Command(BaseCommand):
             socio=felix_socio,
             defaults={"llamadosAtencion": 1, "felicitaciones": 0},
         )
-        self.stdout.write(f"+ AtencionFelicitacion verificado para Félix Fábula ({felix_socio.legajo}): 1 llamado")
+        self.stdout.write(
+            f"+ AtencionFelicitacion verificado para Félix Fábula ({felix_socio.legajo}): 1 llamado"
+        )
 
         # 4.2 Dos llamados de atención para Malena Marea (770013) (2 pendientes para regla 3:1)
         AtencionFelicitacion.objects.update_or_create(
@@ -812,7 +811,8 @@ class Command(BaseCommand):
             defaults={"llamadosAtencion": 2, "felicitaciones": 0},
         )
         self.stdout.write(
-            f"+ AtencionFelicitacion verificado para {malena_socio.legajo} (2 pendientes para regla 3:1)"
+            f"+ AtencionFelicitacion verificado para {malena_socio.legajo} "
+            "(2 pendientes para regla 3:1)"
         )
 
         # 4.3 Lucas Gastiaburu (74907) con 0 llamados (consolidado previamente en EXP-2026-001)
@@ -821,8 +821,12 @@ class Command(BaseCommand):
             defaults={"llamadosAtencion": 0, "felicitaciones": 0},
         )
         self.stdout.write(
-            f"+ AtencionFelicitacion verificado para {lucas_socio.legajo} (0 llamados tras consolidar EXP-2026-001)"
+            f"+ AtencionFelicitacion verificado para {lucas_socio.legajo} "
+            "(0 llamados tras consolidar EXP-2026-001)"
         )
 
-        self.stdout.write(self.style.SUCCESS("✓ Seed de eventos institucionales y asistencias completado exitosamente."))
-
+        self.stdout.write(
+            self.style.SUCCESS(
+                "✓ Seed de eventos institucionales y asistencias completado exitosamente."
+            )
+        )

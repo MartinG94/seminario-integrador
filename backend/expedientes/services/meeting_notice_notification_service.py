@@ -57,6 +57,20 @@ class MeetingNoticeNotificationService:
         elif evento.modo_convocatoria == ModoConvocatoriaEnum.SUBCOMISION and evento.subcomision_id:
             return list(Socio.objects.filter(subcomision_id=evento.subcomision_id, is_enabled=True))
 
+        elif (
+            evento.modo_convocatoria == ModoConvocatoriaEnum.ESTADO_SOCIAL
+            and evento.estado_social_convocado
+        ):
+            if evento.estado_social_convocado.upper() == "JUNIORS":
+                return list(Socio.objects.filter(social_year__lte=3, is_enabled=True))
+            elif evento.estado_social_convocado.upper() == "SENIORS":
+                return list(Socio.objects.filter(social_year__gte=4, is_enabled=True))
+
+        # Si existen convocados formalmente registrados en tribunal_evento_convocado
+        convocados_ids = list(evento.convocados.values_list("socio_id", flat=True))
+        if convocados_ids:
+            return list(Socio.objects.filter(pk__in=convocados_ids, is_enabled=True))
+
         asistencias_socios = list(evento.asistencias.values_list("socio_id", flat=True))
         if asistencias_socios:
             return list(Socio.objects.filter(pk__in=asistencias_socios, is_enabled=True))
@@ -181,6 +195,98 @@ class MeetingNoticeNotificationService:
 
         logger.info(
             "Encoladas %d notificaciones de convocatoria para evento ID %s.",
+            len(outbox_items),
+            evento.id,
+        )
+        return outbox_items
+
+    @classmethod
+    def send_cancellation_notices(
+        cls,
+        evento: EventoInstitucional,
+        motivo: str | None = None,
+        auto_dispatch: bool = False,
+    ) -> list[EmailOutbox]:
+        """
+        Encola y despacha avisos formales de cancelación a todos los socios citados,
+        pidiendo disculpas institucionales e informando el motivo si fue especificado.
+        """
+        convocados = cls.resolve_convocados(evento)
+        if not convocados:
+            logger.info(
+                "No se encontraron convocados para notificar cancelación del evento %s.", evento.id
+            )
+            return []
+
+        motivo_texto = (
+            motivo.strip()
+            if (motivo and motivo.strip())
+            else "Razones operativas y de fuerza mayor comunicadas por la autoridad convocante."
+        )
+        fecha_str = evento.fecha_programada.strftime("%d/%m/%Y a las %H:%M hs")
+        subject = f"[AVISO FORMAL] Cancelación de Convocatoria: {evento.titulo}"
+
+        outbox_items: list[EmailOutbox] = []
+        for socio in convocados:
+            body_text = (
+                f"Estimado/a {socio.first_name} {socio.last_name} (Legajo: {socio.legajo}):\n\n"
+                "Le notificamos formalmente que la convocatoria al siguiente evento institucional "
+                "ha sido CANCELADA:\n\n"
+                f"• Denominación: {evento.titulo}\n"
+                f"• Categoría: {evento.get_categoria_display()} ({evento.tipo})\n"
+                f"• Fecha prevista: {fecha_str}\n"
+                f"• Motivo de Cancelación: {motivo_texto}\n\n"
+                "Pedimos sinceras disculpas por los inconvenientes y cambios de agenda "
+                "ocasionados.\n\n"
+                "Atentamente,\n"
+                "Comisión Directiva / Autoridades Convocantes\n"
+                "Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)"
+            )
+
+            body_html = (
+                "<div style='font-family: Roboto, Arial, sans-serif; color: #151846;'>"
+                "<h2 style='color: #DC2626; border-bottom: 2px solid #DC2626;'>"
+                "Aviso de Cancelación</h2>"
+                f"<p>Estimado/a <strong>{socio.first_name} {socio.last_name}</strong> "
+                f"(Legajo: {socio.legajo}),</p>"
+                "<p>Le informamos que la siguiente convocatoria institucional ha sido "
+                "<strong>CANCELADA</strong> y queda sin efecto:</p>"
+                "<div style='background: #FEF2F2; border-left: 4px solid #DC2626; "
+                "padding: 12px; margin: 12px 0;'>"
+                f"<p><strong>Denominación:</strong> {evento.titulo}</p>"
+                f"<p><strong>Categoría:</strong> {evento.get_categoria_display()} "
+                f"({evento.tipo})</p>"
+                f"<p><strong>Fecha que estaba prevista:</strong> {fecha_str}</p>"
+                f"<p><strong>Motivo informado:</strong> {motivo_texto}</p>"
+                "</div>"
+                "<p style='color: #475569;'>Pedimos sinceras disculpas por los inconvenientes que "
+                "esta cancelación pudiera ocasionarle.</p>"
+                "<hr style='border: 0; border-top: 1px solid #E2E8F0; margin: 20px 0;'/>"
+                "<p style='font-size: 12px; color: #64748B;'>A.V.E.I.T. — UTN FRC</p>"
+                "</div>"
+            )
+
+            idempotency_key = f"meeting_cancellation_{evento.id}_socio_{socio.id}"
+            payload = {
+                "to": [socio.email],
+                "subject": subject,
+                "body_text": body_text,
+                "body_html": body_html,
+                "idempotency_key": idempotency_key,
+                "metadata": {
+                    "tipo_notificacion": "CANCELACION_EVENTO",
+                    "evento_id": evento.id,
+                    "socio_id": socio.id,
+                    "motivo": motivo_texto,
+                },
+            }
+            outbox, _ = EmailDispatcherService.create_or_get_outbox(payload)
+            if auto_dispatch:
+                EmailDispatcherService.dispatch(outbox)
+            outbox_items.append(outbox)
+
+        logger.info(
+            "Encoladas %d notificaciones de cancelación para evento ID %s.",
             len(outbox_items),
             evento.id,
         )

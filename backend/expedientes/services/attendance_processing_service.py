@@ -60,6 +60,8 @@ class AttendanceProcessingService:
             else:
                 return cls.PUNTOS_FALTA_ORDINARIA
         elif evento.categoria == CategoriaEventoEnum.ACTIVIDAD:
+            if evento.puntos_sancion is not None:
+                return -abs(Decimal(str(evento.puntos_sancion)))
             return cls.PUNTOS_FALTA_ACTIVIDAD_OPERATIVA
         return cls.PUNTOS_FALTA_ORDINARIA
 
@@ -226,7 +228,9 @@ class AttendanceProcessingService:
                             "tipo": "CONSOLIDACION_3_1",
                         }
                     )
-                asistencia.save(update_fields=["notificado", "fechaNotificacion", "expediente_generado"])
+                asistencia.save(
+                    update_fields=["notificado", "fechaNotificacion", "expediente_generado"]
+                )
                 apercibimientos_creados.append(
                     {
                         "socio_id": dto.socio_id,

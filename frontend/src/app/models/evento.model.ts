@@ -28,11 +28,19 @@ export type ModalidadEvento =
 export type ModoConvocatoria =
   | 'GRUPO'
   | 'SUBCOMISION'
+  | 'ESTADO_SOCIAL'
   | 'PERSONALIZADA';
 
+export type EstadoSocialConvocado = 'JUNIORS' | 'SENIORS';
+
 export type EstadoEvento =
-  | 'PROGRAMADA'
+  | 'CREADO'
+  | 'NOTIFICADO'
   | 'EN_CURSO'
+  | 'ABIERTO'
+  | 'FINALIZADO'
+  | 'ANULADO'
+  | 'PROGRAMADA'
   | 'CERRADA'
   | 'CANCELADA';
 
@@ -117,6 +125,10 @@ export interface EventoInstitucional {
   es_obligatoria?: boolean;
   es_sancionable?: boolean;
   motivo_no_sancionable?: string | null;
+  detalle_tarea?: string | null;
+  puntos_sancion?: number | string | null;
+  motivo_cancelacion?: string | null;
+  estado_social_convocado?: EstadoSocialConvocado | string | null;
   convocante_id?: number | null;
   convocante_nombre?: string | null;
   reportado_por_id?: number | null;
@@ -161,6 +173,10 @@ export interface CrearEventoPayload {
   modo_convocatoria: ModoConvocatoria;
   grupo_convocado?: string;
   subcomision_id?: number | null;
+  estado_social_convocado?: EstadoSocialConvocado | string;
+  detalle_tarea?: string;
+  puntos_sancion?: number;
+  notificar?: boolean;
   socios_ids?: number[];
   tolerancia_tardanza_minutos?: number;
   tolerancia_retiro_minutos?: number;
@@ -214,6 +230,7 @@ export interface EventoFiltros {
   tipo?: SubtipoEvento;
   estado?: EstadoEvento;
   modo_convocatoria?: ModoConvocatoria;
+  mis_eventos?: boolean;
   search?: string;
   page?: number;
 }

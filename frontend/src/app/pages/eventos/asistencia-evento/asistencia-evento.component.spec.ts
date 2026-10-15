@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatDialog } from '@angular/material/dialog';
@@ -10,14 +10,16 @@ import { TribunalDataService } from '../../../services/tribunal-data.service';
 import { AttendanceContextService } from '../../../eventos-asistencia/strategies/attendance-context.service';
 import { BiometricAttendanceStrategy } from '../../../eventos-asistencia/strategies/biometric-attendance.strategy';
 import { NotificationService } from '../../../services/notification.service';
+import { SocioApiService } from '../../../services/socio-api.service';
 import { EventoInstitucional } from '../../../models/evento.model';
 
-describe('AsistenciaEventoComponent (T15 / CA10)', () => {
+describe('AsistenciaEventoComponent (Rediseño 2 Pestañas / SCRUM-50)', () => {
   let component: AsistenciaEventoComponent;
   let fixture: ComponentFixture<AsistenciaEventoComponent>;
   let eventoServiceSpy: jasmine.SpyObj<EventoService>;
   let notificationSpy: jasmine.SpyObj<NotificationService>;
   let dialogSpy: jasmine.SpyObj<MatDialog>;
+  let socioApiSpy: jasmine.SpyObj<SocioApiService>;
 
   const mockEvento: EventoInstitucional = {
     id: 1,
@@ -39,23 +41,32 @@ describe('AsistenciaEventoComponent (T15 / CA10)', () => {
   beforeEach(async () => {
     eventoServiceSpy = jasmine.createSpyObj('EventoService', [
       'getEventos',
+      'getMisEventos',
       'getAsistencias',
       'registrarAsistenciasBulk',
-      'procesarAsistencias'
+      'procesarAsistencias',
+      'crearEvento',
+      'notificarEvento',
+      'anularEvento',
+      'fijarHoraFin'
     ]);
     notificationSpy = jasmine.createSpyObj('NotificationService', ['success', 'error', 'info', 'warning']);
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    socioApiSpy = jasmine.createSpyObj('SocioApiService', ['searchSocios']);
 
     eventoServiceSpy.getEventos.and.returnValue(of([mockEvento]));
+    eventoServiceSpy.getMisEventos.and.returnValue(of([mockEvento]));
     eventoServiceSpy.getAsistencias.and.returnValue(of(mockAsistencias));
+    socioApiSpy.searchSocios.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
 
     await TestBed.configureTestingModule({
-      imports: [FormsModule, HttpClientTestingModule, RouterTestingModule],
+      imports: [FormsModule, ReactiveFormsModule, HttpClientTestingModule, RouterTestingModule],
       declarations: [AsistenciaEventoComponent],
       providers: [
         { provide: EventoService, useValue: eventoServiceSpy },
         { provide: NotificationService, useValue: notificationSpy },
         { provide: MatDialog, useValue: dialogSpy },
+        { provide: SocioApiService, useValue: socioApiSpy },
         AttendanceContextService,
         BiometricAttendanceStrategy,
         TribunalDataService
@@ -67,12 +78,52 @@ describe('AsistenciaEventoComponent (T15 / CA10)', () => {
     fixture.detectChanges();
   });
 
-  it('debe inicializar y cargar la lista de eventos y convocados', () => {
+  it('debe inicializar y cargar la lista de eventos, mis eventos y formulario reactivo', () => {
     expect(component).toBeTruthy();
+    expect(component.tabActiva).toBe('generar');
+    expect(component.crearForm).toBeDefined();
+    expect(component.crearForm.get('titulo')).toBeDefined();
     expect(component.eventoActivo).toEqual(mockEvento);
     expect(component.convocados.length).toBe(2);
     expect(eventoServiceSpy.getEventos).toHaveBeenCalled();
-    expect(eventoServiceSpy.getAsistencias).toHaveBeenCalledWith(1);
+    expect(eventoServiceSpy.getMisEventos).toHaveBeenCalled();
+  });
+
+  it('debe alternar pestañas entre Generar Evento y Mis Eventos', () => {
+    component.setTab('mis-eventos');
+    expect(component.tabActiva).toBe('mis-eventos');
+    expect(eventoServiceSpy.getMisEventos).toHaveBeenCalledTimes(2);
+
+    component.setTab('generar');
+    expect(component.tabActiva).toBe('generar');
+  });
+
+  it('debe conmutar a detalle de evento y permitir volver a Mis Eventos', () => {
+    component.verDetalle(mockEvento);
+    expect(component.modoDetalle).toBeTrue();
+    expect(component.eventoActivo).toEqual(mockEvento);
+
+    component.volverAMisEventos();
+    expect(component.modoDetalle).toBeFalse();
+  });
+
+  it('debe exigir detalle_tarea cuando la categoría es ACTIVIDAD y permitir sanción personalizada', () => {
+    component.onCategoriaChange('ACTIVIDAD');
+    expect(component.crearForm.get('categoria')?.value).toBe('ACTIVIDAD');
+
+    const detalleControl = component.crearForm.get('detalle_tarea');
+    expect(detalleControl?.validator).toBeDefined();
+
+    component.crearForm.patchValue({
+      titulo: 'Jornada Solidaria',
+      fecha_programada: '2026-10-20T10:00',
+      puntos_sancion: -2.5
+    });
+
+    expect(component.crearForm.valid).toBeFalse(); // falta detalle_tarea
+
+    detalleControl?.setValue('Pintura y acondicionamiento del aula Magna');
+    expect(component.crearForm.get('puntos_sancion')?.value).toBe(-2.5);
   });
 
   it('debe calcular métricas de presentes, ausentes y tardanzas', () => {
@@ -141,7 +192,7 @@ describe('AsistenciaEventoComponent (T15 / CA10)', () => {
 
     eventoServiceSpy.procesarAsistencias.and.returnValue(of({
       evento_id: 1,
-      estado_evento: 'CERRADA',
+      estado_evento: 'FINALIZADO',
       asistencias_procesadas: 2,
       expedientes_generados: 1,
       apercibimientos_generados: 0
@@ -151,7 +202,7 @@ describe('AsistenciaEventoComponent (T15 / CA10)', () => {
 
     expect(dialogSpy.open).toHaveBeenCalled();
     expect(eventoServiceSpy.procesarAsistencias).toHaveBeenCalled();
-    expect(component.eventoActivo?.estado).toBe('CERRADA');
+    expect(component.eventoActivo?.estado).toBe('FINALIZADO');
     expect(notificationSpy.success).toHaveBeenCalled();
   });
 });

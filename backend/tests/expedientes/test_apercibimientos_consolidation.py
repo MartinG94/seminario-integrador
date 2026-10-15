@@ -1,4 +1,5 @@
-"""Tests unitarios TDD para el motor de acumulación y consolidación 3:1 de llamados de atención y felicitaciones (CA4).
+"""Tests unitarios TDD para el motor de acumulación y consolidación 3:1
+de llamados de atención y felicitaciones (CA4).
 
 Cubre:
 - WarningAccumulationService: registro y control sobre atencionFelicitacion (PK nroSocio).
@@ -15,7 +16,6 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from expedientes.models import (
-    AtencionFelicitacion,
     EstadoExpedienteEnum,
     Expediente,
 )

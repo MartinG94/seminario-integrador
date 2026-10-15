@@ -13,7 +13,6 @@ Cubre:
 - RBAC: CD, TD, ADMIN y Fiscalizadora crean/editan; Socios ordinarios leen pero no editan (403).
 """
 
-import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -30,11 +29,9 @@ from expedientes.models import (
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
     EstadoExpedienteEnum,
-    EstadoRegistroApercibimientoEnum,
     EventoInstitucional,
     ModalidadEventoEnum,
     ModoConvocatoriaEnum,
-    RegistroApercibimiento,
     SubtipoActividadEnum,
     SubtipoReunionEnum,
 )
@@ -204,6 +201,7 @@ class TestEventoInstitucionalAPI:
             "fecha_fin": None,  # Estrictamente opcional (CA8)
             "modo_convocatoria": ModoConvocatoriaEnum.PERSONALIZADA,
             "socios_ids": [socio_user_1.socio.id, socio_user_2.socio.id],
+            "notificar": True,
         }
 
         response = api_client.post("/api/v1/expedientes/eventos/", payload, format="json")
@@ -739,9 +737,7 @@ class TestRegistroApercibimientosAPI:
         assert res_td.status_code == status.HTTP_200_OK
         assert len(res_td.data) == 1
 
-    def test_viewset_apercibimientos_filtrado_por_socio(
-        self, api_client, cd_user, socio_user_1
-    ):
+    def test_viewset_apercibimientos_filtrado_por_socio(self, api_client, cd_user, socio_user_1):
         """Verifica filtros de socio en /api/v1/expedientes/apercibimientos/."""
         AtencionFelicitacion.objects.create(
             socio=socio_user_1.socio,
@@ -759,6 +755,166 @@ class TestRegistroApercibimientosAPI:
         assert data[0]["llamadosAtencion"] == 2
         assert data[0]["felicitaciones"] == 1
 
+    def test_notificar_evento_transiciona_estado_y_despacha_correos(
+        self, api_client, cd_user, socio_user_1
+    ):
+        """Un evento en estado CREADO se notifica vía /notificar/, transicionando a NOTIFICADO."""
+        api_client.force_authenticate(user=cd_user)
+        inicio = timezone.now() + timedelta(days=4)
+        payload = {
+            "titulo": "Asamblea Extraordinaria",
+            "categoria": CategoriaEventoEnum.REUNION,
+            "tipo": SubtipoReunionEnum.EXTRAORDINARIA,
+            "modalidad": ModalidadEventoEnum.PRESENCIAL_SEDE,
+            "fecha_programada": inicio.isoformat(),
+            "modo_convocatoria": ModoConvocatoriaEnum.PERSONALIZADA,
+            "socios_ids": [socio_user_1.socio.id],
+            "notificar": False,
+        }
+        res = api_client.post("/api/v1/expedientes/eventos/", payload, format="json")
+        assert res.status_code == status.HTTP_201_CREATED
+        evento_id = res.data["id"]
+        assert res.data["estado"] == EstadoEventoEnum.CREADO
+
+        # Notificar mediante acción
+        res_notif = api_client.post(f"/api/v1/expedientes/eventos/{evento_id}/notificar/")
+        assert res_notif.status_code == status.HTTP_200_OK
+        assert res_notif.data["evento"]["estado"] == EstadoEventoEnum.NOTIFICADO
+
+        # Verificar outbox
+        outbox = EmailOutbox.objects.filter(
+            idempotency_key__startswith=f"meeting_notice_{evento_id}_"
+        )
+        assert outbox.count() == 1
+
+    def test_anular_evento_notificado_despacha_aviso_cancelacion(
+        self, api_client, cd_user, socio_user_1
+    ):
+        """Anulación de evento notificado despacha aviso formal con disculpas y motivo."""
+        api_client.force_authenticate(user=cd_user)
+        inicio = timezone.now() + timedelta(days=5)
+        evento = EventoInstitucional.objects.create(
+            titulo="Jornada Suspendida",
+            categoria=CategoriaEventoEnum.ACTIVIDAD,
+            tipo=SubtipoActividadEnum.JORNADA,
+            modalidad=ModalidadEventoEnum.PRESENCIAL_SEDE,
+            fecha_publicacion=timezone.now(),
+            fecha_programada=inicio,
+            estado=EstadoEventoEnum.NOTIFICADO,
+            detalle_tarea="Limpieza y ordenamiento",
+            convocante=cd_user.socio,
+            es_sancionable=True,
+        )
+        AsistenciaEvento.objects.create(
+            evento=evento,
+            socio=socio_user_1.socio,
+            estado_asistencia=EstadoAsistenciaEventoEnum.AUSENTE,
+            motivo="Convocado",
+        )
+
+        res_anular = api_client.post(
+            f"/api/v1/expedientes/eventos/{evento.id}/anular/",
+            {"motivo": "Inclemencias climáticas severas"},
+            format="json",
+        )
+        assert res_anular.status_code == status.HTTP_200_OK
+        assert res_anular.data["evento"]["estado"] == EstadoEventoEnum.ANULADO
+        evento.refresh_from_db()
+        assert evento.estado == EstadoEventoEnum.ANULADO
+        assert evento.motivo_cancelacion == "Inclemencias climáticas severas"
+
+        # Verificar correo de disculpas/cancelación en outbox
+        cancel_emails = EmailOutbox.objects.filter(
+            idempotency_key__startswith=f"meeting_cancellation_{evento.id}_"
+        )
+        assert cancel_emails.count() == 1
+        assert "Cancelación de Convocatoria" in cancel_emails.first().subject
+        assert "disculpas" in (cancel_emails.first().body_html or "").lower()
+
+    def test_fijar_hora_fin_evento_abierto(self, api_client, cd_user):
+        """Fijar hora fin concluye y transiciona a FINALIZADO."""
+        api_client.force_authenticate(user=cd_user)
+        inicio = timezone.now() - timedelta(hours=2)
+        evento = EventoInstitucional.objects.create(
+            titulo="Reunión sin hora fin",
+            categoria=CategoriaEventoEnum.REUNION,
+            tipo=SubtipoReunionEnum.ORDINARIA,
+            modalidad=ModalidadEventoEnum.PRESENCIAL_SEDE,
+            fecha_publicacion=timezone.now() - timedelta(days=3),
+            fecha_programada=inicio,
+            fecha_fin=None,
+            estado=EstadoEventoEnum.ABIERTO,
+            convocante=cd_user.socio,
+        )
+
+        hora_fin = timezone.now().isoformat()
+        res = api_client.post(
+            f"/api/v1/expedientes/eventos/{evento.id}/fijar-hora-fin/",
+            {"fecha_fin": hora_fin},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["evento"]["estado"] == EstadoEventoEnum.FINALIZADO
+        assert res.data["evento"]["fecha_fin"] is not None
+
+    def test_crear_actividad_con_sancion_personalizada_y_detalle_tarea(
+        self, api_client, cd_user, socio_user_1
+    ):
+        """Actividad exige detalle_tarea y permite puntaje de sanción configurable."""
+        api_client.force_authenticate(user=cd_user)
+        inicio = timezone.now() + timedelta(days=4)
+
+        # 1. Sin detalle_tarea -> 400
+        bad_payload = {
+            "titulo": "Actividad Sin Detalle",
+            "categoria": CategoriaEventoEnum.ACTIVIDAD,
+            "tipo": SubtipoActividadEnum.VOLUNTARIADO,
+            "modalidad": ModalidadEventoEnum.PRESENCIAL_SEDE,
+            "fecha_programada": inicio.isoformat(),
+            "modo_convocatoria": ModoConvocatoriaEnum.PERSONALIZADA,
+            "socios_ids": [socio_user_1.socio.id],
+        }
+        res_bad = api_client.post("/api/v1/expedientes/eventos/", bad_payload, format="json")
+        assert res_bad.status_code == status.HTTP_400_BAD_REQUEST
+        assert "detalle_tarea" in res_bad.data
+
+        # 2. Con detalle_tarea y sanción personalizada
+        good_payload = {
+            "titulo": "Pintura de Fachada",
+            "categoria": CategoriaEventoEnum.ACTIVIDAD,
+            "tipo": SubtipoActividadEnum.MANTENIMIENTO,
+            "modalidad": ModalidadEventoEnum.PRESENCIAL_SEDE,
+            "fecha_programada": inicio.isoformat(),
+            "modo_convocatoria": ModoConvocatoriaEnum.PERSONALIZADA,
+            "detalle_tarea": "Pintar frente de la sede y reparar rejas",
+            "puntos_sancion": -2.5,
+            "socios_ids": [socio_user_1.socio.id],
+        }
+        res_good = api_client.post("/api/v1/expedientes/eventos/", good_payload, format="json")
+        assert res_good.status_code == status.HTTP_201_CREATED
+        assert Decimal(str(res_good.data["puntos_sancion"])) == Decimal("-2.50")
+        assert res_good.data["detalle_tarea"] == "Pintar frente de la sede y reparar rejas"
+
+    def test_convocatoria_por_estado_social_juniors_y_seniors(
+        self, api_client, cd_user, socio_user_1
+    ):
+        """Convocatoria por ESTADO_SOCIAL filtra adecuadamente por año social."""
+        api_client.force_authenticate(user=cd_user)
+        inicio = timezone.now() + timedelta(days=4)
+        payload = {
+            "titulo": "Reunión de Integración Juniors",
+            "categoria": CategoriaEventoEnum.REUNION,
+            "tipo": SubtipoReunionEnum.ORDINARIA,
+            "modalidad": ModalidadEventoEnum.PRESENCIAL_SEDE,
+            "fecha_programada": inicio.isoformat(),
+            "modo_convocatoria": ModoConvocatoriaEnum.ESTADO_SOCIAL,
+            "estado_social_convocado": "JUNIORS",
+        }
+        res = api_client.post("/api/v1/expedientes/eventos/", payload, format="json")
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.data["modo_convocatoria"] == ModoConvocatoriaEnum.ESTADO_SOCIAL
+        assert res.data["estado_social_convocado"] == "JUNIORS"
+        assert res.data["total_convocados"] >= 1
 
 
 @pytest.mark.django_db
