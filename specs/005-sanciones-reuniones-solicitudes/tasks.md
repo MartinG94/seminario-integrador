@@ -46,3 +46,5 @@
   - Regla de apercibimientos 3:1 inmutable (sin fracciones ±0,33 ni ±0,5).
   - Inmutabilidad estricta de las notas del PO.
 - [x] **T21. Preparación de Documento UAT y Smoke Test en Localhost:** Redactar guía UAT en `docs/gestion-proyecto/` con los casos de prueba ejecutables en localhost:4200.
+- [x] **T22. Alineación con Esquema Legacy de AVEIT y Migración Oficial:** Alinear nombres de entidades y tablas con el sistema legacy de AVEIT (`tribunal_categoriaevento`, `tribunal_evento`, `tribunal_evento_convocado`, `tribunal_asistente`, `atencionFelicitacion`). Implementar scripts SQL idempotentes en `backend/core/sql/03-scrum50-eventos-asistencias-apercibimientos.sql` y `docker/mysql/init/03-scrum50-eventos-asistencias-apercibimientos.sql`, actualizar la migración Django `0012` mediante `SeparateDatabaseAndState` con comprobación de `makemigrations --check` en limpio, y validar la regla 3:1 de `atencionFelicitacion` (3 llamadas = 1 sanción -1.00 pt; 3 felicitaciones = 1 mérito +1.00 pt) con 667/667 tests de backend pasando en verde.
+

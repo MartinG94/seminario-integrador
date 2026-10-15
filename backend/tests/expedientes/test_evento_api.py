@@ -25,6 +25,7 @@ from rest_framework.test import APIClient
 
 from expedientes.models import (
     AsistenciaEvento,
+    AtencionFelicitacion,
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
@@ -684,19 +685,15 @@ class TestAsistenciasYSancionesAPI:
 
 @pytest.mark.django_db
 class TestRegistroApercibimientosAPI:
-    """Pruebas del libro mayor de apercibimientos y control de acceso (CA4)."""
+    """Pruebas del libro de llamados de atención y control de acceso (CA4)."""
 
     def test_socio_no_puede_consultar_apercibimientos_de_otro_socio(
         self, api_client, socio_user_1, socio_user_2
     ):
         """Verifica que un socio ordinario reciba 403 al consultar apercibimientos ajenos."""
-        RegistroApercibimiento.objects.create(
+        AtencionFelicitacion.objects.create(
             socio=socio_user_2.socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Tardanza de 20 min en reunión",
-            articulo_reglamento="Art. 100.a",
-            estado=EstadoRegistroApercibimientoEnum.PENDIENTE,
+            llamadosAtencion=1,
         )
 
         api_client.force_authenticate(user=socio_user_1)
@@ -704,14 +701,10 @@ class TestRegistroApercibimientosAPI:
         assert res.status_code == status.HTTP_403_FORBIDDEN
 
     def test_socio_consulta_propios_apercibimientos(self, api_client, socio_user_1):
-        """Verifica que un socio pueda consultar su propio libro mayor de apercibimientos."""
-        RegistroApercibimiento.objects.create(
+        """Verifica que un socio pueda consultar su propio registro de llamados de atención."""
+        AtencionFelicitacion.objects.create(
             socio=socio_user_1.socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Tardanza de 18 min",
-            articulo_reglamento="Art. 100.a",
-            estado=EstadoRegistroApercibimientoEnum.PENDIENTE,
+            llamadosAtencion=1,
         )
 
         api_client.force_authenticate(user=socio_user_1)
@@ -719,19 +712,15 @@ class TestRegistroApercibimientosAPI:
         assert res.status_code == status.HTTP_200_OK
         assert len(res.data) == 1
         assert res.data[0]["socio_id"] == socio_user_1.socio.id
-        assert res.data[0]["motivo"] == "Tardanza de 18 min"
+        assert res.data[0]["llamadosAtencion"] == 1
 
     def test_autoridades_consultan_apercibimientos_de_cualquier_socio(
         self, api_client, cd_user, td_user, socio_user_1
     ):
-        """Verifica que CD y TD puedan consultar el libro mayor de cualquier socio."""
-        RegistroApercibimiento.objects.create(
+        """Verifica que CD y TD puedan consultar el libro de llamados de cualquier socio."""
+        AtencionFelicitacion.objects.create(
             socio=socio_user_1.socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Tardanza registrada por sistema",
-            articulo_reglamento="Art. 100.a",
-            estado=EstadoRegistroApercibimientoEnum.PENDIENTE,
+            llamadosAtencion=1,
         )
 
         # CD
@@ -750,57 +739,26 @@ class TestRegistroApercibimientosAPI:
         assert res_td.status_code == status.HTTP_200_OK
         assert len(res_td.data) == 1
 
-    def test_viewset_apercibimientos_filtrado_por_estado_y_socio(
+    def test_viewset_apercibimientos_filtrado_por_socio(
         self, api_client, cd_user, socio_user_1
     ):
-        """Verifica filtros de estado y socio en /api/v1/expedientes/apercibimientos/."""
-        RegistroApercibimiento.objects.create(
+        """Verifica filtros de socio en /api/v1/expedientes/apercibimientos/."""
+        AtencionFelicitacion.objects.create(
             socio=socio_user_1.socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Pendiente 1",
-            estado=EstadoRegistroApercibimientoEnum.PENDIENTE,
-        )
-        lote_id = uuid.uuid4()
-        from expedientes.models import Expediente
-
-        exp_sancion = Expediente.objects.create(
-            socio=socio_user_1.socio,
-            numero="EXP-9999/2026",
-            motivo="Consolidación terna de apercibimientos",
-            puntos=Decimal("-1.00"),
-            estado=EstadoExpedienteEnum.CREADO,
-        )
-        RegistroApercibimiento.objects.create(
-            socio=socio_user_1.socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Consolidado 1",
-            estado=EstadoRegistroApercibimientoEnum.CONSOLIDADO,
-            lote_consolidacion=lote_id,
-            expediente_sancion=exp_sancion,
-            fecha_consolidacion=timezone.now(),
+            llamadosAtencion=2,
+            felicitaciones=1,
         )
 
         api_client.force_authenticate(user=cd_user)
-
-        # Filtro PENDIENTE
-        res_pend = api_client.get(
-            f"/api/v1/expedientes/apercibimientos/?socio_id={socio_user_1.socio.id}&estado=PENDIENTE"
+        res = api_client.get(
+            f"/api/v1/expedientes/apercibimientos/?socio_id={socio_user_1.socio.id}"
         )
-        assert res_pend.status_code == status.HTTP_200_OK
-        data_pend = _extract_results(res_pend.data)
-        assert len(data_pend) == 1
-        assert data_pend[0]["estado"] == EstadoRegistroApercibimientoEnum.PENDIENTE
+        assert res.status_code == status.HTTP_200_OK
+        data = _extract_results(res.data)
+        assert len(data) == 1
+        assert data[0]["llamadosAtencion"] == 2
+        assert data[0]["felicitaciones"] == 1
 
-        # Filtro CONSOLIDADO
-        res_cons = api_client.get(
-            f"/api/v1/expedientes/apercibimientos/?socio_id={socio_user_1.socio.id}&estado=CONSOLIDADO"
-        )
-        assert res_cons.status_code == status.HTTP_200_OK
-        data_cons = _extract_results(res_cons.data)
-        assert len(data_cons) == 1
-        assert data_cons[0]["lote_consolidacion"] == str(lote_id)
 
 
 @pytest.mark.django_db

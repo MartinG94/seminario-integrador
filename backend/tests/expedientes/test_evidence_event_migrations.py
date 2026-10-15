@@ -12,7 +12,7 @@ def test_evidence_and_events_share_a_conflict_free_migration_graph() -> None:
     for model_name in (
         "EventoInstitucional",
         "AsistenciaEvento",
-        "RegistroApercibimiento",
+        "AtencionFelicitacion",
         "EvidenciaDescargo",
         "AuditoriaDescargaEvidencia",
     ):

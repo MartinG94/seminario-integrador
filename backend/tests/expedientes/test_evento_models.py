@@ -18,6 +18,7 @@ from django.utils import timezone
 from expedientes.models import (
     AsistenciaEvento,
     AsistenciaReunion,
+    AtencionFelicitacion,
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
@@ -256,65 +257,63 @@ class TestAsistenciaEventoModel:
 
 
 @pytest.mark.django_db
-class TestRegistroApercibimientoModel:
-    """Pruebas para el modelo RegistroApercibimiento."""
+class TestAtencionFelicitacionModel:
+    """Pruebas para el modelo AtencionFelicitacion (atencionFelicitacion)."""
 
-    def test_crear_apercibimiento_pendiente(self, socio_asistente):
-        """Crea un apercibimiento en estado PENDIENTE."""
-        apercibimiento = RegistroApercibimiento(
+    def test_crear_atencion_felicitacion_por_defecto(self, socio_asistente):
+        """Crea un registro de atencionFelicitacion con contadores en 0."""
+        registro = AtencionFelicitacion.objects.create(
             socio=socio_asistente,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Tardanza leve de 20 minutos en Reunión Ordinaria (Art. 100.a).",
-            articulo_reglamento="Art. 100.a",
         )
-        apercibimiento.full_clean()
-        apercibimiento.save()
+        assert registro.socio == socio_asistente
+        assert registro.llamadosAtencion == 0
+        assert registro.felicitaciones == 0
+        assert registro.pendientes == 0
+        assert registro.nroSocio == socio_asistente.id
 
-        assert apercibimiento.id is not None
-        assert apercibimiento.estado == "PENDIENTE"
-        assert apercibimiento.lote_consolidacion is None
-        assert apercibimiento.expediente_sancion is None
-
-    def test_consolidacion_valida_con_uuid_y_expediente(self, socio_asistente, socio_organizador):
-        """Verifica que el estado CONSOLIDADO requiera lote_consolidacion y expediente_sancion."""
-        expediente = Expediente.objects.create(
-            numero="EXP-2026-9999",
+    def test_incremento_llamados_y_felicitaciones(self, socio_asistente):
+        """Verifica la persistencia y conteo de llamados y felicitaciones."""
+        registro = AtencionFelicitacion.objects.create(
             socio=socio_asistente,
-            estado=EstadoExpedienteEnum.CREADO,
-            puntos=Decimal("-1.00"),
-            motivo="Acumulación de tres apercibimientos (Art. 83 R.I.)",
+            llamadosAtencion=2,
+            felicitaciones=1,
         )
+        assert registro.llamadosAtencion == 2
+        assert registro.felicitaciones == 1
+        assert registro.pendientes == 2
+        assert registro.estado == "PENDIENTE"
 
-        lote = uuid.uuid4()
-        apercibimiento = RegistroApercibimiento(
-            socio=socio_asistente,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Tardanza consolidada en terna",
-            estado="CONSOLIDADO",
-            lote_consolidacion=lote,
-            expediente_sancion=expediente,
-            fecha_consolidacion=timezone.now(),
-        )
-        apercibimiento.full_clean()
-        apercibimiento.save()
 
-        assert apercibimiento.estado == "CONSOLIDADO"
-        assert apercibimiento.lote_consolidacion == lote
-        assert apercibimiento.expediente_sancion == expediente
+@pytest.mark.django_db
+class TestEventoConvocadoModel:
+    """Pruebas para el modelo EventoConvocado (tribunal_evento_convocado)."""
 
-    def test_rechazo_consolidado_sin_lote_o_expediente(self, socio_asistente):
-        """Rechaza estado CONSOLIDADO si falta lote_consolidacion o expediente_sancion."""
-        apercibimiento_invalido = RegistroApercibimiento(
-            socio=socio_asistente,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=timezone.now().date(),
-            motivo="Consolidación incompleta",
-            estado="CONSOLIDADO",
-            lote_consolidacion=None,
-            expediente_sancion=None,
+    def test_convocar_socio_a_evento_y_unicidad(self, socio_organizador, socio_asistente):
+        """Verifica que un socio pueda ser convocado y no duplicarse en el mismo evento."""
+        from expedientes.models import EventoConvocado
+        from django.db import IntegrityError
+
+        ahora = timezone.now()
+        evento = EventoInstitucional.objects.create(
+            titulo="Reunión Citación Exclusiva",
+            categoria=CategoriaEventoEnum.REUNION,
+            tipo=SubtipoReunionEnum.ORDINARIA,
+            fecha_publicacion=ahora,
+            fecha_programada=ahora + timedelta(days=3),
+            convocante=socio_organizador,
+            modo_convocatoria=ModoConvocatoriaEnum.PERSONALIZADA,
         )
 
-        with pytest.raises(ValidationError):
-            apercibimiento_invalido.full_clean()
+        convocado = EventoConvocado.objects.create(
+            evento=evento,
+            socio=socio_asistente,
+        )
+        assert convocado.id is not None
+        assert convocado.evento == evento
+        assert convocado.socio == socio_asistente
+
+        with pytest.raises((ValidationError, IntegrityError)):
+            dup = EventoConvocado(evento=evento, socio=socio_asistente)
+            dup.full_clean()
+            dup.save()
+

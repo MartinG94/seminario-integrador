@@ -183,16 +183,16 @@ class AttendanceProcessingService:
             # Si el evento NO es sancionable, no se emite ninguna sanción ni apercibimiento
             if not es_sancionable:
                 asistencia.expediente_generado = None
-                asistencia.apercibimiento_generado = None
-                asistencia.save(update_fields=["expediente_generado", "apercibimiento_generado"])
+                asistencia.notificado = False
+                asistencia.save(update_fields=["expediente_generado", "notificado"])
                 asistencias_guardadas.append(asistencia)
                 continue
 
             # Evento SANCIONABLE: Aplicar escala reglamentaria
             if dto.estado_asistencia == EstadoAsistenciaEventoEnum.PRESENTE:
                 asistencia.expediente_generado = None
-                asistencia.apercibimiento_generado = None
-                asistencia.save(update_fields=["expediente_generado", "apercibimiento_generado"])
+                asistencia.notificado = False
+                asistencia.save(update_fields=["expediente_generado", "notificado"])
 
             elif dto.estado_asistencia in (
                 EstadoAsistenciaEventoEnum.TARDE_LEVE,
@@ -205,7 +205,7 @@ class AttendanceProcessingService:
                     else "REUNION_RETIRO_LEVE"
                 )
                 motivo_ap = dto.motivo or f"Impuntualidad leve ({minutos} min) en {evento.titulo}"
-                apercibimiento, exp_consolidado = WarningAccumulationService.register_warning(
+                atencion, exp_consolidado = WarningAccumulationService.register_warning(
                     socio_id=dto.socio_id,
                     origen_tipo=origen,
                     motivo=motivo_ap,
@@ -214,7 +214,8 @@ class AttendanceProcessingService:
                     asistencia_id=asistencia.id,
                     actor=actor,
                 )
-                asistencia.apercibimiento_generado = apercibimiento
+                asistencia.notificado = True
+                asistencia.fechaNotificacion = evento.fecha_programada.date()
                 if exp_consolidado:
                     asistencia.expediente_generado = exp_consolidado
                     expedientes_creados.append(
@@ -225,11 +226,11 @@ class AttendanceProcessingService:
                             "tipo": "CONSOLIDACION_3_1",
                         }
                     )
-                asistencia.save(update_fields=["apercibimiento_generado", "expediente_generado"])
+                asistencia.save(update_fields=["notificado", "fechaNotificacion", "expediente_generado"])
                 apercibimientos_creados.append(
                     {
                         "socio_id": dto.socio_id,
-                        "id": apercibimiento.id,
+                        "id": atencion.id,
                         "origen_tipo": origen,
                         "motivo": motivo_ap,
                     }

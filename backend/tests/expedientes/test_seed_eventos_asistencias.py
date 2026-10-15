@@ -15,6 +15,7 @@ from django.core.management import call_command
 
 from expedientes.models import (
     AsistenciaEvento,
+    AtencionFelicitacion,
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
@@ -113,53 +114,45 @@ class TestSeedEventosYAsistencias:
         assert len(asist_malena.motivo.strip()) > 0
 
     def test_libro_mayor_apercibimientos_y_terna_3_a_1(self):
-        """Verifica casos testigo de apercibimientos pendientes y terna consolidada."""
-        # 1. Apercibimiento derivado de asistencia para Félix Fábula
-        aperc_felix = RegistroApercibimiento.objects.filter(
+        """Verifica casos testigo de llamados de atención en atencionFelicitacion (regla 3:1)."""
+        # 1. Llamado de atención derivado de asistencia para Félix Fábula
+        atencion_felix = AtencionFelicitacion.objects.filter(
             socio__legajo="770006",
-            origen_tipo="REUNION_TARDANZA_LEVE",
         ).first()
-        assert aperc_felix is not None
-        assert aperc_felix.estado == EstadoRegistroApercibimientoEnum.PENDIENTE
-        assert aperc_felix.asistencia is not None
-        assert aperc_felix.asistencia.socio.legajo == "770006"
+        assert atencion_felix is not None
+        assert atencion_felix.llamadosAtencion == 1
 
-        # 2. Dos apercibimientos pendientes para Malena Marea (G60) listos para regla 3:1 (CA4)
-        pendientes_malena = RegistroApercibimiento.objects.filter(
+        # 2. Dos llamados de atención pendientes para Malena Marea (G60) listos para regla 3:1 (CA4)
+        atencion_malena = AtencionFelicitacion.objects.filter(
             socio__legajo="770013",
-            estado=EstadoRegistroApercibimientoEnum.PENDIENTE,
-        )
-        assert pendientes_malena.count() == 2
+        ).first()
+        assert atencion_malena is not None
+        assert atencion_malena.llamadosAtencion == 2
 
-        # 3. Terna consolidada histórica para Lucas Gastiaburu
-        consolidados_lucas = RegistroApercibimiento.objects.filter(
+        # 3. Lucas Gastiaburu con 0 llamados pendientes tras consolidar EXP-2026-001
+        atencion_lucas = AtencionFelicitacion.objects.filter(
             socio__legajo="74907",
-            estado=EstadoRegistroApercibimientoEnum.CONSOLIDADO,
-        )
-        assert consolidados_lucas.count() == 3
-        lote_id = consolidados_lucas.first().lote_consolidacion
-        assert lote_id is not None
-        for a in consolidados_lucas:
-            assert a.lote_consolidacion == lote_id
-            assert a.expediente_sancion is not None
-            assert a.expediente_sancion.numero == "EXP-2026-001"
+        ).first()
+        assert atencion_lucas is not None
+        assert atencion_lucas.llamadosAtencion == 0
 
     def test_seed_idempotencia_total(self):
         """Verifica que ejecutar seed_production_data repetidamente no genere duplicados."""
         eventos_before = EventoInstitucional.objects.count()
         asistencias_before = AsistenciaEvento.objects.count()
-        apercibimientos_before = RegistroApercibimiento.objects.count()
+        atencion_before = AtencionFelicitacion.objects.count()
 
         # Segunda ejecución
         call_command("seed_production_data")
 
         assert EventoInstitucional.objects.count() == eventos_before
         assert AsistenciaEvento.objects.count() == asistencias_before
-        assert RegistroApercibimiento.objects.count() == apercibimientos_before
+        assert AtencionFelicitacion.objects.count() == atencion_before
 
     def test_comando_seed_eventos_asistencias_independiente(self):
         """Verifica la ejecución del comando específico seed_eventos_asistencias."""
         call_command("seed_eventos_asistencias")
         assert EventoInstitucional.objects.count() >= 3
         assert AsistenciaEvento.objects.count() >= 8
-        assert RegistroApercibimiento.objects.count() >= 6
+        assert AtencionFelicitacion.objects.count() >= 3
+

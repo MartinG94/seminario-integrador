@@ -19,8 +19,10 @@ from rest_framework import serializers
 
 from expedientes.models import (
     AsistenciaEvento,
+    AtencionFelicitacion,
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
+    EventoConvocado,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
     ModalidadEventoEnum,
@@ -64,9 +66,7 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
     expediente_generado_numero = serializers.CharField(
         source="expediente_generado.numero", default=None, read_only=True
     )
-    apercibimiento_generado_id = serializers.IntegerField(
-        source="apercibimiento_generado.id", default=None, read_only=True
-    )
+    apercibimiento_generado_id = serializers.SerializerMethodField()
 
     class Meta:
         model = AsistenciaEvento
@@ -93,7 +93,6 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
             "procesado_disciplinario",
             "expediente_generado",
             "expediente_generado_numero",
-            "apercibimiento_generado",
             "apercibimiento_generado_id",
             "created_at",
         ]
@@ -111,7 +110,6 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
             "procesado_disciplinario",
             "expediente_generado",
             "expediente_generado_numero",
-            "apercibimiento_generado",
             "apercibimiento_generado_id",
             "created_at",
         ]
@@ -119,6 +117,9 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
     def get_socio_nombre(self, obj: AsistenciaEvento) -> str:
         socio = obj.socio
         return f"{socio.first_name} {socio.last_name}".strip()
+
+    def get_apercibimiento_generado_id(self, obj: AsistenciaEvento) -> int | None:
+        return 1 if getattr(obj, "notificado", False) else None
 
 
 class AsistenciaItemInputSerializer(serializers.Serializer):
@@ -477,6 +478,13 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
 
         evento = EventoInstitucional.objects.create(**validated_data)
 
+        # Registrar nómina en EventoConvocado (tribunal_evento_convocado)
+        if socios_ids:
+            EventoConvocado.objects.bulk_create(
+                [EventoConvocado(evento=evento, socio_id=sid) for sid in socios_ids],
+                ignore_conflicts=True,
+            )
+
         # Resolver e instanciar asistencias iniciales para convocados (CA6)
         convocados = MeetingNoticeNotificationService.resolve_convocados(
             evento, socios_ids=socios_ids
@@ -514,67 +522,37 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
 
 
 # ---------------------------------------------------------------------------
-# Registro de Apercibimientos Serializers
+# Control de Llamados y Felicitaciones (atencionFelicitacion)
 # ---------------------------------------------------------------------------
 
 
-class RegistroApercibimientoSerializer(serializers.ModelSerializer):
-    """Serializador para consulta del libro mayor de apercibimientos (CA4)."""
+class AtencionFelicitacionSerializer(serializers.ModelSerializer):
+    """Serializador para consulta del libro de llamados de atención y felicitaciones por socio."""
 
     socio_id = serializers.IntegerField(source="socio.id", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
-    estado_display = serializers.CharField(source="get_estado_display", read_only=True)
-    asistencia_id = serializers.IntegerField(source="asistencia.id", default=None, read_only=True)
-    expediente_origen_numero = serializers.CharField(
-        source="expediente_origen.numero", default=None, read_only=True
-    )
-    expediente_sancion_id = serializers.IntegerField(
-        source="expediente_sancion.id", default=None, read_only=True
-    )
-    expediente_sancion_numero = serializers.CharField(
-        source="expediente_sancion.numero", default=None, read_only=True
-    )
+    pendientes = serializers.IntegerField(source="llamadosAtencion", read_only=True)
+    estado = serializers.CharField(read_only=True)
 
     class Meta:
-        model = RegistroApercibimiento
+        model = AtencionFelicitacion
         fields = [
-            "id",
             "socio_id",
             "socio_nombre",
             "socio_legajo",
-            "origen_tipo",
-            "asistencia",
-            "asistencia_id",
-            "expediente_origen",
-            "expediente_origen_numero",
-            "solicitud_t01",
-            "fecha_hecho",
-            "motivo",
-            "articulo_reglamento",
+            "llamadosAtencion",
+            "felicitaciones",
+            "pendientes",
             "estado",
-            "estado_display",
-            "lote_consolidacion",
-            "expediente_sancion",
-            "expediente_sancion_id",
-            "expediente_sancion_numero",
-            "fecha_consolidacion",
-            "actor_registro",
-            "created_at",
         ]
-        read_only_fields = [
-            "id",
-            "socio_id",
-            "socio_nombre",
-            "socio_legajo",
-            "estado_display",
-            "asistencia_id",
-            "expediente_origen_numero",
-            "expediente_sancion_id",
-            "expediente_sancion_numero",
-            "created_at",
-        ]
+        read_only_fields = fields
 
-    def get_socio_nombre(self, obj: RegistroApercibimiento) -> str:
+    def get_socio_nombre(self, obj: AtencionFelicitacion) -> str:
         socio = obj.socio
         return f"{socio.first_name} {socio.last_name}".strip()
+
+
+# Alias retrocompatible
+RegistroApercibimientoSerializer = AtencionFelicitacionSerializer
+

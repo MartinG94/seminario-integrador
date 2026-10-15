@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from expedientes.models import (
+    AtencionFelicitacion,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
     RegistroApercibimiento,
@@ -152,7 +153,7 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
 
         if request.method == "GET":
             asistencias_qs = evento.asistencias.select_related(
-                "socio", "expediente_generado", "apercibimiento_generado"
+                "socio", "expediente_generado"
             ).order_by("socio__legajo")
             serializer = AsistenciaEventoSerializer(asistencias_qs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -271,16 +272,14 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
 
 class RegistroApercibimientoViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet de sólo lectura para consultar el libro mayor de apercibimientos (CA4).
+    ViewSet de sólo lectura para consultar el libro de llamados de atención y felicitaciones (CA4).
 
     Aislamiento RBAC:
-    - Socios ordinarios sólo pueden ver sus propios apercibimientos.
+    - Socios ordinarios sólo pueden ver sus propios llamados y felicitaciones.
     - Directiva, Tribunal y Admin pueden ver todos y filtrar por socio.
     """
 
-    queryset = RegistroApercibimiento.objects.select_related(
-        "socio", "expediente_sancion", "expediente_origen", "asistencia"
-    ).order_by("-created_at")
+    queryset = AtencionFelicitacion.objects.select_related("socio").all()
     serializer_class = RegistroApercibimientoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -304,24 +303,11 @@ class RegistroApercibimientoViewSet(viewsets.ReadOnlyModelViewSet):
         if socio_id:
             qs = qs.filter(socio_id=socio_id)
 
-        estado = params.get("estado")
-        if estado:
-            qs = qs.filter(estado=estado)
-
-        origen_tipo = params.get("origen_tipo")
-        if origen_tipo:
-            qs = qs.filter(origen_tipo=origen_tipo)
-
-        lote = params.get("lote") or params.get("lote_consolidacion")
-        if lote:
-            qs = qs.filter(lote_consolidacion=lote)
-
         search = params.get("search")
         if search:
             search_clean = search.strip()
             qs = qs.filter(
-                Q(motivo__icontains=search_clean)
-                | Q(socio__legajo__icontains=search_clean)
+                Q(socio__legajo__icontains=search_clean)
                 | Q(socio__first_name__icontains=search_clean)
                 | Q(socio__last_name__icontains=search_clean)
             )
@@ -332,7 +318,7 @@ class RegistroApercibimientoViewSet(viewsets.ReadOnlyModelViewSet):
 class SocioApercibimientosView(APIView):
     """
     Endpoint dedicado /api/v1/expedientes/socios/{id}/apercibimientos/.
-    Retorna el historial de apercibimientos y llamados de atención de un socio.
+    Retorna el estado de llamados de atención y felicitaciones de un socio.
     """
 
     permission_classes = [permissions.IsAuthenticated]
@@ -351,11 +337,7 @@ class SocioApercibimientosView(APIView):
                     "No posee autorización para consultar los apercibimientos de otro socio."
                 )
 
-        apercibimientos = (
-            RegistroApercibimiento.objects.filter(socio=socio_solicitado)
-            .select_related("socio", "expediente_sancion", "expediente_origen", "asistencia")
-            .order_by("-created_at")
-        )
+        atencion, _ = AtencionFelicitacion.objects.get_or_create(socio=socio_solicitado)
+        serializer = RegistroApercibimientoSerializer(atencion)
+        return Response([serializer.data], status=status.HTTP_200_OK)
 
-        serializer = RegistroApercibimientoSerializer(apercibimientos, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)

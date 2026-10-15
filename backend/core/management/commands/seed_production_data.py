@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from expedientes.models import (
     AsistenciaEvento,
+    AtencionFelicitacion,
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
@@ -791,97 +792,37 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"  - Asistencia Ad-hoc: {s.legajo} -> {est}")
 
-        # 4. Libro Mayor de Apercibimientos
-        # 4.1 Apercibimiento derivado de la tardanza leve de Félix Fábula (770006)
+        # 4. Libro de Llamados y Felicitaciones (atencionFelicitacion)
+        # 4.1 Llamado de atención derivado de la tardanza leve de Félix Fábula (770006)
         asist_felix = asistencias_ev1.get("770006")
-        aperc_felix, _ = RegistroApercibimiento.objects.update_or_create(
+        if asist_felix:
+            asist_felix.notificado = True
+            asist_felix.fechaNotificacion = datetime.date(2026, 10, 6)
+            asist_felix.save(update_fields=["notificado", "fechaNotificacion"])
+
+        AtencionFelicitacion.objects.update_or_create(
             socio=felix_socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=datetime.date(2026, 10, 6),
-            defaults={
-                "asistencia": asist_felix,
-                "motivo": (
-                    "Tardanza leve de 22 minutos en Reunión Ordinaria Mensual de Grupo G58 "
-                    "(Art. 100.a R.I.)."
-                ),
-                "articulo_reglamento": "Art. 100.a",
-                "estado": EstadoRegistroApercibimientoEnum.PENDIENTE,
-                "actor_registro": "SISTEMA",
-            },
+            defaults={"llamadosAtencion": 1, "felicitaciones": 0},
         )
-        if asist_felix and asist_felix.apercibimiento_generado_id != aperc_felix.id:
-            asist_felix.apercibimiento_generado = aperc_felix
-            asist_felix.save(update_fields=["apercibimiento_generado"])
+        self.stdout.write(f"+ AtencionFelicitacion verificado para Félix Fábula ({felix_socio.legajo}): 1 llamado")
 
-        # 4.2 Dos apercibimientos PENDIENTES para Malena Marea (770013) para caso regla 3:1 (CA4)
-        RegistroApercibimiento.objects.update_or_create(
+        # 4.2 Dos llamados de atención para Malena Marea (770013) (2 pendientes para regla 3:1)
+        AtencionFelicitacion.objects.update_or_create(
             socio=malena_socio,
-            origen_tipo="REUNION_TARDANZA_LEVE",
-            fecha_hecho=datetime.date(2026, 8, 15),
-            defaults={
-                "motivo": "Tardanza leve de 20 minutos en Plenario General Extraordinario.",
-                "articulo_reglamento": "Art. 100.a",
-                "estado": EstadoRegistroApercibimientoEnum.PENDIENTE,
-                "actor_registro": "SISTEMA",
-            },
-        )
-        RegistroApercibimiento.objects.update_or_create(
-            socio=malena_socio,
-            origen_tipo="SOLICITUD_T01",
-            fecha_hecho=datetime.date(2026, 9, 10),
-            defaults={
-                "motivo": (
-                    "Apercibimiento por falta leve en rendición administrativa de Solicitud T01."
-                ),
-                "articulo_reglamento": "Art. 83",
-                "estado": EstadoRegistroApercibimientoEnum.PENDIENTE,
-                "actor_registro": "SISTEMA",
-            },
+            defaults={"llamadosAtencion": 2, "felicitaciones": 0},
         )
         self.stdout.write(
-            f"+ Apercibimientos pendientes verificados para {malena_socio.legajo} "
-            "(2 pendientes para regla 3:1)"
+            f"+ AtencionFelicitacion verificado para {malena_socio.legajo} (2 pendientes para regla 3:1)"
         )
 
-        # 4.3 Terna CONSOLIDADA histórica de 3 apercibimientos para Lucas Gastiaburu (74907)
-        # vinculada a EXP-2026-001
-        exp_001 = Expediente.objects.filter(numero="EXP-2026-001").first()
-        lote_historico = uuid.UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
-        fecha_cons = timezone.make_aware(datetime.datetime(2026, 3, 1, 10, 0))
-
-        terna_data = [
-            (
-                datetime.date(2026, 2, 10),
-                "REUNION_TARDANZA_LEVE",
-                "Tardanza leve en reunión técnica de Cómputos.",
-            ),
-            (
-                datetime.date(2026, 2, 18),
-                "REUNION_TARDANZA_LEVE",
-                "Tardanza leve en plenario de subcomisiones.",
-            ),
-            (
-                datetime.date(2026, 2, 25),
-                "REUNION_RETIRO_ANTICIPADO_LEVE",
-                "Retiro anticipado leve en reunión de Cómputos.",
-            ),
-        ]
-        for f_hecho, o_tipo, desc_motivo in terna_data:
-            RegistroApercibimiento.objects.update_or_create(
-                socio=lucas_socio,
-                origen_tipo=o_tipo,
-                fecha_hecho=f_hecho,
-                defaults={
-                    "motivo": desc_motivo,
-                    "articulo_reglamento": "Art. 83",
-                    "estado": EstadoRegistroApercibimientoEnum.CONSOLIDADO,
-                    "lote_consolidacion": lote_historico,
-                    "expediente_sancion": exp_001,
-                    "fecha_consolidacion": fecha_cons,
-                    "actor_registro": "SISTEMA",
-                },
-            )
+        # 4.3 Lucas Gastiaburu (74907) con 0 llamados (consolidado previamente en EXP-2026-001)
+        AtencionFelicitacion.objects.update_or_create(
+            socio=lucas_socio,
+            defaults={"llamadosAtencion": 0, "felicitaciones": 0},
+        )
         self.stdout.write(
-            f"+ Terna consolidada histórica verificada para {lucas_socio.legajo} "
-            f"(Lote: {lote_historico})"
+            f"+ AtencionFelicitacion verificado para {lucas_socio.legajo} (0 llamados tras consolidar EXP-2026-001)"
         )
+
+        self.stdout.write(self.style.SUCCESS("✓ Seed de eventos institucionales y asistencias completado exitosamente."))
+
