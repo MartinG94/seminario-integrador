@@ -45,7 +45,7 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
   - Python 3.12: Type hints obligatorios en todas las funciones, métodos y modelos públicos.
   - TypeScript: Tipado estricto habilitado (`strict: true`), interfaces y DTOs para cada payload de API.
 - **Idioma del Código:**
-  - Identificadores, nombres de clases, funciones, modelos, campos de BD y commits en **inglés** (ej. `MembershipStatus`, `calculate_balance`, `fetch_records`).
+  - Identificadores, nombres de clases, funciones, modelos, campos de BD y commits en **inglés** (ej. `MembershipStatus`, `calculate_balance`, `fetch_records`). En entidades o modelos que mapeen a tablas preexistentes del sistema legacy, se respeta estrictamente la nomenclatura original de tablas, columnas y relaciones del esquema legacy (`db_table`, `db_column`).
   - Interfaz de usuario, etiquetas, reglamentos, mensajes de error, justificaciones y documentación formal en **español rioplatense institucional** (ej. "Socio Activo", "Expediente Creado", "Formulario T02").
 - **Tokens de Diseño:**
   - Prohibido utilizar colores hexadecimales arbitrarios o estilos ad-hoc.
@@ -89,6 +89,7 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
    - No toques archivos dentro de `specs/` salvo petición explícita de cambio de requerimiento.
    - No agregues dependencias pesadas a `requirements.txt` o `package.json` sin previa aprobación del Product Owner.
    - Respeta estrictamente los 6 estados del expediente (Art. 12 del Reglamento Procesal 2026).
+6. **Prioridad y respeto al esquema de Base de Datos legacy:** En cualquier solución o desarrollo que interactúe con la base de datos, la prioridad absoluta e ineludible es respetar los nombres de las tablas, columnas y relaciones del sistema legacy preexistente. Solo tras evaluar exhaustivamente y confirmar que un comportamiento requerido no se encuentra modelado en dicho esquema, se podrá considerar o proponer la aplicación de un `ALTER TABLE` o la creación de nuevas tablas.
 
 ---
 
