@@ -548,3 +548,623 @@ class SolicitudT01(models.Model):
             self.snapshots_destinatarios = [self.snapshot_destinatario]
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class CategoriaEventoEnum(models.TextChoices):
+    """Categoría institucional del evento: espacio deliberativo vs actividad operativa."""
+
+    REUNION = "REUNION", "Reunión Institucional"
+    ACTIVIDAD = "ACTIVIDAD", "Actividad Operativa / Voluntariado"
+
+
+class SubtipoReunionEnum(models.TextChoices):
+    """Subtipos reglamentarios para eventos de categoría REUNION."""
+
+    ORDINARIA = "ORDINARIA", "Reunión Ordinaria de Subcomisión"
+    EXTRAORDINARIA = "EXTRAORDINARIA", "Reunión Extraordinaria de CD"
+    ASAMBLEA = "ASAMBLEA", "Asamblea General (Ordinaria / Extraordinaria)"
+    PLENARIO = "PLENARIO", "Plenario Directivo"
+
+
+class SubtipoActividadEnum(models.TextChoices):
+    """Subtipos reglamentarios para eventos de categoría ACTIVIDAD."""
+
+    MANTENIMIENTO = "MANTENIMIENTO", "Mantenimiento y Reparaciones"
+    VOLUNTARIADO = "VOLUNTARIADO", "Voluntariado Institucional"
+    JORNADA = "JORNADA", "Jornada de Trabajo"
+    EVENTO_SOCIAL = "EVENTO_SOCIAL", "Evento Social / Beneficio"
+    GUARDIA = "GUARDIA", "Guardia Técnica"
+
+
+class ModalidadEventoEnum(models.TextChoices):
+    """Modalidad de realización de la convocatoria."""
+
+    PRESENCIAL_SEDE = "PRESENCIAL_SEDE", "Presencial en Sede Central"
+    PRESENCIAL_EXTERNA = "PRESENCIAL_EXTERNA", "Presencial Fuera de Sede"
+    VIRTUAL = "VIRTUAL", "Virtual (Videoconferencia)"
+
+
+class ModoConvocatoriaEnum(models.TextChoices):
+    """Alcance de la convocatoria a socios."""
+
+    GRUPO = "GRUPO", "Por Grupo Social Completo"
+    SUBCOMISION = "SUBCOMISION", "Por Subcomisión Completa"
+    ESTADO_SOCIAL = "ESTADO_SOCIAL", "Por Estado Social (Juniors / Seniors)"
+    PERSONALIZADA = "PERSONALIZADA", "Lista Personalizada de Socios"
+
+
+class EstadoEventoEnum(models.TextChoices):
+    """Ciclo de vida del evento institucional."""
+
+    CREADO = "CREADO", "Creado"
+    NOTIFICADO = "NOTIFICADO", "Notificado"
+    EN_CURSO = "EN_CURSO", "En Curso"
+    ABIERTO = "ABIERTO", "Abierto"
+    FINALIZADO = "FINALIZADO", "Finalizado"
+    ANULADO = "ANULADO", "Anulado"
+
+
+# Aliases de compatibilidad histórica
+EstadoEventoEnum.PROGRAMADA = EstadoEventoEnum.CREADO
+EstadoEventoEnum.CERRADA = EstadoEventoEnum.FINALIZADO
+
+
+class EstadoAsistenciaEventoEnum(models.TextChoices):
+    """Tipificación reglamentaria del estado de asistencia de un socio citado."""
+
+    PRESENTE = "PRESENTE", "Presente"
+    TARDE_LEVE = "TARDE_LEVE", "Tardanza Leve (15-30 min)"
+    TARDE_GRAVE = "TARDE_GRAVE", "Tardanza Grave (>30 min)"
+    RETIRO_ANTICIPADO_LEVE = "RETIRO_ANTICIPADO_LEVE", "Retiro Anticipado Leve (15-30 min)"
+    RETIRO_ANTICIPADO_GRAVE = "RETIRO_ANTICIPADO_GRAVE", "Retiro Anticipado Grave (>30 min)"
+    AUSENTE = "AUSENTE", "Ausente Injustificado"
+
+
+class MetodoCapturaAsistenciaEnum(models.TextChoices):
+    """Mecanismo de relevamiento de asistencia conforme al patrón Strategy."""
+
+    MANUAL = "MANUAL", "Carga Manual"
+    BIOMETRICO = "BIOMETRICO", "Lector Biométrico"
+
+
+class EstadoRegistroApercibimientoEnum(models.TextChoices):
+    """Estado del apercibimiento en el libro mayor."""
+
+    PENDIENTE = "PENDIENTE", "Pendiente de Consolidación"
+    CONSOLIDADO = "CONSOLIDADO", "Consolidado en Sanción"
+
+
+class CategoriaEvento(models.Model):
+    """Categoría institucional de eventos (Reunión o Actividad)."""
+
+    id = models.AutoField(primary_key=True, db_column="idCategoria")
+    codigo = models.CharField(max_length=20, unique=True)
+    nombre = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = "tribunal_categoriaevento"
+        verbose_name = "Categoría de Evento"
+        verbose_name_plural = "Categorías de Eventos"
+
+    def __str__(self) -> str:
+        return f"{self.codigo} - {self.nombre}"
+
+
+class EventoInstitucional(models.Model):
+    """Convocatoria institucional a reunión o actividad presencial/virtual obligatoria.
+
+    Satisface CA1, CA2, CA8, CA9 y CA10 reutilizando la entidad preexistente tribunal_evento.
+    """
+
+    id = models.AutoField(primary_key=True, db_column="idEvento")
+    titulo = models.CharField(
+        max_length=128,
+        db_column="nombre",
+        help_text="Título o denominación formal de la convocatoria.",
+    )
+    descripcion = models.TextField(blank=True, default="", db_column="descripcion")
+    categoria_ref = models.ForeignKey(
+        CategoriaEvento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column="categoria_id",
+        related_name="eventos",
+    )
+    categoria = models.CharField(
+        max_length=20,
+        choices=CategoriaEventoEnum.choices,
+        default=CategoriaEventoEnum.REUNION,
+        db_column="categoria",
+        help_text="Discriminador formal entre Reunión y Actividad.",
+    )
+    tipo = models.CharField(
+        max_length=30,
+        default="ORDINARIA",
+        db_column="tipo",
+        help_text="Subtipo reglamentario condicionado según la categoría seleccionada.",
+    )
+    modalidad = models.CharField(
+        max_length=30,
+        choices=ModalidadEventoEnum.choices,
+        default=ModalidadEventoEnum.PRESENCIAL_SEDE,
+        db_column="modalidad",
+        help_text="Modalidad: Sede Central, Fuera de Sede o Virtual.",
+    )
+    ubicacion = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_column="ubicacion",
+        help_text="Dirección física externa o enlace web de videoconferencia (Meet/Zoom).",
+    )
+    lugar = models.CharField(
+        max_length=200,
+        default="Sede Central AVEIT",
+        db_column="lugar",
+        help_text="Descripción textual de la sede o locación.",
+    )
+    fecha_publicacion = models.DateTimeField(
+        db_column="fecha_publicacion",
+        help_text="Momento en que se publica y notifica formalmente la reunión (Art. 95).",
+    )
+    fecha_programada = models.DateTimeField(
+        db_column="fechaHoraInicio",
+        help_text="Fecha y hora de inicio fijada para el evento (campo obligatorio mínimo).",
+    )
+    fecha_fin = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_column="fechaHoraFin",
+        help_text="Fecha y hora de finalización prevista (estrictamente opcional).",
+    )
+    tieneHoraFin = models.BooleanField(
+        default=False,
+        db_column="tieneHoraFin",
+        help_text="Indica si el evento tiene hora de finalización definida.",
+    )
+    fecha_hora_cierre_efectivo = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_column="fecha_hora_cierre_efectivo",
+        help_text="Momento real en que concluyó el evento o se cerró la toma de asistencia.",
+    )
+    fecha_reporte = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_column="fecha_reporte",
+        help_text="Momento en que se eleva el informe a Comisión Directiva (Art. 99).",
+    )
+    tolerancia_tardanza_minutos = models.PositiveSmallIntegerField(
+        default=15,
+        db_column="toleranciaLeveMinutos",
+        help_text="Tolerancia en minutos antes de computar tardanza leve (default: 15 min).",
+    )
+    tolerancia_grave_minutos = models.PositiveSmallIntegerField(
+        default=30,
+        db_column="toleranciaGraveMinutos",
+        help_text="Tolerancia en minutos antes de computar tardanza grave (default: 30 min).",
+    )
+    tolerancia_retiro_minutos = models.PositiveSmallIntegerField(
+        default=15,
+        db_column="tolerancia_retiro_minutos",
+        help_text="Tolerancia en minutos de retiro anticipado leve (default: 15 min).",
+    )
+    estado = models.CharField(
+        max_length=30,
+        choices=EstadoEventoEnum.choices,
+        default=EstadoEventoEnum.CREADO,
+        db_column="estado",
+    )
+    estadoEvento_id = models.IntegerField(default=1, db_column="estadoEvento_id")
+    modo_convocatoria = models.CharField(
+        max_length=30,
+        choices=ModoConvocatoriaEnum.choices,
+        default=ModoConvocatoriaEnum.PERSONALIZADA,
+        db_column="modo_convocatoria",
+    )
+    afectados_id = models.IntegerField(default=20, db_column="afectados_id")
+    grupo_convocado = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        db_column="grupo_convocado",
+    )
+    estado_social_convocado = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=[("JUNIORS", "Juniors"), ("SENIORS", "Seniors")],
+        db_column="estado_social_convocado",
+        help_text="Filtro de cohorte social cuando modo_convocatoria es ESTADO_SOCIAL.",
+    )
+    detalle_tarea = models.TextField(
+        blank=True,
+        default="",
+        db_column="detalle_tarea",
+        help_text="Instrucciones concretas y especificación de la tarea para Actividades.",
+    )
+    puntos_sancion = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        db_column="puntos_sancion",
+        help_text=(
+            "Puntos de penalidad por inasistencia o incumplimiento personalizables para "
+            "Actividades."
+        ),
+    )
+    motivo_cancelacion = models.TextField(
+        null=True,
+        blank=True,
+        db_column="motivo_cancelacion",
+        help_text="Fundamento formal de anulación del evento.",
+    )
+    es_obligatoria = models.BooleanField(
+        default=True,
+        db_column="es_obligatoria",
+        help_text="Indica si la asistencia reviste carácter obligatorio estatutario.",
+    )
+    es_sancionable = models.BooleanField(
+        default=False,
+        db_column="es_sancionable",
+        help_text=(
+            "Determinado según cumplimiento de preaviso de 2 días hábiles y "
+            "reporte en 72 hs hábiles (CA1/CA2)."
+        ),
+    )
+    motivo_no_sancionable = models.TextField(
+        null=True,
+        blank=True,
+        db_column="motivo_no_sancionable",
+        help_text="Fundamento de auditoría si la reunión perdió carácter sancionable.",
+    )
+    convocante = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.PROTECT,
+        db_column="responsable_id",
+        related_name="eventos_convocados",
+    )
+    subcomision = models.ForeignKey(
+        "socios.Subcomision",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column="subcomision_id",
+        related_name="eventos",
+    )
+    reportado_por = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column="reportado_por_id",
+        related_name="eventos_reportados",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_column="created_at")
+    updated_at = models.DateTimeField(auto_now=True, db_column="updated_at")
+
+    @property
+    def idEvento(self) -> int:
+        return self.id
+
+    @property
+    def nombre(self) -> str:
+        return self.titulo
+
+    @nombre.setter
+    def nombre(self, val: str) -> None:
+        self.titulo = val
+
+    @property
+    def fechaHoraInicio(self):
+        return self.fecha_programada
+
+    @fechaHoraInicio.setter
+    def fechaHoraInicio(self, val) -> None:
+        self.fecha_programada = val
+
+    @property
+    def fechaHoraFin(self):
+        return self.fecha_fin
+
+    @fechaHoraFin.setter
+    def fechaHoraFin(self, val) -> None:
+        self.fecha_fin = val
+
+    @property
+    def responsable(self):
+        return self.convocante
+
+    @responsable.setter
+    def responsable(self, val) -> None:
+        self.convocante = val
+
+    @property
+    def toleranciaLeveMinutos(self) -> int:
+        return self.tolerancia_tardanza_minutos
+
+    @toleranciaLeveMinutos.setter
+    def toleranciaLeveMinutos(self, val: int) -> None:
+        self.tolerancia_tardanza_minutos = val
+
+    @property
+    def toleranciaGraveMinutos(self) -> int:
+        return self.tolerancia_grave_minutos
+
+    @toleranciaGraveMinutos.setter
+    def toleranciaGraveMinutos(self, val: int) -> None:
+        self.tolerancia_grave_minutos = val
+
+    class Meta:
+        db_table = "tribunal_evento"
+        verbose_name = "Evento Institucional"
+        verbose_name_plural = "Eventos Institucionales"
+        ordering = ["-fecha_programada"]
+        indexes = [
+            models.Index(
+                fields=["fecha_programada", "estado"], name="idx_evento_fechainicio_estado"
+            ),
+            models.Index(
+                fields=["categoria", "tipo", "es_sancionable"], name="idx_evento_cat_tipo_sanc"
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(fecha_publicacion__lte=models.F("fecha_programada")),
+                name="chk_evento_publicacion_previa",
+            ),
+            models.CheckConstraint(
+                check=models.Q(fecha_fin__isnull=True)
+                | models.Q(fecha_fin__gte=models.F("fecha_programada")),
+                name="chk_evento_fin_coherente",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"[{self.categoria}] {self.titulo} - {self.fecha_programada.strftime('%d/%m/%Y %H:%M')}"
+        )
+
+    def clean(self) -> None:
+        errors = {}
+        if (
+            self.fecha_publicacion
+            and self.fecha_programada
+            and self.fecha_publicacion > self.fecha_programada
+        ):
+            errors["fecha_publicacion"] = (
+                "La fecha de publicación no puede ser posterior a la fecha programada."
+            )
+
+        if self.fecha_fin and self.fecha_programada and self.fecha_fin < self.fecha_programada:
+            errors["fecha_fin"] = (
+                "La fecha de finalización no puede ser anterior a la fecha programada."
+            )
+
+        if self.categoria == CategoriaEventoEnum.REUNION:
+            if self.tipo not in SubtipoReunionEnum.values:
+                errors["tipo"] = (
+                    f"El subtipo '{self.tipo}' no corresponde a una REUNION. "
+                    f"Opciones: {SubtipoReunionEnum.values}"
+                )
+        elif self.categoria == CategoriaEventoEnum.ACTIVIDAD:
+            if self.tipo not in SubtipoActividadEnum.values:
+                errors["tipo"] = (
+                    f"El subtipo '{self.tipo}' no corresponde a una ACTIVIDAD. "
+                    f"Opciones: {SubtipoActividadEnum.values}"
+                )
+            if not (self.detalle_tarea and self.detalle_tarea.strip()):
+                errors["detalle_tarea"] = (
+                    "Para actividades operativas es obligatorio detallar la tarea asignada."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+
+class EventoConvocado(models.Model):
+    """Nómina de socios formalmente convocados o citados a un evento institucional."""
+
+    id = models.AutoField(primary_key=True, db_column="idConvocado")
+    evento = models.ForeignKey(
+        EventoInstitucional,
+        on_delete=models.CASCADE,
+        db_column="evento_id",
+        related_name="convocados",
+    )
+    socio = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.CASCADE,
+        db_column="socio_id",
+        related_name="convocatorias_evento",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_column="created_at")
+
+    class Meta:
+        db_table = "tribunal_evento_convocado"
+        verbose_name = "Socio Convocado a Evento"
+        verbose_name_plural = "Socios Convocados a Eventos"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["evento", "socio"],
+                name="unique_convocado_evento_socio",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Convocado {self.socio} a {self.evento}"
+
+
+class AsistenciaEvento(models.Model):
+    """Registro individual de asistencia de un socio a un evento institucional (CA10).
+
+    Mapeado a la tabla legacy tribunal_asistente.
+    """
+
+    id = models.AutoField(primary_key=True, db_column="idAsistente")
+    evento = models.ForeignKey(
+        EventoInstitucional,
+        on_delete=models.CASCADE,
+        db_column="evento_id",
+        related_name="asistencias",
+    )
+    socio = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.PROTECT,
+        db_column="socio_id",
+        related_name="asistencias_eventos",
+    )
+    estado_asistencia = models.CharField(
+        max_length=30,
+        choices=EstadoAsistenciaEventoEnum.choices,
+        default=EstadoAsistenciaEventoEnum.PRESENTE,
+        db_column="estado_asistencia",
+    )
+    hora_registro = models.DateTimeField(null=True, blank=True, db_column="fechaHoraLlegada")
+    hora_salida = models.DateTimeField(null=True, blank=True, db_column="fechaHoraSalida")
+    notificado = models.BooleanField(default=False, db_column="notificado")
+    fechaNotificacion = models.DateField(null=True, blank=True, db_column="fechaNotificacion")
+    minutos_tardanza = models.PositiveIntegerField(default=0, db_column="minutos_tardanza")
+    minutos_retiro_anticipado = models.PositiveIntegerField(
+        default=0, db_column="minutos_retiro_anticipado"
+    )
+    metodo_captura = models.CharField(
+        max_length=20,
+        choices=MetodoCapturaAsistenciaEnum.choices,
+        default=MetodoCapturaAsistenciaEnum.MANUAL,
+        db_column="metodo_captura",
+    )
+    dispositivo_id = models.CharField(
+        max_length=100, null=True, blank=True, db_column="dispositivo_id"
+    )
+    motivo = models.TextField(
+        blank=True,
+        default="",
+        db_column="motivo",
+        help_text=(
+            "Motivo u observación explicativa circunstanciada registrada por el organizador (CA10)."
+        ),
+    )
+    observaciones = models.TextField(blank=True, default="", db_column="observaciones")
+    procesado_disciplinario = models.BooleanField(
+        default=False, db_column="procesado_disciplinario"
+    )
+    expediente_generado = models.ForeignKey(
+        "expedientes.Expediente",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        db_column="expediente_generado_id",
+        related_name="asistencias_origen",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_column="created_at")
+
+    @property
+    def idAsistente(self) -> int:
+        return self.id
+
+    @property
+    def fechaHoraLlegada(self):
+        return self.hora_registro
+
+    @fechaHoraLlegada.setter
+    def fechaHoraLlegada(self, val) -> None:
+        self.hora_registro = val
+
+    @property
+    def fechaHoraSalida(self):
+        return self.hora_salida
+
+    @fechaHoraSalida.setter
+    def fechaHoraSalida(self, val) -> None:
+        self.hora_salida = val
+
+    @property
+    def apercibimiento_generado_id(self) -> int | None:
+        return 1 if self.notificado else None
+
+    @property
+    def apercibimiento_generado(self):
+        return None if not self.notificado else 1
+
+    @apercibimiento_generado.setter
+    def apercibimiento_generado(self, val) -> None:
+        self.notificado = bool(val)
+
+    class Meta:
+        db_table = "tribunal_asistente"
+        verbose_name = "Asistencia a Evento"
+        verbose_name_plural = "Asistencias a Eventos"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["evento", "socio"],
+                name="unique_asistencia_per_evento_socio",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Asistencia {self.socio} - {self.evento.titulo}: {self.estado_asistencia}"
+
+    def clean(self) -> None:
+        if self.evento_id and self.socio_id:
+            qs = AsistenciaEvento.objects.filter(evento_id=self.evento_id, socio_id=self.socio_id)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    "Ya existe un registro de asistencia para este socio en este evento."
+                )
+
+
+class AtencionFelicitacion(models.Model):
+    """Control de llamados de atención y felicitaciones por socio (atencionFelicitacion).
+
+    Aplica la regla 3:1 inmutable:
+    - Cada 3 llamados de atención consolidan en una sanción (-1.00 punto) y descuentan 3 llamados.
+    - Cada 3 felicitaciones consolidan en un mérito (+1.00 punto) y descuentan 3 felicitaciones.
+    """
+
+    socio = models.OneToOneField(
+        "socios.Socio",
+        primary_key=True,
+        on_delete=models.CASCADE,
+        db_column="nroSocio",
+        related_name="atencion_felicitacion",
+    )
+    felicitaciones = models.IntegerField(default=0, db_column="felicitaciones")
+    llamadosAtencion = models.IntegerField(default=0, db_column="llamadosAtencion")
+
+    @property
+    def nroSocio(self) -> int:
+        return self.socio_id
+
+    @property
+    def id(self) -> int:
+        return self.socio_id
+
+    @property
+    def pendientes(self) -> int:
+        return self.llamadosAtencion
+
+    @property
+    def estado(self) -> str:
+        return "PENDIENTE" if self.llamadosAtencion > 0 else "CONSOLIDADO"
+
+    class Meta:
+        db_table = "atencionFelicitacion"
+        verbose_name = "Atención y Felicitación"
+        verbose_name_plural = "Atenciones y Felicitaciones"
+
+    def __str__(self) -> str:
+        return (
+            f"Socio {self.socio_id}: {self.llamadosAtencion} llamados, "
+            f"{self.felicitaciones} felicitaciones"
+        )
+
+
+# Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy
+Reunion = EventoInstitucional
+AsistenciaReunion = AsistenciaEvento
+RegistroApercibimiento = AtencionFelicitacion

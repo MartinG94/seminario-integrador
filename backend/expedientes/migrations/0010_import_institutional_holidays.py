@@ -73,7 +73,8 @@ def import_current_holidays(apps: Apps, schema_editor: BaseDatabaseSchemaEditor)
         .values_list("date", flat=True)
     )
     holiday_model.objects.using(alias).bulk_create(
-        [holiday for target_date, holiday in imported.items() if target_date not in existing_dates]
+        [holiday for target_date, holiday in imported.items() if target_date not in existing_dates],
+        ignore_conflicts=True,
     )
 
 

@@ -1,0 +1,115 @@
+<div class="resumen-cierre-modal">
+  <div class="modal-header d-flex justify-content-between align-items-center">
+    <h4 class="modal-title font-weight-bold text-danger mb-0">
+      <i class="material-icons align-middle mr-2">gavel</i>
+      Previsualización de Actuaciones y Cierre Formal
+    </h4>
+    <button type="button" class="close" aria-label="Cerrar" (click)="cancelar()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="mb-3">
+      <h5 class="mb-1"><strong>{{ data.evento.titulo }}</strong></h5>
+      <p class="text-muted small mb-2">
+        Categoría: <strong>{{ data.evento.categoria }} ({{ data.evento.tipo }})</strong> • Modalidad: <strong>{{ data.evento.modalidad }}</strong>
+      </p>
+
+      <!-- Banner si NO es sancionable -->
+      <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center" *ngIf="!data.evento.es_sancionable">
+        <i class="material-icons mr-2 text-warning">warning</i>
+        <div>
+          <strong>Evento No Sancionable:</strong>
+          {{ data.evento.motivo_no_sancionable || 'El evento no reúne los requisitos estatutarios de antelación o carácter sancionable. No se emitirán expedientes disciplinarios ni apercibimientos.' }}
+        </div>
+      </div>
+
+      <!-- Resumen numérico -->
+      <div class="row text-center mb-3">
+        <div class="col-md-3">
+          <div class="border rounded p-2 bg-light">
+            <span class="d-block small text-muted">Total Convocados</span>
+            <strong class="h5">{{ data.convocados.length }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 bg-light">
+            <span class="d-block small text-muted">Presentes / Just.</span>
+            <strong class="h5 text-success">{{ totalPresentes }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 bg-light">
+            <span class="d-block small text-muted">Expedientes a Abrir</span>
+            <strong class="h5 text-danger">{{ data.evento.es_sancionable ? totalExpedientes : 0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2 bg-light">
+            <span class="d-block small text-muted">Apercibimientos (3:1)</span>
+            <strong class="h5 text-warning">{{ data.evento.es_sancionable ? totalApercibimientos : 0 }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de actuaciones previstas -->
+    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+      <table class="table table-sm table-hover border">
+        <thead class="thead-light">
+          <tr>
+            <th>Socio</th>
+            <th>Asistencia</th>
+            <th>Actuación Prevista</th>
+            <th>Puntos</th>
+            <th>Motivo Circunstanciado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of actuacionesPrevistas" [class.table-warning]="item.tipoActuacion === 'APERCIBIMIENTO'" [class.table-danger]="item.tipoActuacion === 'EXPEDIENTE'">
+            <td>
+              <strong>{{ item.socioNombre }}</strong>
+              <small class="d-block text-muted">Leg: {{ item.socioLegajo }}</small>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="{
+                'badge-success': item.estadoAsistencia === 'PRESENTE',
+                'badge-secondary': item.estadoAsistencia === 'JUSTIFICADO',
+                'badge-warning': item.estadoAsistencia === 'TARDANZA_LEVE',
+                'badge-danger': item.estadoAsistencia === 'AUSENTE_INJUSTIFICADO' || item.estadoAsistencia === 'TARDANZA_GRAVE'
+              }">
+                {{ item.estadoAsistencia }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ item.actuacionLabel }}</strong>
+              <small class="d-block text-muted">{{ item.norma }}</small>
+            </td>
+            <td class="font-weight-bold" [class.text-danger]="item.puntos < 0" [class.text-muted]="item.puntos === 0">
+              {{ item.puntos !== 0 ? item.puntos + ' pts' : '-' }}
+            </td>
+            <td>
+              <span class="small font-italic">{{ item.motivo || 'Sin motivo registrado' }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-secondary py-2 px-3 mt-3 mb-0 small">
+      <i class="material-icons align-middle mr-1" style="font-size: 16px;">info</i>
+      <em>Importante:</em> Al confirmar, los expedientes se crearán en estado <strong>Expediente Creado</strong> para dar inicio al período de descargo (CA5 / Art. 12). Ningún saldo de puntos es modificado manualmente.
+    </div>
+  </div>
+
+  <div class="modal-footer d-flex justify-content-between">
+    <button type="button" class="btn btn-secondary" (click)="cancelar()">
+      Revisar Planilla
+    </button>
+    <button type="button" class="btn btn-danger font-weight-bold" (click)="confirmar()">
+      <i class="material-icons mr-1">check_circle</i>
+      Confirmar Cierre y Emitir Actuaciones
+    </button>
+  </div>
+</div>

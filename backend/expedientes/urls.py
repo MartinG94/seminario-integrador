@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from expedientes.views import (
     BoardExpedientesView,
@@ -6,6 +7,7 @@ from expedientes.views import (
     CalendarioFeriadosView,
     CaseNotificationAuditView,
     DispatchCaseOpeningView,
+    EventoInstitucionalViewSet,
     EvidenciaDownloadView,
     EvidenciaUploadView,
     ExpedienteCollectionView,
@@ -13,7 +15,9 @@ from expedientes.views import (
     MisExpedientesView,
     MisSolicitudesT01View,
     PresentarDescargoView,
+    RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
+    SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
     SolicitudT01EmitView,
@@ -22,6 +26,10 @@ from expedientes.views import (
 )
 
 app_name = "expedientes"
+
+router = DefaultRouter()
+router.register(r"eventos", EventoInstitucionalViewSet, basename="evento")
+router.register(r"apercibimientos", RegistroApercibimientoViewSet, basename="apercibimiento")
 
 urlpatterns = [
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
@@ -56,4 +64,10 @@ urlpatterns = [
     path("<uuid:pk>/emitir/", SolicitudT01EmitView.as_view(), name="solicitud-emit"),
     path("board/", BoardExpedientesView.as_view(), name="board"),
     path("<int:pk>/transicionar/", TransicionarExpedienteView.as_view(), name="transicionar"),
+    path(
+        "socios/<int:socio_id>/apercibimientos/",
+        SocioApercibimientosView.as_view(),
+        name="socio-apercibimientos",
+    ),
+    path("", include(router.urls)),
 ]

@@ -7,6 +7,7 @@ Garantiza:
 4. Idempotencia total: puede ejecutarse múltiples veces sin duplicar registros.
 """
 
+import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -16,8 +17,24 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
+from django.utils import timezone
 
-from expedientes.models import EstadoExpedienteEnum, Expediente, UrgenciaExpedienteEnum
+from expedientes.models import (
+    AsistenciaEvento,
+    AtencionFelicitacion,
+    CategoriaEventoEnum,
+    EstadoAsistenciaEventoEnum,
+    EstadoEventoEnum,
+    EstadoExpedienteEnum,
+    EventoInstitucional,
+    Expediente,
+    MetodoCapturaAsistenciaEnum,
+    ModalidadEventoEnum,
+    ModoConvocatoriaEnum,
+    SubtipoActividadEnum,
+    SubtipoReunionEnum,
+    UrgenciaExpedienteEnum,
+)
 from socios.models import Role, Socio, Subcomision
 
 UserModel = get_user_model()
@@ -43,22 +60,48 @@ class Command(BaseCommand):
             self.style.NOTICE("=== Iniciando carga de datos para producción y desarrollo ===")
         )
 
-        # 1. Ejecutar esquema legado inicial si no existen tablas
-        init_sql_path = Path(settings.BASE_DIR) / "core" / "sql" / "02-initial-data.sql"
-        if not init_sql_path.exists():
-            init_sql_path = (
-                Path(settings.BASE_DIR).parent / "docker" / "mysql" / "init" / "02-initial-data.sql"
-            )
+        # 1. Ejecutar esquema legado inicial si no existen datos en socio_lista
+        has_data = False
+        with connection.cursor() as cursor:
+            if "socio_lista" in connection.introspection.table_names():
+                cursor.execute("SELECT 1 FROM socio_lista LIMIT 1")
+                has_data = cursor.fetchone() is not None
 
-        if init_sql_path.exists():
-            self.stdout.write(f"Cargando padrón institucional desde: {init_sql_path}")
-            call_command("load_legacy_schema", path=str(init_sql_path))
-        else:
-            self.stdout.write(
-                self.style.WARNING(
-                    "No se encontró 02-initial-data.sql, omitiendo paso SQL directo."
+        if not has_data:
+            init_sql_path = Path(settings.BASE_DIR) / "core" / "sql" / "02-initial-data.sql"
+            if not init_sql_path.exists():
+                init_sql_path = (
+                    Path(settings.BASE_DIR).parent
+                    / "docker"
+                    / "mysql"
+                    / "init"
+                    / "02-initial-data.sql"
                 )
-            )
+
+            if init_sql_path.exists():
+                self.stdout.write(f"Cargando padrón institucional desde: {init_sql_path}")
+                if "socio_lista" in connection.introspection.table_names():
+                    from ranking.management.commands.load_legacy_schema import (
+                        Command as LoadCommand,
+                    )
+
+                    cmd = LoadCommand()
+                    with open(init_sql_path, encoding="utf-8") as f:
+                        raw_sql = f.read()
+                    raw_stmts = cmd._split_sql_statements(raw_sql)
+                    with connection.cursor() as cursor:
+                        for stmt in raw_stmts:
+                            s = stmt.strip()
+                            if s.upper().startswith("INSERT"):
+                                cursor.execute(s)
+                else:
+                    call_command("load_legacy_schema", path=str(init_sql_path))
+            else:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "No se encontró 02-initial-data.sql, omitiendo paso SQL directo."
+                    )
+                )
 
         # 2. Cargar subcomisiones en modelo local
         subcomisiones = {}
@@ -320,6 +363,9 @@ class Command(BaseCommand):
         # Consistencia: Sum(emitidos) == Sum(puntaje_aplicado) == puntajegeneral.puntos
         self._sincronizar_puntos_libro_mayor()
 
+        # 6. Sembrar reuniones, actividades, asistencias y apercibimientos (Spec 005)
+        self._sembrar_eventos_y_asistencias(subcomisiones)
+
         self.stdout.write(
             self.style.SUCCESS("\n✓ Carga de datos completada exitosamente con consistencia total.")
         )
@@ -451,3 +497,336 @@ class Command(BaseCommand):
                             "VALUES (0.00, 0, 0, %s)",
                             [nro_socio],
                         )
+
+    def _sembrar_eventos_y_asistencias(self, subcomisiones: dict[str, Subcomision]) -> None:
+        """Siembra eventos institucionales, asistencias y libro mayor de apercibimientos."""
+        self.stdout.write(self.style.NOTICE("\n--- Sembrando eventos y asistencias (Spec 005) ---"))
+
+        diego_socio = Socio.objects.get(legajo="87414")
+        axel_socio = Socio.objects.get(legajo="403655")
+        lucas_socio = Socio.objects.get(legajo="74907")
+        elena_socio = Socio.objects.get(legajo="770005")
+        felix_socio = Socio.objects.get(legajo="770006")
+        galatea_socio = Socio.objects.get(legajo="770007")
+        hector_socio = Socio.objects.get(legajo="770008")
+        irina_socio = Socio.objects.get(legajo="770009")
+        malena_socio = Socio.objects.get(legajo="770013")
+        quimey_socio = Socio.objects.get(legajo="770017")
+
+        cd_sub = subcomisiones.get("Comisión Directiva")
+        computos_sub = subcomisiones.get("Cómputos")
+        mantenimiento_sub = subcomisiones.get("Mantenimiento")
+
+        # 1. Reunión Ordinaria en Sede (convocatoria por Grupo G58)
+        ev1, _ = EventoInstitucional.objects.update_or_create(
+            titulo="Reunión Ordinaria Mensual de Grupo G58",
+            defaults={
+                "descripcion": (
+                    "Reunión ordinaria institucional mensual obligatoria para todos los socios "
+                    "activos de Grupo G58."
+                ),
+                "categoria": CategoriaEventoEnum.REUNION,
+                "tipo": SubtipoReunionEnum.ORDINARIA,
+                "modalidad": ModalidadEventoEnum.PRESENCIAL_SEDE,
+                "lugar": "Sede Central AVEIT - Aula Magna",
+                "ubicacion": None,
+                "fecha_publicacion": timezone.make_aware(datetime.datetime(2026, 10, 1, 10, 0)),
+                "fecha_programada": timezone.make_aware(datetime.datetime(2026, 10, 6, 18, 0)),
+                "fecha_fin": timezone.make_aware(datetime.datetime(2026, 10, 6, 20, 0)),
+                "fecha_hora_cierre_efectivo": timezone.make_aware(
+                    datetime.datetime(2026, 10, 6, 20, 15)
+                ),
+                "fecha_reporte": timezone.make_aware(datetime.datetime(2026, 10, 7, 11, 0)),
+                "tolerancia_tardanza_minutos": 15,
+                "tolerancia_retiro_minutos": 15,
+                "estado": EstadoEventoEnum.CERRADA,
+                "modo_convocatoria": ModoConvocatoriaEnum.GRUPO,
+                "grupo_convocado": "G58",
+                "es_obligatoria": True,
+                "es_sancionable": True,
+                "convocante": diego_socio,
+                "reportado_por": diego_socio,
+                "subcomision": cd_sub,
+            },
+        )
+        self.stdout.write(f"+ Evento 1 verificado: {ev1.titulo} ({ev1.estado})")
+
+        # Asistencias Evento 1
+        asist_ev1_data = [
+            (
+                elena_socio,
+                EstadoAsistenciaEventoEnum.PRESENTE,
+                timezone.make_aware(datetime.datetime(2026, 10, 6, 18, 5)),
+                timezone.make_aware(datetime.datetime(2026, 10, 6, 20, 15)),
+                0,
+                0,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Presente a horario con acreditación institucional.",
+                "Puntualidad conforme a reglamento.",
+                False,
+            ),
+            (
+                felix_socio,
+                EstadoAsistenciaEventoEnum.TARDE_LEVE,
+                timezone.make_aware(datetime.datetime(2026, 10, 6, 18, 22)),
+                timezone.make_aware(datetime.datetime(2026, 10, 6, 20, 15)),
+                22,
+                0,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Llegada con demora de 22 minutos por congestión vehicular justificada.",
+                "Superó tolerancia de 15 min. Corresponde apercibimiento Art. 100.a.",
+                True,
+            ),
+            (
+                galatea_socio,
+                EstadoAsistenciaEventoEnum.AUSENTE,
+                None,
+                None,
+                0,
+                0,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Inasistencia sin previo aviso ni justificación administrativa.",
+                "Ausente injustificado en reunión obligatoria de grupo.",
+                False,
+            ),
+            (
+                hector_socio,
+                EstadoAsistenciaEventoEnum.PRESENTE,
+                timezone.make_aware(datetime.datetime(2026, 10, 6, 17, 55)),
+                timezone.make_aware(datetime.datetime(2026, 10, 6, 20, 15)),
+                0,
+                0,
+                MetodoCapturaAsistenciaEnum.BIOMETRICO,
+                "BIO-SEDE-01",
+                "Presente registrado biométricamente en ingreso principal.",
+                "Registro biométrico validado.",
+                False,
+            ),
+        ]
+
+        asistencias_ev1 = {}
+        for (
+            s,
+            est,
+            h_in,
+            h_out,
+            m_tarde,
+            m_ret,
+            metodo,
+            disp,
+            motivo,
+            obs,
+            proc,
+        ) in asist_ev1_data:
+            asist, _ = AsistenciaEvento.objects.update_or_create(
+                evento=ev1,
+                socio=s,
+                defaults={
+                    "estado_asistencia": est,
+                    "hora_registro": h_in,
+                    "hora_salida": h_out,
+                    "minutos_tardanza": m_tarde,
+                    "minutos_retiro_anticipado": m_ret,
+                    "metodo_captura": metodo,
+                    "dispositivo_id": disp,
+                    "motivo": motivo,
+                    "observaciones": obs,
+                    "procesado_disciplinario": proc,
+                },
+            )
+            asistencias_ev1[s.legajo] = asist
+            self.stdout.write(f"  - Asistencia G58: {s.legajo} -> {est}")
+
+        # 2. Reunión Extraordinaria Virtual con Meet (convocatoria por Subcomisión Cómputos)
+        ev2, _ = EventoInstitucional.objects.update_or_create(
+            titulo="Reunión Extraordinaria de Coordinación Técnica de Cómputos",
+            defaults={
+                "descripcion": (
+                    "Planificación extraordinaria de migración de servidores y servicios de "
+                    "cómputos."
+                ),
+                "categoria": CategoriaEventoEnum.REUNION,
+                "tipo": SubtipoReunionEnum.EXTRAORDINARIA,
+                "modalidad": ModalidadEventoEnum.VIRTUAL,
+                "lugar": "Plataforma Virtual Google Meet",
+                "ubicacion": "https://meet.google.com/aveit-computos-coord",
+                "fecha_publicacion": timezone.make_aware(datetime.datetime(2026, 10, 12, 9, 0)),
+                "fecha_programada": timezone.make_aware(datetime.datetime(2026, 10, 20, 19, 0)),
+                "fecha_fin": timezone.make_aware(datetime.datetime(2026, 10, 20, 20, 30)),
+                "tolerancia_tardanza_minutos": 15,
+                "tolerancia_retiro_minutos": 15,
+                "estado": EstadoEventoEnum.PROGRAMADA,
+                "modo_convocatoria": ModoConvocatoriaEnum.SUBCOMISION,
+                "subcomision": computos_sub,
+                "es_obligatoria": True,
+                "es_sancionable": True,
+                "convocante": axel_socio,
+                "reportado_por": None,
+            },
+        )
+        self.stdout.write(f"+ Evento 2 verificado: {ev2.titulo} ({ev2.estado})")
+
+        # 3. Jornada de Mantenimiento Externa (convocatoria personalizada ad-hoc)
+        ev3, _ = EventoInstitucional.objects.update_or_create(
+            titulo="Jornada Operativa de Mantenimiento en Predio Deportivo",
+            defaults={
+                "descripcion": (
+                    "Actividad institucional en exteriores: tareas de pintura, reparación y "
+                    "acondicionamiento de instalaciones."
+                ),
+                "categoria": CategoriaEventoEnum.ACTIVIDAD,
+                "tipo": SubtipoActividadEnum.MANTENIMIENTO,
+                "modalidad": ModalidadEventoEnum.PRESENCIAL_EXTERNA,
+                "lugar": "Predio Deportivo UTN",
+                "ubicacion": "Predio Deportivo UTN - Cancha 2, Los Nogales 1200",
+                "fecha_publicacion": timezone.make_aware(datetime.datetime(2026, 10, 5, 8, 0)),
+                "fecha_programada": timezone.make_aware(datetime.datetime(2026, 10, 10, 9, 0)),
+                "fecha_fin": None,  # Estrictamente opcional según CA8
+                "fecha_hora_cierre_efectivo": timezone.make_aware(
+                    datetime.datetime(2026, 10, 10, 13, 30)
+                ),
+                "fecha_reporte": timezone.make_aware(datetime.datetime(2026, 10, 11, 10, 0)),
+                "tolerancia_tardanza_minutos": 15,
+                "tolerancia_retiro_minutos": 15,
+                "estado": EstadoEventoEnum.CERRADA,
+                "modo_convocatoria": ModoConvocatoriaEnum.PERSONALIZADA,
+                "es_obligatoria": True,
+                "es_sancionable": True,
+                "convocante": diego_socio,
+                "reportado_por": diego_socio,
+                "subcomision": mantenimiento_sub,
+            },
+        )
+        self.stdout.write(f"+ Evento 3 verificado: {ev3.titulo} ({ev3.estado})")
+
+        # Asistencias Evento 3 (Ad-hoc)
+        asist_ev3_data = [
+            (
+                irina_socio,
+                EstadoAsistenciaEventoEnum.PRESENTE,
+                timezone.make_aware(datetime.datetime(2026, 10, 10, 8, 50)),
+                timezone.make_aware(datetime.datetime(2026, 10, 10, 13, 30)),
+                0,
+                0,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Presente cumpliendo tareas asignadas de acondicionamiento edilicio.",
+                "Participación activa durante toda la jornada.",
+                False,
+            ),
+            (
+                malena_socio,
+                EstadoAsistenciaEventoEnum.RETIRO_ANTICIPADO_LEVE,
+                timezone.make_aware(datetime.datetime(2026, 10, 10, 9, 0)),
+                timezone.make_aware(datetime.datetime(2026, 10, 10, 13, 5)),
+                0,
+                25,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Retiro anticipado de 25 minutos por compromiso laboral impostergable.",
+                "Notificó al coordinador antes de retirarse.",
+                False,
+            ),
+            (
+                quimey_socio,
+                EstadoAsistenciaEventoEnum.AUSENTE,
+                None,
+                None,
+                0,
+                0,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Inasistencia sin justificación documental a la jornada operativa.",
+                "Convocado personalizado que no asistió.",
+                False,
+            ),
+            (
+                lucas_socio,
+                EstadoAsistenciaEventoEnum.PRESENTE,
+                timezone.make_aware(datetime.datetime(2026, 10, 10, 9, 5)),
+                timezone.make_aware(datetime.datetime(2026, 10, 10, 13, 30)),
+                5,
+                0,
+                MetodoCapturaAsistenciaEnum.MANUAL,
+                None,
+                "Presente supervisando tareas de cableado e infraestructura.",
+                "Dentro del período de tolerancia de 15 minutos.",
+                False,
+            ),
+        ]
+
+        for (
+            s,
+            est,
+            h_in,
+            h_out,
+            m_tarde,
+            m_ret,
+            metodo,
+            disp,
+            motivo,
+            obs,
+            proc,
+        ) in asist_ev3_data:
+            AsistenciaEvento.objects.update_or_create(
+                evento=ev3,
+                socio=s,
+                defaults={
+                    "estado_asistencia": est,
+                    "hora_registro": h_in,
+                    "hora_salida": h_out,
+                    "minutos_tardanza": m_tarde,
+                    "minutos_retiro_anticipado": m_ret,
+                    "metodo_captura": metodo,
+                    "dispositivo_id": disp,
+                    "motivo": motivo,
+                    "observaciones": obs,
+                    "procesado_disciplinario": proc,
+                },
+            )
+            self.stdout.write(f"  - Asistencia Ad-hoc: {s.legajo} -> {est}")
+
+        # 4. Libro de Llamados y Felicitaciones (atencionFelicitacion)
+        # 4.1 Llamado de atención derivado de la tardanza leve de Félix Fábula (770006)
+        asist_felix = asistencias_ev1.get("770006")
+        if asist_felix:
+            asist_felix.notificado = True
+            asist_felix.fechaNotificacion = datetime.date(2026, 10, 6)
+            asist_felix.save(update_fields=["notificado", "fechaNotificacion"])
+
+        AtencionFelicitacion.objects.update_or_create(
+            socio=felix_socio,
+            defaults={"llamadosAtencion": 1, "felicitaciones": 0},
+        )
+        self.stdout.write(
+            f"+ AtencionFelicitacion verificado para Félix Fábula ({felix_socio.legajo}): 1 llamado"
+        )
+
+        # 4.2 Dos llamados de atención para Malena Marea (770013) (2 pendientes para regla 3:1)
+        AtencionFelicitacion.objects.update_or_create(
+            socio=malena_socio,
+            defaults={"llamadosAtencion": 2, "felicitaciones": 0},
+        )
+        self.stdout.write(
+            f"+ AtencionFelicitacion verificado para {malena_socio.legajo} "
+            "(2 pendientes para regla 3:1)"
+        )
+
+        # 4.3 Lucas Gastiaburu (74907) con 0 llamados (consolidado previamente en EXP-2026-001)
+        AtencionFelicitacion.objects.update_or_create(
+            socio=lucas_socio,
+            defaults={"llamadosAtencion": 0, "felicitaciones": 0},
+        )
+        self.stdout.write(
+            f"+ AtencionFelicitacion verificado para {lucas_socio.legajo} "
+            "(0 llamados tras consolidar EXP-2026-001)"
+        )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "✓ Seed de eventos institucionales y asistencias completado exitosamente."
+            )
+        )

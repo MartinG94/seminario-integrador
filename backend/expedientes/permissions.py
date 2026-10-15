@@ -17,11 +17,25 @@ from socios.models import Role
 __all__ = [
     "CanCreateT01",
     "CanManageCalendar",
+    "CanManageEventos",
     "CanOpenExpedientes",
     "CanTransitionExpedientes",
+    "IsComisionDirectivaOrAdmin",
     "IsImputadoOrTribunal",
     "IsTribunalOrDirectiva",
 ]
+
+
+class IsComisionDirectivaOrAdmin(HasAnyRole):
+    """Acceso restringido a CD y Administradores para programar reuniones y cargar asistencia."""
+
+    allowed_roles = (Role.CD, Role.ADMIN)
+
+
+class CanManageEventos(HasAnyRole):
+    """Autoridades facultadas para gestionar eventos (CD, Tribunal, Fiscalizadora, Admin)."""
+
+    allowed_roles = (Role.CD, Role.ADMIN, Role.TD, Role.FISCALIZADORA)
 
 
 class CanManageCalendar(HasAnyRole):
