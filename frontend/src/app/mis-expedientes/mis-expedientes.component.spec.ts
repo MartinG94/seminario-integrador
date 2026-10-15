@@ -11,7 +11,7 @@ describe('MisExpedientesComponent', () => {
   let notifications: jasmine.SpyObj<NotificationService>;
 
   beforeEach(async(() => {
-    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, FormsModule],
       declarations: [MisExpedientesComponent],
@@ -29,18 +29,175 @@ describe('MisExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('notifica validaciones de T02/T03 sin enviar un descargo inválido', () => {
+  it('notifica validaciones de justificativo sin enviar un descargo inválido', () => {
     const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
     component.expedienteSeleccionado = { id: 'test' } as Expediente;
     component.tipoDescargo = 'T02_CERTIFICADO';
     component.nombreArchivo = '';
+    component.archivosSeleccionados = [];
     component.enviarDescargo();
-    expect(notifications.error).toHaveBeenCalledWith('Es obligatorio adjuntar el comprobante o constancia digital (PDF, JPG o PNG).');
+    expect(notifications.error).toHaveBeenCalledWith('Debe adjuntar al menos un documento.');
     component.tipoDescargo = 'T03_EXTRAORDINARIO';
     component.relatoTexto = '';
     component.enviarDescargo();
-    expect(notifications.error).toHaveBeenCalledWith('Por favor expone detalladamente los hechos y motivos extraordinarios.');
+    expect(notifications.error).toHaveBeenCalledWith('Por favor ingrese el motivo de la justificación.');
+    
+    // Validar límite superior de 2000 caracteres
+    component.relatoTexto = 'X'.repeat(2001);
+    component.enviarDescargo();
+    expect(notifications.error).toHaveBeenCalledWith('El motivo o justificación no puede superar los 2000 caracteres.');
     expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('permite alternar causal a Otro y modela descargo como extraordinario', () => {
+    component.causalSeleccionada = 'Otro';
+    component.onCausalChange();
+    expect(component.tipoDescargo).toBe('T03_EXTRAORDINARIO');
+    expect(component.limiteActual).toBe(5);
+
+    component.causalSeleccionada = 'Compromiso Laboral Comprobable';
+    component.onCausalChange();
+    expect(component.tipoDescargo).toBe('T02_CERTIFICADO');
+    expect(component.limiteActual).toBe(3);
+  });
+
+  describe('Custodia de Evidencias Protegidas (US S3-04)', () => {
+    it('valida límite de hasta 3 comprobantes para causal tipificada considerando evidencias existentes y nuevas', () => {
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      component.evidenciasExistentes = [{ id: 10, nombre_original: 'previo.pdf', tamano_bytes: 1024 }];
+      const file1 = new File(['1'], 'doc1.pdf', { type: 'application/pdf' });
+      const file2 = new File(['2'], 'doc2.pdf', { type: 'application/pdf' });
+      const file3 = new File(['3'], 'doc3.pdf', { type: 'application/pdf' });
+
+      // 1 existente + 3 nuevos = 4 > 3
+      component.onFileSelected({ target: { files: [file1, file2, file3] } });
+      expect(notifications.error).toHaveBeenCalledWith('Solo se admite un máximo de 3 documentos en total.');
+      expect(component.archivosSeleccionados.length).toBe(0);
+    });
+
+    it('valida límite de 5 MB por archivo', () => {
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      const bigFile = new File([''], 'grande.pdf', { type: 'application/pdf' });
+      Object.defineProperty(bigFile, 'size', { value: 6 * 1024 * 1024 });
+
+      component.onFileSelected({ target: { files: [bigFile] } });
+      expect(notifications.error).toHaveBeenCalledWith('El archivo "grande.pdf" supera el límite de 5 MB.');
+      expect(component.archivosSeleccionados.length).toBe(0);
+    });
+
+    it('valida formatos permitidos (PDF, JPG, PNG)', () => {
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      const exeFile = new File(['test'], 'malicioso.exe', { type: 'application/octet-stream' });
+
+      component.onFileSelected({ target: { files: [exeFile] } });
+      expect(notifications.error).toHaveBeenCalledWith('El archivo "malicioso.exe" no tiene un formato válido (PDF, JPG, PNG).');
+      expect(component.archivosSeleccionados.length).toBe(0);
+    });
+
+    it('rechaza archivos que ya están en custodia (evidenciasExistentes)', () => {
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      component.evidenciasExistentes = [{ id: 1, nombre_original: 'comprobante_duplicado.pdf' }];
+      const dupFile = new File(['test'], 'comprobante_duplicado.pdf', { type: 'application/pdf' });
+
+      component.onFileSelected({ target: { files: [dupFile] } });
+      expect(notifications.error).toHaveBeenCalledWith('El documento "comprobante_duplicado.pdf" ya se encuentra adjunto.');
+      expect(component.archivosSeleccionados.length).toBe(0);
+    });
+
+    it('rechaza archivos que ya fueron seleccionados en la tanda actual', () => {
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      const file = new File(['test'], 'repetido.pdf', { type: 'application/pdf' });
+      component.archivosSeleccionados = [file];
+
+      const dupFile = new File(['test'], 'repetido.pdf', { type: 'application/pdf' });
+      component.onFileSelected({ target: { files: [dupFile] } });
+      expect(notifications.error).toHaveBeenCalledWith('El archivo "repetido.pdf" ya está seleccionado.');
+      expect(component.archivosSeleccionados.length).toBe(1);
+    });
+
+    it('abre modal propio de confirmación al querer remover un archivo seleccionado y lo elimina si confirma', () => {
+      const file1 = new File(['1'], 'doc1.pdf', { type: 'application/pdf' });
+      const file2 = new File(['2'], 'doc2.pdf', { type: 'application/pdf' });
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      component.archivosSeleccionados = [file1, file2];
+
+      component.removerArchivo(0);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+      expect(component.modalConfirmacionTitulo).toBe('Quitar archivo');
+
+      component.confirmarAccion();
+      expect(component.modalConfirmacionAbierto).toBeFalse();
+      expect(component.archivosSeleccionados.length).toBe(1);
+      expect(component.archivosSeleccionados[0].name).toBe('doc2.pdf');
+    });
+
+    it('no remueve un archivo si el usuario cancela en el modal propio', () => {
+      const file1 = new File(['1'], 'doc1.pdf', { type: 'application/pdf' });
+      component.archivosSeleccionados = [file1];
+
+      component.removerArchivo(0);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+
+      component.cerrarConfirmacion();
+      expect(component.modalConfirmacionAbierto).toBeFalse();
+      expect(component.archivosSeleccionados.length).toBe(1);
+    });
+
+    it('abre modal propio y remueve evidencia existente tras confirmación', () => {
+      component.evidenciasExistentes = [{ id: 10, nombre_original: 'doc_custodia.pdf' }];
+
+      component.removerEvidenciaExistente(0);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+      expect(component.modalConfirmacionTitulo).toBe('Eliminar documento');
+
+      component.confirmarAccion();
+      expect(component.modalConfirmacionAbierto).toBeFalse();
+      expect(component.evidenciasExistentes.length).toBe(0);
+      expect(notifications.info).toHaveBeenCalledWith('Documento "doc_custodia.pdf" eliminado del justificativo.');
+    });
+
+    it('controla puedeSubirMas ocultando subida al alcanzar límite (3 para T02, 5 para T03)', () => {
+      component.tipoDescargo = 'T02_CERTIFICADO';
+      component.evidenciasExistentes = [
+        { id: 1, nombre_original: 'a.pdf' },
+        { id: 2, nombre_original: 'b.pdf' }
+      ];
+      component.archivosSeleccionados = [new File([''], 'c.pdf')];
+      expect(component.totalComprobantes).toBe(3);
+      expect(component.puedeSubirMas).toBeFalse();
+
+      component.removerArchivo(0);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+      component.confirmarAccion();
+      expect(component.totalComprobantes).toBe(2);
+      expect(component.puedeSubirMas).toBeTrue();
+    });
+
+    it('abre modal propio de confirmación al eliminar justificativo completo y lo procesa al confirmar', () => {
+      const expMock: Expediente = {
+        id: 'EXP-1',
+        numero: 'EXP-001/2026',
+        descargo: { tipo: 'T02_CERTIFICADO', texto: 'test', fecha: '2026-10-10' }
+      } as Expediente;
+
+      const eliminarSpy = spyOn(TestBed.inject(TribunalDataService), 'eliminarDescargo');
+
+      component.eliminarDescargo(expMock);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+      expect(component.modalConfirmacionTitulo).toBe('Eliminar Justificativo');
+      expect(eliminarSpy).not.toHaveBeenCalled();
+
+      component.confirmarAccion();
+      expect(component.modalConfirmacionAbierto).toBeFalse();
+      expect(eliminarSpy).toHaveBeenCalledWith('EXP-1', jasmine.any(Object));
+      expect(notifications.info).toHaveBeenCalledWith('Justificativo del expediente EXP-001/2026 eliminado.');
+    });
+
+    it('formatea adecuadamente el tamaño de archivo en bytes', () => {
+      expect(component.formatFileSize(500)).toBe('500 B');
+      expect(component.formatFileSize(2048)).toBe('2.0 KB');
+      expect(component.formatFileSize(1048576 * 2.5)).toBe('2.50 MB');
+    });
   });
 
   describe('Coloreado de Puntos Totales', () => {
@@ -253,19 +410,42 @@ describe('MisExpedientesComponent', () => {
       expect(component.relatoTexto).toBe('Certificado de examen rendido');
     });
 
-    it('elimina el justificativo al confirmar en el diálogo', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+    it('abre el modal de editar justificativo extraordinario precargando causal como Otro', () => {
+      const expExtraordinario: Expediente = {
+        ...expConDescargo,
+        descargo: {
+          tipo: 'T03_EXTRAORDINARIO',
+          texto: 'Motivos imprevistos',
+          fecha: '2026-10-02'
+        }
+      };
+      component.abrirModalEditarDescargo(expExtraordinario);
+      expect(component.modalAbierto).toBeTrue();
+      expect(component.tipoDescargo).toBe('T03_EXTRAORDINARIO');
+      expect(component.causalSeleccionada).toBe('Otro');
+      expect(component.relatoTexto).toBe('Motivos imprevistos');
+    });
+
+    it('elimina el justificativo al confirmar en el diálogo propio', () => {
       const dataSpy = spyOn(component.dataService, 'eliminarDescargo').and.callThrough();
 
       component.eliminarDescargo(expConDescargo);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+      expect(dataSpy).not.toHaveBeenCalled();
+
+      component.confirmarAccion();
+      expect(component.modalConfirmacionAbierto).toBeFalse();
       expect(dataSpy).toHaveBeenCalledWith('EXP-99', jasmine.objectContaining({ nombre: jasmine.any(String) }));
     });
 
-    it('no elimina el justificativo si el usuario cancela la confirmación', () => {
-      spyOn(window, 'confirm').and.returnValue(false);
+    it('no elimina el justificativo si el usuario cancela en el diálogo propio', () => {
       const dataSpy = spyOn(component.dataService, 'eliminarDescargo').and.callThrough();
 
       component.eliminarDescargo(expConDescargo);
+      expect(component.modalConfirmacionAbierto).toBeTrue();
+
+      component.cerrarConfirmacion();
+      expect(component.modalConfirmacionAbierto).toBeFalse();
       expect(dataSpy).not.toHaveBeenCalled();
     });
 
@@ -351,6 +531,38 @@ describe('MisExpedientesComponent', () => {
       component.ngOnDestroy();
       expect(document.body.classList.contains('modal-open')).toBeFalse();
       expect(document.body.style.overflow).toBe('');
+    });
+  });
+
+  describe('Interacción Drag and Drop y Carga API', () => {
+    it('maneja eventos dragover y dragleave alternando isDragging', () => {
+      const eventMock = {
+        preventDefault: jasmine.createSpy('preventDefault'),
+        stopPropagation: jasmine.createSpy('stopPropagation')
+      } as any;
+
+      component.onDragOver(eventMock);
+      expect(component.isDragging).toBeTrue();
+      expect(eventMock.preventDefault).toHaveBeenCalled();
+
+      component.onDragLeave(eventMock);
+      expect(component.isDragging).toBeFalse();
+    });
+
+    it('procesa archivos arrojados en onFileDropped', () => {
+      const dropSpy = spyOn(component, 'procesarArchivos');
+      const testFile = new File(['content'], 'prueba.pdf', { type: 'application/pdf' });
+      const eventMock = {
+        preventDefault: jasmine.createSpy('preventDefault'),
+        stopPropagation: jasmine.createSpy('stopPropagation'),
+        dataTransfer: {
+          files: [testFile]
+        }
+      } as any;
+
+      component.onFileDropped(eventMock);
+      expect(component.isDragging).toBeFalse();
+      expect(dropSpy).toHaveBeenCalledWith([testFile]);
     });
   });
 

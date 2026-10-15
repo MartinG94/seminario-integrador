@@ -82,7 +82,9 @@ export interface Expediente {
     archivo?: string;
     texto: string;
     fecha: string;
+    evidencias?: any[];
   };
+  evidencias?: any[];
   logsDescargo?: LogJustificativo[];
   votacion?: {
     votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
@@ -141,7 +143,7 @@ export class TribunalDataService {
 
   private expedientesSubject = new BehaviorSubject<Expediente[]>([
     {
-      id: 'EXP-2026-001',
+      id: '2',
       numero: 'EXP-001/2026',
       socio: 'Lucas Gastiaburu',
       legajo: '74907',
@@ -491,7 +493,7 @@ export class TribunalDataService {
   enviarDescargo(
     expedienteId: string, 
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO', 
-    datos: { causal?: string; archivo?: string; texto: string },
+    datos: { causal?: string; archivo?: string; archivos?: string[]; texto: string; evidencias?: any[] },
     usuarioInfo?: { nombre: string; legajo?: string; esEdicion?: boolean }
   ): boolean {
     const current = this.expedientesSubject.value;
@@ -500,7 +502,6 @@ export class TribunalDataService {
 
     const updated = { ...current[index] };
     const esEdicion = usuarioInfo?.esEdicion !== undefined ? usuarioInfo.esEdicion : !!updated.descargo;
-    updated.estado = 'revision_resolucion';
     updated.descargoPresentado = true;
     updated.descargo = {
       tipo,
@@ -509,6 +510,10 @@ export class TribunalDataService {
       texto: datos.texto,
       fecha: new Date().toISOString().split('T')[0]
     };
+    if (datos.evidencias) {
+      updated.evidencias = datos.evidencias;
+      updated.descargo.evidencias = datos.evidencias;
+    }
 
     const usuarioStr = usuarioInfo?.nombre || updated.socio;
     const legajoStr = usuarioInfo?.legajo || updated.legajo;
@@ -552,6 +557,12 @@ export class TribunalDataService {
     const updated = { ...current[index] };
     const descargoAnterior = updated.descargo;
     delete updated.descargo;
+    delete updated.evidencias;
+    delete (updated as any).descargo_tipo;
+    delete (updated as any).descargo_causal;
+    delete (updated as any).descargo_archivo;
+    delete (updated as any).descargo_texto;
+    delete (updated as any).descargo_presentado_at;
     updated.descargoPresentado = false;
     updated.estado = 'justificando';
 

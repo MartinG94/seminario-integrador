@@ -97,6 +97,25 @@ export interface SolicitudT01Payload {
 
 type T01MonitoringResponse = Omit<SolicitudMonitoreo, 'puntos'> & Pick<SolicitudT01, 'puntos'>;
 
+export interface EvidenciaMetadata {
+  id: string;
+  nombre_original: string;
+  extension: string;
+  mime_type: string;
+  tamanio_bytes: number;
+  sha256_hash: string;
+  es_vigente: boolean;
+  created_at: string;
+}
+
+export interface PresentarDescargoPayload {
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal?: string;
+  archivo?: string;
+  texto?: string;
+  evidencia_ids?: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -171,6 +190,35 @@ export class ExpedienteApiService {
 
   obtenerApercibimientosSocio(socioId: number | string): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/socios/${socioId}/apercibimientos/`);
+  }
+
+  subirEvidencias(expedienteId: number | string, files: File[], tipoDescargo?: string): Observable<EvidenciaMetadata[]> {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('archivos', file, file.name);
+    });
+    if (tipoDescargo) {
+      formData.append('tipo_descargo', tipoDescargo);
+    }
+    return this.http.post<EvidenciaMetadata[]>(`${this.apiUrl}/${expedienteId}/evidencia/`, formData);
+  }
+
+  descargarEvidencia(expedienteId: number | string, evidenciaId: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/evidencia/${evidenciaId}/`, {
+      responseType: 'blob'
+    });
+  }
+
+  presentarDescargo(expedienteId: number | string, payload: PresentarDescargoPayload): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${expedienteId}/descargo/`, payload);
+  }
+
+  listarMisExpedientes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/mis-expedientes/`);
+  }
+
+  eliminarDescargo(expedienteId: number | string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
   }
 }
 

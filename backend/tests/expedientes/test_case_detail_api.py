@@ -177,3 +177,80 @@ class TestExpedienteDetailAPI:
         response = client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_api_detail_coimputado_authorized_200(self, socio_ajeno, expediente_caso) -> None:
+        """Co-imputados incluidos en expediente.socios.all() tienen acceso 200 OK (SCRUM-79)."""
+        expediente_caso.socios.add(socio_ajeno)
+
+        client = APIClient()
+        client.force_authenticate(user=socio_ajeno.user)
+
+        url = f"/api/v1/expedientes/{expediente_caso.id}/"
+        response = client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == expediente_caso.id
+
+    def test_api_detail_includes_evidencias_and_socio_atribucion(
+        self, vocal_td, socio_imputado, expediente_caso
+    ) -> None:
+        """El detalle expone evidencias con socio_id y socio_nombre para auditoría del TD."""
+        from expedientes.models import EvidenciaDescargo
+
+        EvidenciaDescargo.objects.create(
+            expediente=expediente_caso,
+            socio=socio_imputado,
+            contenido_blob=b"%PDF-1.4 dummy",
+            nombre_original="certificado_medico.pdf",
+            extension=".pdf",
+            mime_type="application/pdf",
+            tamanio_bytes=1024,
+            sha256_hash="dummyhash123",
+            es_vigente=True,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+
+        url = f"/api/v1/expedientes/{expediente_caso.id}/"
+        response = client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["evidencias"]) == 1
+        ev = data["evidencias"][0]
+        assert ev["nombre_original"] == "certificado_medico.pdf"
+        assert ev["socio_id"] == socio_imputado.id
+        assert ev["socio_nombre"] == "Martín Guillén"
+
+    def test_api_detail_td_sees_descargos_list(
+        self, vocal_td, socio_imputado, expediente_caso
+    ) -> None:
+        """El TD puede auditar la colección completa de descargos por socio (SCRUM-79)."""
+        from expedientes.models import DescargoExpediente
+
+        DescargoExpediente.objects.create(
+            expediente=expediente_caso,
+            socio=socio_imputado,
+            tipo="T02_CERTIFICADO",
+            causal="Examen Académico Universitario en UTN FRC",
+            archivo="constancia.pdf",
+            texto="Rendí examen",
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+
+        url = f"/api/v1/expedientes/{expediente_caso.id}/"
+        response = client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "descargos" in data
+        assert len(data["descargos"]) == 1
+        d = data["descargos"][0]
+        assert d["socio_id"] == socio_imputado.id
+        assert d["socio_legajo"] == "74301"
+        assert d["socio_nombre"] == "Martín Guillén"
+        assert d["tipo"] == "T02_CERTIFICADO"
