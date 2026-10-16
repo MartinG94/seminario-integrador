@@ -111,7 +111,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
-        descargos = list(obj.descargos.all())
+        descargos = [d for d in obj.descargos.all() if d.es_vigente]
         if not descargos:
             return None
         request = self.context.get("request")
@@ -140,7 +140,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
-            return bool(len(obj.descargos.all()) > 0 or obj.descargo_presentado)
+            vigentes = [d for d in obj.descargos.all() if d.es_vigente]
+            return bool(vigentes or obj.descargo_presentado)
         descargo = self._descargo_for_requester(obj)
         if descargo:
             return True
@@ -245,7 +246,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
         ) or user.is_staff
 
-        descargos_list = list(obj.descargos.all())
+        descargos_list = [d for d in obj.descargos.all() if d.es_vigente]
         if not is_authority and socio:
             descargos_list = [d for d in descargos_list if d.socio_id == socio.pk]
         elif not is_authority:
