@@ -22,6 +22,7 @@ from expedientes.filters import ExpedienteFilter
 from expedientes.models import (
     CambioEstadoExpediente,
     DescargoExpediente,
+    DescargoVersion,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
@@ -43,6 +44,7 @@ from expedientes.serializers import (
     CalcularPlazoSerializer,
     CalendarQuerySerializer,
     CaseNotificationAuditSerializer,
+    DescargoVersionSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     EvidenciaMetadataSerializer,
@@ -64,6 +66,7 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
+from socios.models import Role
 
 
 def _actor_for_user(user) -> str:
@@ -393,6 +396,37 @@ class PresentarDescargoView(APIView):
             {"detail": "Justificativo eliminado correctamente."},
             status=status.HTTP_200_OK,
         )
+
+
+class DescargoVersionesView(APIView):
+    """Historial inmutable de versiones del descargo (SCRUM-49 / S3-05).
+
+    - GET /api/v1/expedientes/<pk>/descargo/versiones/
+    - IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto, mismos controles que la
+      lectura de descargos).
+    - El socio imputado ve sólo sus versiones; TD, CD, ADMIN y staff ven las de todos.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsImputadoOrTribunal]
+
+    def get(self, request: Request, pk: int) -> Response:
+        expediente = get_object_or_404(Expediente, pk=pk)
+        self.check_object_permissions(request, expediente)
+
+        versiones = DescargoVersion.objects.filter(descargo__expediente=expediente).select_related(
+            "descargo__socio"
+        )
+        socio = getattr(request.user, "socio", None)
+        es_autoridad = request.user.is_staff or bool(
+            socio and socio.is_enabled and socio.role in (Role.TD, Role.CD, Role.ADMIN)
+        )
+        if not es_autoridad:
+            versiones = versiones.filter(descargo__socio=socio)
+
+        versiones = versiones.prefetch_related("evidencias__socio").order_by(
+            "descargo__socio__legajo", "numero"
+        )
+        return Response(DescargoVersionSerializer(versiones, many=True).data)
 
 
 class EvidenciaUploadView(APIView):

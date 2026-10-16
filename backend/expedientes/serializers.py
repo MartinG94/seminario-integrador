@@ -15,6 +15,7 @@ from expedientes.domain.descargo_rules import (
 )
 from expedientes.models import (
     DescargoExpediente,
+    DescargoVersion,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
@@ -300,6 +301,40 @@ class AperturaExpedienteSerializer(serializers.Serializer):
 class TransicionExpedienteSerializer(serializers.Serializer):
     estado = serializers.ChoiceField(choices=Expediente._meta.get_field("estado").choices)
     motivo = serializers.CharField(max_length=5000)
+
+
+class DescargoVersionSerializer(serializers.ModelSerializer):
+    """Versión inmutable de un descargo para el historial por API (SCRUM-49)."""
+
+    operacion_display = serializers.CharField(source="get_operacion_display", read_only=True)
+    socio_id = serializers.IntegerField(source="descargo.socio_id", read_only=True)
+    socio_legajo = serializers.CharField(source="descargo.socio.legajo", read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+    evidencias = EvidenciaMetadataSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DescargoVersion
+        fields = [
+            "id",
+            "numero",
+            "operacion",
+            "operacion_display",
+            "tipo",
+            "causal",
+            "texto",
+            "archivo",
+            "evidencias",
+            "actor",
+            "socio_id",
+            "socio_legajo",
+            "socio_nombre",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_socio_nombre(self, obj: DescargoVersion) -> str:
+        socio = obj.descargo.socio
+        return f"{socio.first_name} {socio.last_name}".strip()
 
 
 class DescargoExpedienteSerializer(serializers.ModelSerializer):
