@@ -315,3 +315,56 @@ class TestLectoresFiltranPorVigencia:
 
         # Sin descargo vigente no se aplica el cupo de 3 del T02 retirado.
         assert response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.django_db(transaction=True)
+class TestHallazgosDeRevision:
+    """Casos detectados en la revisión independiente de SCRUM-49."""
+
+    def test_retiro_fuera_del_estado_justificando_devuelve_409(
+        self, client, socio, expediente
+    ) -> None:
+        client.post(_url(expediente), {"tipo": T03, "texto": "Escrito."}, format="json")
+        expediente.estado = EstadoExpedienteEnum.ESPERA_RESOLUCION
+        expediente.save(update_fields=["estado"])
+
+        response = client.delete(_url(expediente))
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+        descargo = DescargoExpediente.objects.get(expediente=expediente, socio=socio)
+        assert descargo.es_vigente is True
+        assert descargo.versiones.count() == 1
+
+    def test_retiro_del_unico_titular_sin_coimputados_deja_el_expediente_sin_descargo(
+        self, api_client, make_socio
+    ) -> None:
+        titular = make_socio(legajo="70001")
+        exp = Expediente.objects.create(
+            numero="EXP-602/2026",
+            socio=titular,
+            motivo="Sin coimputados registrados",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now() - timedelta(days=1),
+            plazo_limite_at=timezone.now() + timedelta(days=3),
+        )
+        api_client.force_authenticate(user=titular.user)
+        api_client.post(_url(exp), {"tipo": T03, "texto": "Escrito."}, format="json")
+
+        api_client.delete(_url(exp))
+
+        exp.refresh_from_db()
+        assert exp.descargo_presentado is False
+        assert (
+            api_client.get(f"/api/v1/expedientes/{exp.id}/").json()["descargo_presentado"] is False
+        )
+
+    def test_t03_no_filtra_la_causal_en_la_presentacion(self, client, expediente) -> None:
+        """Decisión D4 del PO: el art. 90 lo juzga el Tribunal, no el formulario."""
+        response = client.post(
+            _url(expediente),
+            {"tipo": T03, "causal": "Negligencia", "texto": "Fundamento libre."},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert DescargoVersion.objects.get(descargo__expediente=expediente).causal == "Negligencia"

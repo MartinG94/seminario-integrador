@@ -160,3 +160,27 @@ class TestHistorialDeVersiones:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_evidencias_de_la_version_no_exponen_la_vigencia_actual(
+    api_client, titular, expediente
+) -> None:
+    """La vigencia actual de la evidencia confundiría al leer versiones antiguas."""
+    evidencia = EvidenciaDescargo.objects.create(
+        expediente=expediente,
+        socio=titular,
+        contenido_blob=b"%PDF-1.4 prueba",
+        nombre_original="prueba.pdf",
+        extension=".pdf",
+        mime_type="application/pdf",
+        tamanio_bytes=15,
+        sha256_hash="d" * 64,
+    )
+    _post_descargo(
+        api_client, titular.user, expediente, texto="Con prueba.", evidencia_ids=[str(evidencia.id)]
+    )
+
+    data = _get_versiones(api_client, titular.user, expediente).json()
+
+    assert "es_vigente" not in data[0]["evidencias"][0]

@@ -273,9 +273,7 @@ class PresentarDescargoView(APIView):
                 ),
                 socio,
             )
-            expediente.descargo_presentado = (
-                expediente.descargos.filter(es_vigente=True).count() >= expediente.socios.count()
-            )
+            expediente.descargo_presentado = self._todos_presentaron(expediente)
             fields_to_update = ["descargo_presentado"]
             if expediente.socio_id == socio.id:
                 expediente.descargo_tipo = validated_data["tipo"]
@@ -319,6 +317,12 @@ class PresentarDescargoView(APIView):
                 status=status.HTTP_200_OK if es_correccion else status.HTTP_201_CREATED,
             )
 
+    @staticmethod
+    def _todos_presentaron(expediente: Expediente) -> bool:
+        """True si hay al menos un descargo vigente y cubre a todos los socios del expediente."""
+        vigentes = expediente.descargos.filter(es_vigente=True).count()
+        return vigentes > 0 and vigentes >= expediente.socios.count()
+
     def delete(self, request: Request, pk: int) -> Response:
         """Retiro lógico del descargo: registra la baja y conserva todo el historial."""
         socio = getattr(request.user, "socio", None)
@@ -340,6 +344,13 @@ class PresentarDescargoView(APIView):
             raise PermissionDenied(
                 "No tiene autorización para gestionar el descargo de este expediente."
             )
+
+        if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
+            msg = (
+                f"El expediente está en '{expediente.get_estado_display()}', "
+                "no admitiendo el retiro del descargo."
+            )
+            return Response({"detail": msg}, status=status.HTTP_409_CONFLICT)
 
         now = timezone.now()
         if not expediente.esta_en_plazo(ahora=now):
@@ -363,9 +374,7 @@ class PresentarDescargoView(APIView):
             es_vigente=False
         )
 
-        expediente.descargo_presentado = (
-            expediente.descargos.filter(es_vigente=True).count() >= expediente.socios.count()
-        )
+        expediente.descargo_presentado = self._todos_presentaron(expediente)
         fields_to_update = ["descargo_presentado"]
         if expediente.socio_id == socio.id:
             expediente.descargo_tipo = ""

@@ -303,6 +303,14 @@ class TransicionExpedienteSerializer(serializers.Serializer):
     motivo = serializers.CharField(max_length=5000)
 
 
+class EvidenciaVersionSerializer(EvidenciaMetadataSerializer):
+    """Metadatos de una evidencia dentro de una versión (sin la vigencia actual)."""
+
+    class Meta(EvidenciaMetadataSerializer.Meta):
+        fields = [f for f in EvidenciaMetadataSerializer.Meta.fields if f != "es_vigente"]
+        read_only_fields = fields
+
+
 class DescargoVersionSerializer(serializers.ModelSerializer):
     """Versión inmutable de un descargo para el historial por API (SCRUM-49)."""
 
@@ -310,7 +318,7 @@ class DescargoVersionSerializer(serializers.ModelSerializer):
     socio_id = serializers.IntegerField(source="descargo.socio_id", read_only=True)
     socio_legajo = serializers.CharField(source="descargo.socio.legajo", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
-    evidencias = EvidenciaMetadataSerializer(many=True, read_only=True)
+    evidencias = EvidenciaVersionSerializer(many=True, read_only=True)
 
     class Meta:
         model = DescargoVersion
