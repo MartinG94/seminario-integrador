@@ -639,6 +639,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     transiciones_permitidas = serializers.SerializerMethodField()
     cantidad_socios = serializers.SerializerMethodField()
+    socios = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -648,6 +649,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "socio",
             "socio_nombre",
             "socio_legajo",
+            "socios",
             "subcomision",
             "estado",
             "estado_display",
@@ -665,8 +667,22 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
     def get_cantidad_socios(self, obj: Expediente) -> int:
-        count = obj.socios.count()
+        socios = list(obj.socios.all())
+        count = len(socios)
         return count if count > 0 else 1
+
+    def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
+        socios = list(obj.socios.all())
+        if not socios and obj.socio:
+            socios = [obj.socio]
+        return [
+            {
+                "id": socio.id,
+                "legajo": socio.legajo,
+                "nombre": f"{socio.first_name} {socio.last_name}",
+            }
+            for socio in socios
+        ]
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])

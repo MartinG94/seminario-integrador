@@ -161,8 +161,17 @@
             </div>
             <h5 class="card-title-text" [title]="exp.motivo">{{ exp.motivo }}</h5>
             
-            <div class="card-bottom">
+            <div class="card-bottom d-flex justify-content-between align-items-center">
               <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
+              <button *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" 
+                      type="button" 
+                      class="btn btn-link btn-sm p-0 m-0 text-info font-weight-bold" 
+                      style="font-size: 11px; text-decoration: none;"
+                      (click)="abrirModalSocios(exp, $event)" 
+                      title="Ver todos los socios involucrados ({{exp.cantidadSocios}} imputados)" 
+                      aria-label="Ver listado completo de socios involucrados">
+                <i class="material-icons" style="font-size: 13px; vertical-align: middle;">group</i> {{exp.cantidadSocios}} imputados
+              </button>
             </div>
           </div>
         </ng-container>
@@ -198,7 +207,17 @@
                   style="cursor: pointer;">
                 <td class="font-weight-bold text-dark">{{exp.numero}}</td>
                 <td>
-                  <div>{{exp.socio}}</div>
+                  <div class="d-flex align-items-center">
+                    <span>{{exp.socio}}</span>
+                    <button *ngIf="exp.cantidadSocios && exp.cantidadSocios > 1" 
+                            type="button" 
+                            class="btn btn-link btn-just-icon btn-sm text-info ml-1 p-0 m-0" 
+                            (click)="abrirModalSocios(exp, $event)" 
+                            title="Ver todos los socios involucrados ({{exp.cantidadSocios}} imputados)" 
+                            aria-label="Ver listado completo de socios involucrados">
+                      <i class="material-icons" style="font-size: 18px;">group</i>
+                    </button>
+                  </div>
                   <small class="text-muted">N° {{exp.legajo}}</small>
                 </td>
                 <td>{{exp.subcomision}}</td>
@@ -431,6 +450,41 @@
         <button mat-raised-button class="btn btn-success" (click)="confirmarFirma()">
           <i class="material-icons" style="font-size: 16px;">fingerprint</i> Aplicar Firma Digital
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Listado de Socios Involucrados (S3-08) -->
+<div *ngIf="modalSociosAbierto" class="modal-backdrop-custom">
+  <div class="modal-dialog-custom">
+    <div class="card" *ngIf="expedienteSeleccionado">
+      <div class="card-header card-header-info">
+        <h4 class="card-title">Listado de Socios Involucrados</h4>
+        <p class="card-category">Expediente: {{expedienteSeleccionado.numero}} &bull; Causa con imputación múltiple</p>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Se detalla la nómina completa de socios involucrados en las actuaciones de la causa <strong>{{expedienteSeleccionado.numero}}</strong>.
+        </p>
+
+        <div class="table-responsive">
+          <table class="table table-hover table-mat">
+            <thead>
+              <th>N° de Socio / Legajo</th>
+              <th>Nombre y Apellido</th>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || [])">
+                <td class="font-weight-bold text-dark">{{s.legajo}}</td>
+                <td>{{s.nombre}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-end">
+        <button mat-button class="btn btn-default" (click)="cerrarModales()" aria-label="Cerrar modal">Cerrar</button>
       </div>
     </div>
   </div>

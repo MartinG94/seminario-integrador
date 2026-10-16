@@ -223,7 +223,7 @@ describe('GestionarExpedientesComponent', () => {
         legajo: '74907', subcomision: 'Subcomisión secundaria',
         motivo: 'Inasistencia a reunión institucional', fechaCreacion: '2026-10-07',
         estado: 'creado', horasRestantes: 24, tipo: 'falta', puntos: -1,
-        urgencia: 'urgente', cantidadSocios: 3,
+        urgencia: 'urgente', cantidadSocios: 1,
         firmas: { juecesFirmantes: ['Juez 1', 'Juez 2', 'Juez 3'] },
         ...overrides
       };
@@ -381,6 +381,127 @@ describe('GestionarExpedientesComponent', () => {
       expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
       expect(expMock.urgencia).toBe('urgente');
       expect(notifications.success).toHaveBeenCalledWith('Urgencia actualizada a "Urgente" exitosamente.');
+    });
+  });
+
+  describe('S3-08: Visualización de socios múltiples', () => {
+    const expUnicoSocio: Expediente = {
+      id: '1',
+      numero: 'EXP-001/2026',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia',
+      fechaCreacion: '2026-03-01',
+      estado: 'creado',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '1', legajo: '74907', nombre: 'Lucas Gastiaburu' }
+      ]
+    };
+
+    const expMultiplesSocios: Expediente = {
+      id: '2',
+      numero: 'EXP-002/2026',
+      socio: 'Lucas Martín Guillén',
+      legajo: '85194',
+      subcomision: 'Cómputos',
+      motivo: 'Falta de informes',
+      fechaCreacion: '2026-03-02',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1.5,
+      cantidadSocios: 2,
+      sociosInvolucrados: [
+        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén' },
+        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez' }
+      ]
+    };
+
+    it('abrirModalSocios debe abrir el modal y seleccionar el expediente deteniendo propagación', () => {
+      const dummyEvent = new MouseEvent('click');
+      spyOn(dummyEvent, 'stopPropagation');
+
+      component.abrirModalSocios(expMultiplesSocios, dummyEvent);
+
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado).toEqual(expMultiplesSocios);
+      expect(dummyEvent.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('cerrarModales debe cerrar modalSociosAbierto y reiniciar expedienteSeleccionado', () => {
+      component.abrirModalSocios(expMultiplesSocios);
+      expect(component.modalSociosAbierto).toBeTrue();
+
+      component.cerrarModales();
+
+      expect(component.modalSociosAbierto).toBeFalse();
+      expect(component.expedienteSeleccionado).toBeNull();
+    });
+
+    it('no debe mostrar botón de múltiples imputados si hay un solo socio en el tablero o tabla', () => {
+      component.expedientes = [expUnicoSocio];
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      // En kanban
+      const kanbanButtons = compiled.querySelectorAll('.card-bottom button');
+      expect(kanbanButtons.length).toBe(0);
+
+      // En tabla
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+      const tableButtons = compiled.querySelectorAll('table tbody tr button.text-info');
+      expect(tableButtons.length).toBe(0);
+    });
+
+    it('debe mostrar botón de múltiples imputados en kanban y abrir modal con listado completo al hacer clic', () => {
+      component.expedientes = [expMultiplesSocios];
+      component.vistaActual = 'kanban';
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const kanbanButton = compiled.querySelector('.card-bottom button') as HTMLButtonElement;
+      expect(kanbanButton).toBeTruthy();
+      expect(kanbanButton.textContent).toContain('2 imputados');
+
+      // Hacer click en kanban
+      kanbanButton.click();
+      fixture.detectChanges();
+
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado?.numero).toBe('EXP-002/2026');
+      expect(component.expedienteSeleccionado?.sociosInvolucrados?.length).toBe(2);
+
+      // Verificar contenido del modal renderizado
+      const modal = compiled.querySelector('.modal-backdrop-custom');
+      expect(modal).toBeTruthy();
+      expect(modal?.textContent).toContain('Listado de Socios Involucrados');
+      expect(modal?.textContent).toContain('85194');
+      expect(modal?.textContent).toContain('Lucas Martín Guillén');
+      expect(modal?.textContent).toContain('87414');
+      expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
+    });
+
+    it('debe mostrar acción en la tabla y abrir modal al hacer clic', () => {
+      component.expedientes = [expMultiplesSocios];
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const tableButton = compiled.querySelector('table tbody tr button.text-info') as HTMLButtonElement;
+      expect(tableButton).toBeTruthy();
+
+      tableButton.click();
+      fixture.detectChanges();
+
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado?.numero).toBe('EXP-002/2026');
+      expect(component.expedienteSeleccionado?.sociosInvolucrados?.length).toBe(2);
     });
   });
 });

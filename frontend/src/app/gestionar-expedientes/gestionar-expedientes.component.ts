@@ -60,6 +60,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalDetalleAbierto = false;
   modalVotacionAbierto = false;
   modalFirmaAbierto = false;
+  modalSociosAbierto = false;
   expedienteSeleccionado: Expediente | null = null;
 
   // Votación
@@ -374,10 +375,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = true;
   }
 
+  abrirModalSocios(exp: Expediente, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expedienteSeleccionado = exp;
+    this.modalSociosAbierto = true;
+  }
+
   cerrarModales(): void {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
   }
 

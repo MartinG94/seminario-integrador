@@ -47,7 +47,7 @@ class TestBoardExpedientesView:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_td_puede_ver_board_con_seis_columnas(
-        self, api_client, authenticate, td_user, expediente_creado
+        self, api_client, authenticate, td_user, socio_user, expediente_creado
     ):
         client = authenticate(td_user)
         response = client.get("/api/v1/expedientes/board/")
@@ -73,6 +73,41 @@ class TestBoardExpedientesView:
         case = col_creado["cases"][0]
         assert case["numero"] == "EXP-2026-001"
         assert case["transiciones_permitidas"] == [EstadoExpedienteEnum.JUSTIFICANDO]
+        assert case["cantidad_socios"] == 1
+        assert "socios" in case
+        assert len(case["socios"]) == 1
+        assert case["socios"][0]["id"] == socio_user.id
+        assert case["socios"][0]["legajo"] == "10002"
+
+    def test_board_con_multiples_socios_involucrados(
+        self, api_client, authenticate, td_user, make_socio
+    ):
+        socio_1 = make_socio(legajo="20001", role=Role.SOCIO)
+        socio_2 = make_socio(legajo="20002", role=Role.SOCIO)
+        exp = Expediente.objects.create(
+            numero="EXP-2026-099",
+            socio=socio_1,
+            motivo="Causa colectiva",
+            puntos=-2.0,
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        exp.socios.set([socio_1, socio_2])
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/")
+        assert response.status_code == status.HTTP_200_OK
+
+        col_creado = response.data["columns"][0]
+        case = next(c for c in col_creado["cases"] if c["numero"] == "EXP-2026-099")
+        assert case["cantidad_socios"] == 2
+        assert len(case["socios"]) == 2
+        legajos = [s["legajo"] for s in case["socios"]]
+        assert "20001" in legajos
+        assert "20002" in legajos
+        for s in case["socios"]:
+            assert "id" in s
+            assert "legajo" in s
+            assert "nombre" in s
 
     def test_cd_puede_ver_board(self, api_client, authenticate, cd_user, expediente_creado):
         client = authenticate(cd_user)

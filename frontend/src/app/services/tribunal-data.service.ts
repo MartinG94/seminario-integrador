@@ -16,6 +16,12 @@ export type EstadoExpediente =
 
 export type NivelUrgencia = 'baja' | 'normal' | 'urgente';
 
+export interface SocioInvolucrado {
+  id: number | string;
+  legajo: string;
+  nombre: string;
+}
+
 export interface BoardCaseDTO {
   id: number;
   numero: string;
@@ -33,6 +39,7 @@ export interface BoardCaseDTO {
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
   cantidad_socios?: number;
+  socios?: SocioInvolucrado[];
 }
 
 export interface BoardColumnDTO {
@@ -73,6 +80,7 @@ export interface Expediente {
   tipo: 'falta' | 'merito';
   puntos: number;
   cantidadSocios?: number;
+  sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
   descargoPresentado?: boolean;
@@ -154,6 +162,10 @@ export class TribunalDataService {
       horasRestantes: 74,
       tipo: 'falta',
       puntos: -1.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907' }
+      ],
       plazoInicioAt: '2026-10-08T18:00:00-03:00',
       plazoLimiteAt: '2026-10-15T18:00:00-03:00',
       descargoPresentado: false
@@ -170,6 +182,11 @@ export class TribunalDataService {
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.5,
+      cantidadSocios: 2,
+      sociosInvolucrados: [
+        { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194' },
+        { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414' }
+      ],
       descargo: {
         tipo: 'T02_CERTIFICADO',
         causal: 'Examen Académico Universitario en UTN FRC',
@@ -483,7 +500,8 @@ export class TribunalDataService {
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',
       puntos: Number(c.puntos),
-      cantidadSocios: c.cantidad_socios || 1,
+      cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
+      sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
       plazoLimiteAt: c.plazo_limite_at || undefined
     };
   }
