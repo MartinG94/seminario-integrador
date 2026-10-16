@@ -1,6 +1,7 @@
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { environment } from '../../environments/environment';
 import { MisExpedientesComponent } from './mis-expedientes.component';
 import { NotificationService } from '../services/notification.service';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
@@ -9,6 +10,8 @@ describe('MisExpedientesComponent', () => {
   let component: MisExpedientesComponent;
   let fixture: ComponentFixture<MisExpedientesComponent>;
   let notifications: jasmine.SpyObj<NotificationService>;
+  let http: HttpTestingController;
+  const apiUrl = `${environment.apiUrl}/expedientes`;
 
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
@@ -22,6 +25,7 @@ describe('MisExpedientesComponent', () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(MisExpedientesComponent);
     component = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
   });
 
@@ -42,11 +46,28 @@ describe('MisExpedientesComponent', () => {
     component.enviarDescargo();
     expect(notifications.error).toHaveBeenCalledWith('Por favor ingrese el motivo de la justificación.');
     
-    // Validar límite superior de 2000 caracteres
-    component.relatoTexto = 'X'.repeat(2001);
+    // Validar límite superior de 5000 caracteres (decisión del PO, igual al T01)
+    component.relatoTexto = 'X'.repeat(5001);
     component.enviarDescargo();
-    expect(notifications.error).toHaveBeenCalledWith('El motivo o justificación no puede superar los 2000 caracteres.');
+    expect(notifications.error).toHaveBeenCalledWith('El motivo o justificación no puede superar los 5000 caracteres.');
     expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('expone el límite de 5000 caracteres y acepta un texto de exactamente ese largo', () => {
+    expect(component.MAX_CARACTERES_JUSTIFICACION).toBe(5000);
+    const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
+    component.expedienteSeleccionado = { id: 'test' } as Expediente;
+    component.tipoDescargo = 'T03_EXTRAORDINARIO';
+    component.causalSeleccionada = 'Otro';
+    component.relatoTexto = 'X'.repeat(5000);
+    component.enviarDescargo();
+    expect(notifications.error).not.toHaveBeenCalledWith(
+      'El motivo o justificación no puede superar los 5000 caracteres.'
+    );
+    const req = http.expectOne({ method: 'POST', url: `${apiUrl}/test/descargo/` });
+    expect(req.request.body.texto.length).toBe(5000);
+    req.flush({ detail: 'ok' }, { status: 201, statusText: 'Created' });
+    expect(submit).toHaveBeenCalled();
   });
 
   it('permite alternar causal a Otro y modela descargo como extraordinario', () => {
@@ -173,7 +194,7 @@ describe('MisExpedientesComponent', () => {
       expect(component.puedeSubirMas).toBeTrue();
     });
 
-    it('abre modal propio de confirmación al eliminar justificativo completo y lo procesa al confirmar', () => {
+    it('abre modal propio de confirmación al retirar el descargo y lo procesa al confirmar el servidor', () => {
       const expMock: Expediente = {
         id: 'EXP-1',
         numero: 'EXP-001/2026',
@@ -184,13 +205,18 @@ describe('MisExpedientesComponent', () => {
 
       component.eliminarDescargo(expMock);
       expect(component.modalConfirmacionAbierto).toBeTrue();
-      expect(component.modalConfirmacionTitulo).toBe('Eliminar Justificativo');
+      expect(component.modalConfirmacionTitulo).toBe('Retirar descargo');
       expect(eliminarSpy).not.toHaveBeenCalled();
 
       component.confirmarAccion();
       expect(component.modalConfirmacionAbierto).toBeFalse();
+      expect(eliminarSpy).not.toHaveBeenCalled();
+
+      http.expectOne({ method: 'DELETE', url: `${apiUrl}/EXP-1/descargo/` }).flush({ detail: 'ok' });
       expect(eliminarSpy).toHaveBeenCalledWith('EXP-1', jasmine.any(Object));
-      expect(notifications.info).toHaveBeenCalledWith('Justificativo del expediente EXP-001/2026 eliminado.');
+      expect(notifications.info).toHaveBeenCalledWith(
+        'Descargo del expediente EXP-001/2026 retirado. Queda registrado en el historial.'
+      );
     });
 
     it('formatea adecuadamente el tamaño de archivo en bytes', () => {
@@ -426,7 +452,7 @@ describe('MisExpedientesComponent', () => {
       expect(component.relatoTexto).toBe('Motivos imprevistos');
     });
 
-    it('elimina el justificativo al confirmar en el diálogo propio', () => {
+    it('retira el descargo al confirmar en el diálogo propio y tras la respuesta del servidor', () => {
       const dataSpy = spyOn(component.dataService, 'eliminarDescargo').and.callThrough();
 
       component.eliminarDescargo(expConDescargo);
@@ -435,6 +461,7 @@ describe('MisExpedientesComponent', () => {
 
       component.confirmarAccion();
       expect(component.modalConfirmacionAbierto).toBeFalse();
+      http.expectOne({ method: 'DELETE', url: `${apiUrl}/EXP-99/descargo/` }).flush({ detail: 'ok' });
       expect(dataSpy).toHaveBeenCalledWith('EXP-99', jasmine.objectContaining({ nombre: jasmine.any(String) }));
     });
 
@@ -453,6 +480,155 @@ describe('MisExpedientesComponent', () => {
       expect(component.getBadgeClaseOperacion('CREACION')).toBe('badge-success');
       expect(component.getBadgeClaseOperacion('EDICION')).toBe('badge-info');
       expect(component.getBadgeClaseOperacion('ELIMINACION')).toBe('badge-danger');
+    });
+  });
+
+  describe('Descargo versionado contra el backend (SCRUM-49)', () => {
+    const expDetalle: Expediente = {
+      id: 'EXP-77',
+      numero: 'EXP-077/2026',
+      tipo: 'falta',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      motivo: 'Inasistencia',
+      subcomision: 'Cómputos',
+      puntos: -1,
+      estado: 'justificando',
+      fechaCreacion: '2026-10-01',
+      horasRestantes: 48
+    } as Expediente;
+
+    const versionesApi = [
+      {
+        id: 1, numero: 1, operacion: 'PRESENTADO', operacion_display: 'Descargo presentado',
+        tipo: 'T03_EXTRAORDINARIO', causal: 'Otro', texto: 'v1', archivo: '', evidencias: [{ id: 'a' }],
+        actor: 'SOCIO_74907', socio_id: 1, socio_legajo: '74907', socio_nombre: 'Lucas Gastiaburu',
+        created_at: '2026-10-16T15:30:00-03:00'
+      },
+      {
+        id: 2, numero: 2, operacion: 'CORREGIDO', operacion_display: 'Descargo corregido dentro del plazo',
+        tipo: 'T02_CERTIFICADO', causal: 'Examen', texto: '', archivo: 'c.pdf', evidencias: [],
+        actor: 'SOCIO_74907', socio_id: 1, socio_legajo: '74907', socio_nombre: 'Lucas Gastiaburu',
+        created_at: '2026-10-16T16:05:00-03:00'
+      },
+      {
+        id: 3, numero: 3, operacion: 'RETIRADO', operacion_display: 'Descargo retirado dentro del plazo',
+        tipo: 'T02_CERTIFICADO', causal: 'Examen', texto: '', archivo: 'c.pdf', evidencias: [],
+        actor: 'SOCIO_74907', socio_id: 1, socio_legajo: '74907', socio_nombre: 'Lucas Gastiaburu',
+        created_at: '2026-10-16T17:00:00-03:00'
+      }
+    ];
+
+    it('carga el historial real del backend al abrir el detalle y lo mapea a la tabla de auditoría', () => {
+      component.abrirModalDetalle(expDetalle);
+      http.expectOne({ method: 'GET', url: `${apiUrl}/EXP-77/descargo/versiones/` }).flush(versionesApi);
+
+      expect(component.historialDescargo.length).toBe(3);
+      const [primera, segunda, tercera] = component.historialDescargo;
+      expect(primera.operacion).toBe('CREACION');
+      expect(primera.accionLabel).toBe('Descargo presentado');
+      expect(primera.usuario).toBe('Lucas Gastiaburu (Legajo 74907)');
+      expect(primera.timestamp).toBe('16/10/2026 15:30 hs');
+      expect(primera.detalle).toBe('v1 · T03 (Extraordinario) · Otro · 1 comprobante');
+      expect(segunda.operacion).toBe('EDICION');
+      expect(segunda.detalle).toBe('v2 · T02 (Certificado) · Examen · 0 comprobantes');
+      expect(tercera.operacion).toBe('ELIMINACION');
+    });
+
+    it('limpia el historial al cerrar el detalle y no depende del estado local del navegador', () => {
+      component.abrirModalDetalle({ ...expDetalle, logsDescargo: [{ operacion: 'CREACION', accionLabel: 'Local', usuario: 'x', timestamp: 'y', detalle: 'z' }] });
+      http.expectOne(`${apiUrl}/EXP-77/descargo/versiones/`).flush(versionesApi);
+      expect(component.historialDescargo.map(h => h.accionLabel)).not.toContain('Local');
+
+      component.cerrarModalDetalle();
+      expect(component.historialDescargo).toEqual([]);
+    });
+
+    it('informa el error si no puede cargar el historial y deja la tabla vacía', () => {
+      component.abrirModalDetalle(expDetalle);
+      http.expectOne(`${apiUrl}/EXP-77/descargo/versiones/`).flush({ detail: 'Error' }, { status: 500, statusText: 'Server Error' });
+
+      expect(component.historialDescargo).toEqual([]);
+      expect(notifications.error).toHaveBeenCalledWith('No se pudo cargar el historial del descargo.');
+    });
+
+    it('refresca el historial cuando el retiro se confirma con el detalle abierto', () => {
+      component.abrirModalDetalle({ ...expDetalle, descargo: { tipo: 'T03_EXTRAORDINARIO', texto: 'x', fecha: '2026-10-16' } });
+      http.expectOne(`${apiUrl}/EXP-77/descargo/versiones/`).flush([]);
+
+      component.eliminarDescargo(component.expedienteDetalle as Expediente);
+      component.confirmarAccion();
+      http.expectOne({ method: 'DELETE', url: `${apiUrl}/EXP-77/descargo/` }).flush({ detail: 'ok' });
+
+      http.expectOne({ method: 'GET', url: `${apiUrl}/EXP-77/descargo/versiones/` }).flush(versionesApi);
+      expect(component.historialDescargo.length).toBe(3);
+    });
+
+    it('no registra el retiro ni avisa éxito si el servidor lo rechaza fuera de plazo', () => {
+      const localSpy = spyOn(component.dataService, 'eliminarDescargo');
+      component.eliminarDescargo({ ...expDetalle, descargo: { tipo: 'T03_EXTRAORDINARIO', texto: 'x', fecha: '2026-10-16' } });
+      component.confirmarAccion();
+
+      http.expectOne({ method: 'DELETE', url: `${apiUrl}/EXP-77/descargo/` }).flush(
+        { detail: 'El plazo perentorio de 5 días hábiles ha expirado.' },
+        { status: 409, statusText: 'Conflict' }
+      );
+
+      expect(localSpy).not.toHaveBeenCalled();
+      expect(notifications.info).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('El plazo perentorio de 5 días hábiles ha expirado.');
+    });
+
+    it('no confirma la presentación y conserva el modal si el servidor rechaza el descargo', () => {
+      const localSpy = spyOn(component.dataService, 'enviarDescargo');
+      component.expedienteSeleccionado = expDetalle;
+      component.modalAbierto = true;
+      component.tipoDescargo = 'T03_EXTRAORDINARIO';
+      component.causalSeleccionada = 'Otro';
+      component.relatoTexto = 'Exposición de los hechos.';
+
+      component.enviarDescargo();
+      http.expectOne({ method: 'POST', url: `${apiUrl}/EXP-77/descargo/` }).flush(
+        { detail: 'El plazo perentorio de 5 días hábiles ha expirado.' },
+        { status: 409, statusText: 'Conflict' }
+      );
+
+      expect(localSpy).not.toHaveBeenCalled();
+      expect(notifications.success).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('El plazo perentorio de 5 días hábiles ha expirado.');
+      expect(component.modalAbierto).toBeTrue();
+    });
+
+    it('muestra el primer error de validación del campo cuando el servidor responde 400', () => {
+      component.expedienteSeleccionado = expDetalle;
+      component.modalAbierto = true;
+      component.tipoDescargo = 'T03_EXTRAORDINARIO';
+      component.causalSeleccionada = 'Otro';
+      component.relatoTexto = 'Texto';
+
+      component.enviarDescargo();
+      http.expectOne({ method: 'POST', url: `${apiUrl}/EXP-77/descargo/` }).flush(
+        { texto: ['El motivo o justificación no puede superar los 5000 caracteres.'] },
+        { status: 400, statusText: 'Bad Request' }
+      );
+
+      expect(notifications.error).toHaveBeenCalledWith('El motivo o justificación no puede superar los 5000 caracteres.');
+    });
+
+    it('registra la presentación y refresca el historial cuando el servidor la acepta', () => {
+      const localSpy = spyOn(component.dataService, 'enviarDescargo');
+      component.expedienteSeleccionado = expDetalle;
+      component.modalAbierto = true;
+      component.tipoDescargo = 'T03_EXTRAORDINARIO';
+      component.causalSeleccionada = 'Otro';
+      component.relatoTexto = 'Exposición de los hechos.';
+
+      component.enviarDescargo();
+      http.expectOne({ method: 'POST', url: `${apiUrl}/EXP-77/descargo/` }).flush({ detail: 'ok' }, { status: 201, statusText: 'Created' });
+
+      expect(localSpy).toHaveBeenCalled();
+      expect(notifications.success).toHaveBeenCalledWith('Justificación y documentos registrados correctamente.');
+      expect(component.modalAbierto).toBeFalse();
     });
   });
 
