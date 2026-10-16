@@ -9,6 +9,10 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from expedientes.domain.descargo_rules import (
+    MAX_DESCARGO_TEXT_LENGTH,
+    descargo_text_too_long_message,
+)
 from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
@@ -312,10 +316,8 @@ class PresentarDescargoSerializer(serializers.Serializer):
     texto = serializers.CharField(
         required=False,
         allow_blank=True,
-        max_length=2000,
-        error_messages={
-            "max_length": "El motivo o justificación no puede superar los 2000 caracteres.",
-        },
+        max_length=MAX_DESCARGO_TEXT_LENGTH,
+        error_messages={"max_length": descargo_text_too_long_message()},
     )
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(),
@@ -342,10 +344,8 @@ class PresentarDescargoSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
                 )
-            if len(texto) > 2000:
-                raise serializers.ValidationError(
-                    {"texto": "El motivo o justificación no puede superar los 2000 caracteres."}
-                )
+            if len(texto) > MAX_DESCARGO_TEXT_LENGTH:
+                raise serializers.ValidationError({"texto": descargo_text_too_long_message()})
             if len(evidencia_ids) > 5:
                 raise serializers.ValidationError(
                     {"evidencia_ids": "El Formulario T03 admite un máximo de 5 comprobantes."}

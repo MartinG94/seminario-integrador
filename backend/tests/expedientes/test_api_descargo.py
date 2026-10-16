@@ -374,10 +374,10 @@ class TestDescargoEndpoint:
         exp.refresh_from_db()
         assert exp.descargo_presentado is True
 
-    def test_descargo_t03_rechaza_texto_excediendo_limite_2000_caracteres(
+    def test_descargo_t03_rechaza_texto_excediendo_limite_5000_caracteres(
         self, api_client: APIClient, socio_titular: Socio
     ) -> None:
-        """Si el texto de justificación supera los 2000 caracteres, responde 400 Bad Request."""
+        """Si el texto de justificación supera los 5000 caracteres, responde 400 Bad Request."""
         api_client.force_authenticate(user=socio_titular.user)
 
         exp = Expediente.objects.create(
@@ -391,7 +391,7 @@ class TestDescargoEndpoint:
         )
         exp.socios.add(socio_titular)
 
-        texto_largo = "A" * 2001
+        texto_largo = "A" * 5001
         payload = {
             "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
             "texto": texto_largo,
@@ -403,18 +403,18 @@ class TestDescargoEndpoint:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         body = response.json()
         assert "texto" in body
-        assert "2000" in str(body["texto"])
+        assert "5000" in str(body["texto"])
 
-    def test_descargo_t03_acepta_texto_en_limite_2000_caracteres(
+    def test_descargo_t03_acepta_texto_en_limite_5000_caracteres(
         self, api_client: APIClient, socio_titular: Socio
     ) -> None:
-        """Un texto de exactamente 2000 caracteres es válido y se procesa correctamente."""
+        """Un texto de exactamente 5000 caracteres es válido y se procesa correctamente."""
         api_client.force_authenticate(user=socio_titular.user)
 
         exp = Expediente.objects.create(
             numero="EXP-209/2026",
             socio=socio_titular,
-            motivo="Causa abierta para probar límite exacto de 2000 caracteres",
+            motivo="Causa abierta para probar límite exacto de 5000 caracteres",
             estado=EstadoExpedienteEnum.JUSTIFICANDO,
             plazo_inicio_at=timezone.now(),
             plazo_limite_at=timezone.now() + timedelta(days=3),
@@ -422,7 +422,7 @@ class TestDescargoEndpoint:
         )
         exp.socios.add(socio_titular)
 
-        texto_exacto = "B" * 2000
+        texto_exacto = "B" * 5000
         payload = {
             "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
             "texto": texto_exacto,
