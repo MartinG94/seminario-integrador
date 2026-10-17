@@ -229,6 +229,21 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 9.1 Sprint 3 — Desglose Atómico: S3-05 / SCRUM-49 (Presentar T03 Extraordinario con Fundamento Libre)
+
+> **Historia de Usuario:** S3-05 / SCRUM-49: Presentar T03 extraordinario con fundamento libre.  
+> **Criterios de Aceptación:** CA1 (distinción T02/T03 sin regresiones; el cambio de modalidad en plazo queda como versión), CA2 (cada alta/corrección genera una versión inmutable con sus evidencias; el retiro no destruye datos), CA3 (mismo plazo y controles de acceso), límite de 5.000 caracteres y historial real desde la API. CA4 (vinculación de fundamento/precedente por el TD) se movió a SCRUM-53 por decisión del PO.
+
+- [x] **TS3-05.1 Límite de 5.000 Caracteres [TDD]:** Constante única `MAX_DESCARGO_TEXT_LENGTH` en `backend/expedientes/domain/descargo_rules.py`, usada por el serializer, y límite equivalente en el frontend.
+- [x] **TS3-05.2 Modelo de Versiones y Migraciones [TDD]:** `DescargoVersion` inmutable, evidencias protegidas contra borrado en cascada, migración de esquema `0013` y backfill reversible `0014` con la versión 1 de los descargos existentes.
+- [x] **TS3-05.3 Versionado, Retiro Lógico y Re-presentación [TDD]:** `PresentarDescargoView` versiona cada alta, corrección y cambio T02↔T03; el retiro pasa a ser lógico (`RETIRADO`, solo en estado `justificando` y dentro del plazo) y los lectores filtran por vigencia.
+- [x] **TS3-05.4 Endpoint de Historial `GET /descargo/versiones/` [TDD]:** Historial ordenado por `numero` con permisos por rol (socio titular, TD, CD y ADMIN).
+- [x] **TS3-05.5 Frontend: Historial desde la API y Panel de Detalle Sincronizado:** `obtenerVersionesDescargo` alimenta el «Registro de Operaciones y Auditoría» en `mis-expedientes`, el botón pasa a «Retirar Descargo» y el panel abierto se actualiza con la lista del backend.
+- [x] **TS3-05.6 Verificación Integral y Consistencia PO:** 633 tests de backend en Pytest y 238 de frontend en Karma en verde; `ruff check` y `ruff format --check` limpios; `notasPO.md` sin modificaciones.
+- [x] **TS3-05.7 Prueba Manual en Navegador:** Recorrido completo (presentar, corregir, retirar, re-presentar y ver historial) en `localhost:4200`, validado por el equipo.
+
+---
+
 ## 10. Sprint 3 — Investigación I+D: SCRUM-76 (Investigación y Especificación de IA — Laya System 1, Datos, Hardware y SLMs)
 
 > **Tarea de I+D:** SCRUM-76: Investigar Laya (System 1), requerimientos de fine-tuning/datos/hardware y evaluación de SLMs (<4B) con RAG, CAG y MAG.  

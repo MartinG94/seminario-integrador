@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
-import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
+import { TribunalDataService, Expediente, LogJustificativo } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
-import { ExpedienteApiService, EvidenciaMetadata } from '../services/expediente-api.service';
+import { ExpedienteApiService, EvidenciaMetadata, DescargoVersionDto, OperacionDescargo } from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -32,7 +32,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   readonly LIMITE_T02 = 3;
   readonly LIMITE_T03 = 5;
   readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-  readonly MAX_CARACTERES_JUSTIFICACION = 2000;
+  readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
   esEdicion = false;
 
@@ -97,6 +97,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       next: (expedientesApi) => {
         if (expedientesApi && Array.isArray(expedientesApi) && expedientesApi.length > 0) {
           this.misExpedientes = expedientesApi.map(e => this.mapearExpedienteApi(e));
+          this.sincronizarDetalleAbierto();
           this.actualizarSaldoNeto();
         } else {
           this.filtrarMisExpedientes();
@@ -106,6 +107,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.filtrarMisExpedientes();
       }
     });
+  }
+
+  /** El detalle abierto es una copia: se reapunta a la lista recién recibida para que botones y avisos reflejen el backend. */
+  private sincronizarDetalleAbierto(): void {
+    if (!this.expedienteDetalle) return;
+    const actualizado = this.misExpedientes.find(e => e.id === this.expedienteDetalle!.id);
+    if (actualizado) {
+      this.expedienteDetalle = actualizado;
+    }
   }
 
   private mapearExpedienteApi(raw: any): Expediente {
@@ -219,16 +229,103 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   modalDetalleAbierto = false;
   expedienteDetalle: Expediente | null = null;
 
+  /** Historial inmutable del descargo, proveniente del backend (no del estado local). */
+  historialDescargo: LogJustificativo[] = [];
+
   abrirModalDetalle(exp: Expediente): void {
     this.expedienteDetalle = exp;
     this.modalDetalleAbierto = true;
     this.actualizarScrollBloqueo();
+    this.cargarHistorialDescargo(exp.id);
   }
 
   cerrarModalDetalle(): void {
     this.modalDetalleAbierto = false;
     this.expedienteDetalle = null;
+    this.historialDescargo = [];
     this.actualizarScrollBloqueo();
+  }
+
+  /** Consulta las versiones del descargo y las mapea a las filas de la tabla de auditoría. */
+  private cargarHistorialDescargo(expedienteId: string): void {
+    this.expedienteApi.obtenerVersionesDescargo(expedienteId).subscribe({
+      next: (versiones) => {
+        if (this.expedienteDetalle?.id !== expedienteId) {
+          return;
+        }
+        this.historialDescargo = versiones.map(v => this.mapearVersionAFila(v));
+      },
+      error: () => {
+        this.historialDescargo = [];
+        this.notifications.error('No se pudo cargar el historial del descargo.');
+      }
+    });
+  }
+
+  private refrescarHistorialSiEstaAbierto(expedienteId: string): void {
+    if (this.modalDetalleAbierto && this.expedienteDetalle?.id === expedienteId) {
+      this.cargarHistorialDescargo(expedienteId);
+    }
+  }
+
+  private mapearVersionAFila(v: DescargoVersionDto): LogJustificativo {
+    const operaciones: { [op in OperacionDescargo]: LogJustificativo['operacion'] } = {
+      PRESENTADO: 'CREACION',
+      CORREGIDO: 'EDICION',
+      RETIRADO: 'ELIMINACION'
+    };
+    const modalidad = v.tipo === 'T02_CERTIFICADO' ? 'T02 (Certificado)' : 'T03 (Extraordinario)';
+    const cantidad = (v.evidencias || []).length;
+    const comprobantes = `${cantidad} ${cantidad === 1 ? 'comprobante' : 'comprobantes'}`;
+    const partes = [`v${v.numero}`, modalidad];
+    if (v.causal) {
+      partes.push(v.causal);
+    }
+    partes.push(comprobantes);
+
+    return {
+      operacion: operaciones[v.operacion],
+      accionLabel: v.operacion_display,
+      usuario: `${v.socio_nombre} (Legajo ${v.socio_legajo})`,
+      legajo: v.socio_legajo,
+      timestamp: this.formatearMarcaDeTiempo(v.created_at),
+      detalle: partes.join(' · ')
+    };
+  }
+
+  private formatearMarcaDeTiempo(iso: string): string {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) {
+      return '';
+    }
+    const partes = new Intl.DateTimeFormat('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(d);
+    const mapa: { [key: string]: string } = {};
+    partes.forEach(p => (mapa[p.type] = p.value));
+    return `${mapa['day']}/${mapa['month']}/${mapa['year']} ${mapa['hour']}:${mapa['minute']} hs`;
+  }
+
+  /** Extrae el mensaje legible de una respuesta de error de la API (detail o primer error de campo). */
+  private extraerMensajeError(err: any, porDefecto: string): string {
+    const cuerpo = err?.error;
+    if (cuerpo?.detail) {
+      return String(cuerpo.detail);
+    }
+    if (cuerpo && typeof cuerpo === 'object') {
+      const primero = Object.values(cuerpo)[0];
+      const mensaje = Array.isArray(primero) ? primero[0] : primero;
+      if (typeof mensaje === 'string' && mensaje) {
+        return mensaje;
+      }
+    }
+    return porDefecto;
   }
 
   /**
@@ -323,24 +420,29 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   eliminarDescargo(exp: Expediente): void {
     if (!exp.descargo) return;
     this.abrirConfirmacion(
-      'Eliminar Justificativo',
-      `¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`,
+      'Retirar descargo',
+      `¿Confirmas el retiro del descargo del expediente ${exp.numero}? Tu escrito y sus comprobantes quedan registrados en el historial y podrás presentar uno nuevo mientras el plazo siga abierto.`,
       () => {
         const perfil = this.auth.getPerfil();
         const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
         const legajo = perfil?.legajo || '';
-        
-        // Sincronizar con backend: dar de baja el descargo y sus evidencias (es_vigente = false)
+
+        // El retiro es una baja lógica en el backend: solo se refleja en pantalla si el servidor lo acepta.
         this.expedienteApi.eliminarDescargo(exp.id).subscribe({
           next: () => {
+            this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
             this.cargarMisExpedientes();
+            this.refrescarHistorialSiEstaAbierto(exp.id);
+            this.notifications.info(
+              `Descargo del expediente ${exp.numero} retirado. Queda registrado en el historial.`
+            );
           },
-          error: () => {}
+          error: (err) => {
+            this.notifications.error(
+              this.extraerMensajeError(err, 'No se pudo retirar el descargo. Intenta nuevamente.')
+            );
+          }
         });
-
-        this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
-        this.cargarMisExpedientes();
-        this.notifications.info(`Justificativo del expediente ${exp.numero} eliminado.`);
       }
     );
   }
@@ -607,6 +709,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.subiendoArchivos = false;
       this.cerrarModal();
       this.cargarMisExpedientes();
+      this.refrescarHistorialSiEstaAbierto(expId);
+    };
+
+    // Un rechazo del servidor (plazo vencido, validación) no se presenta como éxito ni cierra el modal.
+    const manejarRechazo = (err: any) => {
+      this.subiendoArchivos = false;
+      this.notifications.error(
+        this.extraerMensajeError(err, 'No se pudo registrar el descargo. Intenta nuevamente.')
+      );
     };
 
     if (this.archivosSeleccionados.length > 0) {
@@ -622,7 +733,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
             evidencia_ids: ids
           }).subscribe({
             next: () => guardarEnDataService(todasLasEvidencias),
-            error: () => guardarEnDataService(todasLasEvidencias)
+            error: manejarRechazo
           });
         },
         error: (err) => {
@@ -640,7 +751,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         evidencia_ids: ids
       }).subscribe({
         next: () => guardarEnDataService(this.evidenciasExistentes),
-        error: () => guardarEnDataService(this.evidenciasExistentes)
+        error: manejarRechazo
       });
     }
   }

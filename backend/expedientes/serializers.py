@@ -9,8 +9,13 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from expedientes.domain.descargo_rules import (
+    MAX_DESCARGO_TEXT_LENGTH,
+    descargo_text_too_long_message,
+)
 from expedientes.models import (
     DescargoExpediente,
+    DescargoVersion,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
@@ -107,7 +112,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
-        descargos = list(obj.descargos.all())
+        descargos = [d for d in obj.descargos.all() if d.es_vigente]
         if not descargos:
             return None
         request = self.context.get("request")
@@ -136,7 +141,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
-            return bool(len(obj.descargos.all()) > 0 or obj.descargo_presentado)
+            vigentes = [d for d in obj.descargos.all() if d.es_vigente]
+            return bool(vigentes or obj.descargo_presentado)
         descargo = self._descargo_for_requester(obj)
         if descargo:
             return True
@@ -241,7 +247,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
         ) or user.is_staff
 
-        descargos_list = list(obj.descargos.all())
+        descargos_list = [d for d in obj.descargos.all() if d.es_vigente]
         if not is_authority and socio:
             descargos_list = [d for d in descargos_list if d.socio_id == socio.pk]
         elif not is_authority:
@@ -297,6 +303,48 @@ class TransicionExpedienteSerializer(serializers.Serializer):
     motivo = serializers.CharField(max_length=5000)
 
 
+class EvidenciaVersionSerializer(EvidenciaMetadataSerializer):
+    """Metadatos de una evidencia dentro de una versión (sin la vigencia actual)."""
+
+    class Meta(EvidenciaMetadataSerializer.Meta):
+        fields = [f for f in EvidenciaMetadataSerializer.Meta.fields if f != "es_vigente"]
+        read_only_fields = fields
+
+
+class DescargoVersionSerializer(serializers.ModelSerializer):
+    """Versión inmutable de un descargo para el historial por API (SCRUM-49)."""
+
+    operacion_display = serializers.CharField(source="get_operacion_display", read_only=True)
+    socio_id = serializers.IntegerField(source="descargo.socio_id", read_only=True)
+    socio_legajo = serializers.CharField(source="descargo.socio.legajo", read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+    evidencias = EvidenciaVersionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DescargoVersion
+        fields = [
+            "id",
+            "numero",
+            "operacion",
+            "operacion_display",
+            "tipo",
+            "causal",
+            "texto",
+            "archivo",
+            "evidencias",
+            "actor",
+            "socio_id",
+            "socio_legajo",
+            "socio_nombre",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_socio_nombre(self, obj: DescargoVersion) -> str:
+        socio = obj.descargo.socio
+        return f"{socio.first_name} {socio.last_name}".strip()
+
+
 class DescargoExpedienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DescargoExpediente
@@ -312,10 +360,8 @@ class PresentarDescargoSerializer(serializers.Serializer):
     texto = serializers.CharField(
         required=False,
         allow_blank=True,
-        max_length=2000,
-        error_messages={
-            "max_length": "El motivo o justificación no puede superar los 2000 caracteres.",
-        },
+        max_length=MAX_DESCARGO_TEXT_LENGTH,
+        error_messages={"max_length": descargo_text_too_long_message()},
     )
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(),
@@ -342,10 +388,8 @@ class PresentarDescargoSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
                 )
-            if len(texto) > 2000:
-                raise serializers.ValidationError(
-                    {"texto": "El motivo o justificación no puede superar los 2000 caracteres."}
-                )
+            if len(texto) > MAX_DESCARGO_TEXT_LENGTH:
+                raise serializers.ValidationError({"texto": descargo_text_too_long_message()})
             if len(evidencia_ids) > 5:
                 raise serializers.ValidationError(
                     {"evidencia_ids": "El Formulario T03 admite un máximo de 5 comprobantes."}
