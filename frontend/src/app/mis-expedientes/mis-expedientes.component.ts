@@ -97,6 +97,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       next: (expedientesApi) => {
         if (expedientesApi && Array.isArray(expedientesApi) && expedientesApi.length > 0) {
           this.misExpedientes = expedientesApi.map(e => this.mapearExpedienteApi(e));
+          this.sincronizarDetalleAbierto();
           this.actualizarSaldoNeto();
         } else {
           this.filtrarMisExpedientes();
@@ -106,6 +107,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.filtrarMisExpedientes();
       }
     });
+  }
+
+  /** El detalle abierto es una copia: se reapunta a la lista recién recibida para que botones y avisos reflejen el backend. */
+  private sincronizarDetalleAbierto(): void {
+    if (!this.expedienteDetalle) return;
+    const actualizado = this.misExpedientes.find(e => e.id === this.expedienteDetalle!.id);
+    if (actualizado) {
+      this.expedienteDetalle = actualizado;
+    }
   }
 
   private mapearExpedienteApi(raw: any): Expediente {

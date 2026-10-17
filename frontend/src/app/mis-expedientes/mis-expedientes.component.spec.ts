@@ -630,6 +630,66 @@ describe('MisExpedientesComponent', () => {
       expect(notifications.success).toHaveBeenCalledWith('Justificación y documentos registrados correctamente.');
       expect(component.modalAbierto).toBeFalse();
     });
+
+    describe('Panel de detalle sincronizado con la lista del backend', () => {
+      const listaUrl = `${apiUrl}/mis-expedientes/`;
+      const rawExpediente = (extra: object = {}) => ({
+        id: 'EXP-77', numero: 'EXP-077/2026', socio_nombre: 'Lucas Gastiaburu', socio_legajo: '74907',
+        motivo: 'Inasistencia', estado: 'justificando', puntos: -1, ...extra
+      });
+
+      /** Recarga la lista y responde solo la última petición, ignorando las del arranque del componente. */
+      const recargarLista = (respuesta: any[]) => {
+        component.cargarMisExpedientes();
+        const pendientes = http.match(listaUrl);
+        pendientes[pendientes.length - 1].flush(respuesta);
+      };
+
+      beforeEach(() => {
+        http.match(listaUrl).forEach(req => req.flush([]));
+      });
+
+      it('muestra el descargo recién presentado sin cerrar el detalle ni depender del almacén local', () => {
+        component.abrirModalDetalle(expDetalle);
+        http.expectOne(`${apiUrl}/EXP-77/descargo/versiones/`).flush([]);
+        expect(component.expedienteDetalle?.descargo).toBeUndefined();
+
+        recargarLista([rawExpediente({
+          descargo_presentado: true, descargo_tipo: 'T03_EXTRAORDINARIO',
+          descargo_causal: 'Otro', descargo_texto: 'Exposición de los hechos.'
+        })]);
+
+        expect(component.expedienteDetalle?.id).toBe('EXP-77');
+        expect(component.expedienteDetalle?.descargo?.tipo).toBe('T03_EXTRAORDINARIO');
+        expect(component.expedienteDetalle?.descargoPresentado).toBeTrue();
+      });
+
+      it('quita el descargo del detalle abierto cuando la lista del backend ya no lo tiene vigente', () => {
+        component.abrirModalDetalle({ ...expDetalle, descargoPresentado: true, descargo: { tipo: 'T03_EXTRAORDINARIO', texto: 'x', fecha: '2026-10-16' } });
+        http.expectOne(`${apiUrl}/EXP-77/descargo/versiones/`).flush([]);
+
+        recargarLista([rawExpediente({ descargo_presentado: false })]);
+
+        expect(component.expedienteDetalle?.descargo).toBeUndefined();
+        expect(component.expedienteDetalle?.descargoPresentado).toBeFalse();
+      });
+
+      it('conserva el detalle abierto si el expediente no figura en la lista recargada', () => {
+        component.abrirModalDetalle(expDetalle);
+        http.expectOne(`${apiUrl}/EXP-77/descargo/versiones/`).flush([]);
+
+        recargarLista([rawExpediente({ id: 'OTRO-1', numero: 'EXP-001/2026' })]);
+
+        expect(component.expedienteDetalle).toBe(expDetalle);
+      });
+
+      it('no abre ningún detalle al recargar la lista con el panel cerrado', () => {
+        recargarLista([rawExpediente()]);
+
+        expect(component.expedienteDetalle).toBeNull();
+        expect(component.modalDetalleAbierto).toBeFalse();
+      });
+    });
   });
 
   describe('Bloqueo de scroll al abrir modales', () => {
