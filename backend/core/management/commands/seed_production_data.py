@@ -17,7 +17,16 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
 
-from expedientes.models import EstadoExpedienteEnum, Expediente, UrgenciaExpedienteEnum
+from django.utils import timezone
+
+from expedientes.domain.calendar import compute_business_deadline
+from expedientes.domain.holiday_provider import DbHolidayProvider
+from expedientes.models import (
+    EstadoExpedienteEnum,
+    Expediente,
+    ExpedienteNumberSequence,
+    UrgenciaExpedienteEnum,
+)
 from socios.models import Role, Socio, Subcomision
 
 UserModel = get_user_model()
@@ -192,9 +201,12 @@ class Command(BaseCommand):
         elena_socio = Socio.objects.get(legajo="770005")
         malena_socio = Socio.objects.get(legajo="770013")
 
+        # Limpiar identificadores legacy si existieran (ej. EXP-2026-001..009)
+        Expediente.objects.filter(numero__regex=r"^EXP-2026-\d+").delete()
+
         expedientes_def = [
             (
-                "EXP-2026-001",
+                "EXP-0001/2026",
                 lucas_socio,
                 EstadoExpedienteEnum.EMITIDO,
                 Decimal("-1.00"),
@@ -203,7 +215,7 @@ class Command(BaseCommand):
                 True,
             ),
             (
-                "EXP-2026-002",
+                "EXP-0002/2026",
                 lucas_socio,
                 EstadoExpedienteEnum.EMITIDO,
                 Decimal("2.00"),
@@ -215,7 +227,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-003",
+                "EXP-0003/2026",
                 lucas_socio,
                 EstadoExpedienteEnum.JUSTIFICANDO,
                 Decimal("-1.50"),
@@ -227,7 +239,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-004",
+                "EXP-0004/2026",
                 lucas_guillen,
                 EstadoExpedienteEnum.CREADO,
                 Decimal("1.00"),
@@ -239,7 +251,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-005",
+                "EXP-0005/2026",
                 diego_socio,
                 EstadoExpedienteEnum.EMITIDO,
                 Decimal("1.00"),
@@ -251,7 +263,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-006",
+                "EXP-0006/2026",
                 axel_socio,
                 EstadoExpedienteEnum.REVISION_RESOLUCION,
                 Decimal("-1.00"),
@@ -260,7 +272,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-007",
+                "EXP-0007/2026",
                 nicolas_socio,
                 EstadoExpedienteEnum.ESPERA_RESOLUCION,
                 Decimal("-1.00"),
@@ -269,7 +281,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-008",
+                "EXP-0008/2026",
                 elena_socio,
                 EstadoExpedienteEnum.EMITIDO,
                 Decimal("3.00"),
@@ -278,7 +290,7 @@ class Command(BaseCommand):
                 False,
             ),
             (
-                "EXP-2026-009",
+                "EXP-0009/2026",
                 malena_socio,
                 EstadoExpedienteEnum.EMITIDO,
                 Decimal("-2.00"),
@@ -288,8 +300,20 @@ class Command(BaseCommand):
             ),
         ]
 
+        holiday_provider = DbHolidayProvider()
+
         with transaction.atomic():
             for numero, socio_dest, estado, puntos, motivo, urgencia, descargo in expedientes_def:
+                plazo_inicio = None
+                plazo_limite = None
+                if estado == EstadoExpedienteEnum.JUSTIFICANDO:
+                    plazo_inicio = timezone.now()
+                    plazo_limite = compute_business_deadline(
+                        start_at=plazo_inicio,
+                        business_days=5,
+                        holiday_provider=holiday_provider,
+                    )
+
                 exp, created_exp = Expediente.objects.get_or_create(
                     numero=numero,
                     defaults={
@@ -299,6 +323,8 @@ class Command(BaseCommand):
                         "motivo": motivo,
                         "urgencia": urgencia,
                         "descargo_presentado": descargo,
+                        "plazo_inicio_at": plazo_inicio,
+                        "plazo_limite_at": plazo_limite,
                     },
                 )
                 if not created_exp:
@@ -308,13 +334,23 @@ class Command(BaseCommand):
                     exp.motivo = motivo
                     exp.urgencia = urgencia
                     exp.descargo_presentado = descargo
+                    if estado == EstadoExpedienteEnum.JUSTIFICANDO and (
+                        not exp.plazo_limite_at or exp.plazo_limite_at < timezone.now()
+                    ):
+                        exp.plazo_inicio_at = plazo_inicio
+                        exp.plazo_limite_at = plazo_limite
                     exp.save()
-                if not exp.socios.filter(pk=socio_dest.pk).exists():
-                    exp.socios.add(socio_dest)
+                exp.socios.set([socio_dest])
 
                 self.stdout.write(
                     f"+ Expediente verificado: {numero} ({estado}) para {socio_dest.legajo}"
                 )
+
+        # Actualizar secuencia correlativa anual para que nuevas aperturas sigan desde EXP-0010/2026
+        seq, _ = ExpedienteNumberSequence.objects.get_or_create(year=2026)
+        if seq.last_value < len(expedientes_def):
+            seq.last_value = len(expedientes_def)
+            seq.save(update_fields=["last_value"])
 
         # 5. Sincronizar libro mayor (tribunal_puntajeaplicado) y caché (tribunal_puntajegeneral)
         # Consistencia: Sum(emitidos) == Sum(puntaje_aplicado) == puntajegeneral.puntos
