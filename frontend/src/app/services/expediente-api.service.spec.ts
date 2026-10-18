@@ -86,4 +86,35 @@ describe('ExpedienteApiService', () => {
     req.flush(null);
     expect(completed).toBeTrue();
   });
+  it('registra la decisión sobre una causal T02 con su fundamento', () => {
+    service.registrarDecisionCausal(12, 5, { decision: 'REJECTED', fundamento: 'El certificado no acredita la fecha.' })
+      .subscribe(decision => {
+        expect(decision.version).toBe(2);
+      });
+
+    const req = http.expectOne(`${environment.apiUrl}/expedientes/12/descargos/5/decisiones/`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ decision: 'REJECTED', fundamento: 'El certificado no acredita la fecha.' });
+    req.flush({ id: 9, descargo: 5, version: 2, decision: 'REJECTED' });
+  });
+
+  it('lista el historial de decisiones de una causal', () => {
+    service.listarDecisionesCausal(12, 5).subscribe(decisiones => {
+      expect(decisiones.map(d => d.version)).toEqual([2, 1]);
+    });
+
+    const req = http.expectOne(`${environment.apiUrl}/expedientes/12/descargos/5/decisiones/`);
+    expect(req.request.method).toBe('GET');
+    req.flush([{ version: 2 }, { version: 1 }]);
+  });
+
+  it('obtiene el detalle del expediente con sus descargos', () => {
+    service.obtenerDetalleExpediente(12).subscribe(detalle => {
+      expect(detalle.descargos.length).toBe(1);
+    });
+
+    const req = http.expectOne(`${environment.apiUrl}/expedientes/12/`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ id: 12, numero: 'EXP-0012/2026', estado: 'revision_resolucion', descargos: [{ id: 5 }] });
+  });
 });

@@ -463,6 +463,72 @@ class AuditoriaDescargaEvidencia(models.Model):
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
+class DecisionCausalEnum(models.TextChoices):
+    """Resultado de la valoración de una causal tipificada T02 (S4-02)."""
+
+    ACCEPTED = "ACCEPTED", "Aceptada"
+    REJECTED = "REJECTED", "Rechazada"
+
+
+class DecisionCausalDescargo(models.Model):
+    """Decisión inmutable y versionada de un vocal sobre la causal de un descargo T02.
+
+    Cada nueva valoración crea una versión; las anteriores se conservan (CA3).
+    Guarda una copia del descargo valorado sin modificar el original (CA4).
+    """
+
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.PROTECT,
+        related_name="decisiones_causal",
+    )
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="decisiones_causal",
+    )
+    version = models.PositiveIntegerField()
+    decision = models.CharField(max_length=10, choices=DecisionCausalEnum.choices)
+    regla_sugerida = models.CharField(max_length=10, choices=DecisionCausalEnum.choices)
+    se_aparta_de_regla = models.BooleanField(default=False)
+    fundamento = models.TextField(blank=True)
+    evidencias_valoradas = models.JSONField(default=list, blank=True)
+    descargo_snapshot = models.JSONField(default=dict)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="decisiones_causal",
+    )
+    autor_legajo = models.CharField(max_length=20)
+    autor_rol = models.CharField(max_length=20)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_decision_causal"
+        verbose_name = "Decisión sobre causal T02"
+        verbose_name_plural = "Decisiones sobre causales T02"
+        ordering = ["descargo_id", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["descargo", "version"],
+                name="unique_decision_version_per_descargo",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Descargo {self.descargo_id} v{self.version}: {self.get_decision_display()}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError(
+                "Una decisión registrada es inmutable; registrá una nueva versión."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Una decisión registrada no puede eliminarse.")
+
+
 class SolicitudT01(models.Model):
     class Estado(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"

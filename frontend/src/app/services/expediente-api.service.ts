@@ -116,6 +116,58 @@ export interface PresentarDescargoPayload {
   evidencia_ids?: string[];
 }
 
+export type DecisionCausal = 'ACCEPTED' | 'REJECTED';
+
+export interface EvidenciaValorada {
+  id: string;
+  nombre_original: string;
+  sha256_hash: string;
+}
+
+export interface DecisionCausalDTO {
+  id: number;
+  descargo: number;
+  version: number;
+  decision: DecisionCausal;
+  decision_display: string;
+  regla_sugerida: DecisionCausal;
+  regla_sugerida_display: string;
+  se_aparta_de_regla: boolean;
+  fundamento: string;
+  evidencias_valoradas: EvidenciaValorada[];
+  autor: string;
+  autor_legajo: string;
+  autor_rol: string;
+  created_at: string;
+}
+
+export interface RegistrarDecisionCausalPayload {
+  decision: DecisionCausal;
+  fundamento?: string;
+  evidencia_ids?: string[];
+}
+
+export interface DescargoDetalleDTO {
+  id: number;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal: string;
+  texto: string;
+  presentado_at: string | null;
+  evidencias: EvidenciaMetadata[];
+  regla_sugerida?: DecisionCausal;
+  decisiones_causal?: DecisionCausalDTO[];
+}
+
+export interface ExpedienteDetalleDTO {
+  id: number;
+  numero: string;
+  estado: string;
+  descargos: DescargoDetalleDTO[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -189,6 +241,27 @@ export class ExpedienteApiService {
 
   eliminarDescargo(expedienteId: number | string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
+  }
+
+  obtenerDetalleExpediente(expedienteId: number | string): Observable<ExpedienteDetalleDTO> {
+    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/`);
+  }
+
+  listarDecisionesCausal(expedienteId: number | string, descargoId: number): Observable<DecisionCausalDTO[]> {
+    return this.http.get<DecisionCausalDTO[]>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/decisiones/`
+    );
+  }
+
+  registrarDecisionCausal(
+    expedienteId: number | string,
+    descargoId: number,
+    payload: RegistrarDecisionCausalPayload
+  ): Observable<DecisionCausalDTO> {
+    return this.http.post<DecisionCausalDTO>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/decisiones/`,
+      payload
+    );
   }
 }
 

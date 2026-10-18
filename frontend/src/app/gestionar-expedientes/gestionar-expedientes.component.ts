@@ -2,7 +2,21 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
+import {
+  DecisionCausal,
+  DescargoDetalleDTO,
+  ExpedienteApiService
+} from '../services/expediente-api.service';
 import { Subscription } from 'rxjs';
+
+const ESTADOS_DECISION_CAUSAL = ['revision_resolucion', 'espera_resolucion'];
+export const MIN_FUNDAMENTO_CAUSAL = 20;
+
+interface BorradorDecisionCausal {
+  decision: DecisionCausal | '';
+  fundamento: string;
+  evidenciaIds: string[];
+}
 
 @Component({
   selector: 'app-gestionar-expedientes',
@@ -81,16 +95,27 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   failedToLoadBoard = false;
   cargando = false;
 
+  // Decisión por causal T02 (S4-02)
+  causalesT02: DescargoDetalleDTO[] = [];
+  cargandoCausales = false;
+  borradoresCausal: { [descargoId: number]: BorradorDecisionCausal } = {};
+  registrandoCausal: { [descargoId: number]: boolean } = {};
+
   private subs: Subscription[] = [];
 
   constructor(
     public dataService: TribunalDataService,
     private auth: AuthService,
-    private notifications: NotificationService
+    private notifications: NotificationService,
+    private expedienteApi: ExpedienteApiService
   ) {}
 
   get puedeVotarOFirmar(): boolean {
     return this.auth.tieneRol('TD', 'ADMIN');
+  }
+
+  get puedeResolverCausales(): boolean {
+    return this.auth.tieneRol('TD');
   }
 
   ngOnInit(): void {
@@ -362,6 +387,88 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.modalDetalleAbierto = true;
+    this.causalesT02 = [];
+    if (ESTADOS_DECISION_CAUSAL.includes(exp.estado) && this.auth.tieneRol('TD', 'CD', 'ADMIN')) {
+      this.cargarCausalesT02(exp.id);
+    }
+  }
+
+  cargarCausalesT02(expedienteId: number | string): void {
+    this.cargandoCausales = true;
+    this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
+      next: detalle => {
+        this.causalesT02 = (detalle.descargos || []).filter(d => d.tipo === 'T02_CERTIFICADO');
+        this.borradoresCausal = {};
+        this.causalesT02.forEach(d => {
+          this.borradoresCausal[d.id] = {
+            decision: '',
+            fundamento: '',
+            evidenciaIds: (d.evidencias || []).map(ev => ev.id)
+          };
+        });
+        this.cargandoCausales = false;
+      },
+      error: err => {
+        this.cargandoCausales = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar las causales.'));
+      }
+    });
+  }
+
+  etiquetaDecision(decision?: DecisionCausal | ''): string {
+    if (decision === 'ACCEPTED') return 'Aceptar';
+    if (decision === 'REJECTED') return 'Rechazar';
+    return '';
+  }
+
+  requiereFundamento(descargo: DescargoDetalleDTO): boolean {
+    const decision = this.borradoresCausal[descargo.id]?.decision;
+    return decision === 'REJECTED' || (!!decision && decision !== descargo.regla_sugerida);
+  }
+
+  evidenciaValorada(descargo: DescargoDetalleDTO, evidenciaId: string): boolean {
+    return !!this.borradoresCausal[descargo.id]?.evidenciaIds.includes(evidenciaId);
+  }
+
+  alternarEvidencia(descargo: DescargoDetalleDTO, evidenciaId: string): void {
+    const borrador = this.borradoresCausal[descargo.id];
+    if (!borrador) return;
+    borrador.evidenciaIds = borrador.evidenciaIds.includes(evidenciaId)
+      ? borrador.evidenciaIds.filter(id => id !== evidenciaId)
+      : [...borrador.evidenciaIds, evidenciaId];
+  }
+
+  registrarDecisionCausal(descargo: DescargoDetalleDTO): void {
+    const borrador = this.borradoresCausal[descargo.id];
+    if (!this.expedienteSeleccionado || !borrador || this.registrandoCausal[descargo.id]) return;
+    if (!borrador.decision) {
+      this.notifications.error('Elegí si aceptás o rechazás la causal.');
+      return;
+    }
+    const fundamento = borrador.fundamento.trim();
+    if (this.requiereFundamento(descargo) && fundamento.length < MIN_FUNDAMENTO_CAUSAL) {
+      this.notifications.error(`Escribí un fundamento de al menos ${MIN_FUNDAMENTO_CAUSAL} caracteres.`);
+      return;
+    }
+
+    this.registrandoCausal[descargo.id] = true;
+    this.expedienteApi.registrarDecisionCausal(this.expedienteSeleccionado.id, descargo.id, {
+      decision: borrador.decision,
+      fundamento,
+      evidencia_ids: borrador.evidenciaIds
+    }).subscribe({
+      next: decision => {
+        this.registrandoCausal[descargo.id] = false;
+        descargo.decisiones_causal = [decision, ...(descargo.decisiones_causal || [])];
+        borrador.decision = '';
+        borrador.fundamento = '';
+        this.notifications.success(`Decisión registrada (versión ${decision.version}).`);
+      },
+      error: err => {
+        this.registrandoCausal[descargo.id] = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la decisión.'));
+      }
+    });
   }
 
   abrirVotacion(exp: Expediente): void {
@@ -379,6 +486,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
     this.expedienteSeleccionado = null;
+    this.causalesT02 = [];
   }
 
   confirmarVotacion(): void {

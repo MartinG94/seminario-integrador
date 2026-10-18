@@ -10,6 +10,7 @@ import { NotificationService } from '../services/notification.service';
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
+import { DecisionCausalDTO, DescargoDetalleDTO, ExpedienteApiService } from '../services/expediente-api.service';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -381,6 +382,151 @@ describe('GestionarExpedientesComponent', () => {
       expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
       expect(expMock.urgencia).toBe('urgente');
       expect(notifications.success).toHaveBeenCalledWith('Urgencia actualizada a "Urgente" exitosamente.');
+    });
+  });
+  describe('Decisión por causal T02 (S4-02)', () => {
+    let api: ExpedienteApiService;
+    const fundamento = 'El certificado no acredita la fecha de la reunión.';
+
+    const expRevision = {
+      id: '12',
+      numero: 'EXP-0012/2026',
+      socio: 'Ana Pérez',
+      legajo: '76001',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia',
+      fechaCreacion: '2026-10-01',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1
+    } as Expediente;
+
+    const descargoT02 = (): DescargoDetalleDTO => ({
+      id: 5,
+      socio_id: 3,
+      socio_legajo: '76001',
+      socio_nombre: 'Ana Pérez',
+      tipo: 'T02_CERTIFICADO',
+      causal: 'Enfermedad certificada',
+      texto: 'Adjunto certificado.',
+      presentado_at: '2026-10-05T10:00:00Z',
+      evidencias: [{ id: 'ev-1', nombre_original: 'certificado.pdf' } as any],
+      regla_sugerida: 'ACCEPTED',
+      decisiones_causal: []
+    });
+
+    const decisionRegistrada = { id: 1, version: 1, decision: 'REJECTED', decision_display: 'Rechazada' } as DecisionCausalDTO;
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+    });
+
+    function abrirComoTribunal(): DescargoDetalleDTO {
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
+      const descargo = descargoT02();
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 12,
+        numero: 'EXP-0012/2026',
+        estado: 'revision_resolucion',
+        descargos: [descargo, { ...descargoT02(), id: 6, tipo: 'T03_EXTRAORDINARIO' }]
+      }));
+      component.abrirDetalle(expRevision);
+      return component.causalesT02[0];
+    }
+
+    it('carga sólo las causales T02 al abrir un expediente en revisión', () => {
+      abrirComoTribunal();
+
+      expect(api.obtenerDetalleExpediente).toHaveBeenCalledWith('12');
+      expect(component.causalesT02.map(d => d.id)).toEqual([5]);
+      expect(component.borradoresCausal[5].evidenciaIds).toEqual(['ev-1']);
+    });
+
+    it('no carga causales fuera de la etapa de revisión', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      spyOn(api, 'obtenerDetalleExpediente');
+
+      component.abrirDetalle({ ...expRevision, estado: 'justificando' } as Expediente);
+
+      expect(api.obtenerDetalleExpediente).not.toHaveBeenCalled();
+      expect(component.causalesT02).toEqual([]);
+    });
+
+    it('exige fundamento al rechazar y no llama a la API sin él', () => {
+      const descargo = abrirComoTribunal();
+      spyOn(api, 'registrarDecisionCausal');
+      component.borradoresCausal[5].decision = 'REJECTED';
+
+      expect(component.requiereFundamento(descargo)).toBeTrue();
+      component.registrarDecisionCausal(descargo);
+
+      expect(api.registrarDecisionCausal).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('Escribí un fundamento de al menos 20 caracteres.');
+    });
+
+    it('exige fundamento al apartarse de la regla sugerida', () => {
+      const descargo = abrirComoTribunal();
+      descargo.regla_sugerida = 'REJECTED';
+      component.borradoresCausal[5].decision = 'ACCEPTED';
+
+      expect(component.requiereFundamento(descargo)).toBeTrue();
+    });
+
+    it('acepta siguiendo la regla sin fundamento', () => {
+      const descargo = abrirComoTribunal();
+      component.borradoresCausal[5].decision = 'ACCEPTED';
+
+      expect(component.requiereFundamento(descargo)).toBeFalse();
+    });
+
+    it('registra la decisión con la evidencia valorada y suma la versión al historial', () => {
+      const descargo = abrirComoTribunal();
+      spyOn(api, 'registrarDecisionCausal').and.returnValue(of(decisionRegistrada));
+      component.borradoresCausal[5].decision = 'REJECTED';
+      component.borradoresCausal[5].fundamento = `  ${fundamento}  `;
+
+      component.registrarDecisionCausal(descargo);
+
+      expect(api.registrarDecisionCausal).toHaveBeenCalledWith('12', 5, {
+        decision: 'REJECTED',
+        fundamento,
+        evidencia_ids: ['ev-1']
+      });
+      expect(descargo.decisiones_causal?.[0]).toBe(decisionRegistrada);
+      expect(component.borradoresCausal[5].decision).toBe('');
+      expect(notifications.success).toHaveBeenCalledWith('Decisión registrada (versión 1).');
+    });
+
+    it('permite quitar un comprobante de la valoración', () => {
+      const descargo = abrirComoTribunal();
+
+      component.alternarEvidencia(descargo, 'ev-1');
+
+      expect(component.evidenciaValorada(descargo, 'ev-1')).toBeFalse();
+    });
+
+    it('informa el error del servidor mediante el servicio de notificaciones', () => {
+      const descargo = abrirComoTribunal();
+      spyOn(api, 'registrarDecisionCausal').and.returnValue(
+        throwError(() => ({ status: 409, error: { detail: 'El expediente no admite decisiones.' } }))
+      );
+      component.borradoresCausal[5].decision = 'ACCEPTED';
+
+      component.registrarDecisionCausal(descargo);
+
+      expect(notifications.error).toHaveBeenCalledWith('El expediente no admite decisiones.');
+      expect(component.registrandoCausal[5]).toBeFalse();
+    });
+
+    it('muestra el panel con el formulario para el Tribunal', () => {
+      abrirComoTribunal();
+      fixture.detectChanges();
+
+      const panel: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-causales-t02"]');
+      expect(panel).toBeTruthy();
+      expect(panel.textContent).toContain('Enfermedad certificada');
+      expect(panel.querySelector('.btn-registrar-causal')).toBeTruthy();
     });
   });
 });

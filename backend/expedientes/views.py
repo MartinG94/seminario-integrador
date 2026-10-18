@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from expedientes.domain.calendar import compute_business_deadline
+from expedientes.domain.causal_resolution import CausalDecision
 from expedientes.domain.evidence_validator import EvidenceValidationError, EvidenceValidator
 from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.filters import ExpedienteFilter
@@ -33,6 +34,7 @@ from expedientes.permissions import (
     CanCreateT01,
     CanManageCalendar,
     CanOpenExpedientes,
+    CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
     IsTribunalOrDirectiva,
@@ -42,6 +44,7 @@ from expedientes.serializers import (
     CalcularPlazoSerializer,
     CalendarQuerySerializer,
     CaseNotificationAuditSerializer,
+    DecisionCausalSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     EvidenciaMetadataSerializer,
@@ -49,11 +52,18 @@ from expedientes.serializers import (
     HolidaySerializer,
     MisSolicitudesT01Serializer,
     PresentarDescargoSerializer,
+    RegistrarDecisionCausalSerializer,
     SolicitudT01Serializer,
     TransicionExpedienteSerializer,
     UpdateUrgenciaExpedienteSerializer,
 )
 from expedientes.services.board_service import build_board_payload
+from expedientes.services.causal_resolution_service import (
+    CausalResolutionNotFound,
+    CausalResolutionService,
+    CausalResolutionStateError,
+    CausalResolutionValidationError,
+)
 from expedientes.services.evidence_service import EvidenceService
 from expedientes.services.opening_notification_service import (
     CaseNotificationQueryService,
@@ -555,6 +565,48 @@ class DispatchCaseOpeningView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class DecisionCausalView(APIView):
+    """Decisiones versionadas de un vocal sobre la causal T02 de un descargo (S4-02).
+
+    - GET: historial de versiones (TD, CD y Administrador).
+    - POST: registra una nueva versión (sólo TD) sin modificar el descargo (CA4).
+    """
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "POST":
+            return [permissions.IsAuthenticated(), CanResolveCausal()]
+        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
+
+    def get(self, request: Request, pk: int, descargo_id: int) -> Response:
+        try:
+            descargo = CausalResolutionService.get_descargo(pk, descargo_id)
+        except CausalResolutionNotFound as exc:
+            raise NotFound(str(exc)) from exc
+        decisiones = descargo.decisiones_causal.select_related("autor")
+        return Response(DecisionCausalSerializer(decisiones, many=True).data)
+
+    def post(self, request: Request, pk: int, descargo_id: int) -> Response:
+        serializer = RegistrarDecisionCausalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            decision = CausalResolutionService.decide(
+                expediente_id=pk,
+                descargo_id=descargo_id,
+                decision=CausalDecision(data["decision"]),
+                fundamento=data["fundamento"],
+                evidencia_ids=data.get("evidencia_ids"),
+                user=request.user,
+            )
+        except CausalResolutionNotFound as exc:
+            raise NotFound(str(exc)) from exc
+        except CausalResolutionStateError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except CausalResolutionValidationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
 # Backward-compatible alias for existing imports
 DespacharNotificacionAperturaView = DispatchCaseOpeningView
 
@@ -602,6 +654,7 @@ class ExpedienteDetailView(APIView):
                 "socios",
                 "cambios_estado",
                 "descargos__socio",
+                "descargos__decisiones_causal__autor",
                 "evidencias__socio",
             )
             .first()

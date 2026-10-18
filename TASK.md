@@ -246,7 +246,23 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 11. Instrucciones para la Actualización de este Archivo
+## 11. Sprint 4 — Desglose Atómico: S4-02 (Resolver Causal T02 con Fundamento Trazable)
+
+> **Spec de Referencia:** [`specs/006-resolver-causal-t02/spec.md`](specs/006-resolver-causal-t02/spec.md)  
+> **Plan Técnico:** [`specs/006-resolver-causal-t02/plan.md`](specs/006-resolver-causal-t02/plan.md)  
+> **Tareas:** [`specs/006-resolver-causal-t02/tasks.md`](specs/006-resolver-causal-t02/tasks.md)
+
+- [x] **TS4-02.1 Dominio de decisión por causal [TDD]:** Regla sugerida y fundamento obligatorio al rechazar o apartarse de la regla.
+- [x] **TS4-02.2 Modelo inmutable y migración [TDD]:** `DecisionCausalDescargo` versionado por descargo, sin modificación ni eliminación.
+- [x] **TS4-02.3 Servicio de aplicación [TDD]:** Etapa procesal, T02, evidencia vigente, versión y copia del descargo valorado.
+- [x] **TS4-02.4 Endpoints REST y permisos [TDD]:** `GET`/`POST /api/v1/expedientes/{id}/descargos/{descargo_id}/decisiones/` (registro exclusivo TD).
+- [x] **TS4-02.5 Servicio frontend y DTOs [TDD]:** Métodos de detalle, historial y registro en `ExpedienteApiService`.
+- [x] **TS4-02.6 Panel "Causales T02" en el detalle del TD:** Aceptar/Rechazar, fundamento, comprobantes valorados e historial.
+- [x] **TS4-02.7 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff` y control contra `notasPO.md`.
+
+---
+
+## 12. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

@@ -319,6 +319,75 @@
           <p class="mt-2 mb-0"><strong>Exposición:</strong> {{expedienteSeleccionado.descargo.texto}}</p>
         </div>
 
+        <!-- Decisión por causal T02 (S4-02) -->
+        <section *ngIf="cargandoCausales || causalesT02.length" class="mt-3 p-3 bg-light rounded border" aria-labelledby="titulo-causales-t02">
+          <h5 id="titulo-causales-t02" class="font-weight-bold text-dark mb-2">
+            <i class="material-icons text-info" aria-hidden="true" style="vertical-align: middle;">fact_check</i> Causales T02
+          </h5>
+          <p *ngIf="cargandoCausales" class="text-muted small mb-0" role="status">Cargando causales…</p>
+
+          <div *ngFor="let d of causalesT02; let ultimo = last" class="causal-t02" [class.border-bottom]="!ultimo" [class.pb-3]="!ultimo" [class.mb-3]="!ultimo">
+            <p class="mb-1"><strong>{{d.socio_legajo}} - {{d.socio_nombre}}</strong></p>
+            <p class="mb-1"><strong>Causal:</strong> {{d.causal}}</p>
+            <p class="mb-2 small">
+              <strong>Regla sugerida:</strong> {{etiquetaDecision(d.regla_sugerida)}}
+              <span class="text-muted">({{d.evidencias.length ? 'con comprobante' : 'sin comprobante'}})</span>
+            </p>
+
+            <div *ngIf="puedeResolverCausales && borradoresCausal[d.id]">
+              <fieldset class="mb-2">
+                <legend class="small font-weight-bold mb-1">Comprobantes valorados</legend>
+                <p *ngIf="!d.evidencias.length" class="text-muted small mb-0">Sin comprobantes.</p>
+                <div *ngFor="let ev of d.evidencias" class="form-check">
+                  <label class="form-check-label small">
+                    <input type="checkbox" class="form-check-input"
+                           [checked]="evidenciaValorada(d, ev.id)"
+                           (change)="alternarEvidencia(d, ev.id)">
+                    {{ev.nombre_original}}
+                  </label>
+                </div>
+              </fieldset>
+
+              <div class="btn-group btn-group-sm mb-2" role="group" [attr.aria-label]="'Decisión sobre la causal de ' + d.socio_nombre">
+                <button type="button" class="btn btn-sm btn-aceptar-causal"
+                        [ngClass]="borradoresCausal[d.id].decision === 'ACCEPTED' ? 'btn-success' : 'btn-outline-secondary'"
+                        [attr.aria-pressed]="borradoresCausal[d.id].decision === 'ACCEPTED'"
+                        (click)="borradoresCausal[d.id].decision = 'ACCEPTED'">Aceptar</button>
+                <button type="button" class="btn btn-sm btn-rechazar-causal"
+                        [ngClass]="borradoresCausal[d.id].decision === 'REJECTED' ? 'btn-danger' : 'btn-outline-secondary'"
+                        [attr.aria-pressed]="borradoresCausal[d.id].decision === 'REJECTED'"
+                        (click)="borradoresCausal[d.id].decision = 'REJECTED'">Rechazar</button>
+              </div>
+
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold" [attr.for]="'fundamento-causal-' + d.id">
+                  Fundamento<span *ngIf="requiereFundamento(d)"> (obligatorio)</span>
+                </label>
+                <textarea class="form-control" rows="3" maxlength="5000"
+                          [id]="'fundamento-causal-' + d.id"
+                          [(ngModel)]="borradoresCausal[d.id].fundamento"></textarea>
+              </div>
+
+              <button type="button" mat-raised-button class="btn btn-primary btn-sm btn-registrar-causal"
+                      [disabled]="registrandoCausal[d.id]"
+                      (click)="registrarDecisionCausal(d)">Registrar decisión</button>
+            </div>
+
+            <div *ngIf="d.decisiones_causal?.length" class="mt-2">
+              <h6 class="small font-weight-bold mb-1">Historial</h6>
+              <ul class="list-unstyled small mb-0">
+                <li *ngFor="let h of d.decisiones_causal" class="mb-1 historial-causal">
+                  v{{h.version}} &bull;
+                  <span class="font-weight-bold" [ngClass]="h.decision === 'ACCEPTED' ? 'text-success' : 'text-danger'">{{h.decision_display}}</span>
+                  &bull; {{h.autor_legajo}} &bull; {{h.created_at | date:'dd/MM/yyyy HH:mm'}}
+                  <span *ngIf="h.se_aparta_de_regla"> &bull; Se aparta de la regla</span>
+                  <div *ngIf="h.fundamento" class="text-muted">{{h.fundamento}}</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
         <!-- Votación si existe -->
         <div *ngIf="expedienteSeleccionado.votacion" class="mt-3 p-3 bg-light rounded border">
           <h5 class="font-weight-bold text-dark mb-2">
