@@ -165,13 +165,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
-    // Filtro por socio en memoria (fallback / reactivo)
+    // Filtro por socio/creador/título en memoria (fallback / reactivo)
     if (this.filtroSocio.trim()) {
       const q = this.filtroSocio.trim().toLowerCase();
       result = result.filter(e =>
         (e.socio && e.socio.toLowerCase().includes(q)) ||
         (e.legajo && e.legajo.toLowerCase().includes(q)) ||
-        (e.numero && e.numero.toLowerCase().includes(q))
+        (e.numero && e.numero.toLowerCase().includes(q)) ||
+        (e.creador && e.creador.toLowerCase().includes(q)) ||
+        (e.titulo && e.titulo.toLowerCase().includes(q)) ||
+        (e.motivo && e.motivo.toLowerCase().includes(q))
       );
     }
 
@@ -444,8 +447,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   formatCaseNumber(caseNumber: string): string {
-    const match = /^(?:EXP-)?(\d+)\/(\d{4})$/.exec(caseNumber);
-    return match ? `${Number(match[1]).toString().padStart(3, '0')}/${match[2]}` : caseNumber;
+    if (!caseNumber) return '';
+    // Formato 1: (EXP-)?<num>/<year>
+    let match = /^(?:EXP-)?(\d+)\/(\d{4})$/i.exec(caseNumber);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      const year = match[2];
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    // Formato 2: (EXP-)?<year>-<num>
+    match = /^(?:EXP-)?(\d{4})-(\d+)$/i.exec(caseNumber);
+    if (match) {
+      const year = match[1];
+      const num = parseInt(match[2], 10);
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    return caseNumber.replace(/^EXP-/i, '');
   }
 
   getUrgenciaLabel(urgencia?: string): string {

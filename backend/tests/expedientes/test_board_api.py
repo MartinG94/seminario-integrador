@@ -3,7 +3,12 @@
 import pytest
 from rest_framework import status
 
-from expedientes.models import CambioEstadoExpediente, EstadoExpedienteEnum, Expediente
+from expedientes.models import (
+    CambioEstadoExpediente,
+    EstadoExpedienteEnum,
+    Expediente,
+    SolicitudT01,
+)
 from socios.models import Role
 
 
@@ -78,6 +83,10 @@ class TestBoardExpedientesView:
         assert len(case["socios"]) == 1
         assert case["socios"][0]["id"] == socio_user.id
         assert case["socios"][0]["legajo"] == "10002"
+        assert case["titulo"] == "Inasistencia a asamblea"
+        assert case["motivo"] == "Inasistencia a asamblea"
+        assert case["razon"] == ""
+        assert case["creador"] == ""
 
     def test_board_con_multiples_socios_involucrados(
         self, api_client, authenticate, td_user, make_socio
@@ -108,6 +117,91 @@ class TestBoardExpedientesView:
             assert "id" in s
             assert "legajo" in s
             assert "nombre" in s
+
+    def test_board_con_solicitud_t01_creador_razon_titulo(
+        self, api_client, authenticate, td_user, make_socio
+    ):
+        solicitante = make_socio(legajo="74907", role=Role.CD)
+        solicitante.first_name = "Lucas"
+        solicitante.last_name = "Gastiaburu"
+        solicitante.save(update_fields=["first_name", "last_name"])
+
+        imputado_1 = make_socio(legajo="85194", role=Role.SOCIO)
+        imputado_1.first_name = "Lucas"
+        imputado_1.last_name = "Guillén"
+        imputado_1.save(update_fields=["first_name", "last_name"])
+
+        imputado_2 = make_socio(legajo="87414", role=Role.SOCIO)
+        imputado_2.first_name = "Diego"
+        imputado_2.last_name = "Sánchez"
+        imputado_2.save(update_fields=["first_name", "last_name"])
+
+        exp = Expediente.objects.create(
+            numero="EXP-2026-101",
+            socio=imputado_1,
+            motivo="Motivo base del expediente",
+            puntos=-1.5,
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        exp.socios.set([imputado_1, imputado_2])
+
+        SolicitudT01.objects.create(
+            solicitante=solicitante,
+            destinatarios_socios_ids=[imputado_1.id, imputado_2.id],
+            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+            titulo="Inconducta grave en asamblea",
+            motivo="Motivo expresado en T01",
+            razon="Violación del Art. 14 del Estatuto Social",
+            puntos=-1.5,
+            expediente=exp,
+        )
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/")
+        assert response.status_code == status.HTTP_200_OK
+
+        col_creado = response.data["columns"][0]
+        case = next(c for c in col_creado["cases"] if c["numero"] == "EXP-2026-101")
+        assert case["creador"] == "Gastiaburu, Lucas (74907)"
+        assert case["titulo"] == "Inconducta grave en asamblea"
+        assert case["razon"] == "Violación del Art. 14 del Estatuto Social"
+        assert case["cantidad_socios"] == 2
+        assert len(case["socios"]) == 2
+
+    def test_board_creador_fallback_cambios_estado(
+        self, api_client, authenticate, td_user, make_socio
+    ):
+        autoridad = make_socio(legajo="99001", role=Role.TD)
+        autoridad.first_name = "Autoridad"
+        autoridad.last_name = "Tribunal"
+        autoridad.save(update_fields=["first_name", "last_name"])
+
+        imputado = make_socio(legajo="99002", role=Role.SOCIO)
+
+        exp = Expediente.objects.create(
+            numero="EXP-2026-102",
+            socio=imputado,
+            motivo="Apertura por oficio",
+            puntos=-1.0,
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        CambioEstadoExpediente.objects.create(
+            expediente=exp,
+            estado_anterior=EstadoExpedienteEnum.CREADO,
+            estado_nuevo=EstadoExpedienteEnum.CREADO,
+            actor=f"SOLICITANTE_{autoridad.legajo}",
+            motivo="Apertura inicial",
+        )
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/")
+        assert response.status_code == status.HTTP_200_OK
+
+        col_creado = response.data["columns"][0]
+        case = next(c for c in col_creado["cases"] if c["numero"] == "EXP-2026-102")
+        assert case["creador"] == "Tribunal, Autoridad (99001)"
+        assert case["titulo"] == "Apertura por oficio"
+        assert case["razon"] == ""
 
     def test_cd_puede_ver_board(self, api_client, authenticate, cd_user, expediente_creado):
         client = authenticate(cd_user)

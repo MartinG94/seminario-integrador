@@ -35,6 +35,9 @@ export interface BoardCaseDTO {
   urgencia_display?: string;
   puntos: number;
   motivo: string;
+  titulo?: string;
+  razon?: string;
+  creador?: string;
   created_at: string;
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
@@ -70,6 +73,9 @@ export interface Expediente {
   legajo: string;
   subcomision: string;
   motivo: string;
+  titulo?: string;
+  razon?: string;
+  creador?: string;
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;
@@ -222,7 +228,10 @@ export class TribunalDataService {
       horasRestantes: 0,
       tipo: 'merito',
       puntos: 2.0,
-
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917' }
+      ],
       votacion: {
         votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE', 'Juez 3': 'FAVORABLE' },
         considerandos: 'Desempeño sobresaliente con impacto directo en la comunidad.',
@@ -246,6 +255,10 @@ export class TribunalDataService {
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -0.5,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541' }
+      ],
       firmas: {
         juecesFirmantes: ['Presidente TD', 'Vocal 1', 'Vocal 2'],
         hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
@@ -263,7 +276,11 @@ export class TribunalDataService {
       estado: 'creado',
       horasRestantes: 120,
       tipo: 'falta',
-      puntos: -1.0
+      puntos: -1.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '9', nombre: 'Martín Gómez', legajo: 'LEG-5412' }
+      ]
     },
     {
       id: 'EXP-2026-006',
@@ -277,6 +294,10 @@ export class TribunalDataService {
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917' }
+      ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
         hashCriptografico: '',
@@ -295,6 +316,10 @@ export class TribunalDataService {
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -2.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '5', nombre: 'Axel René Villegas', legajo: '403655' }
+      ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
         hashCriptografico: 'sha256-abc123789fed456',
@@ -491,7 +516,10 @@ export class TribunalDataService {
       legajo: c.socio_legajo,
       subcomision: c.subcomision,
       motivo: c.motivo,
-      fechaCreacion: c.created_at ? c.created_at.split('T')[0] : '',
+      titulo: c.titulo || c.motivo,
+      razon: c.razon || '',
+      creador: c.creador || '',
+      fechaCreacion: c.created_at || '',
       estado: c.estado,
       estadoDisplay: c.estado_display,
       urgencia,

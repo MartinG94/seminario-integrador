@@ -53,6 +53,82 @@ class EvidenciaMetadataSerializer(serializers.ModelSerializer):
         return ""
 
 
+def _formatear_socio_creador(socio: Socio | None) -> str:
+    if not socio:
+        return ""
+    last = (socio.last_name or "").strip()
+    first = (socio.first_name or "").strip()
+    legajo = (str(socio.legajo) if socio.legajo else "").strip()
+    nombre_completo = f"{last}, {first}".strip().strip(",")
+    if not nombre_completo:
+        nombre_completo = str(socio)
+    return f"{nombre_completo} ({legajo})" if legajo else nombre_completo
+
+
+def _obtener_creador_expediente(obj: Expediente) -> str:
+    # 1. Si existe una solicitud T01, utilizar solicitud_t01.solicitante
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and solicitud.solicitante:
+            return _formatear_socio_creador(solicitud.solicitante)
+    except Exception:
+        pass
+
+    # 2. Si la causa se origina en inasistencia/evento/reunión (fallback con atributos dinámicos)
+    reunion_autoridad = (
+        getattr(obj, "creador_reunion", None)
+        or getattr(obj, "autoridad_evento", None)
+        or getattr(obj, "creador_evento", None)
+    )
+    if isinstance(reunion_autoridad, Socio):
+        return _formatear_socio_creador(reunion_autoridad)
+
+    # 3. En los demás casos, utilizar el actor del registro inicial de cambios_estado
+    cambios = list(obj.cambios_estado.all()) if hasattr(obj, "cambios_estado") else []
+    if cambios:
+        primer_cambio = sorted(cambios, key=lambda c: (c.fecha_hora, c.id))[0]
+        actor = (primer_cambio.actor or "").strip()
+        if actor:
+            actor_limpio = actor
+            for prefix in ("SOLICITANTE_", "TD_", "CD_"):
+                if actor_limpio.startswith(prefix):
+                    actor_limpio = actor_limpio[len(prefix) :]
+            socio_actor = Socio.objects.filter(legajo=actor_limpio).first()
+            if socio_actor:
+                return _formatear_socio_creador(socio_actor)
+            return actor
+
+    return ""
+
+
+def _obtener_razon_expediente(obj: Expediente) -> str:
+    razon_directa = getattr(obj, "razon", None)
+    if razon_directa and str(razon_directa).strip():
+        return str(razon_directa).strip()
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and getattr(solicitud, "razon", None) and solicitud.razon.strip():
+            return solicitud.razon.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _obtener_titulo_expediente(obj: Expediente) -> str:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and getattr(solicitud, "titulo", None) and solicitud.titulo.strip():
+            return solicitud.titulo.strip()
+    except Exception:
+        pass
+
+    titulo_evento = getattr(obj, "titulo_evento", None) or getattr(obj, "titulo_hecho", None)
+    if titulo_evento and str(titulo_evento).strip():
+        return str(titulo_evento).strip()
+
+    return obj.motivo or ""
+
+
 class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
@@ -69,6 +145,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     esta_en_plazo = serializers.SerializerMethodField()
     horas_restantes = serializers.SerializerMethodField()
     socios = serializers.SerializerMethodField()
+    cantidad_socios = serializers.SerializerMethodField()
+    creador = serializers.SerializerMethodField()
+    razon = serializers.SerializerMethodField()
+    titulo = serializers.SerializerMethodField()
     historial = serializers.SerializerMethodField()
     evidencias = serializers.SerializerMethodField()
     descargos = serializers.SerializerMethodField()
@@ -78,14 +158,18 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "numero",
+            "titulo",
             "motivo",
+            "razon",
             "puntos",
             "estado",
             "urgencia",
             "urgencia_display",
             "socio_nombre",
             "socio_legajo",
+            "creador",
             "socios",
+            "cantidad_socios",
             "subcomision",
             "plazo_inicio_at",
             "plazo_limite_at",
@@ -105,6 +189,20 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
+
+    def get_cantidad_socios(self, obj: Expediente) -> int:
+        socios = list(obj.socios.all())
+        count = len(socios)
+        return count if count > 0 else 1
+
+    def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj)
+
+    def get_razon(self, obj: Expediente) -> str:
+        return _obtener_razon_expediente(obj)
+
+    def get_titulo(self, obj: Expediente) -> str:
+        return _obtener_titulo_expediente(obj)
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
         descargos = list(obj.descargos.all())
@@ -640,15 +738,22 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     transiciones_permitidas = serializers.SerializerMethodField()
     cantidad_socios = serializers.SerializerMethodField()
     socios = serializers.SerializerMethodField()
+    creador = serializers.SerializerMethodField()
+    razon = serializers.SerializerMethodField()
+    titulo = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
         fields = [
             "id",
             "numero",
+            "titulo",
+            "motivo",
+            "razon",
             "socio",
             "socio_nombre",
             "socio_legajo",
+            "creador",
             "socios",
             "subcomision",
             "estado",
@@ -656,7 +761,6 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "urgencia",
             "urgencia_display",
             "puntos",
-            "motivo",
             "created_at",
             "plazo_limite_at",
             "transiciones_permitidas",
@@ -683,6 +787,15 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             }
             for socio in socios
         ]
+
+    def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj)
+
+    def get_razon(self, obj: Expediente) -> str:
+        return _obtener_razon_expediente(obj)
+
+    def get_titulo(self, obj: Expediente) -> str:
+        return _obtener_titulo_expediente(obj)
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])

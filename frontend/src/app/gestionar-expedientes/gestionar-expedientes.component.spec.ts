@@ -384,7 +384,7 @@ describe('GestionarExpedientesComponent', () => {
     });
   });
 
-  describe('S3-08: Visualización de socios múltiples', () => {
+  describe('S3-08: Visualización de socios involucrados', () => {
     const expUnicoSocio: Expediente = {
       id: '1',
       numero: 'EXP-001/2026',
@@ -392,6 +392,8 @@ describe('GestionarExpedientesComponent', () => {
       legajo: '74907',
       subcomision: 'Cómputos',
       motivo: 'Inasistencia',
+      titulo: 'Inasistencia a asamblea',
+      creador: 'Gastiaburu, Lucas (74907)',
       fechaCreacion: '2026-03-01',
       estado: 'creado',
       horasRestantes: 0,
@@ -410,6 +412,8 @@ describe('GestionarExpedientesComponent', () => {
       legajo: '85194',
       subcomision: 'Cómputos',
       motivo: 'Falta de informes',
+      titulo: 'Falta de informes cuatrimestrales',
+      creador: 'Guillén, Lucas Martín (85194)',
       fechaCreacion: '2026-03-02',
       estado: 'revision_resolucion',
       horasRestantes: 0,
@@ -443,34 +447,26 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.expedienteSeleccionado).toBeNull();
     });
 
-    it('no debe mostrar botón de múltiples imputados si hay un solo socio en el tablero o tabla', () => {
-      component.expedientes = [expUnicoSocio];
-      fixture.detectChanges();
-
-      const compiled = fixture.nativeElement as HTMLElement;
-      // En kanban
-      const kanbanButtons = compiled.querySelectorAll('.card-bottom button');
-      expect(kanbanButtons.length).toBe(0);
-
-      // En tabla
-      component.vistaActual = 'tabla';
-      fixture.detectChanges();
-      const tableButtons = compiled.querySelectorAll('table tbody tr button.text-info');
-      expect(tableButtons.length).toBe(0);
-    });
-
-    it('debe mostrar botón de múltiples imputados en kanban y abrir modal con listado completo al hacer clic', () => {
+    it('las tarjetas kanban no muestran botones en el pie manteniendo simplicidad visual', () => {
       component.expedientes = [expMultiplesSocios];
       component.vistaActual = 'kanban';
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const kanbanButton = compiled.querySelector('.card-bottom button') as HTMLButtonElement;
-      expect(kanbanButton).toBeTruthy();
-      expect(kanbanButton.textContent).toContain('2 imputados');
+      const kanbanButtons = compiled.querySelectorAll('.card-bottom button');
+      expect(kanbanButtons.length).toBe(0);
+    });
 
-      // Hacer click en kanban
-      kanbanButton.click();
+    it('debe mostrar acción Ver Involucrados en la tabla y abrir modal al hacer clic', () => {
+      component.expedientes = [expMultiplesSocios];
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const tableButton = compiled.querySelector('table tbody tr button[title="Ver Involucrados"]') as HTMLButtonElement;
+      expect(tableButton).toBeTruthy();
+
+      tableButton.click();
       fixture.detectChanges();
 
       expect(component.modalSociosAbierto).toBeTrue();
@@ -487,21 +483,20 @@ describe('GestionarExpedientesComponent', () => {
       expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
     });
 
-    it('debe mostrar acción en la tabla y abrir modal al hacer clic', () => {
-      component.expedientes = [expMultiplesSocios];
+    it('debe mostrar acciones Emitir Resolución y Firmar Resolución según permisos y estado', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const expRevision: Expediente = { ...expMultiplesSocios, estado: 'revision_resolucion' };
+      const expFirma: Expediente = { ...expMultiplesSocios, id: '3', estado: 'pendiente_correos' };
+      component.expedientes = [expRevision, expFirma];
       component.vistaActual = 'tabla';
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const tableButton = compiled.querySelector('table tbody tr button.text-info') as HTMLButtonElement;
-      expect(tableButton).toBeTruthy();
+      const btnEmitir = compiled.querySelector('table tbody tr button[title="Emitir Resolución"]') as HTMLButtonElement;
+      const btnFirmar = compiled.querySelectorAll('table tbody tr')[1].querySelector('button[title="Firmar Resolución"]') as HTMLButtonElement;
 
-      tableButton.click();
-      fixture.detectChanges();
-
-      expect(component.modalSociosAbierto).toBeTrue();
-      expect(component.expedienteSeleccionado?.numero).toBe('EXP-002/2026');
-      expect(component.expedienteSeleccionado?.sociosInvolucrados?.length).toBe(2);
+      expect(btnEmitir).toBeTruthy();
+      expect(btnFirmar).toBeTruthy();
     });
   });
 });
