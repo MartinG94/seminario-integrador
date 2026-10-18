@@ -2,7 +2,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../environments/environment';
-import { ExpedienteApiService } from './expediente-api.service';
+import { DescargoVersionDto, ExpedienteApiService } from './expediente-api.service';
 
 describe('ExpedienteApiService', () => {
   let service: ExpedienteApiService;
@@ -116,5 +116,15 @@ describe('ExpedienteApiService', () => {
     const req = http.expectOne(`${environment.apiUrl}/expedientes/12/`);
     expect(req.request.method).toBe('GET');
     req.flush({ id: 12, numero: 'EXP-0012/2026', estado: 'revision_resolucion', descargos: [{ id: 5 }] });
+    });
+
+  it('consulta el historial inmutable de versiones del descargo de un expediente', () => {
+    let versiones: DescargoVersionDto[] = [];
+    service.obtenerVersionesDescargo(42).subscribe(v => (versiones = v));
+
+    const req = http.expectOne({ method: 'GET', url: `${environment.apiUrl}/expedientes/42/descargo/versiones/` });
+    req.flush([{ id: 1, numero: 1, operacion: 'PRESENTADO' }]);
+    expect(versiones.length).toBe(1);
+    expect(versiones[0].numero).toBe(1);
   });
 });

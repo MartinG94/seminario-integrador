@@ -108,6 +108,26 @@ export interface EvidenciaMetadata {
   created_at: string;
 }
 
+export type OperacionDescargo = 'PRESENTADO' | 'CORREGIDO' | 'RETIRADO';
+
+/** Versión inmutable de un descargo, tal como la devuelve el historial del backend. */
+export interface DescargoVersionDto {
+  id: number;
+  numero: number;
+  operacion: OperacionDescargo;
+  operacion_display: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal: string;
+  texto: string;
+  archivo: string;
+  evidencias: Partial<EvidenciaMetadata>[];
+  actor: string;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  created_at: string;
+}
+
 export interface PresentarDescargoPayload {
   tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
   causal?: string;
@@ -262,6 +282,10 @@ export class ExpedienteApiService {
       `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/decisiones/`,
       payload
     );
+  }
+
+  obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
+    return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
 }
 

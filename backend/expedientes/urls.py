@@ -6,6 +6,7 @@ from expedientes.views import (
     CalendarioFeriadosView,
     CaseNotificationAuditView,
     DecisionCausalView,
+    DescargoVersionesView,
     DispatchCaseOpeningView,
     EvidenciaDownloadView,
     EvidenciaUploadView,
@@ -40,6 +41,11 @@ urlpatterns = [
         "<int:pk>/descargos/<int:descargo_id>/decisiones/",
         DecisionCausalView.as_view(),
         name="descargo-decisiones-causal",
+    ),
+    path(
+        "<int:pk>/descargo/versiones/",
+        DescargoVersionesView.as_view(),
+        name="descargo-versiones",
     ),
     path("<int:pk>/evidencia/", EvidenciaUploadView.as_view(), name="expediente-evidencia-upload"),
     path(
