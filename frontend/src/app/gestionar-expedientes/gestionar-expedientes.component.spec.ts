@@ -527,6 +527,17 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.modalDetalleAbierto).toBeFalse();
       expect(component.modalSociosAbierto).toBeTrue();
       expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
+
+      // Al hacer clic en Volver, regresa al modal de detalle del expediente sin cerrar todo
+      const btnVolver = compiled.querySelector('.modal-backdrop-custom button[aria-label="Volver al detalle"]') as HTMLButtonElement;
+      expect(btnVolver).toBeTruthy();
+      btnVolver.click();
+      fixture.detectChanges();
+
+      expect(component.modalSociosAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado).toEqual(expDetalle);
+      expect(compiled.textContent).toContain('Razón:');
     });
   });
 });

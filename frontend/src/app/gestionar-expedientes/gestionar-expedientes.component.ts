@@ -413,6 +413,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = true;
   }
 
+  volverADetalle(): void {
+    this.modalSociosAbierto = false;
+    if (this.expedienteSeleccionado) {
+      this.abrirDetalle(this.expedienteSeleccionado);
+    }
+  }
+
   cerrarModales(): void {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
