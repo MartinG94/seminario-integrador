@@ -73,7 +73,10 @@ class ExpedienteCollectionView(APIView):
 
     def get(self, request: Request) -> Response:
         queryset = Expediente.objects.select_related(
-            "socio", "socio__subcomision"
+            "socio",
+            "socio__subcomision",
+            "solicitud_t01",
+            "solicitud_t01__solicitante",
         ).prefetch_related(
             "socios",
             "cambios_estado",

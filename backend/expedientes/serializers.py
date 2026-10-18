@@ -65,7 +65,7 @@ def _formatear_socio_creador(socio: Socio | None) -> str:
     return f"{nombre_completo} ({legajo})" if legajo else nombre_completo
 
 
-def _obtener_creador_expediente(obj: Expediente) -> str:
+def _obtener_creador_expediente(obj: Expediente, context: dict | None = None) -> str:
     # 1. Si existe una solicitud T01, utilizar solicitud_t01.solicitante
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
@@ -93,9 +93,30 @@ def _obtener_creador_expediente(obj: Expediente) -> str:
             for prefix in ("SOLICITANTE_", "TD_", "CD_"):
                 if actor_limpio.startswith(prefix):
                     actor_limpio = actor_limpio[len(prefix) :]
-            socio_actor = Socio.objects.filter(legajo=actor_limpio).first()
-            if socio_actor:
-                return _formatear_socio_creador(socio_actor)
+            # Optimización N+1: si el socio del expediente coincide con el actor
+            if obj.socio and str(obj.socio.legajo) == actor_limpio:
+                return _formatear_socio_creador(obj.socio)
+            # Chequear en los socios precargados de la causa
+            if hasattr(obj, "socios"):
+                for s in obj.socios.all():
+                    if str(s.legajo) == actor_limpio:
+                        return _formatear_socio_creador(s)
+            # Chequear o guardar en cache de context
+            cache = None
+            if context is not None:
+                cache = context.setdefault("_socio_actor_cache", {})
+                if actor_limpio in cache:
+                    socio_cached = cache[actor_limpio]
+                    return _formatear_socio_creador(socio_cached) if socio_cached else actor
+
+            try:
+                socio_actor = Socio.objects.filter(legajo=actor_limpio).first()
+                if cache is not None:
+                    cache[actor_limpio] = socio_actor
+                if socio_actor:
+                    return _formatear_socio_creador(socio_actor)
+            except Exception:
+                pass
             return actor
 
     return ""
@@ -196,7 +217,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return count if count > 0 else 1
 
     def get_creador(self, obj: Expediente) -> str:
-        return _obtener_creador_expediente(obj)
+        return _obtener_creador_expediente(obj, context=self.context)
 
     def get_razon(self, obj: Expediente) -> str:
         return _obtener_razon_expediente(obj)
@@ -789,7 +810,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         ]
 
     def get_creador(self, obj: Expediente) -> str:
-        return _obtener_creador_expediente(obj)
+        return _obtener_creador_expediente(obj, context=self.context)
 
     def get_razon(self, obj: Expediente) -> str:
         return _obtener_razon_expediente(obj)
