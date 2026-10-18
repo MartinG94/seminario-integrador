@@ -143,6 +143,63 @@ def _obtener_razon_expediente(obj: Expediente) -> str:
     return (obj.motivo or "").strip()
 
 
+def _cargar_mapa_grupos_legado() -> dict[str, str]:
+    """Obtiene en una única consulta el número de grupo (idGrupo) desde socio_estadoHistorial."""
+    from django.db import connection
+
+    mapa: dict[str, str] = {}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT eh.nroSocio, se.nroLegajo, eh.idGrupo
+                FROM socio_estadoHistorial eh
+                LEFT JOIN socio_estudio se ON se.nroSocio = eh.nroSocio
+                ORDER BY eh.fechaHora ASC, eh.idEstadoHistorial ASC
+                """
+            )
+            for nro_socio, nro_legajo, id_grupo in cursor.fetchall():
+                if id_grupo is not None:
+                    grupo_str = str(id_grupo)
+                    if nro_socio is not None:
+                        mapa[str(nro_socio)] = grupo_str
+                    if nro_legajo is not None:
+                        mapa[str(nro_legajo)] = grupo_str
+    except Exception:
+        pass
+    return mapa
+
+
+def _serializar_socio_involucrado(
+    socio: Socio, context: dict | None = None
+) -> dict[str, int | str]:
+    legajo = str(socio.legajo or "").strip()
+    grupo = ""
+    if context is not None:
+        if "_socio_grupo_cache" not in context:
+            context["_socio_grupo_cache"] = _cargar_mapa_grupos_legado()
+        grupo = context["_socio_grupo_cache"].get(legajo, "")
+    if not grupo and getattr(socio, "social_year", 0) and int(socio.social_year) > 0:
+        # Cálculo dinámico anual: en el año Y, el 1° año social corresponde al grupo (Y - 1963)
+        current_year = timezone.localdate().year
+        grupo = str((current_year - 1962) - int(socio.social_year))
+
+    if not getattr(socio, "is_enabled", True):
+        estado = "Inactivo"
+    else:
+        estado = (
+            socio.get_category_display() if hasattr(socio, "get_category_display") else "Activo"
+        )
+
+    return {
+        "id": socio.id,
+        "legajo": legajo,
+        "nombre": f"{socio.first_name} {socio.last_name}".strip(),
+        "grupo": grupo,
+        "estado": estado,
+    }
+
+
 def _obtener_titulo_expediente(obj: Expediente) -> str:
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
@@ -318,14 +375,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return max(0, horas)
 
     def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
-        return [
-            {
-                "id": socio.id,
-                "legajo": socio.legajo,
-                "nombre": f"{socio.first_name} {socio.last_name}",
-            }
-            for socio in obj.socios.all()
-        ]
+        socios = list(obj.socios.all())
+        if not socios and obj.socio:
+            socios = [obj.socio]
+        return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
 
     def get_evidencias(self, obj: Expediente) -> list[dict]:
         request = self.context.get("request")
@@ -847,14 +900,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         socios = list(obj.socios.all())
         if not socios and obj.socio:
             socios = [obj.socio]
-        return [
-            {
-                "id": socio.id,
-                "legajo": socio.legajo,
-                "nombre": f"{socio.first_name} {socio.last_name}",
-            }
-            for socio in socios
-        ]
+        return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
 
     def get_creador(self, obj: Expediente) -> str:
         return _obtener_creador_expediente(obj, context=self.context)

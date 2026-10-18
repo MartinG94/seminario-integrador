@@ -117,6 +117,9 @@ class TestBoardExpedientesView:
             assert "id" in s
             assert "legajo" in s
             assert "nombre" in s
+            assert "grupo" in s
+            assert str(s["grupo"]).isdigit()
+            assert s["estado"] in ("Activo", "Pasivo", "Inactivo")
 
     def test_board_con_solicitud_t01_creador_razon_titulo(
         self, api_client, authenticate, td_user, make_socio

@@ -232,7 +232,7 @@ describe('GestionarExpedientesComponent', () => {
       return expediente;
     }
 
-    it('muestra únicamente ID, urgencia, puntos, motivo y fecha en las seis etapas', () => {
+    it('muestra únicamente ID, urgencia, puntos, motivo, fecha y cantidad de involucrados en las seis etapas', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
       for (const column of component.columnasKanban) {
         renderCase({ estado: column.estado });
@@ -240,7 +240,7 @@ describe('GestionarExpedientesComponent', () => {
         expect(cards.length).toBe(1);
         const card = cards[0];
         expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026'
+          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
         );
         expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
       }
@@ -263,7 +263,7 @@ describe('GestionarExpedientesComponent', () => {
       renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
       const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
       expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026'
+        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
       );
     });
 
@@ -421,8 +421,8 @@ describe('GestionarExpedientesComponent', () => {
       puntos: -1.5,
       cantidadSocios: 2,
       sociosInvolucrados: [
-        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén' },
-        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez' }
+        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
+        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
       ]
     };
 
@@ -457,12 +457,13 @@ describe('GestionarExpedientesComponent', () => {
       expect(kanbanButtons.length).toBe(0);
     });
 
-    it('debe mostrar acción Ver Involucrados en la tabla y abrir modal al hacer clic', () => {
+    it('debe mostrar columna Involucrados en la tabla y Grupo/Estado en el modal al hacer clic', () => {
       component.expedientes = [expMultiplesSocios];
       component.vistaActual = 'tabla';
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('table thead')?.textContent).toContain('Involucrados');
       const tableButton = compiled.querySelector('table tbody tr button[title="Ver Involucrados"]') as HTMLButtonElement;
       expect(tableButton).toBeTruthy();
 
@@ -473,7 +474,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.expedienteSeleccionado?.numero).toBe('EXP-002/2026');
       expect(component.expedienteSeleccionado?.sociosInvolucrados?.length).toBe(2);
 
-      // Verificar contenido del modal renderizado
+      // Verificar contenido del modal renderizado incluyendo Grupo (solo número) y Estado
       const modal = compiled.querySelector('.modal-backdrop-custom');
       expect(modal).toBeTruthy();
       expect(modal?.textContent).toContain('Socios Involucrados');
@@ -481,6 +482,9 @@ describe('GestionarExpedientesComponent', () => {
       expect(modal?.textContent).toContain('Lucas Martín Guillén');
       expect(modal?.textContent).toContain('87414');
       expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
+      expect(modal?.textContent).toContain('59');
+      expect(modal?.textContent).toContain('Activo');
+      expect(modal?.textContent).toContain('Pasivo');
     });
 
     it('debe mostrar acciones Emitir Resolución y Firmar Resolución según permisos y estado', () => {
@@ -499,7 +503,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnFirmar).toBeTruthy();
     });
 
-    it('debe mostrar siempre la Razón en el modal de detalle y cerrar el detalle al abrir un modal secundario', () => {
+    it('debe mostrar siempre la Razón y la cantidad de Involucrados en el modal de detalle y cerrar el detalle al abrir un modal secundario', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
       const expDetalle: Expediente = {
         ...expMultiplesSocios,
@@ -512,6 +516,7 @@ describe('GestionarExpedientesComponent', () => {
 
       const compiled = fixture.nativeElement as HTMLElement;
       expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
+      expect(compiled.textContent).toContain('Involucrados:');
       expect(compiled.textContent).toContain('Razón:');
       expect(compiled.textContent).toContain('Falta de informes');
 

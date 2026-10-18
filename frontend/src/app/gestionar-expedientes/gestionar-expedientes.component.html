@@ -163,6 +163,10 @@
             
             <div class="card-bottom d-flex justify-content-between align-items-center">
               <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
+              <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
+                <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
+                <span>{{ getCantidadInvolucrados(exp) }}</span>
+              </span>
             </div>
           </div>
         </ng-container>
@@ -181,6 +185,7 @@
               <th (click)="cambiarOrden('numero')" style="cursor: pointer;">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('titulo')" style="cursor: pointer;">Título <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('creador')" style="cursor: pointer;">Creador <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('cantidadSocios')" style="cursor: pointer;">Involucrados <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('fechaCreacion')" style="cursor: pointer;">Fecha <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('urgencia')" style="cursor: pointer;">Urgencia <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
@@ -200,6 +205,7 @@
                   <div class="text-truncate" title="{{exp.titulo || exp.motivo}}">{{exp.titulo || exp.motivo}}</div>
                 </td>
                 <td>{{exp.creador || 'No especificado'}}</td>
+                <td>{{getCantidadInvolucrados(exp)}}</td>
                 <td>
                   <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
                 </td>
@@ -313,6 +319,12 @@
             <label class="text-muted small">Puntos:</label>
             <div class="font-weight-bold" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
               {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">Involucrados:</label>
+            <div class="font-weight-bold">
+              {{getCantidadInvolucrados(expedienteSeleccionado)}}
             </div>
           </div>
           <div class="col-md-12 mb-3">
@@ -492,11 +504,15 @@
             <thead>
               <th>N° de Socio / Legajo</th>
               <th>Nombre y Apellido</th>
+              <th>Grupo</th>
+              <th>Estado</th>
             </thead>
             <tbody>
               <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || [])">
                 <td class="font-weight-bold text-dark">{{s.legajo}}</td>
                 <td>{{s.nombre}}</td>
+                <td>{{s.grupo || '-'}}</td>
+                <td>{{s.estado || 'Activo'}}</td>
               </tr>
             </tbody>
           </table>

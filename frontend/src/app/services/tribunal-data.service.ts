@@ -20,6 +20,8 @@ export interface SocioInvolucrado {
   id: number | string;
   legajo: string;
   nombre: string;
+  grupo?: string;
+  estado?: string;
 }
 
 export interface BoardCaseDTO {
@@ -173,7 +175,7 @@ export class TribunalDataService {
       puntos: -1.0,
       cantidadSocios: 1,
       sociosInvolucrados: [
-        { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907' }
+        { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907', grupo: '62', estado: 'Pasivo' }
       ],
       plazoInicioAt: '2026-10-08T18:00:00-03:00',
       plazoLimiteAt: '2026-10-15T18:00:00-03:00',
@@ -196,8 +198,8 @@ export class TribunalDataService {
       puntos: -1.5,
       cantidadSocios: 2,
       sociosInvolucrados: [
-        { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194' },
-        { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414' }
+        { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194', grupo: '60', estado: 'Activo' },
+        { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414', grupo: '59', estado: 'Activo' }
       ],
       descargo: {
         tipo: 'T02_CERTIFICADO',
@@ -239,7 +241,7 @@ export class TribunalDataService {
       puntos: 2.0,
       cantidadSocios: 1,
       sociosInvolucrados: [
-        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917' }
+        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
       ],
       votacion: {
         votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE', 'Juez 3': 'FAVORABLE' },
@@ -269,7 +271,7 @@ export class TribunalDataService {
       puntos: -0.5,
       cantidadSocios: 1,
       sociosInvolucrados: [
-        { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541' }
+        { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541', grupo: '60', estado: 'Activo' }
       ],
       firmas: {
         juecesFirmantes: ['Presidente TD', 'Vocal 1', 'Vocal 2'],
@@ -294,7 +296,7 @@ export class TribunalDataService {
       puntos: -1.0,
       cantidadSocios: 1,
       sociosInvolucrados: [
-        { id: '9', nombre: 'Martín Gómez', legajo: 'LEG-5412' }
+        { id: '9', nombre: 'Martín Gómez', legajo: 'LEG-5412', grupo: '62', estado: 'Pasivo' }
       ]
     },
     {
@@ -314,7 +316,7 @@ export class TribunalDataService {
       puntos: -1.0,
       cantidadSocios: 1,
       sociosInvolucrados: [
-        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917' }
+        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
       ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
@@ -339,7 +341,7 @@ export class TribunalDataService {
       puntos: -2.0,
       cantidadSocios: 1,
       sociosInvolucrados: [
-        { id: '5', nombre: 'Axel René Villegas', legajo: '403655' }
+        { id: '5', nombre: 'Axel René Villegas', legajo: '403655', grupo: '59', estado: 'Activo' }
       ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],

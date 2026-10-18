@@ -212,8 +212,18 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
 
     result.sort((a, b) => {
-      let valA = this.columnaOrden === 'titulo' ? (a.titulo || a.motivo || '') : ((a as any)[this.columnaOrden] ?? '');
-      let valB = this.columnaOrden === 'titulo' ? (b.titulo || b.motivo || '') : ((b as any)[this.columnaOrden] ?? '');
+      let valA: any;
+      let valB: any;
+      if (this.columnaOrden === 'titulo') {
+        valA = a.titulo || a.motivo || '';
+        valB = b.titulo || b.motivo || '';
+      } else if (this.columnaOrden === 'cantidadSocios') {
+        valA = this.getCantidadInvolucrados(a);
+        valB = this.getCantidadInvolucrados(b);
+      } else {
+        valA = (a as any)[this.columnaOrden] ?? '';
+        valB = (b as any)[this.columnaOrden] ?? '';
+      }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 
@@ -461,6 +471,17 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }
+  }
+
+  getCantidadInvolucrados(exp: Expediente | null | undefined): number {
+    if (!exp) return 1;
+    if (exp.cantidadSocios && exp.cantidadSocios > 0) {
+      return exp.cantidadSocios;
+    }
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados.length;
+    }
+    return 1;
   }
 
   formatCaseNumber(caseNumber: string): string {
