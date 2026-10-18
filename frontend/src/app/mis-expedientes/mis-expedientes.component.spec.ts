@@ -82,6 +82,23 @@ describe('MisExpedientesComponent', () => {
     expect(component.limiteActual).toBe(3);
   });
 
+  it('permite enviar motivo o justificación opcional en justificaciones con certificado (T02)', () => {
+    const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
+    component.expedienteSeleccionado = { id: 'test-t02' } as Expediente;
+    component.tipoDescargo = 'T02_CERTIFICADO';
+    component.causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
+    component.nombreArchivo = 'certificado.pdf';
+    component.relatoTexto = 'Rendí examen de Sistemas Operativos en el turno mañana.';
+    component.enviarDescargo();
+
+    const req = http.expectOne({ method: 'POST', url: `${apiUrl}/test-t02/descargo/` });
+    expect(req.request.body.tipo).toBe('T02_CERTIFICADO');
+    expect(req.request.body.causal).toBe('Examen Académico Universitario en UTN FRC');
+    expect(req.request.body.texto).toBe('Rendí examen de Sistemas Operativos en el turno mañana.');
+    req.flush({ detail: 'ok' }, { status: 201, statusText: 'Created' });
+    expect(submit).toHaveBeenCalled();
+  });
+
   describe('Custodia de Evidencias Protegidas (US S3-04)', () => {
     it('valida límite de hasta 3 comprobantes para causal tipificada considerando evidencias existentes y nuevas', () => {
       component.tipoDescargo = 'T02_CERTIFICADO';

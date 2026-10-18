@@ -666,6 +666,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T02} documentos.`);
         return;
       }
+      if (this.relatoTexto && this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+        this.notifications.error(
+          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
+        );
+        return;
+      }
     } else {
       if (!this.relatoTexto.trim()) {
         this.notifications.error('Por favor ingrese el motivo de la justificación.');
@@ -687,6 +693,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
     const legajo = perfil?.legajo || '';
     const expId = this.expedienteSeleccionado.id;
+    const textoAEnviar = this.relatoTexto ? this.relatoTexto.trim() : '';
 
     const guardarEnDataService = (todasLasEvidencias: any[]) => {
       this.dataService.enviarDescargo(
@@ -696,7 +703,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
           causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : 'Otro',
           archivo: this.nombreArchivo || (todasLasEvidencias.length > 0 ? todasLasEvidencias[0].nombre_original : undefined),
           archivos: todasLasEvidencias.map(e => e.nombre_original || e.name || 'documento'),
-          texto: this.relatoTexto || `Justificación presentada bajo causal: ${this.causalSeleccionada}.`,
+          texto: textoAEnviar || (this.tipoDescargo === 'T02_CERTIFICADO' ? `Justificación presentada bajo causal: ${this.causalSeleccionada}.` : ''),
           evidencias: todasLasEvidencias
         },
         {
@@ -729,7 +736,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
           this.expedienteApi.presentarDescargo(expId, {
             tipo: this.tipoDescargo,
             causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
-            texto: this.relatoTexto,
+            texto: textoAEnviar,
             evidencia_ids: ids
           }).subscribe({
             next: () => guardarEnDataService(todasLasEvidencias),
@@ -747,7 +754,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.expedienteApi.presentarDescargo(expId, {
         tipo: this.tipoDescargo,
         causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
-        texto: this.relatoTexto,
+        texto: textoAEnviar,
         evidencia_ids: ids
       }).subscribe({
         next: () => guardarEnDataService(this.evidenciasExistentes),
