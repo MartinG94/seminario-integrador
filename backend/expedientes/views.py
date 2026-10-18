@@ -22,10 +22,12 @@ from expedientes.filters import ExpedienteFilter
 from expedientes.models import (
     CambioEstadoExpediente,
     DescargoExpediente,
+    DescargoVersion,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
     Holiday,
+    OperacionDescargoEnum,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
@@ -42,6 +44,7 @@ from expedientes.serializers import (
     CalcularPlazoSerializer,
     CalendarQuerySerializer,
     CaseNotificationAuditSerializer,
+    DescargoVersionSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     EvidenciaMetadataSerializer,
@@ -54,6 +57,7 @@ from expedientes.serializers import (
     UpdateUrgenciaExpedienteSerializer,
 )
 from expedientes.services.board_service import build_board_payload
+from expedientes.services.descargo_version_service import DescargoVersionService
 from expedientes.services.evidence_service import EvidenceService
 from expedientes.services.opening_notification_service import (
     CaseNotificationQueryService,
@@ -62,6 +66,7 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
+from socios.models import Role
 
 
 def _actor_for_user(user) -> str:
@@ -221,9 +226,13 @@ class PresentarDescargoView(APIView):
 
             # Registro o corrección del descargo dentro del plazo
             validated_data = serializer.validated_data
-            es_correccion = DescargoExpediente.objects.filter(
-                expediente=expediente, socio=socio
-            ).exists() or (expediente.descargo_presentado and expediente.socio_id == socio.id)
+            previo = DescargoExpediente.objects.filter(expediente=expediente, socio=socio).first()
+            if previo is not None:
+                es_correccion = previo.es_vigente
+            else:
+                es_correccion = bool(
+                    expediente.descargo_presentado and expediente.socio_id == socio.id
+                )
             descargo, _ = DescargoExpediente.objects.update_or_create(
                 expediente=expediente,
                 socio=socio,
@@ -233,6 +242,7 @@ class PresentarDescargoView(APIView):
                     "archivo": validated_data.get("archivo", ""),
                     "texto": validated_data.get("texto", ""),
                     "presentado_at": now,
+                    "es_vigente": True,
                 },
             )
             if "evidencia_ids" in validated_data:
@@ -253,9 +263,17 @@ class PresentarDescargoView(APIView):
                     if not validated_data.get("archivo"):
                         descargo.archivo = ""
                         descargo.save(update_fields=["archivo"])
-            expediente.descargo_presentado = (
-                expediente.descargos.count() >= expediente.socios.count()
+            es_version_posterior = es_correccion and descargo.versiones.exists()
+            DescargoVersionService.registrar_version(
+                descargo,
+                (
+                    OperacionDescargoEnum.CORREGIDO
+                    if es_version_posterior
+                    else OperacionDescargoEnum.PRESENTADO
+                ),
+                socio,
             )
+            expediente.descargo_presentado = self._todos_presentaron(expediente)
             fields_to_update = ["descargo_presentado"]
             if expediente.socio_id == socio.id:
                 expediente.descargo_tipo = validated_data["tipo"]
@@ -299,12 +317,23 @@ class PresentarDescargoView(APIView):
                 status=status.HTTP_200_OK if es_correccion else status.HTTP_201_CREATED,
             )
 
+    @staticmethod
+    def _todos_presentaron(expediente: Expediente) -> bool:
+        """True si hay al menos un descargo vigente y cubre a todos los socios del expediente."""
+        vigentes = expediente.descargos.filter(es_vigente=True).count()
+        return vigentes > 0 and vigentes >= expediente.socios.count()
+
     def delete(self, request: Request, pk: int) -> Response:
+        """Retiro lógico del descargo: registra la baja y conserva todo el historial."""
         socio = getattr(request.user, "socio", None)
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
 
-        expediente = Expediente.objects.filter(id=pk).first()
+        with transaction.atomic():
+            return self._retirar(pk, socio)
+
+    def _retirar(self, pk: int, socio) -> Response:
+        expediente = Expediente.objects.select_for_update().filter(id=pk).first()
         if not expediente:
             return Response(
                 {"detail": "Expediente no encontrado."},
@@ -315,6 +344,13 @@ class PresentarDescargoView(APIView):
             raise PermissionDenied(
                 "No tiene autorización para gestionar el descargo de este expediente."
             )
+
+        if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
+            msg = (
+                f"El expediente está en '{expediente.get_estado_display()}', "
+                "no admitiendo el retiro del descargo."
+            )
+            return Response({"detail": msg}, status=status.HTTP_409_CONFLICT)
 
         now = timezone.now()
         if not expediente.esta_en_plazo(ahora=now):
@@ -327,16 +363,18 @@ class PresentarDescargoView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        descargo = DescargoExpediente.objects.filter(expediente=expediente, socio=socio).first()
+        descargo = DescargoExpediente.objects.filter(
+            expediente=expediente, socio=socio, es_vigente=True
+        ).first()
         if descargo:
-            descargo.delete()
+            DescargoVersionService.retirar(descargo, socio)
 
-        # Dar de baja evidencias vigentes de este socio (preservación histórica, es_vigente=False)
+        # Dar de baja evidencias del socio aún sin vincular a un descargo (es_vigente=False)
         EvidenciaDescargo.objects.filter(expediente=expediente, socio=socio).update(
             es_vigente=False
         )
 
-        expediente.descargo_presentado = expediente.descargos.count() >= expediente.socios.count()
+        expediente.descargo_presentado = self._todos_presentaron(expediente)
         fields_to_update = ["descargo_presentado"]
         if expediente.socio_id == socio.id:
             expediente.descargo_tipo = ""
@@ -367,6 +405,37 @@ class PresentarDescargoView(APIView):
             {"detail": "Justificativo eliminado correctamente."},
             status=status.HTTP_200_OK,
         )
+
+
+class DescargoVersionesView(APIView):
+    """Historial inmutable de versiones del descargo (SCRUM-49 / S3-05).
+
+    - GET /api/v1/expedientes/<pk>/descargo/versiones/
+    - IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto, mismos controles que la
+      lectura de descargos).
+    - El socio imputado ve sólo sus versiones; TD, CD, ADMIN y staff ven las de todos.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsImputadoOrTribunal]
+
+    def get(self, request: Request, pk: int) -> Response:
+        expediente = get_object_or_404(Expediente, pk=pk)
+        self.check_object_permissions(request, expediente)
+
+        versiones = DescargoVersion.objects.filter(descargo__expediente=expediente).select_related(
+            "descargo__socio"
+        )
+        socio = getattr(request.user, "socio", None)
+        es_autoridad = request.user.is_staff or bool(
+            socio and socio.is_enabled and socio.role in (Role.TD, Role.CD, Role.ADMIN)
+        )
+        if not es_autoridad:
+            versiones = versiones.filter(descargo__socio=socio)
+
+        versiones = versiones.prefetch_related("evidencias__socio").order_by(
+            "descargo__socio__legajo", "numero"
+        )
+        return Response(DescargoVersionSerializer(versiones, many=True).data)
 
 
 class EvidenciaUploadView(APIView):
@@ -429,7 +498,7 @@ class EvidenciaUploadView(APIView):
         tipo_descargo = request.data.get("tipo_descargo")
         if not tipo_descargo:
             descargo_existente = DescargoExpediente.objects.filter(
-                expediente=expediente, socio=socio
+                expediente=expediente, socio=socio, es_vigente=True
             ).first()
             if descargo_existente:
                 tipo_descargo = descargo_existente.tipo

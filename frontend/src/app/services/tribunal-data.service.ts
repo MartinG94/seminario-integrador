@@ -520,7 +520,7 @@ export class TribunalDataService {
     const operacion: 'CREACION' | 'EDICION' = esEdicion ? 'EDICION' : 'CREACION';
     const accionLabel = esEdicion ? 'Edición de Justificativo' : 'Añadir Justificativo';
     const detalle = tipo === 'T02_CERTIFICADO'
-      ? `Modalidad T02 (Certificado): ${datos.causal || 'Causal tipificada'}${datos.archivo ? ' • Archivo: ' + datos.archivo : ''}`
+      ? `Modalidad T02 (Certificado): ${datos.causal || 'Causal tipificada'}${datos.archivo ? ' • Archivo: ' + datos.archivo : ''}${datos.texto && !datos.texto.startsWith('Justificación presentada') ? ' • Fundamento: ' + datos.texto.slice(0, 50) : ''}`
       : `Modalidad T03 (Extraordinario): ${datos.texto ? datos.texto.slice(0, 60) + '...' : 'Fundamentación expuesta'}`;
 
     const now = new Date();
