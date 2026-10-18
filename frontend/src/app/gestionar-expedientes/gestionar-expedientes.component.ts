@@ -172,9 +172,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         (e.socio && e.socio.toLowerCase().includes(q)) ||
         (e.legajo && e.legajo.toLowerCase().includes(q)) ||
         (e.numero && e.numero.toLowerCase().includes(q)) ||
+        (e.numero && this.formatCaseNumber(e.numero).toLowerCase().includes(q)) ||
         (e.creador && e.creador.toLowerCase().includes(q)) ||
         (e.titulo && e.titulo.toLowerCase().includes(q)) ||
-        (e.motivo && e.motivo.toLowerCase().includes(q))
+        (e.motivo && e.motivo.toLowerCase().includes(q)) ||
+        (e.sociosInvolucrados && e.sociosInvolucrados.some(s =>
+          (s.nombre && s.nombre.toLowerCase().includes(q)) ||
+          (s.legajo && s.legajo.toLowerCase().includes(q))
+        ))
       );
     }
 
@@ -198,17 +203,17 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       result = result.filter(e => (e.urgencia || 'normal') === urg);
     }
 
-    // Filtro por rango de fechas
+    // Filtro por rango de fechas (comparación YYYY-MM-DD ante timestamps ISO)
     if (this.filtroFechaDesde) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion >= this.filtroFechaDesde);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) >= this.filtroFechaDesde);
     }
     if (this.filtroFechaHasta) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion <= this.filtroFechaHasta);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) <= this.filtroFechaHasta);
     }
 
     result.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA = this.columnaOrden === 'titulo' ? (a.titulo || a.motivo || '') : ((a as any)[this.columnaOrden] ?? '');
+      let valB = this.columnaOrden === 'titulo' ? (b.titulo || b.motivo || '') : ((b as any)[this.columnaOrden] ?? '');
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 
@@ -365,16 +370,25 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
   }
 
   abrirVotacion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
   abrirFirma(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalFirmaAbierto = true;
   }
 
@@ -383,6 +397,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
     this.modalSociosAbierto = true;
   }
 

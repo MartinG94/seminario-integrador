@@ -173,7 +173,6 @@
     <div *ngIf="vistaActual === 'tabla'" class="card">
       <div class="card-header card-header-primary">
         <h4 class="card-title">Detalle de Expedientes</h4>
-        <p class="card-category">Grilla interactiva para auditoría del Tribunal de Disciplina con ordenamiento dinámico por columnas.</p>
       </div>
       <div class="card-body">
         <div class="table-responsive explorer-table-container">
@@ -275,7 +274,7 @@
       <div class="card-body">
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="text-muted small">Estado Procesal Oficial:</label>
+            <label class="text-muted small">Estado:</label>
             <div>
               <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteSeleccionado.estado)">
                 {{getEstadoLabel(expedienteSeleccionado.estado)}}
@@ -283,13 +282,13 @@
             </div>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="text-muted small">Fecha de Apertura:</label>
+            <label class="text-muted small">Fecha:</label>
             <div class="font-weight-bold">
               {{expedienteSeleccionado.fechaCreacion | date:'dd/MM/yyyy'}}
             </div>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="text-muted small">Nivel de Urgencia:</label>
+            <label class="text-muted small">Urgencia:</label>
             <div class="d-flex align-items-center gap-2">
               <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(expedienteSeleccionado.urgencia)">
                 <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i> {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
@@ -311,22 +310,18 @@
             </div>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="text-muted small">Puntaje Comprometido:</label>
+            <label class="text-muted small">Puntos:</label>
             <div class="font-weight-bold" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
               {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts
             </div>
           </div>
           <div class="col-md-12 mb-3">
-            <label class="text-muted small">Título de la Causa:</label>
+            <label class="text-muted small">Título:</label>
             <div class="p-2 bg-light rounded border font-weight-bold">{{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</div>
           </div>
           <div class="col-md-12 mb-3">
-            <label class="text-muted small">Motivo de la Causa Reglamentaria:</label>
-            <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.motivo}}</div>
-          </div>
-          <div *ngIf="expedienteSeleccionado.razon" class="col-md-12 mb-3">
-            <label class="text-muted small font-weight-bold">Razón / Circunstanciación:</label>
-            <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.razon}}</div>
+            <label class="text-muted small font-weight-bold">Razón:</label>
+            <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.razon || expedienteSeleccionado.motivo}}</div>
           </div>
         </div>
 
@@ -398,13 +393,13 @@
   </div>
 </div>
 
-<!-- Modal 2: Votación Nominal Colegiada de Jueces -->
+<!-- Modal 2: Emitir Resolución -->
 <div *ngIf="modalVotacionAbierto" class="modal-backdrop-custom">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-warning">
-        <h4 class="card-title">Votación Nominal Colegiada del Tribunal</h4>
-        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; Causa: {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
+        <h4 class="card-title">Emitir Resolución</h4>
+        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
       <div class="card-body">
         <div class="alert alert-warning">
@@ -436,13 +431,13 @@
   </div>
 </div>
 
-<!-- Modal 3: Firma Digital Criptográfica -->
+<!-- Modal 3: Firmar Resolución -->
 <div *ngIf="modalFirmaAbierto" class="modal-backdrop-custom">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-success">
-        <h4 class="card-title">Aplicación de Firma Digital Criptográfica</h4>
-        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; Causa: {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
+        <h4 class="card-title">Firmar Resolución</h4>
+        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
       <div class="card-body">
         <div class="alert alert-info">
@@ -451,7 +446,7 @@
         </div>
 
         <div class="form-group">
-          <label class="font-weight-bold text-dark">Seleccione Magistrado Firmante:</label>
+          <label class="font-weight-bold text-dark">Firmante:</label>
           <select class="form-control" [(ngModel)]="juezFirmando">
             <option *ngFor="let j of juecesDisponibles" [value]="j">{{j}}</option>
           </select>
@@ -479,17 +474,17 @@
   </div>
 </div>
 
-<!-- Modal 4: Listado de Socios Involucrados (S3-08) -->
+<!-- Modal 4: Socios Involucrados (S3-08) -->
 <div *ngIf="modalSociosAbierto" class="modal-backdrop-custom">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info">
-        <h4 class="card-title">Listado de Socios Involucrados</h4>
-        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; Causa con pluralidad de involucrados</p>
+        <h4 class="card-title">Socios Involucrados</h4>
+        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}}</p>
       </div>
       <div class="card-body">
         <p class="text-muted small mb-3">
-          Se detalla la nómina completa de socios involucrados en las actuaciones de la causa <strong>{{formatCaseNumber(expedienteSeleccionado.numero)}}</strong>.
+          Socios involucrados en el expediente <strong>{{formatCaseNumber(expedienteSeleccionado.numero)}}</strong>:
         </p>
 
         <div class="table-responsive">

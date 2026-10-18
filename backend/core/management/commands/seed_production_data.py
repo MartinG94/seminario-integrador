@@ -21,6 +21,7 @@ from django.utils import timezone
 from expedientes.domain.calendar import compute_business_deadline
 from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.models import (
+    CambioEstadoExpediente,
     EstadoExpedienteEnum,
     Expediente,
     ExpedienteNumberSequence,
@@ -339,7 +340,24 @@ class Command(BaseCommand):
                         exp.plazo_inicio_at = plazo_inicio
                         exp.plazo_limite_at = plazo_limite
                     exp.save()
-                exp.socios.set([socio_dest])
+                if numero == "EXP-0003/2026":
+                    exp.socios.set([socio_dest, diego_socio])
+                else:
+                    exp.socios.set([socio_dest])
+
+                actor_creador = (
+                    diego_socio.legajo
+                    if numero in ("EXP-0002/2026", "EXP-0004/2026", "EXP-0008/2026")
+                    else nicolas_socio.legajo
+                )
+                if not exp.cambios_estado.exists():
+                    CambioEstadoExpediente.objects.create(
+                        expediente=exp,
+                        estado_anterior=EstadoExpedienteEnum.CREADO,
+                        estado_nuevo=estado,
+                        actor=actor_creador,
+                        motivo=motivo,
+                    )
 
                 self.stdout.write(
                     f"+ Expediente verificado: {numero} ({estado}) para {socio_dest.legajo}"

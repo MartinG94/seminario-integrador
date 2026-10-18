@@ -476,7 +476,7 @@ describe('GestionarExpedientesComponent', () => {
       // Verificar contenido del modal renderizado
       const modal = compiled.querySelector('.modal-backdrop-custom');
       expect(modal).toBeTruthy();
-      expect(modal?.textContent).toContain('Listado de Socios Involucrados');
+      expect(modal?.textContent).toContain('Socios Involucrados');
       expect(modal?.textContent).toContain('85194');
       expect(modal?.textContent).toContain('Lucas Martín Guillén');
       expect(modal?.textContent).toContain('87414');
@@ -497,6 +497,31 @@ describe('GestionarExpedientesComponent', () => {
 
       expect(btnEmitir).toBeTruthy();
       expect(btnFirmar).toBeTruthy();
+    });
+
+    it('debe mostrar siempre la Razón en el modal de detalle y cerrar el detalle al abrir un modal secundario', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const expDetalle: Expediente = {
+        ...expMultiplesSocios,
+        estado: 'revision_resolucion',
+        razon: undefined
+      };
+
+      component.abrirDetalle(expDetalle);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
+      expect(compiled.textContent).toContain('Razón:');
+      expect(compiled.textContent).toContain('Falta de informes');
+
+      // Al abrir Socios Involucrados desde el detalle, se cierra el modal de detalle evitando superposición
+      component.abrirModalSocios(expDetalle);
+      fixture.detectChanges();
+
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
     });
   });
 });

@@ -133,11 +133,14 @@ def _obtener_razon_expediente(obj: Expediente) -> str:
         return str(razon_directa).strip()
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
-        if solicitud and getattr(solicitud, "razon", None) and solicitud.razon.strip():
-            return solicitud.razon.strip()
+        if solicitud:
+            for attr in ("razon", "anexo_relato", "motivo"):
+                val = getattr(solicitud, attr, None)
+                if val and str(val).strip():
+                    return str(val).strip()
     except Exception:
         pass
-    return ""
+    return (obj.motivo or "").strip()
 
 
 def _obtener_titulo_expediente(obj: Expediente) -> str:
