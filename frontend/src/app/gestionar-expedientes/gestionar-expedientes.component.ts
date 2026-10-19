@@ -1,5 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
+import { 
+  TribunalDataService, 
+  Expediente, 
+  EstadoExpediente, 
+  NivelUrgencia,
+  ResponsableTribunal,
+  SocioInvolucrado,
+  CANONICAL_RESPONSABLES_TD,
+  CANONICAL_REGLAMENTOS_RESPALDANTES
+} from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import { Subscription } from 'rxjs';
@@ -478,5 +487,92 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar la urgencia.'));
       }
     });
+  }
+
+  // --- Métodos de apoyo formato canónico Tribunal (S3-10) ---
+
+  getResponsablesTribunal(exp: Expediente | null): ResponsableTribunal[] {
+    if (!exp) return CANONICAL_RESPONSABLES_TD;
+    if (exp.responsablesTribunal && exp.responsablesTribunal.length > 0) {
+      return exp.responsablesTribunal;
+    }
+    if (exp.responsables && exp.responsables.length > 0) {
+      return exp.responsables;
+    }
+    return CANONICAL_RESPONSABLES_TD;
+  }
+
+  getReglamentosRespaldantes(exp: Expediente | null): string[] {
+    if (!exp) return CANONICAL_REGLAMENTOS_RESPALDANTES;
+    if (exp.reglamentosRespaldantes && exp.reglamentosRespaldantes.length > 0) {
+      return exp.reglamentosRespaldantes;
+    }
+    if (exp.reglamentos_respaldantes && exp.reglamentos_respaldantes.length > 0) {
+      return exp.reglamentos_respaldantes;
+    }
+    return CANONICAL_REGLAMENTOS_RESPALDANTES;
+  }
+
+  getReglamentoAsociado(exp: Expediente | null): string {
+    if (!exp) return 'Reglamento Procesal Disciplinario 2026 (Art. 12)';
+    return exp.reglamentoAsociado || exp.reglamento_asociado || 'Reglamento Procesal Disciplinario 2026 (Art. 12)';
+  }
+
+  getInvolucrados(exp: Expediente | null): SocioInvolucrado[] {
+    if (!exp) return [];
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados;
+    }
+    if (exp.socios && exp.socios.length > 0) {
+      return exp.socios;
+    }
+
+    // Fallback con el socio principal del expediente
+    const estadoJust = exp.descargoPresentado || exp.descargo
+      ? 'Justificado'
+      : (exp.estado === 'justificando' ? 'En plazo' : 'No justificado');
+
+    const partes = (exp.socio || '').trim().split(' ');
+    const nombre = partes[0] || '—';
+    const apellido = partes.slice(1).join(' ') || '—';
+
+    return [
+      {
+        legajo: exp.legajo || '—',
+        nombre,
+        apellido,
+        grupo: 'G58',
+        estado_justificacion: estadoJust
+      }
+    ];
+  }
+
+  getEstadoJustificacionBadgeClass(estado?: string): string {
+    switch (estado) {
+      case 'Justificado':
+        return 'badge-mat-success';
+      case 'En plazo':
+        return 'badge-mat-warning';
+      case 'No justificado':
+      default:
+        return 'badge-mat-danger';
+    }
+  }
+
+  formatSancionSolicitada(puntos?: number): string {
+    if (puntos === undefined || puntos === null) return '0.0 pts';
+    return `${puntos > 0 ? '+' : ''}${puntos} pts`;
+  }
+
+  formatFechaSolicitud(fecha?: string): string {
+    if (!fecha) return '—';
+    if (fecha.includes('T')) {
+      fecha = fecha.split('T')[0];
+    }
+    const parts = fecha.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return fecha;
   }
 }

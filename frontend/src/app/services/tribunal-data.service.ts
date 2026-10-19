@@ -16,12 +16,47 @@ export type EstadoExpediente =
 
 export type NivelUrgencia = 'baja' | 'normal' | 'urgente';
 
+export interface ResponsableTribunal {
+  identificador: string;
+  legajo: string;
+  nombre: string;
+  grupo: string;
+}
+
+export interface SocioInvolucrado {
+  id?: number | string;
+  legajo: string;
+  nombre: string;
+  apellido: string;
+  nombre_completo?: string;
+  grupo: string;
+  estado_justificacion?: string;
+}
+
+export const CANONICAL_RESPONSABLES_TD: ResponsableTribunal[] = [
+  { identificador: 'Responsable 1', legajo: '11239', nombre: 'Giuliano Toselli', grupo: 'G57' },
+  { identificador: 'Responsable 2', legajo: '11737', nombre: 'Catalina Cerda Gallego', grupo: 'G58' },
+  { identificador: 'Responsable 3', legajo: '11735', nombre: 'Candela Moreno Migliore', grupo: 'G59' },
+];
+
+export const CANONICAL_REGLAMENTOS_RESPALDANTES: string[] = [
+  'Estatuto Social AVEIT (Reforma 2026)',
+  'Reglamento Procesal Disciplinario 2026',
+  'Reglamento Interno de Disciplina',
+];
+
 export interface BoardCaseDTO {
   id: number;
   numero: string;
+  titulo?: string;
+  creador?: string;
   socio: number;
   socio_nombre: string;
   socio_legajo: string;
+  socios?: SocioInvolucrado[];
+  responsables?: ResponsableTribunal[];
+  reglamento_asociado?: string;
+  reglamentos_respaldantes?: string[];
   subcomision: string;
   estado: EstadoExpediente;
   estado_display: string;
@@ -59,8 +94,19 @@ export interface LogJustificativo {
 export interface Expediente {
   id: string;
   numero: string;
+  titulo?: string;
+  solicitante?: string;
+  creador?: string;
   socio: string;
   legajo: string;
+  sociosInvolucrados?: SocioInvolucrado[];
+  socios?: SocioInvolucrado[];
+  responsablesTribunal?: ResponsableTribunal[];
+  responsables?: ResponsableTribunal[];
+  reglamentoAsociado?: string;
+  reglamento_asociado?: string;
+  reglamentosRespaldantes?: string[];
+  reglamentos_respaldantes?: string[];
   subcomision: string;
   motivo: string;
   fechaCreacion: string;
@@ -145,10 +191,13 @@ export class TribunalDataService {
     {
       id: '2',
       numero: 'EXP-001/2026',
+      titulo: 'Inasistencia a Asamblea General Ordinaria',
+      solicitante: 'Comisión Directiva',
+      creador: 'Comisión Directiva',
       socio: 'Lucas Gastiaburu',
       legajo: '74907',
       subcomision: 'Cómputos',
-      motivo: 'Inasistencia no informada a asamblea general ordinaria',
+      motivo: 'Inasistencia no informada a asamblea general ordinaria convocada con carácter obligatorio el día 01 de marzo de 2026.',
       fechaCreacion: '2026-03-01',
       estado: 'justificando',
       horasRestantes: 74,
@@ -156,20 +205,35 @@ export class TribunalDataService {
       puntos: -1.0,
       plazoInicioAt: '2026-10-08T18:00:00-03:00',
       plazoLimiteAt: '2026-10-15T18:00:00-03:00',
-      descargoPresentado: false
+      descargoPresentado: false,
+      reglamentoAsociado: 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: '74907', nombre: 'Lucas', apellido: 'Gastiaburu', grupo: 'G58', estado_justificacion: 'En plazo' }
+      ]
     },
     {
       id: 'EXP-2026-002',
       numero: 'EXP-002/2026',
+      titulo: 'Omisión reiterada en presentación de informes cuatrimestrales',
+      solicitante: 'Subcomisión de Cómputos',
+      creador: 'Subcomisión de Cómputos',
       socio: 'Lucas Martín Guillén',
       legajo: '85194',
       subcomision: 'Cómputos',
-      motivo: 'Falta reiterada de entrega de informes operativos cuatrimestrales',
+      motivo: 'Falta reiterada de entrega de informes operativos cuatrimestrales correspondientes al período ordinario.',
       fechaCreacion: '2026-03-02',
       estado: 'revision_resolucion',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.5,
+      reglamentoAsociado: 'Reglamento Interno de Disciplina (Art. 8)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: '85194', nombre: 'Lucas Martín', apellido: 'Guillén', grupo: 'G57', estado_justificacion: 'Justificado' }
+      ],
       descargo: {
         tipo: 'T02_CERTIFICADO',
         causal: 'Examen Académico Universitario en UTN FRC',
@@ -196,16 +260,24 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-003',
       numero: 'EXP-003/2026',
+      titulo: 'Reconocimiento por Coordinación en Jornadas Tecnológicas Solidarias',
+      solicitante: 'Comisión Directiva',
+      creador: 'Comisión Directiva',
       socio: 'Nicolás Rosales',
       legajo: '408917',
       subcomision: 'Cómputos',
-      motivo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
+      motivo: 'Coordinación ejemplar en jornadas tecnológicas solidarias en representación institucional de AVEIT.',
       fechaCreacion: '2026-02-28',
       estado: 'pendiente_correos',
       horasRestantes: 0,
       tipo: 'merito',
       puntos: 2.0,
-
+      reglamentoAsociado: 'Estatuto Social AVEIT (Reforma 2026)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: '408917', nombre: 'Nicolás', apellido: 'Rosales', grupo: 'G59', estado_justificacion: 'No justificado' }
+      ],
       votacion: {
         votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE', 'Juez 3': 'FAVORABLE' },
         considerandos: 'Desempeño sobresaliente con impacto directo en la comunidad.',
@@ -220,15 +292,24 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-004',
       numero: 'EXP-004/2026',
+      titulo: 'Incumplimiento de tareas asignadas en cobertura institucional',
+      solicitante: 'Subcomisión de Prensa y Difusión',
+      creador: 'Subcomisión de Prensa y Difusión',
       socio: 'Valentina Rossi',
       legajo: 'LEG-6541',
       subcomision: 'Prensa y Difusión',
-      motivo: 'Incumplimiento de tareas asignadas en cobertura institucional',
+      motivo: 'Incumplimiento de tareas asignadas en cobertura institucional de eventos universitarios.',
       fechaCreacion: '2026-02-15',
       estado: 'emitido',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -0.5,
+      reglamentoAsociado: 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: 'LEG-6541', nombre: 'Valentina', apellido: 'Rossi', grupo: 'G60', estado_justificacion: 'No justificado' }
+      ],
       firmas: {
         juecesFirmantes: ['Presidente TD', 'Vocal 1', 'Vocal 2'],
         hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
@@ -238,28 +319,46 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-005',
       numero: 'EXP-005/2026',
+      titulo: 'Ausencia en convocatoria de reacondicionamiento edilicio',
+      solicitante: 'Subcomisión de Deportes',
+      creador: 'Subcomisión de Deportes',
       socio: 'Martín Gómez',
       legajo: 'LEG-5412',
       subcomision: 'Deportes',
-      motivo: 'Ausencia en convocatoria de reacondicionamiento edilicio',
+      motivo: 'Ausencia en convocatoria de reacondicionamiento edilicio y mantenimiento de instalaciones.',
       fechaCreacion: '2026-03-04',
       estado: 'creado',
       horasRestantes: 120,
       tipo: 'falta',
-      puntos: -1.0
+      puntos: -1.0,
+      reglamentoAsociado: 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: 'LEG-5412', nombre: 'Martín', apellido: 'Gómez', grupo: 'G57', estado_justificacion: 'No justificado' }
+      ]
     },
     {
       id: 'EXP-2026-006',
       numero: 'EXP-006/2026',
+      titulo: 'Retraso reiterado en entrega de actas de subcomisión',
+      solicitante: 'Comisión Directiva',
+      creador: 'Comisión Directiva',
       socio: 'Nicolás Rosales',
       legajo: '408917',
       subcomision: 'Cómputos',
-      motivo: 'Retraso reiterado en entrega de actas de subcomisión',
+      motivo: 'Retraso reiterado en entrega de actas de subcomisión y documentación administrativa.',
       fechaCreacion: '2026-03-02',
       estado: 'pendiente_firma',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.0,
+      reglamentoAsociado: 'Reglamento Interno de Disciplina (Art. 14)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: '408917', nombre: 'Nicolás', apellido: 'Rosales', grupo: 'G59', estado_justificacion: 'No justificado' }
+      ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
         hashCriptografico: '',
@@ -269,15 +368,24 @@ export class TribunalDataService {
     {
       id: 'EXP-2026-007',
       numero: 'EXP-007/2026',
+      titulo: 'Incumplimiento de guardia de laboratorio informático',
+      solicitante: 'Subcomisión de Cómputos',
+      creador: 'Subcomisión de Cómputos',
       socio: 'Axel René Villegas',
       legajo: '403655',
       subcomision: 'Cómputos',
-      motivo: 'Incumplimiento de guardia de laboratorio informático',
+      motivo: 'Incumplimiento de guardia asignada en laboratorio informático según cronograma fijado.',
       fechaCreacion: '2026-02-28',
       estado: 'pendiente_correos',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -2.0,
+      reglamentoAsociado: 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentosRespaldantes: CANONICAL_REGLAMENTOS_RESPALDANTES,
+      responsablesTribunal: CANONICAL_RESPONSABLES_TD,
+      sociosInvolucrados: [
+        { legajo: '403655', nombre: 'Axel René', apellido: 'Villegas', grupo: 'G58', estado_justificacion: 'No justificado' }
+      ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
         hashCriptografico: 'sha256-abc123789fed456',
@@ -470,8 +578,19 @@ export class TribunalDataService {
     return {
       id: String(c.id),
       numero: c.numero,
+      titulo: c.titulo,
+      solicitante: c.creador || 'Comisión Directiva',
+      creador: c.creador || 'Comisión Directiva',
       socio: c.socio_nombre,
       legajo: c.socio_legajo,
+      socios: c.socios,
+      sociosInvolucrados: c.socios,
+      responsables: c.responsables || CANONICAL_RESPONSABLES_TD,
+      responsablesTribunal: c.responsables || CANONICAL_RESPONSABLES_TD,
+      reglamento_asociado: c.reglamento_asociado || 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentoAsociado: c.reglamento_asociado || 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentos_respaldantes: c.reglamentos_respaldantes || CANONICAL_REGLAMENTOS_RESPALDANTES,
+      reglamentosRespaldantes: c.reglamentos_respaldantes || CANONICAL_REGLAMENTOS_RESPALDANTES,
       subcomision: c.subcomision,
       motivo: c.motivo,
       fechaCreacion: c.created_at ? c.created_at.split('T')[0] : '',

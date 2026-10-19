@@ -53,6 +53,138 @@ class EvidenciaMetadataSerializer(serializers.ModelSerializer):
         return ""
 
 
+REGLAMENTOS_VIGENTES_LIST = [
+    "Estatuto Social AVEIT (Reforma 2026)",
+    "Reglamento Procesal Disciplinario 2026",
+    "Reglamento Interno de Disciplina",
+]
+
+CANONICAL_RESPONSABLES_TD = [
+    {
+        "identificador": "Responsable 1",
+        "legajo": "11239",
+        "nombre": "Giuliano Toselli",
+        "grupo": "G57",
+    },
+    {
+        "identificador": "Responsable 2",
+        "legajo": "11737",
+        "nombre": "Catalina Cerda Gallego",
+        "grupo": "G58",
+    },
+    {
+        "identificador": "Responsable 3",
+        "legajo": "11735",
+        "nombre": "Candela Moreno Migliore",
+        "grupo": "G59",
+    },
+]
+
+
+def _obtener_responsables_td() -> list[dict[str, str]]:
+    td_socios = list(Socio.objects.filter(role=Role.TD, is_enabled=True).order_by("legajo")[:3])
+    if len(td_socios) >= 3:
+        res = []
+        for idx, s in enumerate(td_socios, start=1):
+            grupo = (
+                f"G{s.social_year}"
+                if s.social_year and s.social_year >= 50
+                else f"G{s.social_year or 58}"
+            )
+            res.append(
+                {
+                    "identificador": f"Responsable {idx}",
+                    "legajo": str(s.legajo),
+                    "nombre": f"{s.first_name} {s.last_name}".strip(),
+                    "grupo": grupo,
+                }
+            )
+        return res
+    return CANONICAL_RESPONSABLES_TD
+
+
+def _obtener_reglamentos_respaldantes(obj: Expediente) -> list[str]:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and solicitud.reglamentos_respaldantes:
+            return list(solicitud.reglamentos_respaldantes)
+    except Exception:
+        pass
+    return list(REGLAMENTOS_VIGENTES_LIST)
+
+
+def _obtener_reglamento_asociado(obj: Expediente) -> str:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and solicitud.causal:
+            return solicitud.causal
+        if solicitud and solicitud.reglamentos_respaldantes:
+            return solicitud.reglamentos_respaldantes[0]
+    except Exception:
+        pass
+    return "Reglamento Procesal Disciplinario 2026 (Art. 12)"
+
+
+def _obtener_creador_expediente(obj: Expediente) -> str:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and solicitud.solicitante:
+            s = solicitud.solicitante
+            return f"{s.first_name} {s.last_name} ({s.legajo})".strip()
+    except Exception:
+        pass
+    cambios = list(obj.cambios_estado.all()) if hasattr(obj, "cambios_estado") else []
+    if cambios:
+        primer = sorted(cambios, key=lambda c: (c.fecha_hora, c.id))[0]
+        if primer.actor and primer.actor != "SISTEMA":
+            return primer.actor
+    return "Comisión Directiva"
+
+
+def _obtener_socios_expediente(obj: Expediente) -> list[dict[str, Any]]:
+    socios = list(obj.socios.all())
+    if not socios and obj.socio:
+        socios = [obj.socio]
+
+    descargo_socio_ids: set[int] = set()
+    if hasattr(obj, "descargos"):
+        try:
+            descargo_socio_ids = {d.socio_id for d in obj.descargos.all()}
+        except Exception:
+            pass
+
+    result = []
+    for socio in socios:
+        has_descargo = (socio.id in descargo_socio_ids) or (
+            obj.socio_id == socio.id and bool(getattr(obj, "descargo_presentado", False))
+        )
+        if has_descargo:
+            estado_just = "Justificado"
+        elif obj.estado == EstadoExpedienteEnum.JUSTIFICANDO:
+            estado_just = "En plazo"
+        else:
+            estado_just = "No justificado"
+
+        grupo = (
+            f"G{socio.social_year}"
+            if socio.social_year and socio.social_year >= 50
+            else f"G{socio.social_year or 58}"
+        )
+
+        result.append(
+            {
+                "id": socio.id,
+                "legajo": socio.legajo,
+                "nombre": socio.first_name,
+                "apellido": socio.last_name,
+                "nombre_completo": f"{socio.first_name} {socio.last_name}".strip(),
+                "grupo": grupo,
+                "estado_justificacion": estado_just,
+            }
+        )
+    return result
+
+
 class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
@@ -60,6 +192,11 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    titulo = serializers.SerializerMethodField()
+    creador = serializers.SerializerMethodField()
+    responsables = serializers.SerializerMethodField()
+    reglamento_asociado = serializers.SerializerMethodField()
+    reglamentos_respaldantes = serializers.SerializerMethodField()
     descargo_presentado = serializers.SerializerMethodField()
     descargo_tipo = serializers.SerializerMethodField()
     descargo_causal = serializers.SerializerMethodField()
@@ -78,7 +215,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "numero",
+            "titulo",
             "motivo",
+            "creador",
             "puntos",
             "estado",
             "urgencia",
@@ -86,6 +225,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "socio_nombre",
             "socio_legajo",
             "socios",
+            "responsables",
+            "reglamento_asociado",
+            "reglamentos_respaldantes",
             "subcomision",
             "plazo_inicio_at",
             "plazo_limite_at",
@@ -189,15 +331,29 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         horas = int(diff.total_seconds() // 3600)
         return max(0, horas)
 
-    def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
-        return [
-            {
-                "id": socio.id,
-                "legajo": socio.legajo,
-                "nombre": f"{socio.first_name} {socio.last_name}",
-            }
-            for socio in obj.socios.all()
-        ]
+    def get_titulo(self, obj: Expediente) -> str:
+        try:
+            solicitud = getattr(obj, "solicitud_t01", None)
+            if solicitud and getattr(solicitud, "titulo", None) and solicitud.titulo.strip():
+                return solicitud.titulo.strip()
+        except Exception:
+            pass
+        return getattr(obj, "titulo", "") or obj.motivo
+
+    def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj)
+
+    def get_responsables(self, obj: Expediente) -> list[dict[str, str]]:
+        return _obtener_responsables_td()
+
+    def get_reglamento_asociado(self, obj: Expediente) -> str:
+        return _obtener_reglamento_asociado(obj)
+
+    def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
+        return _obtener_reglamentos_respaldantes(obj)
+
+    def get_socios(self, obj: Expediente) -> list[dict[str, Any]]:
+        return _obtener_socios_expediente(obj)
 
     def get_evidencias(self, obj: Expediente) -> list[dict]:
         request = self.context.get("request")
@@ -637,6 +793,12 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
+    titulo = serializers.SerializerMethodField()
+    creador = serializers.SerializerMethodField()
+    socios = serializers.SerializerMethodField()
+    responsables = serializers.SerializerMethodField()
+    reglamento_asociado = serializers.SerializerMethodField()
+    reglamentos_respaldantes = serializers.SerializerMethodField()
     transiciones_permitidas = serializers.SerializerMethodField()
     cantidad_socios = serializers.SerializerMethodField()
 
@@ -645,16 +807,22 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "numero",
+            "titulo",
+            "motivo",
+            "creador",
             "socio",
             "socio_nombre",
             "socio_legajo",
+            "socios",
+            "responsables",
+            "reglamento_asociado",
+            "reglamentos_respaldantes",
             "subcomision",
             "estado",
             "estado_display",
             "urgencia",
             "urgencia_display",
             "puntos",
-            "motivo",
             "created_at",
             "plazo_limite_at",
             "transiciones_permitidas",
@@ -663,6 +831,27 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
+
+    def get_titulo(self, obj: Expediente) -> str:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and getattr(solicitud, "titulo", None):
+            return solicitud.titulo
+        return f"Expediente Disciplinario {obj.numero}"
+
+    def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj)
+
+    def get_responsables(self, obj: Expediente) -> list[dict[str, str]]:
+        return _obtener_responsables_td()
+
+    def get_reglamento_asociado(self, obj: Expediente) -> str:
+        return _obtener_reglamento_asociado(obj)
+
+    def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
+        return _obtener_reglamentos_respaldantes(obj)
+
+    def get_socios(self, obj: Expediente) -> list[dict[str, Any]]:
+        return _obtener_socios_expediente(obj)
 
     def get_cantidad_socios(self, obj: Expediente) -> int:
         count = obj.socios.count()

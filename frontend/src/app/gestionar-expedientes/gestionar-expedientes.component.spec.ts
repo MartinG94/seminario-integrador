@@ -383,6 +383,137 @@ describe('GestionarExpedientesComponent', () => {
       expect(notifications.success).toHaveBeenCalledWith('Urgencia actualizada a "Urgente" exitosamente.');
     });
   });
+
+  describe('S3-10: Formato canónico del Tribunal en el detalle del expediente', () => {
+    const mockExpedienteS310: Expediente = {
+      id: '419',
+      numero: 'EXP-419/2025',
+      titulo: 'Inasistencia no informada a asamblea general ordinaria',
+      solicitante: 'Comisión Directiva',
+      creador: 'Comisión Directiva',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia injustificada a la asamblea convocada con carácter obligatorio.\nSe adjuntan registros de firmas y libro de actas.',
+      fechaCreacion: '2025-11-20',
+      estado: 'justificando',
+      horasRestantes: 72,
+      tipo: 'falta',
+      puntos: -1.0,
+      reglamentoAsociado: 'Reglamento Procesal Disciplinario 2026 (Art. 12)',
+      reglamentosRespaldantes: [
+        'Estatuto Social AVEIT (Reforma 2026)',
+        'Reglamento Procesal Disciplinario 2026',
+        'Reglamento Interno de Disciplina'
+      ],
+      responsablesTribunal: [
+        { identificador: 'Responsable 1', legajo: '11239', nombre: 'Giuliano Toselli', grupo: 'G57' },
+        { identificador: 'Responsable 2', legajo: '11737', nombre: 'Catalina Cerda Gallego', grupo: 'G58' },
+        { identificador: 'Responsable 3', legajo: '11735', nombre: 'Candela Moreno Migliore', grupo: 'G59' }
+      ],
+      sociosInvolucrados: [
+        { legajo: '74907', nombre: 'Lucas', apellido: 'Gastiaburu', grupo: 'G58', estado_justificacion: 'En plazo' }
+      ]
+    };
+
+    it('getResponsablesTribunal debe retornar los 3 responsables canónicos del TD', () => {
+      const responsables = component.getResponsablesTribunal(mockExpedienteS310);
+      expect(responsables.length).toBe(3);
+      expect(responsables[0]).toEqual({
+        identificador: 'Responsable 1',
+        legajo: '11239',
+        nombre: 'Giuliano Toselli',
+        grupo: 'G57'
+      });
+      expect(responsables[1].identificador).toBe('Responsable 2');
+      expect(responsables[2].identificador).toBe('Responsable 3');
+    });
+
+    it('getResponsablesTribunal debe retornar el fallback canónico si el expediente no los tiene explícitos', () => {
+      const expSinResp: any = { ...mockExpedienteS310, responsablesTribunal: undefined, responsables: undefined };
+      const responsables = component.getResponsablesTribunal(expSinResp);
+      expect(responsables.length).toBe(3);
+      expect(responsables[0].nombre).toBe('Giuliano Toselli');
+    });
+
+    it('getReglamentosRespaldantes debe retornar los reglamentos oficiales con denominación completa', () => {
+      const reglamentos = component.getReglamentosRespaldantes(mockExpedienteS310);
+      expect(reglamentos).toContain('Estatuto Social AVEIT (Reforma 2026)');
+      expect(reglamentos).toContain('Reglamento Procesal Disciplinario 2026');
+      expect(reglamentos).toContain('Reglamento Interno de Disciplina');
+    });
+
+    it('getInvolucrados debe devolver los socios involucrados y su estado de justificación', () => {
+      const involucrados = component.getInvolucrados(mockExpedienteS310);
+      expect(involucrados.length).toBe(1);
+      expect(involucrados[0].legajo).toBe('74907');
+      expect(involucrados[0].nombre).toBe('Lucas');
+      expect(involucrados[0].apellido).toBe('Gastiaburu');
+      expect(involucrados[0].grupo).toBe('G58');
+      expect(involucrados[0].estado_justificacion).toBe('En plazo');
+    });
+
+    it('formatSancionSolicitada debe formatear puntos con signo y unidad', () => {
+      expect(component.formatSancionSolicitada(-1.5)).toBe('-1.5 pts');
+      expect(component.formatSancionSolicitada(2.0)).toBe('+2 pts');
+      expect(component.formatSancionSolicitada(0)).toBe('0 pts');
+    });
+
+    it('formatFechaSolicitud debe formatear fechas ISO en DD/MM/YYYY', () => {
+      expect(component.formatFechaSolicitud('2026-03-01')).toBe('01/03/2026');
+      expect(component.formatFechaSolicitud('2025-11-20T14:30:00Z')).toBe('20/11/2025');
+    });
+
+    it('getEstadoJustificacionBadgeClass debe devolver la clase correcta según el estado', () => {
+      expect(component.getEstadoJustificacionBadgeClass('Justificado')).toBe('badge-mat-success');
+      expect(component.getEstadoJustificacionBadgeClass('En plazo')).toBe('badge-mat-warning');
+      expect(component.getEstadoJustificacionBadgeClass('No justificado')).toBe('badge-mat-danger');
+    });
+
+    it('debe renderizar en el DOM las 4 secciones canónicas al abrir el modal de detalle', () => {
+      component.abrirDetalle(mockExpedienteS310);
+      fixture.detectChanges();
+
+      const modalElement = fixture.nativeElement.querySelector('.modal-dialog-tribunal');
+      expect(modalElement).toBeTruthy();
+
+      // Sección 1: Cabecera
+      const headerTitle = modalElement.querySelector('.card-header h4');
+      expect(headerTitle.textContent).toContain('Expediente 419/2025');
+      const descripcion = modalElement.querySelector('.descripcion-causa');
+      expect(descripcion.textContent).toContain('Inasistencia injustificada');
+
+      // Sección 2: Responsables
+      const cardsResponsables = modalElement.querySelectorAll('.card-responsable');
+      expect(cardsResponsables.length).toBe(3);
+      expect(cardsResponsables[0].textContent).toContain('Responsable 1');
+      expect(cardsResponsables[0].textContent).toContain('Giuliano Toselli');
+      expect(cardsResponsables[0].textContent).toContain('G57');
+
+      // Sección 3: Reglamentos
+      const itemsReglamentos = modalElement.querySelectorAll('.reglamento-item');
+      expect(itemsReglamentos.length).toBe(3);
+      expect(itemsReglamentos[0].textContent).toContain('Estatuto Social AVEIT');
+
+      // Sección 4: Involucrados
+      const tablaInvolucrados = modalElement.querySelector('.table-involucrados');
+      expect(tablaInvolucrados).toBeTruthy();
+      const ths = tablaInvolucrados.querySelectorAll('thead th');
+      expect(ths[0].textContent).toContain('N.º de Socio');
+      expect(ths[1].textContent).toContain('N.º de Grupo');
+      expect(ths[2].textContent).toContain('Nombre');
+      expect(ths[3].textContent).toContain('Apellido');
+      expect(ths[4].textContent).toContain('Estado de Justificación');
+
+      const filas = tablaInvolucrados.querySelectorAll('tbody tr');
+      expect(filas.length).toBe(1);
+      expect(filas[0].textContent).toContain('74907');
+      expect(filas[0].textContent).toContain('G58');
+      expect(filas[0].textContent).toContain('Lucas');
+      expect(filas[0].textContent).toContain('Gastiaburu');
+      expect(filas[0].textContent).toContain('En plazo');
+    });
+  });
 });
 
 

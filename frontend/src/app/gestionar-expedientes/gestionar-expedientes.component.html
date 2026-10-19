@@ -251,35 +251,83 @@
   </div>
 </div>
 
-<!-- Modal 1: Detalle Completo del Expediente -->
+<!-- Modal 1: Detalle Completo del Expediente (Formato Canónico Tribunal - S3-10) -->
 <div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom">
-  <div class="modal-dialog-custom">
+  <div class="modal-dialog-custom modal-dialog-tribunal">
     <div class="card" *ngIf="expedienteSeleccionado">
-      <div class="card-header card-header-primary">
-        <h4 class="card-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
-        <p class="card-category">Socio: {{expedienteSeleccionado.socio}} &bull; N° de Socio: {{expedienteSeleccionado.legajo}}</p>
+      <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="card-title mb-0">Expediente {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
+          <p class="card-category mb-0">{{expedienteSeleccionado.titulo || 'Detalle Oficial del Expediente'}}</p>
+        </div>
+        <button type="button" 
+                class="btn btn-link text-white p-1 m-0 btn-close-modal" 
+                (click)="cerrarModales()" 
+                aria-label="Cerrar modal">
+          <i class="material-icons">close</i>
+        </button>
       </div>
+
       <div class="card-body">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Subcomisión Asignada:</label>
-            <div class="font-weight-bold">{{expedienteSeleccionado.subcomision}}</div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Estado Procesal Oficial:</label>
-            <div>
-              <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteSeleccionado.estado)">
-                {{getEstadoLabel(expedienteSeleccionado.estado)}}
-              </span>
+        <!-- SECCIÓN 1: Cabecera del expediente -->
+        <div class="seccion-detalle mb-4">
+          <h5 class="seccion-titulo">
+            <i class="material-icons">info</i> Cabecera del Expediente
+          </h5>
+          <div class="row datos-generales-grid">
+            <div class="col-12 col-sm-6 col-md-3 mb-3">
+              <span class="label-dato">Estado del expediente</span>
+              <div class="valor-dato mt-1">
+                <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteSeleccionado.estado)">
+                  {{getEstadoLabel(expedienteSeleccionado.estado)}}
+                </span>
+              </div>
             </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Nivel de Urgencia:</label>
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(expedienteSeleccionado.urgencia)">
+            <div class="col-12 col-sm-6 col-md-3 mb-3">
+              <span class="label-dato">Fecha de solicitud</span>
+              <div class="valor-dato font-weight-bold mt-1">
+                {{formatFechaSolicitud(expedienteSeleccionado.fechaCreacion)}}
+              </div>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3 mb-3">
+              <span class="label-dato">Sanción solicitada</span>
+              <div class="valor-dato font-weight-bold mt-1" 
+                   [ngClass]="expedienteSeleccionado.puntos >= 0 ? 'text-success' : 'text-danger'">
+                {{formatSancionSolicitada(expedienteSeleccionado.puntos)}}
+              </div>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3 mb-3">
+              <span class="label-dato">Solicitante</span>
+              <div class="valor-dato font-weight-bold mt-1 text-truncate" [title]="expedienteSeleccionado.solicitante || expedienteSeleccionado.creador || 'Comisión Directiva'">
+                {{expedienteSeleccionado.solicitante || expedienteSeleccionado.creador || 'Comisión Directiva'}}
+              </div>
+            </div>
+            <div class="col-12 col-md-6 mb-3">
+              <span class="label-dato">Título</span>
+              <div class="valor-dato font-weight-bold mt-1">
+                {{expedienteSeleccionado.titulo || ('Expediente Disciplinario ' + expedienteSeleccionado.numero)}}
+              </div>
+            </div>
+            <div class="col-12 col-md-6 mb-3">
+              <span class="label-dato">Reglamento asociado</span>
+              <div class="valor-dato font-weight-bold mt-1 text-primary">
+                {{getReglamentoAsociado(expedienteSeleccionado)}}
+              </div>
+            </div>
+            <div class="col-12 mb-2">
+              <span class="label-dato">Motivo o descripción completa de la causa</span>
+              <div class="descripcion-causa mt-1">
+                {{expedienteSeleccionado.motivo}}
+              </div>
+            </div>
+
+            <!-- Nivel de Urgencia y controles de gestión -->
+            <div class="col-12 mt-2 pt-2 border-top d-flex align-items-center flex-wrap gap-2">
+              <span class="label-dato mr-2">Nivel de Urgencia:</span>
+              <span class="badge-mat mr-2" [ngClass]="getUrgenciaBadgeClass(expedienteSeleccionado.urgencia)">
                 <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i> {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
               </span>
-              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2" role="group" aria-label="Cambiar Urgencia">
+              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm" role="group" aria-label="Cambiar Urgencia">
                 <button type="button" 
                         class="btn btn-sm py-0 px-2"
                         [ngClass]="expedienteSeleccionado.urgencia === 'baja' ? 'btn-success' : 'btn-outline-secondary'"
@@ -295,21 +343,75 @@
               </div>
             </div>
           </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Puntaje Comprometido:</label>
-            <div class="font-weight-bold" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
-              {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts
+        </div>
+
+        <!-- SECCIÓN 2: Responsables del tribunal -->
+        <div class="seccion-detalle mb-4">
+          <h5 class="seccion-titulo">
+            <i class="material-icons">gavel</i> Responsables del Tribunal
+          </h5>
+          <div class="row">
+            <div *ngFor="let resp of getResponsablesTribunal(expedienteSeleccionado)" class="col-12 col-md-4 mb-3">
+              <div class="card-responsable">
+                <div class="responsable-identificador">{{resp.identificador}}</div>
+                <div class="responsable-nombre">{{resp.nombre}}</div>
+                <div class="responsable-meta">
+                  <span class="responsable-legajo">Legajo: <strong>{{resp.legajo}}</strong></span>
+                  <span class="responsable-grupo badge-grupo">{{resp.grupo}}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="col-md-12 mb-3">
-            <label class="text-muted small">Motivo de la Causa Reglamentaria:</label>
-            <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.motivo}}</div>
           </div>
         </div>
 
+        <!-- SECCIÓN 3: Reglamentos respaldantes de resolución -->
+        <div class="seccion-detalle mb-4">
+          <h5 class="seccion-titulo">
+            <i class="material-icons">menu_book</i> Reglamentos Respaldantes de Resolución
+          </h5>
+          <ul class="reglamentos-list">
+            <li *ngFor="let regl of getReglamentosRespaldantes(expedienteSeleccionado)" class="reglamento-item">
+              <i class="material-icons text-primary mr-2">verified_user</i>
+              <span class="reglamento-nombre">{{regl}}</span>
+            </li>
+          </ul>
+        </div>
 
-        <!-- Descargo si existe -->
-        <div *ngIf="expedienteSeleccionado.descargo" class="mt-3 p-3 bg-light rounded border">
+        <!-- SECCIÓN 4: Involucrados -->
+        <div class="seccion-detalle mb-4">
+          <h5 class="seccion-titulo">
+            <i class="material-icons">group</i> Involucrados
+          </h5>
+          <div class="table-responsive">
+            <table class="table table-hover table-striped table-mat table-involucrados mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">N.º de Socio</th>
+                  <th scope="col">N.º de Grupo</th>
+                  <th scope="col">Nombre</th>
+                  <th scope="col">Apellido</th>
+                  <th scope="col">Estado de Justificación</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let soc of getInvolucrados(expedienteSeleccionado)">
+                  <td class="font-weight-bold">{{soc.legajo}}</td>
+                  <td><span class="badge-grupo">{{soc.grupo}}</span></td>
+                  <td>{{soc.nombre}}</td>
+                  <td>{{soc.apellido}}</td>
+                  <td>
+                    <span class="badge-mat" [ngClass]="getEstadoJustificacionBadgeClass(soc.estado_justificacion)">
+                      {{soc.estado_justificacion || 'No justificado'}}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Descargo presentado si existe -->
+        <div *ngIf="expedienteSeleccionado.descargo" class="seccion-detalle mb-4 p-3 bg-light rounded border">
           <h5 class="font-weight-bold text-dark mb-2">
             <i class="material-icons text-info" style="vertical-align: middle;">description</i> Descargo del Socio Presentado:
           </h5>
@@ -320,7 +422,7 @@
         </div>
 
         <!-- Votación si existe -->
-        <div *ngIf="expedienteSeleccionado.votacion" class="mt-3 p-3 bg-light rounded border">
+        <div *ngIf="expedienteSeleccionado.votacion" class="seccion-detalle mb-4 p-3 bg-light rounded border">
           <h5 class="font-weight-bold text-dark mb-2">
             <i class="material-icons text-warning" style="vertical-align: middle;">how_to_vote</i> Registro de Votación Nominal:
           </h5>
@@ -332,7 +434,7 @@
         </div>
 
         <!-- Firmas si existen -->
-        <div *ngIf="expedienteSeleccionado.firmas && expedienteSeleccionado.firmas.juecesFirmantes.length > 0" class="mt-3 p-3 bg-light rounded border">
+        <div *ngIf="expedienteSeleccionado.firmas && expedienteSeleccionado.firmas.juecesFirmantes.length > 0" class="seccion-detalle mb-4 p-3 bg-light rounded border">
           <h5 class="font-weight-bold text-dark mb-2">
             <i class="material-icons text-success" style="vertical-align: middle;">verified</i> Firmas Digitales Registradas:
           </h5>
@@ -348,7 +450,22 @@
         </div>
 
       </div>
-      <div class="card-footer d-flex justify-content-end">
+
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <div>
+          <button *ngIf="puedeVotarOFirmar && (expedienteSeleccionado.estado === 'revision_resolucion' || expedienteSeleccionado.estado === 'espera_resolucion')" 
+                  mat-button 
+                  class="btn btn-warning mr-2" 
+                  (click)="abrirVotacion(expedienteSeleccionado)">
+            <i class="material-icons">how_to_vote</i> Votar Dictamen
+          </button>
+          <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'pendiente_correos'" 
+                  mat-button 
+                  class="btn btn-success" 
+                  (click)="abrirFirma(expedienteSeleccionado)">
+            <i class="material-icons">draw</i> Firmar Resolución
+          </button>
+        </div>
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>
