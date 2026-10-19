@@ -140,9 +140,132 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 7. Instrucciones para la Actualización de este Archivo
+## 7. Sprint 3 — Desglose Atómico: S3-01 / SCRUM-45 (Configurar Calendario Institucional de Días Hábiles)
+
+> **Historia de Usuario:** S3-01 / SCRUM-45: Como autoridad habilitada quiero mantener los feriados del calendario institucional único para calcular plazos auditables.
+> **Criterios vigentes tras la revisión del PR #49 y los cambios adicionales del PM:** CA1 (Calendario único e impacto inmediato), CA2 (Auditoría por feriado), CA3 (Vencimientos persistidos inmutables), CA4 (Zona institucional), CA5 (Lectura autenticada y alta ADMIN/CD/TD), CA6 (UX/UI simplificada y simulador modal con reinicio), CA7 (Fecha >= hoy y sin duplicados), CA8 (Actualización y reaplicación segura de migraciones), CA9 (Notificaciones globales de 10 segundos con cierre manual).
+
+### Implementación original (antecedente del PR)
+
+- [x] **TS3-01.1 Modelos ORM y Dominio de Calendario:** Implementar `CalendarioVersion` y `FeriadoExcepcion` en `backend/expedientes/models.py` con restricciones de unicidad y auditoría (CA2). Vincular `Expediente.calendario_version` con ForeignKey protegida (CA3).
+- [x] **TS3-01.2 Adaptador de Infraestructura y Cálculo de Plazos:** Implementar `DbHolidayProvider` en `backend/expedientes/domain/holiday_provider.py` que consulta feriados por versión de calendario. Actualizar `Expediente.iniciar_plazo_descargo` para asociar y congelar la versión activa o pasada explícitamente (CA1, CA3, CA4).
+- [x] **TS3-01.3 Migraciones y Carga Inicial de Feriados 2026 (Seeder):** Generar migraciones de esquema y migración de datos para crear la Versión 1 ("Calendario Oficial AVEIT 2026") y poblar los 16 feriados oficiales de 2026.
+- [x] **TS3-01.4 Tests de Dominio y Persistencia (TDD Backend):** Crear `backend/tests/expedientes/test_calendar_models.py` para probar la inmutabilidad de la versión en el expediente, exclusión de fines de semana/feriados, y preservación de zona horaria (CA1, CA2, CA3, CA4).
+- [x] **TS3-01.5 Serializers y Permisos RBAC de Calendario:** Implementar `CalendarioVersionSerializer`, `FeriadoExcepcionSerializer`, `CalcularPlazoSerializer` y el permiso `CanManageCalendar` (ADMIN, CD, TD) en `backend/expedientes/`.
+- [x] **TS3-01.6 Endpoints REST de Calendario (TDD Backend):** Implementar vistas y router en `backend/expedientes/` para listar versiones, crear nueva versión auditada, listar feriados y calcular plazos. Crear `backend/tests/expedientes/test_calendar_api.py` verificando RBAC y cálculos.
+- [x] **TS3-01.7 DTOs y Servicio Angular (`CalendarioApiService`):** Crear interfaces tipadas y servicio Angular en `frontend/src/app/services/calendario-api.service.ts` con sus tests unitarios en Jasmine.
+- [x] **TS3-01.8 Componente Angular e Interfaz de Usuario:** Crear componente `CalendarioInstitucionalComponent` en `frontend/src/app/calendario-institucional/`, con vista de feriados, simulador de plazos interactivo en tiempo real y formulario modal para nuevas excepciones/versiones conforme a `DESIGN.md`. Registrar ruta y enlace en sidebar para autoridades.
+- [x] **TS3-01.9 Verificación Integral, Cobertura y Consistencia PO:** Ejecutar suite completa `pytest` y `npm test`, linters (`ruff` y `ng lint`), verificar consistencia con `notasPO.md` y preparar el levantamiento en localhost.
+
+### Correcciones de la revisión del PO — PR #49
+
+- [x] **R1. Calendario único y migración auditable:** Importación de inhábiles del último calendario activo, conservación de referencias y timestamps históricos, fechas oficiales corregidas y sin autores inferidos.
+- [x] **R2. API y cómputo unificados (TDD):** Lectura para todo usuario autenticado, alta por ADMIN/CD/TD, validación de fecha institucional, auditoría del servidor y duplicados concurrentes controlados.
+- [x] **R3. UX/UI simplificada (TDD):** Crear Feriado, Año/Mes, orden Fecha y autoría visible; fechas independientes de zona del navegador y recálculo de simulaciones pendientes tras un alta.
+- [x] **R4. Verificación y entorno UAT:** Backend 505/505, frontend 153/153, dominio 99%, build/Ruff y migraciones en verde. Auditoría sin hallazgos pendientes y localhost disponible. La limitación del lint Angular se registra en [UAT del PR #49](docs/gestion-proyecto/UAT-PR49-calendario.md).
+- [x] **R5. Ajustes visuales de UAT:** Año/Mes en una misma fila; etiquetas e inputs del simulador alineados en escritorio. Verificación a 320/393 px, 153 tests frontend y compilación en verde; auditoría de par sin hallazgos. UAT aprobada por el usuario el 10/10/2026.
+
+### Segunda review del PM — PR #49
+
+- [x] **R6. Migraciones y lectura (TDD):** Importación 0010 idempotente que conserva registros/auditoría. Ocho casos de importación y MigrationExecutor sobre MySQL; GET real 200 para SOCIO, FISCALIZADORA, CD, TD y ADMIN.
+- [x] **R7. Interfaz y recuperación (TDD):** Tarjeta de alta blanca con radio de 8 px; botones institucionales con iconos y controles alineados. Estados vacío/error centrados, reintento real y bloqueo de alta hasta recuperar la carga completa.
+- [x] **R8. Verificación y entorno:** Backend 510/510, frontend 156/156, compilación/Ruff/migraciones y DESIGN.md lint sin errores. Auditoría independiente cerrada; escritorio, 768/393/320 px, teclado y recuperación de carga verificados. Localhost disponible; UAT aprobada por el usuario el 10/10/2026.
+
+### Integración con main — PR #49
+
+- [x] **R9. Resolver conflictos con main:** Calendario y urgencia preservados; migración de unión 0011 sin reescribir historiales publicados. Actualización desde ambas ramas comprobada con datos existentes; backend 537/537, frontend 175/175, build/Ruff/migraciones en verde y auditoría independiente sin hallazgos pendientes.
+
+### Modificaciones adicionales del PM — PR #49
+
+- [x] **R10. Notificaciones centrales (TDD):** Avisos abajo a la derecha, 10 segundos, X accesible y temporizadores independientes; host visible e integrado al foco de modales. Regla en AGENTS.md.
+- [x] **R11. Login, calendario y sesión (TDD):** Feedback centralizado y errores de sesión sin duplicados ni afectación de una sesión nueva.
+- [x] **R12. T01 y descargos (TDD):** Validaciones y resultados centralizados, con borradores, emisión, urgencia y evidencia preservados.
+- [x] **R13. Gestión y restantes vistas (TDD):** Gestión, ranking/legajo, asistencia y demo mediante el mismo servicio; errores y recuperación verificados.
+- [x] **R14. Simulador modal (TDD):** Botón junto a Crear Feriado; cierre cancela solicitudes y reinicia campos y resultado.
+- [x] **R15. Verificación y auditoría:** Frontend 205/205, build y diseño sin errores; auditoría independiente cerrada, consistencia PO y QA real a 1306/393/320 px con teclado. Localhost activo y UAT del nuevo alcance aprobada por el usuario el 10/10/2026 en la guía del PR #49.
+
+---
+
+## 8. Sprint 3 — Desglose Atómico: S3-07 / SCRUM-78 (Clasificador e Indicador Visual de Urgencia en Expedientes)
+
+> **Historia de Usuario:** S3-07 / SCRUM-78: Implementar clasificador e indicador visual de urgencia en expedientes.  
+> **Criterios de Aceptación:** CA1 (Tres niveles de urgencia: Baja, Normal, Urgente con default Normal), CA2 (Filtro por urgencia en API y Frontend), CA3 (Indicador visual distintivo en tarjetas Kanban y tabla), CA4 (Actualización de urgencia autorizada vía PATCH para TD/CD), CA5 (Inmutabilidad de notas del PO y estricto respeto a tokens de diseño).
+
+- [x] **TS3-07.1 Modelo y Migración de Urgencia (Backend TDD):** Enumeración `UrgenciaExpedienteEnum` (`baja`, `normal`, `urgente`), campo `urgencia` con default `normal` e índice en `Expediente` y `SolicitudT01`. Migración Django `0007_expediente_urgencia.py`.
+- [x] **TS3-07.2 Serialización y Filtro por Urgencia en API REST (Backend TDD):** Inclusión de `urgencia` y `urgencia_display` en `BoardExpedienteSerializer` y `ExpedienteListSerializer`. Filtro por urgencia en `ExpedienteFilter`.
+- [x] **TS3-07.3 Endpoint PATCH de Actualización de Urgencia (Backend TDD):** `PATCH /api/v1/expedientes/<id>/` con `UpdateUrgenciaExpedienteSerializer` y permiso `IsTribunalOrDirectiva`.
+- [x] **TS3-07.4 DTOs, Mapeo y Servicio en Frontend (Angular TDD):** Tipado `NivelUrgencia`, mapeo en `TribunalDataService` y método `actualizarUrgencia()`.
+- [x] **TS3-07.5 Indicadores Visuales y Filtro en Tablero Kanban y Tabla (Frontend):** Filtro de urgencia en toolbar, badge semántico compacto (icono opcional en Kanban), resaltado de borde rojo en tarjetas urgentes (`.kanban-card-urgente`), columna en tabla explorer y selector de urgencia en modal de detalle.
+- [x] **TS3-07.6 Verificación Integral, Cobertura y Consistencia con PO:** 9 tests unitarios e integrales backend en verde, 13 tests frontend en Karma pasando en verde y compilación de producción exitosa.
+
+---
+
+### Observaciones del PO en PR #50 — S3-07 / SCRUM-78
+
+- [x] **TS3-07.7 Urgencia en origen:** Selector Crear Expediente / T01, persistencia de borrador, herencia al expediente y snapshot inmutable de emisión con pruebas. 57 pruebas backend y 30 del formulario Angular en verde.
+- [x] **TS3-07.8 Tarjeta Kanban simplificada:** Únicamente ID sin quiebres, urgencia compacta, puntos, título/motivo y fecha institucional con pruebas de renderizado. 18 pruebas del componente Angular en verde.
+- [x] **TS3-07.9 Verificación y UAT:** 490 pruebas backend/MySQL y 151 frontend/Karma en verde (0 errores), build de producción correcto, Ruff y migraciones verificados, consistencia con PO y auditoría full stack sin hallazgos pendientes. UAT funcional/visual en escritorio y móvil (375 px), con http://localhost:4201 activo. Lint frontend bloqueado por la configuración TSLint heredada.
+
+- [x] **TS3-07.10 Selección visual de urgencia (TDD):** Casillas Baja/Normal/Urgente con tokens verde/azul/rojo, selección única y estados bloqueados. 32 pruebas del formulario y 153 frontend en verde (0 errores), build correcto y auditoría sin bloqueantes. Guardado/reanudación/emisión, teclado y controles a 320/375 px verificados en localhost:4201. UAT aprobada por el usuario el 10/10/2026.
+
+---
+
+## 9. Sprint 3 — Desglose Atómico: S3-04 / SCRUM-48 (Adjuntar y Custodiar Evidencia Protegida)
+
+> **Historia de Usuario:** S3-04 / SCRUM-48: Adjuntar y custodiar evidencia protegida.  
+> **Criterios de Aceptación:** CA1 (Límites y formatos: PDF/JPG/PNG <= 5MB; T02 1-3 docs, T03 0-5 docs), CA2 (Validación real magic bytes, hash SHA-256, extensión y sanitización), CA3 (Custodia en BD BLOB MySQL y RBAC por objeto IsImputadoOrTribunal), CA4 (Auditoría inmutable de descargas con nosniff), CA5 (Advertencia estatutaria Art. 102 en Frontend y notificaciones globales 10s), CA6 (Preservación histórica en base de datos es_vigente=False), CA7 (Suites de pruebas en verde).
+
+- [x] **TS3-04.1 Dominio y Validación Binaria (Magic Bytes, Hash, Sanitización) [TDD]:** Implementar `backend/expedientes/domain/evidence_validator.py` con validación de magic bytes (PDF, JPEG, PNG), límite de 5 MB, sanitización de nombre contra path traversal, cálculo SHA-256 y control de cupos (T02 máx 3, T03 máx 5).
+- [x] **TS3-04.2 Modelos ORM, Persistencia BLOB y Auditoría de Descargas [TDD]:** Implementar `EvidenciaDescargo` y `AuditoriaDescargaEvidencia` en `backend/expedientes/models.py`. Generar migración Django.
+- [x] **TS3-04.3 Servicio de Aplicación y Serializadores:** Implementar `EvidenceService` en `backend/expedientes/services/evidence_service.py` y serializadores `EvidenciaMetadataSerializer` en `backend/expedientes/serializers.py`. Adaptar `PresentarDescargoSerializer`.
+- [x] **TS3-04.4 Endpoints REST de Carga y Descarga Segura Auditada [TDD]:** Implementar `EvidenciaUploadView` y `EvidenciaDownloadView` en `backend/expedientes/views.py`, registrar rutas en `backend/expedientes/urls.py`, aplicar permiso por objeto `IsImputadoOrTribunal`, auditoría de descargas y headers `nosniff`.
+- [x] **TS3-04.5 Servicio Frontend y DTOs (`ExpedienteApiService`) [TDD]:** Agregar métodos `subirEvidencias` y `descargarEvidencia` con DTOs en `frontend/src/app/services/expediente-api.service.ts`.
+- [x] **TS3-04.6 Componente Frontend `MisExpedientes` (Adjuntos Múltiples, Art. 102 y Descarga Segura):** Integrar en `mis-expedientes.component.html` y `.ts`: selector múltiple con límites de 3 (T02) y 5 (T03), advertencia estatutaria visible Art. 102, previsualización/eliminación de adjuntos, visualización en modal de detalle de causa con descarga directa y notificaciones globales de 10s.
+- [x] **TS3-04.7 Verificación Integral, Cobertura, Linters y Consistencia PO:** Ejecutar suite completa de backend (`pytest`) y frontend (`Karma`), linters (`ruff check/format`), verificar inmutabilidad de `notasPO.md` y consistencia con las directivas del PO.
+
+### Observaciones del Revisor en PR — S3-04 / SCRUM-48
+
+- [x] **TS3-04.8 Simplificación de Modal y Unificación de Justificativos:** Eliminar bloque "Modalidad de Justificación Asignada", modelar descargo extraordinario como opción "Otro" en combobox "Tipo de Justificación", renombrar a "Adjuntar documentos", unificar sección de carga y eliminar jerga técnica y referencias a "T0". 218 tests unitarios de frontend en Karma y 569 tests de backend en Pytest en verde (0 errores).
+
+---
+
+## 9.1 Sprint 3 — Desglose Atómico: S3-05 / SCRUM-49 (Presentar T03 Extraordinario con Fundamento Libre)
+
+> **Historia de Usuario:** S3-05 / SCRUM-49: Presentar T03 extraordinario con fundamento libre.  
+> **Criterios de Aceptación:** CA1 (distinción T02/T03 sin regresiones; el cambio de modalidad en plazo queda como versión), CA2 (cada alta/corrección genera una versión inmutable con sus evidencias; el retiro no destruye datos), CA3 (mismo plazo y controles de acceso), límite de 5.000 caracteres y historial real desde la API. CA4 (vinculación de fundamento/precedente por el TD) se movió a SCRUM-53 por decisión del PO.
+
+- [x] **TS3-05.1 Límite de 5.000 Caracteres [TDD]:** Constante única `MAX_DESCARGO_TEXT_LENGTH` en `backend/expedientes/domain/descargo_rules.py`, usada por el serializer, y límite equivalente en el frontend.
+- [x] **TS3-05.2 Modelo de Versiones y Migraciones [TDD]:** `DescargoVersion` inmutable, evidencias protegidas contra borrado en cascada, migración de esquema `0013` y backfill reversible `0014` con la versión 1 de los descargos existentes.
+- [x] **TS3-05.3 Versionado, Retiro Lógico y Re-presentación [TDD]:** `PresentarDescargoView` versiona cada alta, corrección y cambio T02↔T03; el retiro pasa a ser lógico (`RETIRADO`, solo en estado `justificando` y dentro del plazo) y los lectores filtran por vigencia.
+- [x] **TS3-05.4 Endpoint de Historial `GET /descargo/versiones/` [TDD]:** Historial ordenado por `numero` con permisos por rol (socio titular, TD, CD y ADMIN).
+- [x] **TS3-05.5 Frontend: Historial desde la API y Panel de Detalle Sincronizado:** `obtenerVersionesDescargo` alimenta el «Registro de Operaciones y Auditoría» en `mis-expedientes`, el botón pasa a «Retirar Descargo» y el panel abierto se actualiza con la lista del backend.
+- [x] **TS3-05.6 Verificación Integral y Consistencia PO:** 633 tests de backend en Pytest y 238 de frontend en Karma en verde; `ruff check` y `ruff format --check` limpios; `notasPO.md` sin modificaciones.
+- [x] **TS3-05.7 Prueba Manual en Navegador:** Recorrido completo (presentar, corregir, retirar, re-presentar y ver historial) en `localhost:4200`, validado por el equipo.
+
+---
+
+## 10. Sprint 3 — Investigación I+D: SCRUM-76 (Investigación y Especificación de IA — Laya System 1, Datos, Hardware y SLMs)
+
+> **Tarea de I+D:** SCRUM-76: Investigar Laya (System 1), requerimientos de fine-tuning/datos/hardware y evaluación de SLMs (<4B) con RAG, CAG y MAG.  
+> **Referencia Rector:** [`docs/gestion-proyecto/notasPO.md`](docs/gestion-proyecto/notasPO.md) (Sección 2, Líneas 144–148).  
+> **Entregables:** Documentos técnicos modulares en [`docs/Implementacion IA/`](docs/Implementacion%20IA/).
+
+- [x] **TS-76.1 Escenarios y Casos de Uso (Laya System 1):** Documentación técnica de primitivas `score` (urgencia procesal), `choice` (sugerencias reglamentarias no vinculantes) y `noul` (consistencia en descargos y flagrancia) junto con la arquitectura desacoplada en contenedor sidecar (`laya-service` en Docker Compose).  
+      *Hecho cuando:* `docs/Implementacion IA/01_escenarios_y_casos_de_uso.md` generado y alineado a directivas del PO.
+- [x] **TS-76.2 Metodología de Entrenamiento, Datos y Hardware:** Esquema del dataset en JSONL con soft targets, pipeline de Teacher Distillation a partir de resoluciones históricas del TD, algoritmo RLCD con ECE $\le 0.10$ y perfiles cuantitativos agnósticos de hardware (GPU local 8–16 GB VRAM para fine-tuning vs. CPU pura <1.5 GB RAM para inferencia en oficina).  
+      *Hecho cuando:* `docs/Implementacion IA/02_entrenamiento_datos_y_hardware.md` redactado con comandos reproducibles CLI y ONNX.
+- [x] **TS-76.3 Evaluación de SLMs (<4B), RAG, CAG y MAG:** Comparativa multidimensional de SLMs (Qwen 2.5, Llama 3.2, Phi-3.5-mini), matriz Laya vs. SLMs, casos de uso viables (borrador de considerandos, síntesis de expedientes, asistente estatutario) y análisis en profundidad de RAG, CAG (context caching de reglamentos) y las 3 vertientes de MAG (Memory, Multi-Agent y Model-Augmented híbrido System 1 + System 2).  
+      *Hecho cuando:* `docs/Implementacion IA/03_evaluacion_slm_rag_cag_mag.md` consolidado con dictamen y hoja de ruta.
+- [x] **TS-76.4 Memos Ejecutivos de Propuesta y Persuasión Institucional:** Redacción de 3 propuestas de valor estructuradas bajo PNL y redacción humanizada para la toma de decisión: Cómputos (Ing. en Sistemas/Electrónica — arquitectura sidecar, ONNX INT8, CPU pura, observabilidad), Tribunal de Disciplina (Ing. Industrial — optimización de procesos, reducción de lead time, soberanía judicial humana estricta) y Comisión Directiva (multidisciplinar — gobernanza, paz social, salvaguarda patrimonial temprana, costo operativo $0).  
+      *Hecho cuando:* `docs/Implementacion IA/presentacion/` completo con los 3 memos y sección de objeciones.
+
+---
+
+## 11. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.
 3. Sincroniza simultáneamente el archivo `specs/<spec>/tasks.md`.
 4. Al culminar la totalidad de las tareas de una spec, actualiza la tabla del **Roadmap Macro** indicando el estado `Completado` y avanza a la siguiente fase.
+
+

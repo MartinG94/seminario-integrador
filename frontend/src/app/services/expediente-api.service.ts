@@ -1,8 +1,10 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
+import type { NivelUrgencia } from './tribunal-data.service';
 
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
 export type EstadoT01 = 'DRAFT' | 'ISSUED';
@@ -42,6 +44,8 @@ export interface SolicitudMonitoreo {
   destinatarios_socios_ids: number[];
   estado_procesal: string;
   estado_procesal_display: string;
+  urgencia?: NivelUrgencia;
+  urgencia_display?: string;
   involucrados: SocioInvolucrado[];
   resolucion_final: ResolucionFinalInfo | null;
   created_at: string;
@@ -55,9 +59,10 @@ export interface SolicitudT01 {
   destinatario_socio_id: number | null;
   destinatarios_socios_ids: number[];
   tipo_accion: TipoAccionT01;
+  urgencia?: NivelUrgencia;
   titulo: string;
   causal: string;
-  puntos: number | null;
+  puntos: number | string | null;
   motivo: string;
   razon: string;
   reglamentos_respaldantes: string[];
@@ -78,6 +83,7 @@ export interface SolicitudT01Payload {
   destinatario_socio_id?: number | null;
   destinatarios_socios_ids?: number[];
   tipo_accion: TipoAccionT01;
+  urgencia?: NivelUrgencia;
   titulo?: string;
   causal?: string;
   puntos?: number | null;
@@ -88,6 +94,47 @@ export interface SolicitudT01Payload {
   anexo_lugar?: string;
   anexo_relato?: string;
   anexo_testigos?: string;
+}
+
+type T01MonitoringResponse = Omit<SolicitudMonitoreo, 'puntos'> & Pick<SolicitudT01, 'puntos'>;
+
+export interface EvidenciaMetadata {
+  id: string;
+  nombre_original: string;
+  extension: string;
+  mime_type: string;
+  tamanio_bytes: number;
+  sha256_hash: string;
+  es_vigente: boolean;
+  created_at: string;
+}
+
+export type OperacionDescargo = 'PRESENTADO' | 'CORREGIDO' | 'RETIRADO';
+
+/** Versión inmutable de un descargo, tal como la devuelve el historial del backend. */
+export interface DescargoVersionDto {
+  id: number;
+  numero: number;
+  operacion: OperacionDescargo;
+  operacion_display: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal: string;
+  texto: string;
+  archivo: string;
+  evidencias: Partial<EvidenciaMetadata>[];
+  actor: string;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  created_at: string;
+}
+
+export interface PresentarDescargoPayload {
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal?: string;
+  archivo?: string;
+  texto?: string;
+  evidencia_ids?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -124,10 +171,49 @@ export class ExpedienteApiService {
     if (params?.estado) {
       httpParams = httpParams.set('estado', params.estado);
     }
-    return this.http.get<SolicitudMonitoreo[]>(`${this.apiUrl}/mis-solicitudes/`, { params: httpParams });
+    return this.http.get<T01MonitoringResponse[]>(`${this.apiUrl}/mis-solicitudes/`, { params: httpParams }).pipe(
+      map(solicitudes => solicitudes.map(solicitud => ({
+        ...solicitud,
+        puntos: solicitud.puntos == null ? null : Number(solicitud.puntos)
+      })))
+    );
   }
 
   eliminarBorrador(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}/`);
   }
+
+  subirEvidencias(expedienteId: number | string, files: File[], tipoDescargo?: string): Observable<EvidenciaMetadata[]> {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('archivos', file, file.name);
+    });
+    if (tipoDescargo) {
+      formData.append('tipo_descargo', tipoDescargo);
+    }
+    return this.http.post<EvidenciaMetadata[]>(`${this.apiUrl}/${expedienteId}/evidencia/`, formData);
+  }
+
+  descargarEvidencia(expedienteId: number | string, evidenciaId: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/evidencia/${evidenciaId}/`, {
+      responseType: 'blob'
+    });
+  }
+
+  presentarDescargo(expedienteId: number | string, payload: PresentarDescargoPayload): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${expedienteId}/descargo/`, payload);
+  }
+
+  listarMisExpedientes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/mis-expedientes/`);
+  }
+
+  eliminarDescargo(expedienteId: number | string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
+  }
+
+  obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
+    return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
+  }
 }
+

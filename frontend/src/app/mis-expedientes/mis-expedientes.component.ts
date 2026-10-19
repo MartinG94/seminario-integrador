@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
-import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
+import { TribunalDataService, Expediente, LogJustificativo } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
+import { ExpedienteApiService, EvidenciaMetadata, DescargoVersionDto, OperacionDescargo } from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -24,9 +26,23 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   tipoDescargo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO' = 'T02_CERTIFICADO';
   causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
   nombreArchivo = '';
+  archivosSeleccionados: File[] = [];
+  evidenciasExistentes: any[] = [];
+  subiendoArchivos = false;
+  readonly LIMITE_T02 = 3;
+  readonly LIMITE_T03 = 5;
+  readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
-  errorMensaje = '';
   esEdicion = false;
+
+  isDragging = false;
+
+  // Modal propio de Confirmación
+  modalConfirmacionAbierto = false;
+  modalConfirmacionTitulo = '';
+  modalConfirmacionMensaje = '';
+  modalConfirmacionAccion: (() => void) | null = null;
 
   // Temporizador dinámico para cuenta regresiva (CA3)
   private tickerSub: Subscription | null = null;
@@ -37,19 +53,23 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   constructor(
     public dataService: TribunalDataService,
     private auth: AuthService,
-    private renderer: Renderer2
+    private renderer: Renderer2,
+    private notifications: NotificationService,
+    private expedienteApi: ExpedienteApiService
   ) {}
 
   ngOnInit(): void {
     const subPerfil = this.auth.perfil$.subscribe(perfil => {
       this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
-      this.filtrarMisExpedientes();
+      this.cargarMisExpedientes();
     });
     this.subs.push(subPerfil);
 
     const subExp = this.dataService.expedientes$.subscribe(list => {
       this.expedientes = list;
-      this.filtrarMisExpedientes();
+      if (!this.misExpedientes || this.misExpedientes.length === 0) {
+        this.filtrarMisExpedientes();
+      }
       if (this.expedienteDetalle) {
         const actualizado = list.find(e => e.id === this.expedienteDetalle!.id);
         if (actualizado) {
@@ -59,9 +79,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     });
     this.subs.push(subExp);
 
-    const subSocios = this.dataService.socios$.subscribe(socios => {
-      const s = socios.find(soc => soc.nombre.toLowerCase() === this.socioActual.toLowerCase());
-      this.saldoNeto = s ? s.saldo : 0;
+    const subSocios = this.dataService.socios$.subscribe(() => {
+      this.actualizarSaldoNeto();
     });
     this.subs.push(subSocios);
 
@@ -69,14 +88,91 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.tickerSub = interval(1000).subscribe(() => {
       this.ahoraMs = Date.now();
     });
+
+    this.cargarMisExpedientes();
   }
 
-  /** Los expedientes del socio en sesión; hoy provienen de datos simulados. */
+  cargarMisExpedientes(): void {
+    this.expedienteApi.listarMisExpedientes().subscribe({
+      next: (expedientesApi) => {
+        if (expedientesApi && Array.isArray(expedientesApi) && expedientesApi.length > 0) {
+          this.misExpedientes = expedientesApi.map(e => this.mapearExpedienteApi(e));
+          this.sincronizarDetalleAbierto();
+          this.actualizarSaldoNeto();
+        } else {
+          this.filtrarMisExpedientes();
+        }
+      },
+      error: () => {
+        this.filtrarMisExpedientes();
+      }
+    });
+  }
+
+  /** El detalle abierto es una copia: se reapunta a la lista recién recibida para que botones y avisos reflejen el backend. */
+  private sincronizarDetalleAbierto(): void {
+    if (!this.expedienteDetalle) return;
+    const actualizado = this.misExpedientes.find(e => e.id === this.expedienteDetalle!.id);
+    if (actualizado) {
+      this.expedienteDetalle = actualizado;
+    }
+  }
+
+  private mapearExpedienteApi(raw: any): Expediente {
+    const descargoObj = raw.descargo_presentado ? {
+      tipo: raw.descargo_tipo || 'T02_CERTIFICADO',
+      causal: raw.descargo_causal,
+      archivo: raw.descargo_archivo,
+      texto: raw.descargo_texto || '',
+      fecha: raw.descargo_presentado_at || raw.created_at || '',
+      evidencias: raw.evidencias || []
+    } : undefined;
+
+    return {
+      id: String(raw.id),
+      numero: raw.numero,
+      socio: raw.socio_nombre || '',
+      legajo: raw.socio_legajo || '',
+      subcomision: raw.subcomision || 'General',
+      motivo: raw.motivo || '',
+      fechaCreacion: raw.created_at || '',
+      estado: raw.estado,
+      urgencia: raw.urgencia,
+      horasRestantes: raw.horas_restantes ?? 0,
+      tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
+      puntos: raw.puntos || 0,
+      plazoInicioAt: raw.plazo_inicio_at,
+      plazoLimiteAt: raw.plazo_limite_at,
+      descargoPresentado: raw.descargo_presentado,
+      descargo: descargoObj,
+      evidencias: raw.evidencias || [],
+      cantidadSocios: raw.socios ? raw.socios.length : 1
+    };
+  }
+
+  /** Los expedientes del socio en sesión y cálculo de saldo neto de expedientes emitidos. */
   private filtrarMisExpedientes(): void {
+    const perfil = this.auth.getPerfil();
     const nombre = this.socioActual.trim().toLowerCase();
-    this.misExpedientes = nombre
-      ? this.expedientes.filter(e => e.socio.toLowerCase() === nombre)
+    const legajo = perfil?.legajo ? String(perfil.legajo).trim().toLowerCase() : '';
+
+    this.misExpedientes = (nombre || legajo)
+      ? this.expedientes.filter(e => {
+          const matchNombre = !!(nombre && e.socio.trim().toLowerCase() === nombre);
+          const matchLegajo = !!(legajo && e.legajo && String(e.legajo).trim().toLowerCase() === legajo);
+          return matchNombre || matchLegajo;
+        })
       : [];
+    this.actualizarSaldoNeto();
+  }
+
+  /**
+   * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
+   * Los expedientes en trámite (creado, justificando, espera_resolucion, etc.) no impactan el saldo.
+   */
+  public actualizarSaldoNeto(): void {
+    const emitidos = this.misExpedientes.filter(e => e.estado === 'emitido');
+    this.saldoNeto = emitidos.reduce((acc, exp) => acc + Number(exp.puntos || 0), 0);
   }
 
   ngOnDestroy(): void {
@@ -133,16 +229,103 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   modalDetalleAbierto = false;
   expedienteDetalle: Expediente | null = null;
 
+  /** Historial inmutable del descargo, proveniente del backend (no del estado local). */
+  historialDescargo: LogJustificativo[] = [];
+
   abrirModalDetalle(exp: Expediente): void {
     this.expedienteDetalle = exp;
     this.modalDetalleAbierto = true;
     this.actualizarScrollBloqueo();
+    this.cargarHistorialDescargo(exp.id);
   }
 
   cerrarModalDetalle(): void {
     this.modalDetalleAbierto = false;
     this.expedienteDetalle = null;
+    this.historialDescargo = [];
     this.actualizarScrollBloqueo();
+  }
+
+  /** Consulta las versiones del descargo y las mapea a las filas de la tabla de auditoría. */
+  private cargarHistorialDescargo(expedienteId: string): void {
+    this.expedienteApi.obtenerVersionesDescargo(expedienteId).subscribe({
+      next: (versiones) => {
+        if (this.expedienteDetalle?.id !== expedienteId) {
+          return;
+        }
+        this.historialDescargo = versiones.map(v => this.mapearVersionAFila(v));
+      },
+      error: () => {
+        this.historialDescargo = [];
+        this.notifications.error('No se pudo cargar el historial del descargo.');
+      }
+    });
+  }
+
+  private refrescarHistorialSiEstaAbierto(expedienteId: string): void {
+    if (this.modalDetalleAbierto && this.expedienteDetalle?.id === expedienteId) {
+      this.cargarHistorialDescargo(expedienteId);
+    }
+  }
+
+  private mapearVersionAFila(v: DescargoVersionDto): LogJustificativo {
+    const operaciones: { [op in OperacionDescargo]: LogJustificativo['operacion'] } = {
+      PRESENTADO: 'CREACION',
+      CORREGIDO: 'EDICION',
+      RETIRADO: 'ELIMINACION'
+    };
+    const modalidad = v.tipo === 'T02_CERTIFICADO' ? 'T02 (Certificado)' : 'T03 (Extraordinario)';
+    const cantidad = (v.evidencias || []).length;
+    const comprobantes = `${cantidad} ${cantidad === 1 ? 'comprobante' : 'comprobantes'}`;
+    const partes = [`v${v.numero}`, modalidad];
+    if (v.causal) {
+      partes.push(v.causal);
+    }
+    partes.push(comprobantes);
+
+    return {
+      operacion: operaciones[v.operacion],
+      accionLabel: v.operacion_display,
+      usuario: `${v.socio_nombre} (Legajo ${v.socio_legajo})`,
+      legajo: v.socio_legajo,
+      timestamp: this.formatearMarcaDeTiempo(v.created_at),
+      detalle: partes.join(' · ')
+    };
+  }
+
+  private formatearMarcaDeTiempo(iso: string): string {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) {
+      return '';
+    }
+    const partes = new Intl.DateTimeFormat('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(d);
+    const mapa: { [key: string]: string } = {};
+    partes.forEach(p => (mapa[p.type] = p.value));
+    return `${mapa['day']}/${mapa['month']}/${mapa['year']} ${mapa['hour']}:${mapa['minute']} hs`;
+  }
+
+  /** Extrae el mensaje legible de una respuesta de error de la API (detail o primer error de campo). */
+  private extraerMensajeError(err: any, porDefecto: string): string {
+    const cuerpo = err?.error;
+    if (cuerpo?.detail) {
+      return String(cuerpo.detail);
+    }
+    if (cuerpo && typeof cuerpo === 'object') {
+      const primero = Object.values(cuerpo)[0];
+      const mensaje = Array.isArray(primero) ? primero[0] : primero;
+      if (typeof mensaje === 'string' && mensaje) {
+        return mensaje;
+      }
+    }
+    return porDefecto;
   }
 
   /**
@@ -209,8 +392,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.tipoDescargo = 'T02_CERTIFICADO';
     this.causalSeleccionada = 'Examen Académico Universitario en UTN FRC';
     this.nombreArchivo = '';
+    this.archivosSeleccionados = [];
+    this.evidenciasExistentes = [];
     this.relatoTexto = '';
-    this.errorMensaje = '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
   }
@@ -220,34 +404,59 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteSeleccionado = exp;
     this.esEdicion = true;
     this.tipoDescargo = exp.descargo.tipo;
-    this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
+    if (this.tipoDescargo === 'T03_EXTRAORDINARIO') {
+      this.causalSeleccionada = 'Otro';
+    } else {
+      this.causalSeleccionada = exp.descargo.causal || 'Examen Académico Universitario en UTN FRC';
+    }
     this.nombreArchivo = exp.descargo.archivo || '';
+    this.archivosSeleccionados = [];
+    this.evidenciasExistentes = exp.descargo.evidencias ? [...exp.descargo.evidencias] : [];
     this.relatoTexto = exp.descargo.texto || '';
-    this.errorMensaje = '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
   }
 
   eliminarDescargo(exp: Expediente): void {
     if (!exp.descargo) return;
-    const confirma = confirm(`¿Confirmas la eliminación del justificativo para el expediente ${exp.numero}? La causa volverá al estado 'Justificando' y se registrará la baja en el historial.`);
-    if (!confirma) return;
+    this.abrirConfirmacion(
+      'Retirar descargo',
+      `¿Confirmas el retiro del descargo del expediente ${exp.numero}? Tu escrito y sus comprobantes quedan registrados en el historial y podrás presentar uno nuevo mientras el plazo siga abierto.`,
+      () => {
+        const perfil = this.auth.getPerfil();
+        const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
+        const legajo = perfil?.legajo || '';
 
-    const perfil = this.auth.getPerfil();
-    const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
-    const legajo = perfil?.legajo || '';
-
-    this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
+        // El retiro es una baja lógica en el backend: solo se refleja en pantalla si el servidor lo acepta.
+        this.expedienteApi.eliminarDescargo(exp.id).subscribe({
+          next: () => {
+            this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
+            this.cargarMisExpedientes();
+            this.refrescarHistorialSiEstaAbierto(exp.id);
+            this.notifications.info(
+              `Descargo del expediente ${exp.numero} retirado. Queda registrado en el historial.`
+            );
+          },
+          error: (err) => {
+            this.notifications.error(
+              this.extraerMensajeError(err, 'No se pudo retirar el descargo. Intenta nuevamente.')
+            );
+          }
+        });
+      }
+    );
   }
 
   cerrarModal(): void {
     this.modalAbierto = false;
     this.expedienteSeleccionado = null;
+    this.archivosSeleccionados = [];
+    this.evidenciasExistentes = [];
     this.actualizarScrollBloqueo();
   }
 
   private actualizarScrollBloqueo(): void {
-    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto;
+    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
     const body = document.body;
     const docElem = document.documentElement;
     const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
@@ -264,6 +473,47 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  abrirConfirmacion(titulo: string, mensaje: string, onConfirm: () => void): void {
+    this.modalConfirmacionTitulo = titulo;
+    this.modalConfirmacionMensaje = mensaje;
+    this.modalConfirmacionAccion = onConfirm;
+    this.modalConfirmacionAbierto = true;
+    this.actualizarScrollBloqueo();
+  }
+
+  cerrarConfirmacion(): void {
+    this.modalConfirmacionAbierto = false;
+    this.modalConfirmacionAccion = null;
+    this.actualizarScrollBloqueo();
+  }
+
+  confirmarAccion(): void {
+    if (this.modalConfirmacionAccion) {
+      this.modalConfirmacionAccion();
+    }
+    this.cerrarConfirmacion();
+  }
+
+  get totalComprobantes(): number {
+    return this.evidenciasExistentes.length + this.archivosSeleccionados.length;
+  }
+
+  get limiteActual(): number {
+    return this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+  }
+
+  get puedeSubirMas(): boolean {
+    return this.totalComprobantes < this.limiteActual;
+  }
+
+  onCausalChange(): void {
+    if (this.causalSeleccionada === 'Otro') {
+      this.tipoDescargo = 'T03_EXTRAORDINARIO';
+    } else {
+      this.tipoDescargo = 'T02_CERTIFICADO';
+    }
+  }
+
   private removerScrollBloqueo(): void {
     const body = document.body;
     const docElem = document.documentElement;
@@ -277,24 +527,164 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      this.nombreArchivo = file.name;
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onFileDropped(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      this.procesarArchivos(Array.from(event.dataTransfer.files));
     }
+  }
+
+  onFileSelected(event: any): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    this.procesarArchivos(Array.from(input.files));
+    input.value = '';
+  }
+
+  procesarArchivos(nuevos: File[]): void {
+    if (!nuevos || nuevos.length === 0) return;
+    const limite = this.limiteActual;
+    const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length + nuevos.length;
+
+    if (totalComprobantes > limite) {
+      this.notifications.error(`Solo se admite un máximo de ${limite} documentos en total.`);
+      return;
+    }
+
+    for (const f of nuevos) {
+      if (f.size > this.MAX_BYTES) {
+        this.notifications.error(`El archivo "${f.name}" supera el límite de 5 MB.`);
+        return;
+      }
+      const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
+      if (!['.pdf', '.jpg', '.jpeg', '.png'].includes(ext)) {
+        this.notifications.error(`El archivo "${f.name}" no tiene un formato válido (PDF, JPG, PNG).`);
+        return;
+      }
+
+      // Validación de duplicados: chequear contra archivos ya guardados
+      const yaExisteEnCustodia = this.evidenciasExistentes.some(
+        ev => (ev.nombre_original || ev.name || '').toLowerCase() === f.name.toLowerCase()
+      );
+      if (yaExisteEnCustodia) {
+        this.notifications.error(`El documento "${f.name}" ya se encuentra adjunto.`);
+        return;
+      }
+
+      // Validación de duplicados: chequear contra archivos ya seleccionados en esta tanda
+      const yaSeleccionado = this.archivosSeleccionados.some(
+        sel => sel.name.toLowerCase() === f.name.toLowerCase() && sel.size === f.size
+      );
+      if (yaSeleccionado) {
+        this.notifications.error(`El archivo "${f.name}" ya está seleccionado.`);
+        return;
+      }
+
+      this.archivosSeleccionados.push(f);
+    }
+    this.nombreArchivo = this.archivosSeleccionados.map(f => f.name).join(', ');
+  }
+
+  removerArchivo(index: number): void {
+    const archivo = this.archivosSeleccionados[index];
+    const nombre = archivo ? archivo.name : 'este archivo';
+    this.abrirConfirmacion(
+      'Quitar archivo',
+      `¿Confirmas que deseas quitar el archivo "${nombre}" de la selección?`,
+      () => {
+        this.archivosSeleccionados.splice(index, 1);
+        this.nombreArchivo = this.archivosSeleccionados.map(f => f.name).join(', ');
+      }
+    );
+  }
+
+  removerEvidenciaExistente(index: number): void {
+    const ev = this.evidenciasExistentes[index];
+    const nombre = ev ? (ev.nombre_original || ev.name) : 'este documento';
+    this.abrirConfirmacion(
+      'Eliminar documento',
+      `¿Confirmas que deseas eliminar el documento "${nombre}"?`,
+      () => {
+        this.evidenciasExistentes.splice(index, 1);
+        this.notifications.info(`Documento "${nombre}" eliminado del justificativo.`);
+      }
+    );
+  }
+
+  formatFileSize(bytes: number): string {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  descargarEvidencia(ev: any): void {
+    if (!this.expedienteDetalle) return;
+    this.expedienteApi.descargarEvidencia(this.expedienteDetalle.id, ev.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = ev.nombre_original || 'comprobante';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.notifications.info(`Descargando comprobante: ${ev.nombre_original}`);
+      },
+      error: () => {
+        this.notifications.error('Error al descargar el comprobante probatorio.');
+      }
+    });
   }
 
   enviarDescargo(): void {
     if (!this.expedienteSeleccionado) return;
 
+    const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length;
+
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
-      if (!this.nombreArchivo) {
-        this.errorMensaje = 'Es obligatorio adjuntar el comprobante o constancia digital (PDF, JPG o PNG).';
+      if (totalComprobantes === 0 && !this.nombreArchivo) {
+        this.notifications.error('Debe adjuntar al menos un documento.');
+        return;
+      }
+      if (totalComprobantes > this.LIMITE_T02) {
+        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T02} documentos.`);
+        return;
+      }
+      if (this.relatoTexto && this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+        this.notifications.error(
+          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
+        );
         return;
       }
     } else {
       if (!this.relatoTexto.trim()) {
-        this.errorMensaje = 'Por favor expone detalladamente los hechos y motivos extraordinarios.';
+        this.notifications.error('Por favor ingrese el motivo de la justificación.');
+        return;
+      }
+      if (this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+        this.notifications.error(
+          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
+        );
+        return;
+      }
+      if (totalComprobantes > this.LIMITE_T03) {
+        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T03} documentos.`);
         return;
       }
     }
@@ -302,23 +692,75 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const perfil = this.auth.getPerfil();
     const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
     const legajo = perfil?.legajo || '';
+    const expId = this.expedienteSeleccionado.id;
+    const textoAEnviar = this.relatoTexto ? this.relatoTexto.trim() : '';
 
-    this.dataService.enviarDescargo(
-      this.expedienteSeleccionado.id, 
-      this.tipoDescargo, 
-      {
+    const guardarEnDataService = (todasLasEvidencias: any[]) => {
+      this.dataService.enviarDescargo(
+        expId,
+        this.tipoDescargo,
+        {
+          causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : 'Otro',
+          archivo: this.nombreArchivo || (todasLasEvidencias.length > 0 ? todasLasEvidencias[0].nombre_original : undefined),
+          archivos: todasLasEvidencias.map(e => e.nombre_original || e.name || 'documento'),
+          texto: textoAEnviar || (this.tipoDescargo === 'T02_CERTIFICADO' ? `Justificación presentada bajo causal: ${this.causalSeleccionada}.` : ''),
+          evidencias: todasLasEvidencias
+        },
+        {
+          nombre,
+          legajo,
+          esEdicion: this.esEdicion
+        }
+      );
+      this.notifications.success('Justificación y documentos registrados correctamente.');
+      this.subiendoArchivos = false;
+      this.cerrarModal();
+      this.cargarMisExpedientes();
+      this.refrescarHistorialSiEstaAbierto(expId);
+    };
+
+    // Un rechazo del servidor (plazo vencido, validación) no se presenta como éxito ni cierra el modal.
+    const manejarRechazo = (err: any) => {
+      this.subiendoArchivos = false;
+      this.notifications.error(
+        this.extraerMensajeError(err, 'No se pudo registrar el descargo. Intenta nuevamente.')
+      );
+    };
+
+    if (this.archivosSeleccionados.length > 0) {
+      this.subiendoArchivos = true;
+      this.expedienteApi.subirEvidencias(expId, this.archivosSeleccionados, this.tipoDescargo).subscribe({
+        next: (nuevasEvidencias) => {
+          const todasLasEvidencias = [...this.evidenciasExistentes, ...nuevasEvidencias];
+          const ids = todasLasEvidencias.map(e => e.id);
+          this.expedienteApi.presentarDescargo(expId, {
+            tipo: this.tipoDescargo,
+            causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
+            texto: textoAEnviar,
+            evidencia_ids: ids
+          }).subscribe({
+            next: () => guardarEnDataService(todasLasEvidencias),
+            error: manejarRechazo
+          });
+        },
+        error: (err) => {
+          this.subiendoArchivos = false;
+          const msg = err?.error?.detail || 'Error al guardar los documentos.';
+          this.notifications.error(msg);
+        }
+      });
+    } else {
+      const ids = this.evidenciasExistentes.map(e => e.id);
+      this.expedienteApi.presentarDescargo(expId, {
+        tipo: this.tipoDescargo,
         causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
-        archivo: this.nombreArchivo,
-        texto: this.relatoTexto || `Justificación formal presentada bajo causal de ${this.causalSeleccionada}.`
-      },
-      {
-        nombre,
-        legajo,
-        esEdicion: this.esEdicion
-      }
-    );
-
-    this.cerrarModal();
+        texto: textoAEnviar,
+        evidencia_ids: ids
+      }).subscribe({
+        next: () => guardarEnDataService(this.evidenciasExistentes),
+        error: manejarRechazo
+      });
+    }
   }
 
   getBadgeClaseOperacion(operacion: string): string {

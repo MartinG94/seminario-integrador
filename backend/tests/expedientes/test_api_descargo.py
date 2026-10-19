@@ -373,3 +373,64 @@ class TestDescargoEndpoint:
         assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED)
         exp.refresh_from_db()
         assert exp.descargo_presentado is True
+
+    def test_descargo_t03_rechaza_texto_excediendo_limite_5000_caracteres(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Si el texto de justificación supera los 5000 caracteres, responde 400 Bad Request."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exp = Expediente.objects.create(
+            numero="EXP-208/2026",
+            socio=socio_titular,
+            motivo="Causa abierta para probar límite de caracteres",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now(),
+            plazo_limite_at=timezone.now() + timedelta(days=3),
+            descargo_presentado=False,
+        )
+        exp.socios.add(socio_titular)
+
+        texto_largo = "A" * 5001
+        payload = {
+            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
+            "texto": texto_largo,
+        }
+
+        response = api_client.post(
+            f"/api/v1/expedientes/{exp.id}/descargo/", payload, format="json"
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        body = response.json()
+        assert "texto" in body
+        assert "5000" in str(body["texto"])
+
+    def test_descargo_t03_acepta_texto_en_limite_5000_caracteres(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Un texto de exactamente 5000 caracteres es válido y se procesa correctamente."""
+        api_client.force_authenticate(user=socio_titular.user)
+
+        exp = Expediente.objects.create(
+            numero="EXP-209/2026",
+            socio=socio_titular,
+            motivo="Causa abierta para probar límite exacto de 5000 caracteres",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now(),
+            plazo_limite_at=timezone.now() + timedelta(days=3),
+            descargo_presentado=False,
+        )
+        exp.socios.add(socio_titular)
+
+        texto_exacto = "B" * 5000
+        payload = {
+            "tipo": TipoDescargoEnum.T03_EXTRAORDINARIO,
+            "texto": texto_exacto,
+        }
+
+        response = api_client.post(
+            f"/api/v1/expedientes/{exp.id}/descargo/", payload, format="json"
+        )
+        assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED)
+        descargo = DescargoExpediente.objects.get(expediente=exp, socio=socio_titular)
+        assert descargo.texto == texto_exacto

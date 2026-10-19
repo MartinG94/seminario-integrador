@@ -95,3 +95,4 @@ testem.log
 
 # --- Agentes y Workspaces Temporales ---
 .agents/
+.codex-remote-attachments/

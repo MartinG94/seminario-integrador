@@ -12,6 +12,8 @@ import {
   TipoAccionT01
 } from '../services/expediente-api.service';
 import { PadronApiService, PadronSocio } from '../services/padron-api.service';
+import { NotificationService, httpErrorMessage } from '../services/notification.service';
+import type { NivelUrgencia } from '../services/tribunal-data.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 
 @Component({
@@ -25,6 +27,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   socioBusqueda = new FormControl('');
   sociosFiltrados: PadronSocio[] = [];
   tipoAccion: TipoAccionT01 = 'SANCTION';
+  urgency: NivelUrgencia = 'normal';
   puntosSeleccionados: number | null = -1;
   causal = '';
   motivoTexto = '';
@@ -41,16 +44,17 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   estado: 'DRAFT' | 'ISSUED' | null = null;
   numeroExpediente: string | null = null;
   cargando = false;
-  errorMensaje = '';
-  exitoMensaje = '';
 
   // Panel Mis Solicitudes T01 (SCRUM-75 / PB-04)
   misSolicitudes: SolicitudMonitoreo[] = [];
   cargandoSolicitudes = false;
-  errorSolicitudes = '';
+  failedToLoadRequests = false;
   busquedaControl = new FormControl('');
   estadoFiltro = new FormControl('');
   private destroy$ = new Subject<void>();
+
+  // Pestañas principales: 'nueva' (Formulario T01) vs 'creadas' (Mis Solicitudes)
+  tabActiva: 'nueva' | 'creadas' = 'nueva';
 
   escalasSancion = [
     { valor: -0.5, desc: '-0.5 pts: Falta Leve' },
@@ -68,7 +72,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   constructor(
     private padronApi: PadronApiService,
     private expedienteApi: ExpedienteApiService,
-    public dialog: MatDialog
+    public dialog: MatDialog,
+    private notifications: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -104,7 +109,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   cargarMisSolicitudes(): void {
     this.cargandoSolicitudes = true;
-    this.errorSolicitudes = '';
+    this.failedToLoadRequests = false;
     const search = this.busquedaControl.value?.trim() || undefined;
     const estado = this.estadoFiltro.value || undefined;
     this.expedienteApi.listarMisSolicitudes({ search, estado }).subscribe({
@@ -113,7 +118,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
         this.cargandoSolicitudes = false;
       },
       error: () => {
-        this.errorSolicitudes = 'No se pudieron cargar las solicitudes iniciadas.';
+        this.failedToLoadRequests = true;
+        this.notifications.error('No se pudieron cargar las solicitudes iniciadas.');
         this.cargandoSolicitudes = false;
       }
     });
@@ -166,15 +172,13 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   guardarBorrador(): void {
-    this.errorMensaje = '';
-    this.exitoMensaje = '';
     if (this.estado === 'ISSUED') return;
     this.cargando = true;
     const request = this.borradorId ? this.expedienteApi.actualizarBorrador(this.borradorId, this.payload()) : this.expedienteApi.crearBorrador(this.payload());
     request.subscribe({
       next: solicitud => {
         this.aplicarSolicitud(solicitud);
-        this.exitoMensaje = 'Borrador guardado.';
+        this.notifications.success('Borrador guardado.');
         this.cargando = false;
         this.cargarMisSolicitudes();
       },
@@ -183,8 +187,6 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   emitirT01(): void {
-    this.errorMensaje = '';
-    this.exitoMensaje = '';
     if (!this.validarEmision() || this.estado === 'ISSUED') return;
     this.cargando = true;
     const guardar = this.borradorId ? this.expedienteApi.actualizarBorrador(this.borradorId, this.payload()) : this.expedienteApi.crearBorrador(this.payload());
@@ -199,7 +201,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.expedienteApi.emitir(solicitud.id).subscribe({
       next: emitida => {
         this.aplicarSolicitud(emitida);
-        this.exitoMensaje = `Expediente creado: ${emitida.numero_expediente}.`;
+        this.notifications.success(`Expediente creado: ${emitida.numero_expediente}.`);
         this.cargando = false;
         this.cargarMisSolicitudes();
       },
@@ -207,15 +209,21 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     });
   }
 
+  setTab(tab: 'nueva' | 'creadas'): void {
+    this.tabActiva = tab;
+  }
+
   continuarEdicion(solicitud: SolicitudMonitoreo): void {
     if (solicitud.estado === 'ISSUED') return;
 
+    this.tabActiva = 'nueva';
     this.borradorId = solicitud.id;
     this.estado = solicitud.estado;
     this.numeroExpediente = solicitud.numero_expediente;
     this.titulo = solicitud.titulo ?? '';
     this.causal = solicitud.causal ?? '';
     this.tipoAccion = solicitud.tipo_accion ?? 'SANCTION';
+    this.urgency = solicitud.urgencia ?? 'normal';
     this.puntosSeleccionados = solicitud.puntos ?? (this.tipoAccion === 'SANCTION' ? -1 : 1);
     this.razon = solicitud.razon || solicitud.motivo || '';
     this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ? [...solicitud.reglamentos_respaldantes] : [];
@@ -245,8 +253,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     }
 
     this.sincronizarEstadoSocio();
-    this.exitoMensaje = `Borrador "${solicitud.titulo || solicitud.numero}" cargado en el formulario.`;
-    this.errorMensaje = '';
+    this.notifications.info(`Borrador "${solicitud.titulo || solicitud.numero}" cargado en el formulario.`);
 
     if (typeof window !== 'undefined' && window.scrollTo) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -260,8 +267,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
     this.expedienteApi.eliminarBorrador(solicitud.id).subscribe({
       next: () => {
-        this.exitoMensaje = 'Borrador eliminado correctamente.';
-        this.errorMensaje = '';
+        this.notifications.success('Borrador eliminado correctamente.');
         if (this.borradorId === solicitud.id) {
           this.resetearFormulario();
         }
@@ -278,6 +284,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.titulo = '';
     this.causal = '';
     this.tipoAccion = 'SANCTION';
+    this.urgency = 'normal';
     this.puntosSeleccionados = -1;
     this.razon = '';
     this.reglamentosSeleccionados = [];
@@ -332,6 +339,31 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     return solicitud.estado_procesal_display || 'En Trámite';
   }
 
+  obtenerClaseUrgencia(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente':
+        return 'badge-mat-danger';
+      case 'baja':
+        return 'badge-mat-success';
+      case 'normal':
+      default:
+        return 'badge-mat-info';
+    }
+  }
+
+  obtenerIconoUrgencia(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente':
+        return 'priority_high';
+      case 'baja':
+        return 'arrow_downward';
+      case 'normal':
+      default:
+        return 'horizontal_rule';
+    }
+  }
+
+
   obtenerTextoInvolucrados(solicitud: SolicitudMonitoreo): string {
     if (!solicitud.involucrados || solicitud.involucrados.length === 0) {
       return 'Sin socios asignados';
@@ -350,6 +382,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       destinatario_socio_id: ids.length > 0 ? ids[0] : null,
       destinatarios_socios_ids: ids,
       tipo_accion: this.tipoAccion,
+      urgencia: this.urgency,
       titulo: this.titulo,
       causal: this.causal,
       puntos: this.puntosSeleccionados,
@@ -365,23 +398,23 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   private validarEmision(): boolean {
     if (!this.titulo.trim()) {
-      this.errorMensaje = 'Indica el título de la solicitud.';
+      this.notifications.error('Indica el título de la solicitud.');
       return false;
     }
     if (this.sociosSeleccionados.length === 0) {
-      this.errorMensaje = 'Selecciona al menos un socio involucrado.';
+      this.notifications.error('Selecciona al menos un socio involucrado.');
       return false;
     }
     if (!this.razon.trim()) {
-      this.errorMensaje = 'Describe la razón de la solicitud.';
+      this.notifications.error('Describe la razón de la solicitud.');
       return false;
     }
     if (this.puntosSeleccionados === null || this.puntosSeleccionados === undefined) {
-      this.errorMensaje = 'Indica los puntos antes de emitir.';
+      this.notifications.error('Indica los puntos antes de emitir.');
       return false;
     }
     if ((this.tipoAccion === 'SANCTION' && this.puntosSeleccionados >= 0) || (this.tipoAccion === 'MERIT' && this.puntosSeleccionados <= 0)) {
-      this.errorMensaje = 'Los puntos no son coherentes con el tipo de acción.';
+      this.notifications.error('Los puntos no son coherentes con el tipo de acción.');
       return false;
     }
     return true;
@@ -394,7 +427,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.titulo = solicitud.titulo ?? this.titulo;
     this.causal = solicitud.causal ?? this.causal;
     this.tipoAccion = solicitud.tipo_accion ?? this.tipoAccion;
-    this.puntosSeleccionados = solicitud.puntos ?? this.puntosSeleccionados;
+    this.urgency = solicitud.urgencia ?? 'normal';
+    this.puntosSeleccionados = solicitud.puntos == null ? this.puntosSeleccionados : Number(solicitud.puntos);
     this.razon = solicitud.razon || solicitud.motivo || this.razon;
     this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ?? this.reglamentosSeleccionados;
     this.anexoFecha = solicitud.anexo_fecha ?? this.anexoFecha;
@@ -421,28 +455,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   private mostrarError(error: { status?: number; error?: unknown }): void {
-    if (error && typeof error.status === 'number' && error.status >= 500) {
-      this.errorMensaje = 'El servicio no está disponible en este momento. Intentá nuevamente más tarde.';
-      return;
-    }
-
-    const body = error && error.error;
-    if (typeof body === 'string') {
-      this.errorMensaje = 'No se pudo completar la operación.';
-      return;
-    }
-    if (body && typeof body === 'object') {
-      const detail = (body as { detail?: unknown }).detail;
-      if (typeof detail === 'string' && detail.trim()) {
-        this.errorMensaje = detail;
-        return;
-      }
-      const messages = Object.values(body).flat().filter(value => typeof value === 'string');
-      if (messages.length > 0) {
-        this.errorMensaje = messages.join(' ');
-        return;
-      }
-    }
-    this.errorMensaje = 'No se pudo completar la operación.';
+    const fallback = error?.status === 0 || error?.status >= 500
+      ? 'El servicio no está disponible en este momento. Intentá nuevamente más tarde.'
+      : 'No se pudo completar la operación.';
+    this.notifications.error(httpErrorMessage(error, fallback));
   }
 }

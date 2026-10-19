@@ -1,4 +1,6 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { DashboardComponent } from './dashboard.component';
 
@@ -8,6 +10,7 @@ describe('DashboardComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
+      imports: [MatTooltipModule, NoopAnimationsModule],
       declarations: [ DashboardComponent ]
     })
     .compileComponents();

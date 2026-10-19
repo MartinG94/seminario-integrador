@@ -2,7 +2,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../environments/environment';
-import { ExpedienteApiService } from './expediente-api.service';
+import { DescargoVersionDto, ExpedienteApiService } from './expediente-api.service';
 
 describe('ExpedienteApiService', () => {
   let service: ExpedienteApiService;
@@ -63,6 +63,19 @@ describe('ExpedienteApiService', () => {
     req.flush([{ id: 'uuid-2', numero: 'T01-002', estado: 'DRAFT', titulo: 'Inconducta' }]);
   });
 
+  it('normaliza los puntos decimales del monitoreo para retomar borradores sin perder la selección', () => {
+    service.listarMisSolicitudes().subscribe(solicitudes => {
+      expect(solicitudes.map(solicitud => solicitud.puntos)).toEqual([-0.5, 2, 2, null]);
+      expect(solicitudes[0].urgencia).toBe('urgente');
+    });
+    http.expectOne(`${environment.apiUrl}/expedientes/mis-solicitudes/`).flush([
+      { id: 'draft-1', puntos: '-0.50', urgencia: 'urgente' },
+      { id: 'draft-2', puntos: '2.00' },
+      { id: 'draft-3', puntos: 2 },
+      { id: 'draft-4', puntos: null }
+    ]);
+  });
+
   it('elimina un borrador existente mediante DELETE', () => {
     let completed = false;
     service.eliminarBorrador('draft-123').subscribe(() => {
@@ -72,5 +85,15 @@ describe('ExpedienteApiService', () => {
     const req = http.expectOne({ method: 'DELETE', url: `${environment.apiUrl}/expedientes/draft-123/` });
     req.flush(null);
     expect(completed).toBeTrue();
+  });
+
+  it('consulta el historial inmutable de versiones del descargo de un expediente', () => {
+    let versiones: DescargoVersionDto[] = [];
+    service.obtenerVersionesDescargo(42).subscribe(v => (versiones = v));
+
+    const req = http.expectOne({ method: 'GET', url: `${environment.apiUrl}/expedientes/42/descargo/versiones/` });
+    req.flush([{ id: 1, numero: 1, operacion: 'PRESENTADO' }]);
+    expect(versiones.length).toBe(1);
+    expect(versiones[0].numero).toBe(1);
   });
 });

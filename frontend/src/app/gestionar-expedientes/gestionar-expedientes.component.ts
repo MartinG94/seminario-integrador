@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TribunalDataService, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
+import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
+import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -12,9 +13,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   expedientes: Expediente[] = [];
   vistaActual: 'kanban' | 'tabla' = 'kanban';
 
-  // Filtros explícitos (CA2)
+  // Filtros explícitos (CA2 / S3-07)
   filtroSocio: string = '';
   filtroEstado: string = '';
+  filtroUrgencia: string = '';
   filtroFechaDesde: string = '';
   filtroFechaHasta: string = '';
 
@@ -42,6 +44,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     { key: 'emitido', label: 'Emitidos' }
   ];
 
+  urgenciasDisponibles: { key: string; label: string }[] = [
+    { key: '', label: 'Todas las urgencias' },
+    { key: 'baja', label: 'Baja' },
+    { key: 'normal', label: 'Normal' },
+    { key: 'urgente', label: 'Urgente' }
+  ];
+
   // Estado de colapso de columnas
   columnasColapsadas: { [estado: string]: boolean } = {
     emitido: false
@@ -51,6 +60,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalDetalleAbierto = false;
   modalVotacionAbierto = false;
   modalFirmaAbierto = false;
+  modalSociosAbierto = false;
   expedienteSeleccionado: Expediente | null = null;
 
   // Votación
@@ -69,14 +79,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     'Ing. Rossi (Vocal 2)'
   ];
 
-  mensajeExito = '';
+  failedToLoadBoard = false;
   cargando = false;
 
   private subs: Subscription[] = [];
 
   constructor(
     public dataService: TribunalDataService,
-    private auth: AuthService
+    private auth: AuthService,
+    private notifications: NotificationService
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -121,9 +132,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   cargarDatosTablero(): void {
     this.cargando = true;
+    this.failedToLoadBoard = false;
     const filtros: any = {};
     if (this.filtroSocio.trim()) filtros.socio = this.filtroSocio.trim();
     if (this.filtroEstado.trim()) filtros.estado = this.filtroEstado.trim();
+    if (this.filtroUrgencia.trim()) filtros.urgencia = this.filtroUrgencia.trim();
     if (this.filtroFechaDesde) filtros.fecha_desde = this.filtroFechaDesde;
     if (this.filtroFechaHasta) filtros.fecha_hasta = this.filtroFechaHasta;
 
@@ -134,6 +147,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       error: () => {
         // En caso de error o backend no disponible, se mantiene la colección local
         this.cargando = false;
+        this.failedToLoadBoard = true;
+        this.notifications.error('No se pudo cargar el tablero. Intentá nuevamente.');
       }
     });
   }
@@ -141,6 +156,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   limpiarFiltros(): void {
     this.filtroSocio = '';
     this.filtroEstado = '';
+    this.filtroUrgencia = '';
     this.filtroFechaDesde = '';
     this.filtroFechaHasta = '';
     this.cargarDatosTablero();
@@ -149,13 +165,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
-    // Filtro por socio en memoria (fallback / reactivo)
+    // Filtro por socio/creador/título en memoria (fallback / reactivo)
     if (this.filtroSocio.trim()) {
       const q = this.filtroSocio.trim().toLowerCase();
       result = result.filter(e =>
         (e.socio && e.socio.toLowerCase().includes(q)) ||
         (e.legajo && e.legajo.toLowerCase().includes(q)) ||
-        (e.numero && e.numero.toLowerCase().includes(q))
+        (e.numero && e.numero.toLowerCase().includes(q)) ||
+        (e.numero && this.formatCaseNumber(e.numero).toLowerCase().includes(q)) ||
+        (e.creador && e.creador.toLowerCase().includes(q)) ||
+        (e.titulo && e.titulo.toLowerCase().includes(q)) ||
+        (e.motivo && e.motivo.toLowerCase().includes(q)) ||
+        (e.sociosInvolucrados && e.sociosInvolucrados.some(s =>
+          (s.nombre && s.nombre.toLowerCase().includes(q)) ||
+          (s.legajo && s.legajo.toLowerCase().includes(q))
+        ))
       );
     }
 
@@ -173,17 +197,33 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Filtro por rango de fechas
+    // Filtro por urgencia en memoria (S3-07)
+    if (this.filtroUrgencia.trim()) {
+      const urg = this.filtroUrgencia.trim();
+      result = result.filter(e => (e.urgencia || 'normal') === urg);
+    }
+
+    // Filtro por rango de fechas (comparación YYYY-MM-DD ante timestamps ISO)
     if (this.filtroFechaDesde) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion >= this.filtroFechaDesde);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) >= this.filtroFechaDesde);
     }
     if (this.filtroFechaHasta) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion <= this.filtroFechaHasta);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) <= this.filtroFechaHasta);
     }
 
     result.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA: any;
+      let valB: any;
+      if (this.columnaOrden === 'titulo') {
+        valA = a.titulo || a.motivo || '';
+        valB = b.titulo || b.motivo || '';
+      } else if (this.columnaOrden === 'cantidadSocios') {
+        valA = this.getCantidadInvolucrados(a);
+        valB = this.getCantidadInvolucrados(b);
+      } else {
+        valA = (a as any)[this.columnaOrden] ?? '';
+        valB = (b as any)[this.columnaOrden] ?? '';
+      }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 
@@ -229,8 +269,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.cargarDatosTablero();
       },
       error: (err) => {
-        const errorMsg = err?.error?.to_status || err?.error?.detail || 'No se pudo realizar la transición.';
-        this.mostrarNotificacion(`Error: ${errorMsg}`);
+        this.notifications.error(httpErrorMessage(err, 'No se pudo realizar la transición.'));
       }
     });
   }
@@ -341,23 +380,51 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
   }
 
   abrirVotacion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
   abrirFirma(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalFirmaAbierto = true;
+  }
+
+  abrirModalSocios(exp: Expediente, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = true;
+  }
+
+  volverADetalle(): void {
+    this.modalSociosAbierto = false;
+    if (this.expedienteSeleccionado) {
+      this.abrirDetalle(this.expedienteSeleccionado);
+    }
   }
 
   cerrarModales(): void {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
   }
 
@@ -384,8 +451,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   mostrarNotificacion(msg: string): void {
-    this.mensajeExito = msg;
-    setTimeout(() => { this.mensajeExito = ''; }, 4500);
+    this.notifications.success(msg);
   }
 
   getEstadoLabel(estado: string): string {
@@ -412,5 +478,79 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }
+  }
+
+  getCantidadInvolucrados(exp: Expediente | null | undefined): number {
+    if (!exp) return 1;
+    if (exp.cantidadSocios && exp.cantidadSocios > 0) {
+      return exp.cantidadSocios;
+    }
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados.length;
+    }
+    return 1;
+  }
+
+  formatCaseNumber(caseNumber: string): string {
+    if (!caseNumber) return '';
+    // Formato 1: (EXP-)?<num>/<year>
+    let match = /^(?:EXP-)?(\d+)\/(\d{4})$/i.exec(caseNumber);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      const year = match[2];
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    // Formato 2: (EXP-)?<year>-<num>
+    match = /^(?:EXP-)?(\d{4})-(\d+)$/i.exec(caseNumber);
+    if (match) {
+      const year = match[1];
+      const num = parseInt(match[2], 10);
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    return caseNumber.replace(/^EXP-/i, '');
+  }
+
+  getUrgenciaLabel(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente': return 'Urgente';
+      case 'baja': return 'Baja';
+      default: return 'Normal';
+    }
+  }
+
+  getUrgenciaBadgeClass(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente': return 'badge-mat-danger';
+      case 'baja': return 'badge-mat-success';
+      default: return 'badge-mat-info';
+    }
+  }
+
+  getUrgenciaIcon(urgencia?: string): string {
+    switch (urgencia) {
+      case 'urgente': return 'priority_high';
+      case 'baja': return 'arrow_downward';
+      default: return 'horizontal_rule';
+    }
+  }
+
+  cambiarUrgenciaExpediente(nuevaUrgencia: NivelUrgencia): void {
+    if (!this.expedienteSeleccionado) return;
+    const label = this.getUrgenciaLabel(nuevaUrgencia);
+    this.dataService.actualizarUrgencia(this.expedienteSeleccionado.id, nuevaUrgencia).subscribe({
+      next: () => {
+        if (this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.urgencia = nuevaUrgencia;
+          this.expedienteSeleccionado.urgenciaDisplay = label;
+        }
+        this.mostrarNotificacion(`Urgencia actualizada a "${label}" exitosamente.`);
+        this.cargarDatosTablero();
+      },
+      error: (err) => {
+        this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar la urgencia.'));
+      }
+    });
   }
 }

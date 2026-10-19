@@ -16,11 +16,18 @@ from socios.models import Role
 
 __all__ = [
     "CanCreateT01",
+    "CanManageCalendar",
     "CanOpenExpedientes",
     "CanTransitionExpedientes",
     "IsImputadoOrTribunal",
     "IsTribunalOrDirectiva",
 ]
+
+
+class CanManageCalendar(HasAnyRole):
+    """Autoridades y administradores autorizados a configurar calendario y feriados (CA5)."""
+
+    allowed_roles = (Role.ADMIN, Role.CD, Role.TD)
 
 
 class CanOpenExpedientes(HasAnyRole):
@@ -72,10 +79,13 @@ class IsImputadoOrTribunal(BasePermission):
             audit.log_access_granted(identifier=identifier, role=role, resource=resource)
             return True
 
-        # Socio imputado: sólo si está habilitado y coincide socio_id del expediente
-        if socio and socio.is_enabled and getattr(obj, "socio_id", None) == socio.id:
-            audit.log_access_granted(identifier=identifier, role=role, resource=resource)
-            return True
+        # Socio imputado (titular o co-imputado): sólo si está habilitado
+        if socio and socio.is_enabled:
+            is_titular = getattr(obj, "socio_id", None) == socio.id
+            is_coimputado = hasattr(obj, "socios") and obj.socios.filter(pk=socio.pk).exists()
+            if is_titular or is_coimputado:
+                audit.log_access_granted(identifier=identifier, role=role, resource=resource)
+                return True
 
         # Acceso denegado a terceros o socios deshabilitados
         audit.log_access_denied(identifier=identifier, role=role, resource=resource)

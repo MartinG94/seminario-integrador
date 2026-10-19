@@ -13,12 +13,10 @@ export class EventosAsistenciaComponent implements OnInit, OnDestroy {
   eventoActivo: EventoAsistencia | null = null;
   socioSimulado = 'Ignacio Morales';
   estaEscaneando = false;
-  mensajeAlerta = '';
-  tipoAlerta: 'success' | 'danger' | 'info' = 'info';
 
   private subs: Subscription[] = [];
 
-  constructor(public dataService: TribunalDataService) {}
+  constructor(public dataService: TribunalDataService, private notifications: NotificationService) {}
 
   ngOnInit(): void {
     const subEvt = this.dataService.eventos$.subscribe(list => {
@@ -71,8 +69,7 @@ export class EventosAsistenciaComponent implements OnInit, OnDestroy {
   }
 
   mostrarMensaje(msg: string, tipo: 'success' | 'danger' | 'info'): void {
-    this.mensajeAlerta = msg;
-    this.tipoAlerta = tipo;
-    setTimeout(() => { this.mensajeAlerta = ''; }, 4500);
+    this.notifications.show(tipo === 'danger' ? 'error' : tipo, msg);
   }
 }
+import { NotificationService } from '../services/notification.service';

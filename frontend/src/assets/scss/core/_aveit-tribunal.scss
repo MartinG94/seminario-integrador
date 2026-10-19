@@ -645,3 +645,11 @@ body.dark-edition, html.dark {
     }
   }
 }
+// Angular overlays deben quedar sobre los modales Bootstrap existentes.
+.cdk-overlay-container { z-index: 2000; }
+
+.calendar-simulation-dialog .mat-dialog-container {
+  border-radius: 8px;
+  background: var(--color-surface-card);
+  color: var(--color-text-primary);
+}

@@ -1,6 +1,7 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { SocioApiService, SocioLegajoDTO } from '../../services/socio-api.service';
+import { NotificationService } from '../../services/notification.service';
 
 export interface SocioLegajoDialogData {
   socioId: number | string;
@@ -29,7 +30,8 @@ export class SocioLegajoDialogComponent implements OnInit {
   constructor(
     public dialogRef: MatDialogRef<SocioLegajoDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: SocioLegajoDialogData,
-    private socioApiService: SocioApiService
+    private socioApiService: SocioApiService,
+    private notifications: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -48,12 +50,13 @@ export class SocioLegajoDialogComponent implements OnInit {
       error: (err) => {
         this.cargando = false;
         if (err.status === 403) {
-          this.errorHttp = 'No posee autorización para consultar este legajo (CA4).';
+          this.errorHttp = 'No posee autorización para consultar este legajo.';
         } else if (err.status === 404) {
           this.errorHttp = 'El socio solicitado no fue encontrado en el padrón.';
         } else {
           this.errorHttp = 'Ocurrió un error al cargar la información del legajo. Verifique la conexión.';
         }
+        this.notifications.error(this.errorHttp);
       }
     });
   }

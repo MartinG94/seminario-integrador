@@ -1,0 +1,224 @@
+:host {
+  display: block;
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
+
+.calendar-page {
+  .card, .card-body {
+    background: var(--color-surface-card);
+    color: var(--color-text-primary);
+  }
+
+  .calendar-heading {
+    background: linear-gradient(60deg, var(--grad-primary-start), var(--grad-primary-end));
+    color: var(--color-text-inverse);
+
+    .card-title {
+      color: inherit;
+      font-family: var(--font-h2);
+      margin: 0;
+    }
+  }
+
+  .calendar-toolbar {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .calendar-toolbar {
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .calendar-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    flex: 0 1 28rem;
+    min-width: 0;
+  }
+
+  .calendar-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+  .simulation-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border-main);
+    h2 { color: var(--color-text-primary); font-family: var(--font-h2); margin: 0; }
+  }
+
+  .dialog-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    width: 2.5rem;
+    height: 2.5rem;
+    cursor: pointer;
+  }
+
+  .calendar-field {
+    flex: 1 1 10rem;
+    min-width: 0;
+
+    label { display: block; font-weight: 600; color: var(--color-text-primary); margin-bottom: 0.5rem; }
+    small { display: block; color: var(--color-text-secondary); }
+  }
+
+  .form-control {
+    background-color: var(--color-surface-card);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-main);
+    padding: 0.5rem;
+    height: 2.5rem;
+    border-radius: 4px;
+  }
+
+  .holiday-form, .simulation-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) max-content;
+    align-items: start;
+    gap: 0.5rem 1.25rem;
+
+    .calendar-field { display: contents; }
+    .calendar-field:first-child > * { grid-column: 1; }
+    .calendar-field:nth-child(2) > * { grid-column: 2; }
+    label { grid-row: 1; margin: 0; }
+    .form-control { grid-row: 2; }
+    small { grid-row: 3; }
+    > .btn { grid-column: 3; grid-row: 2; }
+  }
+
+  .holiday-form {
+    grid-template-columns: minmax(10rem, 1fr) minmax(0, 3fr) max-content;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-main);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px var(--color-border-main);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .calendar-table { margin-top: 1rem; }
+
+  .btn.btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+    box-shadow: 0 2px 4px var(--color-border-main);
+    margin: 0;
+    min-height: 2.5rem;
+    padding: 0.5rem 1rem;
+    line-height: 1.25rem;
+    border-radius: 4px;
+
+    &:hover:not(:disabled), &:focus:not(:disabled) { background-color: var(--grad-primary-end); }
+    &:disabled { opacity: 1; box-shadow: none; cursor: not-allowed; }
+
+    .material-icons { color: inherit; font-size: 1.125rem; margin-right: 0.375rem; }
+  }
+
+  table {
+    color: var(--color-text-primary);
+    th, td { border-color: var(--color-border-main); }
+    th { color: var(--color-text-primary); font-weight: 600; }
+    td { vertical-align: middle; }
+    tbody tr:hover { background: var(--color-surface); }
+  }
+
+  .holiday-date, .holiday-audit { white-space: nowrap; }
+
+  .date-sort {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-primary);
+    font: inherit;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  button:focus-visible, input:focus-visible, select:focus-visible, .calendar-table:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 3px;
+  }
+
+  .calendar-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--color-text-primary);
+
+    p { margin: 0; max-width: 30rem; }
+    .calendar-state-icon { font-size: 2rem; }
+    .calendar-state-help { color: var(--color-text-secondary); }
+  }
+
+  .simulation-result {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-main);
+    background: var(--color-surface);
+  }
+
+  .deadline-label { color: var(--color-text-secondary); margin-bottom: 0.25rem; }
+  .deadline-value { font: 600 1.25rem var(--font-h3); }
+  .simulation-days { display: flex; flex-wrap: wrap; gap: 2rem; }
+  .simulation-days li { margin-bottom: 0.5rem; }
+  .simulation-days h5 { font-weight: 600; }
+
+  @media (max-width: 900px) {
+    .holiday-form, .simulation-form {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      > .btn { grid-column: 1 / -1; grid-row: 4; justify-self: start; margin-top: 0.5rem; }
+    }
+  }
+
+  @media (max-width: 600px) {
+    > .container-fluid { padding: 0; }
+    .card-body, .holiday-form { padding: 1rem; }
+    .calendar-toolbar, .holiday-form, .simulation-form {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+    }
+    .calendar-filters {
+      flex-basis: auto;
+      width: 100%;
+      gap: 0.5rem;
+      .form-control { padding-inline: 0.25rem; }
+    }
+    .calendar-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      .btn { padding-inline: 0.5rem; }
+    }
+    .holiday-form, .simulation-form {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.25rem;
+
+      .calendar-field { display: block; grid-column: 1; }
+      label { margin-bottom: 0.5rem; }
+      small { margin-top: 0.5rem; }
+      > .btn { grid-column: 1; grid-row: auto; justify-self: stretch; margin-top: 0; }
+    }
+    .simulation-days { display: block; }
+    .btn { white-space: normal; }
+  }
+}

@@ -45,11 +45,16 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
   - Python 3.12: Type hints obligatorios en todas las funciones, métodos y modelos públicos.
   - TypeScript: Tipado estricto habilitado (`strict: true`), interfaces y DTOs para cada payload de API.
 - **Idioma del Código:**
-  - Identificadores, nombres de clases, funciones, modelos, campos de BD y commits en **inglés** (ej. `MembershipStatus`, `calculate_balance`, `fetch_records`).
+  - Identificadores, nombres de clases, funciones, modelos, campos de BD y commits en **inglés** (ej. `MembershipStatus`, `calculate_balance`, `fetch_records`). En entidades o modelos que mapeen a tablas preexistentes del sistema legacy, se respeta estrictamente la nomenclatura original de tablas, columnas y relaciones del esquema legacy (`db_table`, `db_column`).
   - Interfaz de usuario, etiquetas, reglamentos, mensajes de error, justificaciones y documentación formal en **español rioplatense institucional** (ej. "Socio Activo", "Expediente Creado", "Formulario T02").
 - **Tokens de Diseño:**
   - Prohibido utilizar colores hexadecimales arbitrarios o estilos ad-hoc.
   - Toda interfaz debe consumir exclusivamente las variables canónicas y tokens definidos en [`DESIGN.md`](DESIGN.md).
+- **Feedback al usuario (solicitud del PM, PR #49):**
+  - En toda la aplicación, incluidos login y modales, los mensajes transitorios de éxito, error, advertencia e información se muestran mediante el servicio central de notificaciones, abajo a la derecha.
+  - Cada notificación dura 10 segundos, se desvanece al finalizar y permite cerrarla con una X accesible. Su temporizador y cierre son independientes; cambiar de pantalla no la elimina anticipadamente.
+  - No se muestran alertas transitorias dentro de formularios ni se usan mecanismos alternativos como `$.notify`. Se conserva el contenido permanente de la vista: ayudas, estados vacíos, acciones de recuperación, resultados del cálculo y datos del expediente.
+  - Los avisos usan texto plano, tokens institucionales, anuncio accesible y foco visible; permanecen visibles sobre modales y respetan la preferencia de movimiento reducido. No exponen HTML, trazas ni referencias internas de implementación.
 - **Componentes y Búsqueda de Socios:**
   - Siempre que se tenga que desarrollar un componente donde sea necesario seleccionar un socio, se debe implementar **Select2** (o componente de autocompletado equivalente con búsqueda reactiva) para ir mostrando dinámicamente las posibles coincidencias a medida que se escribe.
 - **Control de Versiones y Ramas:**
@@ -84,6 +89,7 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
    - No toques archivos dentro de `specs/` salvo petición explícita de cambio de requerimiento.
    - No agregues dependencias pesadas a `requirements.txt` o `package.json` sin previa aprobación del Product Owner.
    - Respeta estrictamente los 6 estados del expediente (Art. 12 del Reglamento Procesal 2026).
+6. **Prioridad y respeto al esquema de Base de Datos legacy:** En cualquier solución o desarrollo que interactúe con la base de datos, la prioridad absoluta e ineludible es respetar los nombres de las tablas, columnas y relaciones del sistema legacy preexistente. Solo tras evaluar exhaustivamente y confirmar que un comportamiento requerido no se encuentra modelado en dicho esquema, se podrá considerar o proponer la aplicación de un `ALTER TABLE` o la creación de nuevas tablas.
 
 ---
 

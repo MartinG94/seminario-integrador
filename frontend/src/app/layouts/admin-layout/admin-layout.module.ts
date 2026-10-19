@@ -30,6 +30,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
 import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
+import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
 
 @NgModule({
   imports: [
@@ -58,6 +59,7 @@ import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarro
     SolicitarPuntosComponent,
     SolicitudDetalleDialogComponent,
     EventosAsistenciaComponent,
+    CalendarioInstitucionalComponent,
     DashboardComponent,
     TableListComponent,
     TypographyComponent,
@@ -70,3 +72,4 @@ import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarro
 })
 
 export class AdminLayoutModule {}
+

@@ -1,18 +1,20 @@
 """Servicios transaccionales para apertura y transiciones de expedientes."""
 
 from datetime import datetime
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
-from expedientes.domain.holiday_provider import Argentina2026HolidayProvider
+from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.models import (
     CambioEstadoExpediente,
     EstadoExpedienteEnum,
     Expediente,
     ExpedienteNumberSequence,
+    UrgenciaExpedienteEnum,
 )
 from socios.models import Socio
 
@@ -34,7 +36,15 @@ class ExpedienteWorkflowService:
 
     @classmethod
     @transaction.atomic
-    def open_expediente(cls, *, motivo: str, socio_ids: list[int], actor: str) -> Expediente:
+    def open_expediente(
+        cls,
+        *,
+        motivo: str,
+        socio_ids: list[int],
+        actor: str,
+        urgencia: str = UrgenciaExpedienteEnum.NORMAL,
+        points: Decimal = Decimal("-1.0"),
+    ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de apertura es obligatorio."})
         if not socio_ids:
@@ -48,6 +58,8 @@ class ExpedienteWorkflowService:
             socio_id=socio_ids[0],
             motivo=motivo.strip(),
             estado=EstadoExpedienteEnum.CREADO,
+            urgencia=urgencia,
+            puntos=points,
         )
         expediente.socios.set(socio_ids)
         CambioEstadoExpediente.objects.create(
@@ -103,7 +115,7 @@ class ExpedienteWorkflowService:
             expediente.plazo_limite_at = compute_business_deadline(
                 start_at=start_at,
                 business_days=5,
-                holiday_provider=Argentina2026HolidayProvider(),
+                holiday_provider=DbHolidayProvider(),
             )
             fields_to_update.extend(["plazo_inicio_at", "plazo_limite_at"])
         expediente.save(update_fields=fields_to_update)

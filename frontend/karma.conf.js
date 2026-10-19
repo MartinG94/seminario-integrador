@@ -41,10 +41,14 @@ module.exports = function (config) {
     browsers: ['Chrome'],
     customLaunchers: {
       ChromeHeadlessNoSandbox: {
-        base: 'ChromeHeadless',
-        flags: ['--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions']
+        base: 'Chrome',
+        flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions', '--remote-debugging-port=9222']
       }
     },
+    captureTimeout: 120000,
+    browserDisconnectTimeout: 30000,
+    browserDisconnectTolerance: 3,
+    browserNoActivityTimeout: 120000,
     singleRun: false
   });
 };

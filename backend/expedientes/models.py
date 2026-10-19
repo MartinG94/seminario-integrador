@@ -11,12 +11,13 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
-from expedientes.domain.holiday_provider import Argentina2026HolidayProvider
+from expedientes.domain.holiday_provider import DbHolidayProvider
 
 if TYPE_CHECKING:
     from expedientes.domain.ports import HolidayProviderPort
@@ -38,6 +39,139 @@ class TipoDescargoEnum(models.TextChoices):
 
     T02_CERTIFICADO = "T02_CERTIFICADO", "Formulario T02 - Causal con Certificado"
     T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
+
+
+class OperacionDescargoEnum(models.TextChoices):
+    """Operaciones registradas en el historial inmutable de un descargo (SCRUM-49)."""
+
+    PRESENTADO = "PRESENTADO", "Descargo presentado"
+    CORREGIDO = "CORREGIDO", "Descargo corregido dentro del plazo"
+    RETIRADO = "RETIRADO", "Descargo retirado dentro del plazo"
+
+
+class TipoFeriadoEnum(models.TextChoices):
+    """Tipos de feriados y días inhábiles procesales."""
+
+    NACIONAL = "NACIONAL", "Feriado Nacional"
+    PROVINCIAL = "PROVINCIAL", "Feriado Provincial"
+    INSTITUCIONAL = "INSTITUCIONAL", "Asueto Institucional"
+    EXCEPCION = "EXCEPCION", "Día Inhábil Excepcional"
+
+
+class CalendarioVersion(models.Model):
+    """Evidencia histórica; no configura el calendario operativo."""
+
+    version = models.PositiveIntegerField(unique=True, db_index=True)
+    nombre = models.CharField(max_length=150)
+    vigencia_desde = models.DateField(db_index=True)
+    vigencia_hasta = models.DateField(null=True, blank=True)
+    activa = models.BooleanField(default=True, db_index=True)
+    motivo_cambio = models.TextField(
+        help_text="Justificación formal de auditoría para la creación/modificación de la versión."
+    )
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="calendarios_creados",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "expedientes_calendario_version"
+        verbose_name = "Versión de Calendario Institucional"
+        verbose_name_plural = "Versiones de Calendario Institucional"
+        ordering = ["-version"]
+
+    def __str__(self) -> str:
+        return f"v{self.version} - {self.nombre} ({'Activa' if self.activa else 'Inactiva'})"
+
+
+class FeriadoExcepcion(models.Model):
+    """Registro histórico de una versión anterior del calendario."""
+
+    calendario_version = models.ForeignKey(
+        CalendarioVersion,
+        on_delete=models.CASCADE,
+        related_name="feriados",
+    )
+    fecha = models.DateField(db_index=True)
+    descripcion = models.CharField(max_length=200)
+    tipo = models.CharField(
+        max_length=30,
+        choices=TipoFeriadoEnum.choices,
+        default=TipoFeriadoEnum.NACIONAL,
+    )
+    es_laborable = models.BooleanField(
+        default=False,
+        help_text="False indica día inhábil (feriado/asueto); True para excepciones laborables.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "expedientes_feriado_excepcion"
+        verbose_name = "Feriado o Excepción de Calendario"
+        verbose_name_plural = "Feriados y Excepciones de Calendario"
+        ordering = ["fecha"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["calendario_version", "fecha"],
+                name="unique_fecha_per_calendario_version",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.fecha}: {self.descripcion} ({self.get_tipo_display()})"
+
+
+class Holiday(models.Model):
+    """Día inhábil del único calendario institucional operativo."""
+
+    class Origin(models.TextChoices):
+        USER = "USER", "Registro por usuario"
+        SYSTEM = "SYSTEM", "Carga inicial del sistema"
+        LEGACY = "LEGACY", "Registro previo sin autoría registrada"
+
+    date = models.DateField(unique=True)
+    description = models.CharField(max_length=200)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="institutional_holidays",
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    origin = models.CharField(max_length=10, choices=Origin.choices, default=Origin.USER)
+
+    class Meta:
+        db_table = "expedientes_institutional_holiday"
+        verbose_name = "Feriado institucional"
+        verbose_name_plural = "Feriados institucionales"
+        ordering = ["date"]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(origin="USER", created_by__isnull=False)
+                    | models.Q(origin__in=["SYSTEM", "LEGACY"], created_by__isnull=True)
+                ),
+                name="holiday_requires_creation_audit",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.date}: {self.description}"
+
+
+class UrgenciaExpedienteEnum(models.TextChoices):
+    """Niveles de urgencia procesal para expedientes disciplinarios (SCRUM-78)."""
+
+    BAJA = "baja", "Baja"
+    NORMAL = "normal", "Normal"
+    URGENTE = "urgente", "Urgente"
 
 
 class ExpedienteNumberSequence(models.Model):
@@ -92,14 +226,29 @@ class Expediente(models.Model):
         blank=True,
     )
     motivo = models.TextField()
-    puntos = models.DecimalField(max_digits=5, decimal_places=2, default=-1.0)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, default=-1.0)
     estado = models.CharField(
         max_length=30,
         choices=EstadoExpedienteEnum.choices,
         default=EstadoExpedienteEnum.CREADO,
         db_index=True,
     )
+    urgencia = models.CharField(
+        max_length=20,
+        choices=UrgenciaExpedienteEnum.choices,
+        default=UrgenciaExpedienteEnum.NORMAL,
+        db_index=True,
+        help_text="Nivel de urgencia procesal (Baja, Normal, Urgente).",
+    )
     # Plazos procesales perentorios (CA1 y CA2)
+    calendario_version = models.ForeignKey(
+        CalendarioVersion,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="expedientes_congelados",
+        help_text="Versión del calendario institucional aplicada al congelar el plazo (CA3).",
+    )
     plazo_inicio_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -150,9 +299,13 @@ class Expediente(models.Model):
     ) -> datetime:
         """
         Calcula y congela el plazo de 5 días hábiles a partir de fecha_hora_inicio.
+        Usa el calendario único y conserva la fecha/hora límite persistida (CA3).
         Transiciona al estado JUSTIFICANDO registrando trazabilidad y auditoría.
         """
-        provider = holiday_provider or Argentina2026HolidayProvider()
+        if self.plazo_limite_at is not None:
+            return self.plazo_limite_at
+        provider = holiday_provider if holiday_provider is not None else DbHolidayProvider()
+
         limite = compute_business_deadline(
             start_at=fecha_hora_inicio,
             business_days=dias_habiles,
@@ -161,7 +314,13 @@ class Expediente(models.Model):
 
         self.plazo_inicio_at = fecha_hora_inicio
         self.plazo_limite_at = limite
-        self.save(update_fields=["plazo_inicio_at", "plazo_limite_at", "updated_at"])
+        self.save(
+            update_fields=[
+                "plazo_inicio_at",
+                "plazo_limite_at",
+                "updated_at",
+            ]
+        )
 
         from expedientes.services.workflow_service import ExpedienteWorkflowService
 
@@ -234,6 +393,11 @@ class DescargoExpediente(models.Model):
     archivo = models.CharField(max_length=255, blank=True)
     texto = models.TextField(blank=True)
     presentado_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    es_vigente = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="False cuando el socio retiró el descargo dentro del plazo (baja lógica).",
+    )
 
     class Meta:
         db_table = "expedientes_descargo"
@@ -243,6 +407,122 @@ class DescargoExpediente(models.Model):
                 name="unique_descargo_per_expediente_socio",
             )
         ]
+
+
+class EvidenciaDescargo(models.Model):
+    """Comprobante probatorio protegido y serializado en base de datos (Directiva PO)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+        db_index=True,
+    )
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="evidencias",
+        null=True,
+        blank=True,
+    )
+    socio = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.PROTECT,
+        related_name="evidencias_aportadas",
+        db_index=True,
+    )
+    contenido_blob = models.BinaryField(
+        help_text="Contenido binario serializado del archivo probatorio (hasta 5 MB)."
+    )
+    nombre_original = models.CharField(max_length=255)
+    extension = models.CharField(
+        max_length=20, help_text="Extensión original extraída (ej. .pdf, .jpg)"
+    )
+    mime_type = models.CharField(max_length=100, help_text="Tipo MIME validado por magic bytes")
+    tamanio_bytes = models.PositiveIntegerField()
+    sha256_hash = models.CharField(max_length=64, db_index=True)
+    es_vigente = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_evidencia_descargo"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.nombre_original} ({self.expediente.numero})"
+
+
+class DescargoVersion(models.Model):
+    """Versión inmutable de un descargo (solo-inserción).
+
+    La versión vigente es la de mayor ``numero``; si su operación es ``RETIRADO`` el socio
+    no tiene descargo vigente. Guarda una copia del contenido y el juego de evidencias de
+    ese momento, de modo que ninguna corrección o retiro destruya el rastro del escrito.
+    """
+
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="versiones",
+    )
+    numero = models.PositiveIntegerField()
+    operacion = models.CharField(max_length=20, choices=OperacionDescargoEnum.choices)
+    tipo = models.CharField(max_length=30, choices=TipoDescargoEnum.choices)
+    causal = models.CharField(max_length=255, blank=True)
+    archivo = models.CharField(max_length=255, blank=True)
+    texto = models.TextField(blank=True)
+    evidencias = models.ManyToManyField(
+        EvidenciaDescargo,
+        related_name="versiones",
+        blank=True,
+    )
+    actor = models.CharField(max_length=150)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_descargo_version"
+        ordering = ["numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["descargo", "numero"],
+                name="unique_version_numero_per_descargo",
+            )
+        ]
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Las versiones del descargo son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Las versiones del descargo no pueden eliminarse.")
+
+    def __str__(self) -> str:
+        return f"v{self.numero} {self.operacion} ({self.descargo.expediente.numero})"
+
+
+class AuditoriaDescargaEvidencia(models.Model):
+    """Pista de auditoría inmutable de accesos y descargas de evidencia (CA4)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    evidencia = models.ForeignKey(
+        EvidenciaDescargo,
+        on_delete=models.CASCADE,
+        related_name="descargas_auditadas",
+    )
+    usuario = models.CharField(max_length=150)
+    rol = models.CharField(max_length=50)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_descarga"
+        ordering = ["-fecha_hora"]
+
+    def __str__(self) -> str:
+        return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
 class SolicitudT01(models.Model):
@@ -260,6 +540,12 @@ class SolicitudT01(models.Model):
     destinatario_socio_id = models.PositiveBigIntegerField(null=True, blank=True)
     destinatarios_socios_ids = models.JSONField(default=list, blank=True)
     tipo_accion = models.CharField(max_length=10, choices=TipoAccion.choices)
+    urgencia = models.CharField(
+        max_length=20,
+        choices=UrgenciaExpedienteEnum.choices,
+        default=UrgenciaExpedienteEnum.NORMAL,
+        blank=True,
+    )
     titulo = models.CharField(max_length=255, blank=True, default="")
     causal = models.CharField(max_length=255, blank=True)
     puntos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

@@ -1,13 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
-import { TribunalDataService, BoardResponseDTO } from '../services/tribunal-data.service';
+import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -15,6 +17,7 @@ describe('GestionarExpedientesComponent', () => {
   let authService: AuthService;
   let dataService: TribunalDataService;
   let httpMock: HttpTestingController;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   const mockBoardResponse: BoardResponseDTO = {
     columns: [
@@ -28,8 +31,10 @@ describe('GestionarExpedientesComponent', () => {
   };
 
   beforeEach(async () => {
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
     await TestBed.configureTestingModule({
       imports: [
+        CommonModule,
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
@@ -37,6 +42,7 @@ describe('GestionarExpedientesComponent', () => {
       ],
       declarations: [GestionarExpedientesComponent],
       providers: [
+        { provide: NotificationService, useValue: notifications },
         TribunalDataService,
         AuthService
       ]
@@ -209,4 +215,331 @@ describe('GestionarExpedientesComponent', () => {
     expect(eventDown.preventDefault).toHaveBeenCalled();
     expect(card2.focus).toHaveBeenCalled();
   });
+
+  describe('Tarjetas Kanban simplificadas (observaciones PO PR #50)', () => {
+    function renderCase(overrides: Partial<Expediente> = {}): Expediente {
+      const expediente: Expediente = {
+        id: 'case-1', numero: 'EXP-0007/2026', socio: 'Socio secundario',
+        legajo: '74907', subcomision: 'Subcomisión secundaria',
+        motivo: 'Inasistencia a reunión institucional', fechaCreacion: '2026-10-07',
+        estado: 'creado', horasRestantes: 24, tipo: 'falta', puntos: -1,
+        urgencia: 'urgente', cantidadSocios: 1,
+        firmas: { juecesFirmantes: ['Juez 1', 'Juez 2', 'Juez 3'] },
+        ...overrides
+      };
+      component.expedientes = [expediente];
+      fixture.detectChanges();
+      return expediente;
+    }
+
+    it('muestra únicamente ID, urgencia, puntos, motivo, fecha y cantidad de involucrados en las seis etapas', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      for (const column of component.columnasKanban) {
+        renderCase({ estado: column.estado });
+        const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.kanban-card-mat'));
+        expect(cards.length).toBe(1);
+        const card = cards[0];
+        expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
+          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+        );
+        expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
+      }
+    });
+
+    it('conserva el número canónico y mantiene ID y puntos sin quiebres', () => {
+      const expediente = renderCase({ numero: 'EXP-1234/2026', puntos: 2, urgencia: 'baja' });
+      const id: HTMLElement | null = fixture.nativeElement.querySelector('.card-id');
+      const points: HTMLElement | null = fixture.nativeElement.querySelector('.card-points');
+      expect(id?.textContent?.trim()).toBe('1234/2026');
+      expect(points?.textContent?.trim()).toBe('+2 pts');
+      if (id && points) {
+        expect(getComputedStyle(id).whiteSpace).toBe('nowrap');
+        expect(getComputedStyle(points).whiteSpace).toBe('nowrap');
+      }
+      expect(expediente.numero).toBe('EXP-1234/2026');
+    });
+
+    it('mantiene el signo de puntos fraccionarios y Normal para registros anteriores', () => {
+      renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
+      const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
+      expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
+        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+      );
+    });
+
+    it('mantiene legible el máximo de puntos sin desbordar ni superponer los datos de cabecera', () => {
+      fixture.nativeElement.style.width = '375px';
+      renderCase({ numero: 'EXP-1234/2026', puntos: 99999999.99 });
+      const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
+      const header: HTMLElement = card.querySelector('.card-top')!;
+      expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+      expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+      expect(card.querySelector('.card-points')?.textContent?.trim()).toBe('+99999999.99 pts');
+      const bounds = Array.from(header.children).map(element => element.getBoundingClientRect());
+      for (let index = 0; index < bounds.length; index++) {
+        for (const other of bounds.slice(index + 1)) {
+          const current = bounds[index];
+          const overlap = Math.min(current.right, other.right) > Math.max(current.left, other.left) &&
+            Math.min(current.bottom, other.bottom) > Math.max(current.top, other.top);
+          expect(overlap).toBeFalse();
+        }
+      }
+    });
+
+    it('permite abrir el detalle mediante clic, Enter y espacio', () => {
+      const expediente = renderCase();
+      const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
+      spyOn(component, 'abrirDetalle');
+      expect(card.tabIndex).toBe(0);
+      card.click();
+      card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      card.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      expect(component.abrirDetalle).toHaveBeenCalledTimes(3);
+      expect(component.abrirDetalle).toHaveBeenCalledWith(expediente);
+    });
+  });
+
+  describe('Clasificador e indicador visual de urgencia (SCRUM-78)', () => {
+    it('notifica un fallo de urgencia como error y conserva su valor anterior', () => {
+      component.expedienteSeleccionado = { id: '1', urgencia: 'normal' } as Expediente;
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(
+        throwError(() => ({ status: 500, error: { detail: 'Traceback database' } })));
+      component.cambiarUrgenciaExpediente('urgente');
+      expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo actualizar la urgencia.');
+      expect(notifications.success).not.toHaveBeenCalled();
+      expect(component.expedienteSeleccionado.urgencia).toBe('normal');
+    });
+
+    it('notifica fallos de transición sin insertarlos como mensajes de éxito', () => {
+      spyOn(dataService, 'transicionarExpediente').and.returnValue(
+        throwError(() => ({ status: 400, error: { to_status: ['Transición no permitida.'] } })));
+      component.transicionarEstado({ id: '1', numero: '001/2026' } as Expediente, 'justificando');
+      fixture.detectChanges();
+      expect(notifications.error).toHaveBeenCalledOnceWith('Transición no permitida.');
+      expect(notifications.success).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.textContent).not.toContain('Transición no permitida.');
+    });
+
+    it('notifica un fallo de tablero y ofrece reintentar su carga', () => {
+      (dataService.obtenerTablero as jasmine.Spy).and.returnValue(throwError(() => ({ status: 500 })));
+      component.cargarDatosTablero();
+      fixture.detectChanges();
+      expect(notifications.error).toHaveBeenCalledWith('No se pudo cargar el tablero. Intentá nuevamente.');
+      const retry = fixture.nativeElement.querySelector('[aria-label="Reintentar carga del tablero"]') as HTMLButtonElement;
+      expect(retry).toBeTruthy();
+      (dataService.obtenerTablero as jasmine.Spy).and.returnValue(of(mockBoardResponse));
+      retry.click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[aria-label="Reintentar carga del tablero"]')).toBeNull();
+    });
+    it('debe mapear correctamente etiquetas, clases e iconos de urgencia', () => {
+      expect(component.getUrgenciaLabel('baja')).toBe('Baja');
+      expect(component.getUrgenciaLabel('normal')).toBe('Normal');
+      expect(component.getUrgenciaLabel('urgente')).toBe('Urgente');
+      expect(component.getUrgenciaLabel(undefined)).toBe('Normal');
+
+      expect(component.getUrgenciaBadgeClass('urgente')).toBe('badge-mat-danger');
+
+      expect(component.getUrgenciaBadgeClass('normal')).toBe('badge-mat-info');
+      expect(component.getUrgenciaBadgeClass('baja')).toBe('badge-mat-success');
+
+      expect(component.getUrgenciaIcon('urgente')).toBe('priority_high');
+      expect(component.getUrgenciaIcon('normal')).toBe('horizontal_rule');
+      expect(component.getUrgenciaIcon('baja')).toBe('arrow_downward');
+    });
+
+    it('cargarDatosTablero debe incluir el filtro de urgencia si está seleccionado', () => {
+      component.filtroUrgencia = 'urgente';
+      component.cargarDatosTablero();
+
+      expect(dataService.obtenerTablero).toHaveBeenCalledWith(jasmine.objectContaining({
+        urgencia: 'urgente'
+      }));
+    });
+
+    it('cambiarUrgenciaExpediente debe actualizar la urgencia vía TribunalDataService', () => {
+      const expMock: any = {
+        id: '1',
+        numero: 'EXP-001',
+        socio: 'Lucas G',
+        legajo: '74907',
+        subcomision: 'Cómputos',
+        motivo: 'Falta',
+        fechaCreacion: '2026-03-01',
+        estado: 'creado',
+        horasRestantes: 0,
+        tipo: 'falta',
+        puntos: -1,
+        urgencia: 'normal'
+      };
+
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(of({ id: 1, urgencia: 'urgente', urgencia_display: 'Urgente' } as any));
+
+      component.expedienteSeleccionado = expMock;
+      component.cambiarUrgenciaExpediente('urgente');
+
+      expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
+      expect(expMock.urgencia).toBe('urgente');
+      expect(notifications.success).toHaveBeenCalledWith('Urgencia actualizada a "Urgente" exitosamente.');
+    });
+  });
+
+  describe('S3-08: Visualización de socios involucrados', () => {
+    const expUnicoSocio: Expediente = {
+      id: '1',
+      numero: 'EXP-001/2026',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia',
+      titulo: 'Inasistencia a asamblea',
+      creador: 'Gastiaburu, Lucas (74907)',
+      fechaCreacion: '2026-03-01',
+      estado: 'creado',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '1', legajo: '74907', nombre: 'Lucas Gastiaburu' }
+      ]
+    };
+
+    const expMultiplesSocios: Expediente = {
+      id: '2',
+      numero: 'EXP-002/2026',
+      socio: 'Lucas Martín Guillén',
+      legajo: '85194',
+      subcomision: 'Cómputos',
+      motivo: 'Falta de informes',
+      titulo: 'Falta de informes cuatrimestrales',
+      creador: 'Guillén, Lucas Martín (85194)',
+      fechaCreacion: '2026-03-02',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1.5,
+      cantidadSocios: 2,
+      sociosInvolucrados: [
+        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
+        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
+      ]
+    };
+
+    it('abrirModalSocios debe abrir el modal y seleccionar el expediente deteniendo propagación', () => {
+      const dummyEvent = new MouseEvent('click');
+      spyOn(dummyEvent, 'stopPropagation');
+
+      component.abrirModalSocios(expMultiplesSocios, dummyEvent);
+
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado).toEqual(expMultiplesSocios);
+      expect(dummyEvent.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('cerrarModales debe cerrar modalSociosAbierto y reiniciar expedienteSeleccionado', () => {
+      component.abrirModalSocios(expMultiplesSocios);
+      expect(component.modalSociosAbierto).toBeTrue();
+
+      component.cerrarModales();
+
+      expect(component.modalSociosAbierto).toBeFalse();
+      expect(component.expedienteSeleccionado).toBeNull();
+    });
+
+    it('las tarjetas kanban no muestran botones en el pie manteniendo simplicidad visual', () => {
+      component.expedientes = [expMultiplesSocios];
+      component.vistaActual = 'kanban';
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const kanbanButtons = compiled.querySelectorAll('.card-bottom button');
+      expect(kanbanButtons.length).toBe(0);
+    });
+
+    it('debe mostrar columna Involucrados en la tabla y Grupo/Estado en el modal al hacer clic', () => {
+      component.expedientes = [expMultiplesSocios];
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('table thead')?.textContent).toContain('Involucrados');
+      const tableButton = compiled.querySelector('table tbody tr button[title="Ver Involucrados"]') as HTMLButtonElement;
+      expect(tableButton).toBeTruthy();
+
+      tableButton.click();
+      fixture.detectChanges();
+
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado?.numero).toBe('EXP-002/2026');
+      expect(component.expedienteSeleccionado?.sociosInvolucrados?.length).toBe(2);
+
+      // Verificar contenido del modal renderizado incluyendo Grupo (solo número) y Estado
+      const modal = compiled.querySelector('.modal-backdrop-custom');
+      expect(modal).toBeTruthy();
+      expect(modal?.textContent).toContain('Socios Involucrados');
+      expect(modal?.textContent).toContain('85194');
+      expect(modal?.textContent).toContain('Lucas Martín Guillén');
+      expect(modal?.textContent).toContain('87414');
+      expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
+      expect(modal?.textContent).toContain('59');
+      expect(modal?.textContent).toContain('Activo');
+      expect(modal?.textContent).toContain('Pasivo');
+    });
+
+    it('debe mostrar acciones Emitir Resolución y Firmar Resolución según permisos y estado', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const expRevision: Expediente = { ...expMultiplesSocios, estado: 'revision_resolucion' };
+      const expFirma: Expediente = { ...expMultiplesSocios, id: '3', estado: 'pendiente_correos' };
+      component.expedientes = [expRevision, expFirma];
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const btnEmitir = compiled.querySelector('table tbody tr button[title="Emitir Resolución"]') as HTMLButtonElement;
+      const btnFirmar = compiled.querySelectorAll('table tbody tr')[1].querySelector('button[title="Firmar Resolución"]') as HTMLButtonElement;
+
+      expect(btnEmitir).toBeTruthy();
+      expect(btnFirmar).toBeTruthy();
+    });
+
+    it('debe mostrar siempre la Razón y la cantidad de Involucrados en el modal de detalle y cerrar el detalle al abrir un modal secundario', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const expDetalle: Expediente = {
+        ...expMultiplesSocios,
+        estado: 'revision_resolucion',
+        razon: undefined
+      };
+
+      component.abrirDetalle(expDetalle);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
+      expect(compiled.textContent).toContain('Involucrados:');
+      expect(compiled.textContent).toContain('Razón:');
+      expect(compiled.textContent).toContain('Falta de informes');
+
+      // Al abrir Socios Involucrados desde el detalle, se cierra el modal de detalle evitando superposición
+      component.abrirModalSocios(expDetalle);
+      fixture.detectChanges();
+
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(component.modalSociosAbierto).toBeTrue();
+      expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
+
+      // Al hacer clic en Volver, regresa al modal de detalle del expediente sin cerrar todo
+      const btnVolver = compiled.querySelector('.modal-backdrop-custom button[aria-label="Volver al detalle"]') as HTMLButtonElement;
+      expect(btnVolver).toBeTruthy();
+      btnVolver.click();
+      fixture.detectChanges();
+
+      expect(component.modalSociosAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado).toEqual(expDetalle);
+      expect(compiled.textContent).toContain('Razón:');
+    });
+  });
 });
+
+

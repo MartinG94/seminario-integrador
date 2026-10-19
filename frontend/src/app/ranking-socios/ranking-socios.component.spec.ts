@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 
 import { RankingSociosComponent } from './ranking-socios.component';
 import { RankingService } from '../services/ranking.service';
+import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
 
@@ -13,6 +14,7 @@ describe('RankingSociosComponent', () => {
   let fixture: ComponentFixture<RankingSociosComponent>;
   let rankingServiceSpy: jasmine.SpyObj<RankingService>;
   let dialogSpy: jasmine.SpyObj<MatDialog>;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   const sociosMock: RankingSocio[] = [
     {
@@ -46,6 +48,7 @@ describe('RankingSociosComponent', () => {
   beforeEach(async () => {
     rankingServiceSpy = jasmine.createSpyObj('RankingService', ['obtenerRanking']);
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error']);
 
     rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
 
@@ -53,6 +56,7 @@ describe('RankingSociosComponent', () => {
       imports: [FormsModule],
       declarations: [RankingSociosComponent],
       providers: [
+        { provide: NotificationService, useValue: notifications },
         { provide: RankingService, useValue: rankingServiceSpy },
         { provide: MatDialog, useValue: dialogSpy }
       ]
@@ -64,6 +68,19 @@ describe('RankingSociosComponent', () => {
 
   it('debería crear el componente', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('notifica un fallo sin repetirlo en la tabla y permite reintentar', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(throwError(() => ({ status: 500 })));
+    fixture.detectChanges();
+    expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo cargar el ranking. Intentá nuevamente.');
+    expect(fixture.nativeElement.textContent).not.toContain('No se pudo cargar el ranking');
+    const retry = fixture.nativeElement.querySelector('[aria-label="Reintentar carga del ranking"]') as HTMLButtonElement;
+    expect(retry).toBeTruthy();
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
+    retry.click();
+    fixture.detectChanges();
+    expect(component.socios).toEqual(sociosMock);
   });
 
   it('debería cargar socios desde RankingService', () => {
