@@ -503,7 +503,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnFirmar).toBeTruthy();
     });
 
-    it('debe mostrar siempre la Razón y la cantidad de Involucrados en el modal de detalle y cerrar el detalle al abrir un modal secundario', () => {
+    it('debe permitir navegar a Socios Involucrados desde el detalle y volver sin perder el contexto', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
       const expDetalle: Expediente = {
         ...expMultiplesSocios,
@@ -516,12 +516,13 @@ describe('GestionarExpedientesComponent', () => {
 
       const compiled = fixture.nativeElement as HTMLElement;
       expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
-      expect(compiled.textContent).toContain('Involucrados:');
-      expect(compiled.textContent).toContain('Razón:');
+      expect(compiled.textContent).toContain('Motivo:');
       expect(compiled.textContent).toContain('Falta de informes');
 
-      // Al abrir Socios Involucrados desde el detalle, se cierra el modal de detalle evitando superposición
-      component.abrirModalSocios(expDetalle);
+      // Al abrir Socios Involucrados desde el footer del detalle, se cierra el modal de detalle evitando superposición
+      const btnVerInvolucrados = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Ver Involucrados"]') as HTMLButtonElement;
+      expect(btnVerInvolucrados).toBeTruthy();
+      btnVerInvolucrados.click();
       fixture.detectChanges();
 
       expect(component.modalDetalleAbierto).toBeFalse();
@@ -537,7 +538,122 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.modalSociosAbierto).toBeFalse();
       expect(component.modalDetalleAbierto).toBeTrue();
       expect(component.expedienteSeleccionado).toEqual(expDetalle);
-      expect(compiled.textContent).toContain('Razón:');
+      expect(compiled.textContent).toContain('Motivo:');
+    });
+  });
+
+  describe('S3-10: Detalle de expediente según formato canónico del Tribunal (SCRUM-81)', () => {
+    const expMock: Expediente = {
+      id: '419',
+      numero: 'EXP-419/2025',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia reiterada a reuniones plenarias de comisión sin aviso previo formal',
+      titulo: 'Falta disciplinaria por inasistencias plenarias',
+      razon: 'Inasistencia injustificada a reuniones plenarias consecutivas',
+      creador: 'Gastiaburu, Lucas (74907)',
+      solicitante: 'Comisión Directiva',
+      reglamento_asociado: 'Reglamento de Faltas y Sanciones Internas',
+      fechaCreacion: '2025-10-15',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -2,
+      urgencia: 'urgente',
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '1', legajo: '74907', nombre: 'Lucas Gastiaburu', grupo: '10', estado: 'No justificado' }
+      ]
+    };
+
+    it('debe renderizar exactamente los siete campos canónicos de metadatos en Modal 1', () => {
+      component.abrirDetalle(expMock);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const modal = compiled.querySelector('.modal-backdrop-custom');
+      expect(modal).toBeTruthy();
+
+      // Cabecera: solo título identificador sin subtítulo duplicado
+      const title = modal?.querySelector('.card-header .card-title')?.textContent?.trim();
+      expect(title).toBe('Expediente 419/2025');
+      expect(modal?.querySelector('.card-header .card-category')).toBeNull();
+
+      // 1. Estado de expediente
+      expect(modal?.textContent).toContain('Estado de expediente:');
+      expect(modal?.textContent).toContain('En Revisión');
+
+      // 2. Fecha de Solicitud (formato dd/MM/yyyy)
+      expect(modal?.textContent).toContain('Fecha de Solicitud:');
+      expect(modal?.textContent).toContain('15/10/2025');
+
+      // 3. Título
+      expect(modal?.textContent).toContain('Título:');
+      expect(modal?.textContent).toContain('Falta disciplinaria por inasistencias plenarias');
+
+      // 4. Motivo
+      expect(modal?.textContent).toContain('Motivo:');
+      expect(modal?.textContent).toContain('Inasistencia injustificada a reuniones plenarias consecutivas');
+
+      // 5. Sanción solicitada
+      expect(modal?.textContent).toContain('Sanción solicitada:');
+      expect(modal?.textContent).toContain('-2 pts');
+
+      // 6. Reglamento
+      expect(modal?.textContent).toContain('Reglamento:');
+      expect(modal?.textContent).toContain('Reglamento de Faltas y Sanciones Internas');
+
+      // 7. Solicitante
+      expect(modal?.textContent).toContain('Solicitante:');
+      expect(modal?.textContent).toContain('74907 - Gastiaburu, Lucas');
+
+      // Control de Urgencia debajo de los metadatos
+      expect(modal?.textContent).toContain('Nivel de Urgencia:');
+    });
+
+    it('debe usar fallback canónico de reglamento sin citas de artículos', () => {
+      const expSinReglamento: Expediente = {
+        ...expMock,
+        reglamento_asociado: undefined,
+        reglamentoAsociado: undefined
+      };
+      expect(component.getReglamentoAsociado(expSinReglamento)).toBe('Reglamento Procesal Disciplinario 2026');
+      expect(component.getReglamentoAsociado(null)).toBe('Reglamento Procesal Disciplinario 2026');
+    });
+
+    it('formatSolicitante debe formatear legajo - nombre o fallback', () => {
+      expect(component.formatSolicitante(expMock)).toBe('74907 - Gastiaburu, Lucas');
+      expect(component.formatSolicitante({ ...expMock, creador: 'Comisión Directiva' })).toBe('Comisión Directiva');
+      expect(component.formatSolicitante({ ...expMock, creador: '', solicitante: '' })).toBe('Comisión Directiva');
+      expect(component.formatSolicitante(null)).toBe('Comisión Directiva');
+    });
+
+    it('no debe renderizar las secciones pospuestas ni tabla embebida de involucrados en Modal 1', () => {
+      component.abrirDetalle(expMock);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.card-responsable')).toBeNull();
+      expect(compiled.querySelector('.reglamentos-list')).toBeNull();
+      expect(compiled.querySelector('.card-body table')).toBeNull();
+      expect(compiled.textContent).not.toContain('Responsables del tribunal');
+      expect(compiled.textContent).not.toContain('Reglamentos respaldantes');
+    });
+
+    it('debe conservar las acciones existentes en el pie del modal', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      component.abrirDetalle(expMock);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const btnInvolucrados = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Ver Involucrados"]');
+      const btnEmitir = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Emitir Resolución"]');
+      const btnCerrar = compiled.querySelector('.modal-backdrop-custom .card-footer button.btn-default');
+
+      expect(btnInvolucrados).toBeTruthy();
+      expect(btnEmitir).toBeTruthy();
+      expect(btnCerrar).toBeTruthy();
     });
   });
 });

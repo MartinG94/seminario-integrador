@@ -1,5 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TribunalDataService, Expediente, EstadoExpediente, NivelUrgencia } from '../services/tribunal-data.service';
+import { 
+  TribunalDataService, 
+  Expediente, 
+  EstadoExpediente, 
+  NivelUrgencia
+} from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import { Subscription } from 'rxjs';
@@ -552,5 +557,29 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar la urgencia.'));
       }
     });
+  }
+
+  // --- Métodos de apoyo formato canónico Tribunal (S3-10 / SCRUM-81) ---
+
+  getReglamentoAsociado(exp: Expediente | null): string {
+    if (!exp) return 'Reglamento Procesal Disciplinario 2026';
+    const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
+    return reg || 'Reglamento Procesal Disciplinario 2026';
+  }
+
+  formatSolicitante(exp: Expediente | null): string {
+    if (!exp) return 'Comisión Directiva';
+    const creador = (exp.creador || '').trim();
+    if (creador) {
+      // Si ya viene en formato "Apellido, Nombre (Legajo)" o "Nombre (Legajo)"
+      const match = /^(.+?)\s*\((.+?)\)$/.exec(creador);
+      if (match) {
+        const nombrePart = match[1].trim();
+        const legajoPart = match[2].trim();
+        return `${legajoPart} - ${nombrePart}`;
+      }
+      return creador;
+    }
+    return exp.solicitante || 'Comisión Directiva';
   }
 }
