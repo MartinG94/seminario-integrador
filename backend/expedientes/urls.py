@@ -5,7 +5,10 @@ from expedientes.views import (
     CalcularPlazoView,
     CalendarioFeriadosView,
     CaseNotificationAuditView,
+    DescargoVersionesView,
     DispatchCaseOpeningView,
+    EvidenciaDownloadView,
+    EvidenciaUploadView,
     ExpedienteCollectionView,
     ExpedienteDetailView,
     MisExpedientesView,
@@ -33,6 +36,17 @@ urlpatterns = [
     path("mis-solicitudes/", MisSolicitudesT01View.as_view(), name="mis-solicitudes"),
     path("<int:pk>/estado/", TransicionExpedienteView.as_view(), name="transicionar-expediente"),
     path("<int:pk>/descargo/", PresentarDescargoView.as_view(), name="presentar-descargo"),
+    path(
+        "<int:pk>/descargo/versiones/",
+        DescargoVersionesView.as_view(),
+        name="descargo-versiones",
+    ),
+    path("<int:pk>/evidencia/", EvidenciaUploadView.as_view(), name="expediente-evidencia-upload"),
+    path(
+        "<int:pk>/evidencia/<uuid:evidencia_id>/",
+        EvidenciaDownloadView.as_view(),
+        name="expediente-evidencia-download",
+    ),
     path(
         "<int:pk>/despachar-notificacion/",
         DispatchCaseOpeningView.as_view(),

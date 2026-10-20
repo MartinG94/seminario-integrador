@@ -41,6 +41,14 @@ class TipoDescargoEnum(models.TextChoices):
     T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
 
 
+class OperacionDescargoEnum(models.TextChoices):
+    """Operaciones registradas en el historial inmutable de un descargo (SCRUM-49)."""
+
+    PRESENTADO = "PRESENTADO", "Descargo presentado"
+    CORREGIDO = "CORREGIDO", "Descargo corregido dentro del plazo"
+    RETIRADO = "RETIRADO", "Descargo retirado dentro del plazo"
+
+
 class TipoFeriadoEnum(models.TextChoices):
     """Tipos de feriados y días inhábiles procesales."""
 
@@ -385,6 +393,11 @@ class DescargoExpediente(models.Model):
     archivo = models.CharField(max_length=255, blank=True)
     texto = models.TextField(blank=True)
     presentado_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    es_vigente = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="False cuando el socio retiró el descargo dentro del plazo (baja lógica).",
+    )
 
     class Meta:
         db_table = "expedientes_descargo"
@@ -394,6 +407,122 @@ class DescargoExpediente(models.Model):
                 name="unique_descargo_per_expediente_socio",
             )
         ]
+
+
+class EvidenciaDescargo(models.Model):
+    """Comprobante probatorio protegido y serializado en base de datos (Directiva PO)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+        db_index=True,
+    )
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="evidencias",
+        null=True,
+        blank=True,
+    )
+    socio = models.ForeignKey(
+        "socios.Socio",
+        on_delete=models.PROTECT,
+        related_name="evidencias_aportadas",
+        db_index=True,
+    )
+    contenido_blob = models.BinaryField(
+        help_text="Contenido binario serializado del archivo probatorio (hasta 5 MB)."
+    )
+    nombre_original = models.CharField(max_length=255)
+    extension = models.CharField(
+        max_length=20, help_text="Extensión original extraída (ej. .pdf, .jpg)"
+    )
+    mime_type = models.CharField(max_length=100, help_text="Tipo MIME validado por magic bytes")
+    tamanio_bytes = models.PositiveIntegerField()
+    sha256_hash = models.CharField(max_length=64, db_index=True)
+    es_vigente = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_evidencia_descargo"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.nombre_original} ({self.expediente.numero})"
+
+
+class DescargoVersion(models.Model):
+    """Versión inmutable de un descargo (solo-inserción).
+
+    La versión vigente es la de mayor ``numero``; si su operación es ``RETIRADO`` el socio
+    no tiene descargo vigente. Guarda una copia del contenido y el juego de evidencias de
+    ese momento, de modo que ninguna corrección o retiro destruya el rastro del escrito.
+    """
+
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="versiones",
+    )
+    numero = models.PositiveIntegerField()
+    operacion = models.CharField(max_length=20, choices=OperacionDescargoEnum.choices)
+    tipo = models.CharField(max_length=30, choices=TipoDescargoEnum.choices)
+    causal = models.CharField(max_length=255, blank=True)
+    archivo = models.CharField(max_length=255, blank=True)
+    texto = models.TextField(blank=True)
+    evidencias = models.ManyToManyField(
+        EvidenciaDescargo,
+        related_name="versiones",
+        blank=True,
+    )
+    actor = models.CharField(max_length=150)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_descargo_version"
+        ordering = ["numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["descargo", "numero"],
+                name="unique_version_numero_per_descargo",
+            )
+        ]
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Las versiones del descargo son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Las versiones del descargo no pueden eliminarse.")
+
+    def __str__(self) -> str:
+        return f"v{self.numero} {self.operacion} ({self.descargo.expediente.numero})"
+
+
+class AuditoriaDescargaEvidencia(models.Model):
+    """Pista de auditoría inmutable de accesos y descargas de evidencia (CA4)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    evidencia = models.ForeignKey(
+        EvidenciaDescargo,
+        on_delete=models.CASCADE,
+        related_name="descargas_auditadas",
+    )
+    usuario = models.CharField(max_length=150)
+    rol = models.CharField(max_length=50)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_descarga"
+        ordering = ["-fecha_hora"]
+
+    def __str__(self) -> str:
+        return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
 class SolicitudT01(models.Model):

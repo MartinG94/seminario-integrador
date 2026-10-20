@@ -22,6 +22,8 @@ DEMO_SOCIOS = [
     ("87414", "Sánchez", "Diego Gabriel", Role.CD, 5),
     ("408917", "Rosales", "Nicolás", Role.TD, 6),
     ("403655", "Villegas", "Axel René", Role.ADMIN, 5),
+    ("409953", "Urviola", "Luis", Role.SOCIO, 4),
+    ("415327", "Quiroz", "Tomas Augusto", Role.SOCIO, 3),
 ]
 
 
@@ -62,3 +64,11 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(f"\nContraseña para todos: {DEMO_PASSWORD}")
+        from django.core.management import call_command
+
+        try:
+            call_command("seed_production_data")
+        except Exception as exc:
+            self.stdout.write(
+                f"Aviso: no se pudo sincronizar seed_production_data automáticamente: {exc}"
+            )

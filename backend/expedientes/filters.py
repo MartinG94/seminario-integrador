@@ -28,10 +28,16 @@ class ExpedienteFilter(django_filters.FilterSet):
             return queryset
         val = value.strip()
         return queryset.filter(
-            Q(socio__legajo__icontains=val)
+            Q(numero__icontains=val)
+            | Q(motivo__icontains=val)
+            | Q(socio__legajo__icontains=val)
             | Q(socio__first_name__icontains=val)
             | Q(socio__last_name__icontains=val)
             | Q(socios__legajo__icontains=val)
             | Q(socios__first_name__icontains=val)
             | Q(socios__last_name__icontains=val)
+            | Q(solicitud_t01__titulo__icontains=val)
+            | Q(solicitud_t01__solicitante__legajo__icontains=val)
+            | Q(solicitud_t01__solicitante__first_name__icontains=val)
+            | Q(solicitud_t01__solicitante__last_name__icontains=val)
         ).distinct()

@@ -177,9 +177,11 @@ class Command(BaseCommand):
     def _clean_mysql_statements(self, sql: str, clean: bool = False) -> list[str]:
         """
         Limpia sentencias MySQL manteniendo compatibilidad nativa y preservando
-        la base de datos de Django.
+        la base de datos de Django. Omite CREATE TABLE si la tabla ya existe
+        para evitar commits implícitos que romperían transacciones en tests.
         """
         raw_statements = self._split_sql_statements(sql)
+        existing_tables = set(connection.introspection.table_names())
         statements = []
         for stmt in raw_statements:
             clean_stmt = stmt.strip()
@@ -188,6 +190,16 @@ class Command(BaseCommand):
                 continue
             if upper.startswith("DROP TABLE") and not clean:
                 continue
+            if upper.startswith("CREATE TABLE"):
+                match = re.search(
+                    r"CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+[`\"']?(\w+)[`\"']?",
+                    clean_stmt,
+                    re.IGNORECASE,
+                )
+                if match:
+                    tbl_name = match.group(1)
+                    if tbl_name in existing_tables and not clean:
+                        continue
             statements.append(clean_stmt)
         return statements
 
@@ -315,7 +327,14 @@ class Command(BaseCommand):
                 if '"auth_user"' in clean_stmt and "date_joined" not in clean_stmt:
                     clean_stmt = clean_stmt.replace('("id",', '("date_joined", "id",')
                     clean_stmt = re.sub(r"\(\s*(\d+)\s*,", r"(datetime('now'), \1,", clean_stmt)
-                # Reemplazar con INSERT OR REPLACE INTO para idempotencia
+                # Reemplazar con INSERT OR REPLACE INTO y remover
+                # ON DUPLICATE KEY UPDATE para SQLite
+                clean_stmt = re.sub(
+                    r"\s+ON\s+DUPLICATE\s+KEY\s+UPDATE.*$",
+                    "",
+                    clean_stmt,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
                 clean_stmt = re.sub(
                     r"^INSERT INTO", "INSERT OR REPLACE INTO", clean_stmt, flags=re.IGNORECASE
                 )
