@@ -78,7 +78,7 @@ describe('ExpedientesSocioDialogComponent', () => {
     fixture.detectChanges();
   });
 
-  it('debe consultar las causas usando el legajo recibido', () => {
+  it('debe consultar los expedientes usando el legajo recibido', () => {
     expect(expedienteApiSpy.listarPorLegajo).toHaveBeenCalledWith('74907');
     expect(component.expedientes).toEqual(expedientesMock);
     expect(component.cargando).toBeFalse();
@@ -88,13 +88,26 @@ describe('ExpedientesSocioDialogComponent', () => {
   it('debe mostrar los expedientes recibidos', () => {
     const contenido = fixture.nativeElement.textContent as string;
 
+    expect(contenido).toContain('Detalle de expedientes');
     expect(contenido).toContain('EXP-0001/2026');
     expect(contenido).toContain('Falta reglamentaria');
     expect(contenido).toContain('EXP-0002/2026');
     expect(contenido).toContain('Reconocimiento institucional');
   });
 
-  it('debe informar cuando el socio no posee causas', () => {
+  it('debe mostrar el estado vacío y los mensajes de carga con la terminología de expedientes', () => {
+    expedienteApiSpy.listarPorLegajo.and.returnValue(of([]));
+
+    component.cargarExpedientes();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Este socio no posee expedientes registrados.'
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('causas');
+  });
+
+  it('debe informar cuando el socio no posee expedientes', () => {
     expedienteApiSpy.listarPorLegajo.and.returnValue(of([]));
 
     component.cargarExpedientes();
@@ -102,7 +115,7 @@ describe('ExpedientesSocioDialogComponent', () => {
 
     expect(component.expedientes).toEqual([]);
     expect(fixture.nativeElement.textContent).toContain(
-      'Este socio no posee causas registradas.'
+      'Este socio no posee expedientes registrados.'
     );
   });
 
@@ -115,11 +128,11 @@ describe('ExpedientesSocioDialogComponent', () => {
     fixture.detectChanges();
 
     expect(component.error).toBe(
-      'No posee autorizaci?n para consultar las causas de este socio.'
+      'No posee autorizaci?n para consultar los expedientes de este socio.'
     );
 
     expect(fixture.nativeElement.textContent).toContain(
-      'No posee autorizaci?n para consultar las causas de este socio.'
+      'No posee autorizaci?n para consultar los expedientes de este socio.'
     );
   });
 

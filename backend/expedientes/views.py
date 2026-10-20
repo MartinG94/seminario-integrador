@@ -66,7 +66,8 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
-from socios.models import Role
+from padron.models import SocioEstudio
+from socios.models import Role, Socio
 
 
 def _actor_for_user(user) -> str:
@@ -94,8 +95,18 @@ class ExpedienteCollectionView(APIView):
         legajo = request.query_params.get("legajo")
         if legajo is not None and legajo.strip():
             legajo = legajo.strip()
+            padron_user_ids = SocioEstudio.objects.filter(
+                nroLegajo=legajo,
+                socio__user_id__isnull=False,
+            ).values("socio__user_id")
+            local_socio_ids = Socio.objects.filter(
+                user_id__in=padron_user_ids,
+            ).values("pk")
             queryset = queryset.filter(
-                Q(socio__legajo=legajo) | Q(socios__legajo=legajo)
+                Q(socio__legajo=legajo)
+                | Q(socios__legajo=legajo)
+                | Q(socio_id__in=local_socio_ids)
+                | Q(socios__id__in=local_socio_ids)
             ).distinct()
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data

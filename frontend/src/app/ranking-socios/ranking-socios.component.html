@@ -91,7 +91,7 @@
                     <span *ngIf="ordenSaldo === 'asc'" aria-hidden="true">?</span>
                   </th>
                   <th>Reconciliación</th>
-                                  <th>Causas</th>
+                  <th>Expedientes</th>
                 </thead>
                 <tbody>
                   <tr *ngIf="sociosOrdenados.length === 0">
@@ -135,9 +135,9 @@
                         (click)="$event.stopPropagation(); abrirExpedientesSocio(s)"
                         (keydown.enter)="$event.stopPropagation()"
                         (keydown.space)="$event.stopPropagation()"
-                        [attr.aria-label]="'Ver causas de ' + s.nombre + ' ' + s.apellido">
+                        [attr.aria-label]="'Ver expedientes de ' + s.nombre + ' ' + s.apellido">
                         <i class="material-icons" style="font-size: 16px;">folder_open</i>
-                        Causas
+                        Expedientes
                       </button>
                     </td>
                   </tr>

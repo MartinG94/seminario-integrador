@@ -1,7 +1,7 @@
 <div class="causas-dialog">
   <div class="dialog-header">
     <div>
-      <h3 class="mb-1">Detalle de causas</h3>
+      <h3 class="mb-1">Detalle de expedientes</h3>
       <div class="text-muted">
         {{ data.nombreSocio }} &bull; N.? de socio {{ data.legajo }}
       </div>
@@ -17,7 +17,7 @@
   </div>
 
   <div *ngIf="cargando" class="text-center text-muted py-4">
-    Cargando causas...
+    Cargando expedientes...
   </div>
 
   <div *ngIf="!cargando && error" class="text-center py-4">
@@ -30,7 +30,7 @@
   <div
     *ngIf="!cargando && !error && expedientes.length === 0"
     class="text-center text-muted py-4">
-    Este socio no posee causas registradas.
+    Este socio no posee expedientes registrados.
   </div>
 
   <div *ngIf="!cargando && !error && expedientes.length > 0">

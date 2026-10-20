@@ -5,7 +5,9 @@ from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from expedientes.models import Expediente, SolicitudT01
+from padron.models import Socio as PadronSocio, SocioEstudio
 from socios.models import Role
+from tests.legacy_schema import create_legacy_record
 
 
 @pytest.fixture
@@ -567,3 +569,37 @@ def test_gestion_expedientes_filtra_por_legajo_principal_y_adicional(
         adicional.numero,
     }
     assert ajeno.numero not in numeros
+
+
+@pytest.mark.django_db
+def test_gestion_expedientes_resuelve_legajo_institucional_por_usuario(
+    make_socio, authenticate
+):
+    operador = make_socio(legajo="82010", role=Role.CD)
+    client = authenticate(operador)
+    socio_local = make_socio(legajo="local-82011", role=Role.SOCIO)
+
+    padron_socio = create_legacy_record(
+        PadronSocio,
+        nroSocio=98211,
+        user_id=socio_local.user_id,
+    )
+    create_legacy_record(
+        SocioEstudio,
+        compositeKey=9821101,
+        socio=padron_socio,
+        nroLegajo=88211,
+        codEspecialidad=1,
+    )
+    expediente = Expediente.objects.create(
+        numero="EXP-8211/2026",
+        socio=socio_local,
+        motivo="Legajo institucional",
+        puntos=-1,
+    )
+    expediente.socios.add(socio_local)
+
+    response = client.get("/api/v1/expedientes/gestion/", {"legajo": "88211"})
+
+    assert response.status_code == 200
+    assert [item["numero"] for item in response.data] == [expediente.numero]

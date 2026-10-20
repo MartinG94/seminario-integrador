@@ -94,6 +94,19 @@ describe('RankingSociosComponent', () => {
     expect(component.subcomisiones).toEqual(['Cómputos', 'Deportes']);
   });
 
+  it('debería mostrar la acción de Expedientes con su etiqueta accesible', () => {
+    fixture.detectChanges();
+
+    const contenido = fixture.nativeElement.textContent as string;
+    const boton = fixture.nativeElement.querySelector(
+      '[aria-label="Ver expedientes de Ana Gómez"]'
+    ) as HTMLButtonElement;
+
+    expect(contenido).toContain('Expedientes');
+    expect(contenido).not.toContain('Causas');
+    expect(boton).toBeTruthy();
+  });
+
   it('debería filtrar socios por categoría', () => {
     fixture.detectChanges();
 

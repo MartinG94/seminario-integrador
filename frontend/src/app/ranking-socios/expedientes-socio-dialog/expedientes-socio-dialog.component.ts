@@ -45,9 +45,9 @@ export class ExpedientesSocioDialogComponent implements OnInit {
         this.cargando = false;
 
         if (err.status === 403) {
-          this.error = 'No posee autorizaci?n para consultar las causas de este socio.';
+          this.error = 'No posee autorizaci?n para consultar los expedientes de este socio.';
         } else {
-          this.error = 'No se pudieron cargar las causas del socio.';
+          this.error = 'No se pudieron cargar los expedientes del socio.';
         }
       }
     });
