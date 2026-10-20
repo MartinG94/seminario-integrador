@@ -6,20 +6,52 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(4px);
-  z-index: 1050;
+  z-index: 1060;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 30px 20px;
+  overflow-y: auto;
 }
 
 .modal-dialog-custom {
   width: 100%;
   max-width: 680px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+
+  > .card {
+    margin: 0;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    > .card-body {
+      overflow-y: auto;
+      flex: 1 1 auto;
+      max-height: calc(100vh - 200px);
+    }
+
+    > [class*="card-header-"] {
+      margin-top: 0 !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      border-radius: 8px 8px 0 0 !important;
+      flex-shrink: 0;
+    }
+
+    > .card-footer {
+      flex-shrink: 0;
+      border-top: 1px solid var(--color-border-main, #E2E8F0);
+      background-color: var(--color-surface, #F8FAFC);
+      padding: 12px 20px;
+    }
+  }
 }
 
 // Estilos de accesibilidad y foco (CA4 y CA5)
@@ -50,8 +82,7 @@ table.table-mat tbody tr:focus {
   }
 
   .modal-dialog-custom {
-    padding: 10px;
-    max-height: 95vh;
+    max-height: calc(100vh - 20px);
   }
 }
 
@@ -205,4 +236,80 @@ table.table-mat tbody tr:focus {
   }
 }
 
+// ==========================================================================
+// Estilos del Detalle Canónico de Expedientes del Tribunal (S3-10)
+// ==========================================================================
 
+.modal-dialog-tribunal {
+  max-width: 880px;
+
+  .card {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .card-header-primary {
+    background: var(--grad-primary-start, #151846);
+    background: linear-gradient(60deg, var(--grad-primary-start, #151846), var(--grad-primary-end, #252B6B));
+    padding: 16px 20px;
+
+    .btn-close-modal {
+      opacity: 0.85;
+      transition: opacity 0.2s ease-in-out;
+      line-height: 1;
+
+      &:hover,
+      &:focus {
+        opacity: 1;
+        outline: none;
+      }
+
+      .material-icons {
+        font-size: 22px;
+      }
+    }
+  }
+
+
+}
+
+
+
+// Evaluación de justificaciones T02 (S4-02)
+.tabla-involucrados th {
+  color: var(--color-text-secondary);
+  font-family: var(--font-subtitle);
+  font-size: 12px;
+}
+
+.btn-evaluar-justificacion,
+.btn-ver-comprobante,
+.btn-aprobar-causal,
+.btn-desaprobar-causal,
+.btn-volver-involucrados {
+  .material-icons {
+    font-size: 16px;
+    vertical-align: middle;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.panel-evaluar-justificacion {
+  .seccion-titulo {
+    color: var(--color-primary);
+    font-family: var(--font-subtitle);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: none;
+  }
+
+  textarea:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+  }
+}

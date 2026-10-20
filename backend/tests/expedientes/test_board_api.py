@@ -168,6 +168,7 @@ class TestBoardExpedientesView:
         assert case["creador"] == "Gastiaburu, Lucas (74907)"
         assert case["titulo"] == "Inconducta grave en asamblea"
         assert case["razon"] == "Violación del Art. 14 del Estatuto Social"
+        assert case["reglamento_asociado"] == "Reglamento Procesal Disciplinario 2026"
         assert case["cantidad_socios"] == 2
         assert len(case["socios"]) == 2
 
@@ -214,6 +215,34 @@ class TestBoardExpedientesView:
         assert case["creador"] == "Tribunal, Autoridad (99001)"
         assert case["titulo"] == "Apertura por oficio"
         assert case["razon"] == "Apertura por oficio"
+        assert case["reglamento_asociado"] == "Reglamento Procesal Disciplinario 2026"
+
+    def test_board_reglamento_asociado_custom_y_fallback(
+        self, api_client, authenticate, td_user, make_socio
+    ):
+        socio = make_socio(legajo="30001", role=Role.SOCIO)
+        exp_con_causal = Expediente.objects.create(
+            numero="EXP-2026-301",
+            socio=socio,
+            motivo="Causa con causal específica",
+            puntos=-1.0,
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        SolicitudT01.objects.create(
+            solicitante=td_user,
+            destinatarios_socios_ids=[socio.id],
+            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+            causal="Reglamento Interno de Becas y Ayudas 2025",
+            expediente=exp_con_causal,
+        )
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/")
+        assert response.status_code == status.HTTP_200_OK
+
+        col = response.data["columns"][0]
+        case_causal = next(c for c in col["cases"] if c["numero"] == "EXP-2026-301")
+        assert case_causal["reglamento_asociado"] == "Reglamento Interno de Becas y Ayudas 2025"
 
     def test_cd_puede_ver_board(self, api_client, authenticate, cd_user, expediente_creado):
         client = authenticate(cd_user)

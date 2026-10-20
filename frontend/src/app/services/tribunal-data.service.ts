@@ -40,6 +40,8 @@ export interface BoardCaseDTO {
   titulo?: string;
   razon?: string;
   creador?: string;
+  solicitante?: string;
+  reglamento_asociado?: string;
   created_at: string;
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
@@ -78,6 +80,9 @@ export interface Expediente {
   titulo?: string;
   razon?: string;
   creador?: string;
+  solicitante?: string;
+  reglamento_asociado?: string;
+  reglamentoAsociado?: string;
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;
@@ -542,6 +547,8 @@ export class TribunalDataService {
       titulo: c.titulo || c.motivo,
       razon: c.razon || c.motivo,
       creador: c.creador || '',
+      solicitante: c.solicitante || c.creador || '',
+      reglamento_asociado: c.reglamento_asociado || '',
       fechaCreacion: c.created_at || '',
       estado: c.estado,
       estadoDisplay: c.estado_display,
