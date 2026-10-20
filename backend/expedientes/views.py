@@ -83,6 +83,16 @@ def _actor_for_user(user) -> str:
     return user.get_username()
 
 
+# Relaciones que lee ExpedienteListSerializer; compartidas para evitar N+1 (S4-02).
+EXPEDIENTE_LIST_PREFETCH = (
+    "socios",
+    "cambios_estado",
+    "descargos__socio",
+    "descargos__decisiones_causal__autor",
+    "evidencias__socio",
+)
+
+
 class ExpedienteCollectionView(APIView):
     permission_classes = [CanOpenExpedientes]
 
@@ -92,12 +102,7 @@ class ExpedienteCollectionView(APIView):
             "socio__subcomision",
             "solicitud_t01",
             "solicitud_t01__solicitante",
-        ).prefetch_related(
-            "socios",
-            "cambios_estado",
-            "descargos__socio",
-            "evidencias__socio",
-        )
+        ).prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -116,7 +121,7 @@ class ExpedienteCollectionView(APIView):
             raise DRFValidationError("No se pudo asignar el número de expediente.") from exc
         expediente = (
             Expediente.objects.select_related("socio", "socio__subcomision")
-            .prefetch_related("socios", "cambios_estado", "descargos")
+            .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .get(pk=expediente.pk)
         )
         return Response(
@@ -146,7 +151,7 @@ class TransicionExpedienteView(APIView):
             )
         expediente = (
             Expediente.objects.select_related("socio", "socio__subcomision")
-            .prefetch_related("socios", "cambios_estado", "descargos")
+            .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .get(pk=expediente.pk)
         )
         return Response(ExpedienteListSerializer(expediente, context={"request": request}).data)
@@ -166,12 +171,7 @@ class MisExpedientesView(APIView):
             Expediente.objects.filter(Q(socio=socio) | Q(socios=socio))
             .distinct()
             .select_related("socio", "socio__subcomision")
-            .prefetch_related(
-                "socios",
-                "cambios_estado",
-                "descargos__socio",
-                "evidencias__socio",
-            )
+            .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
         )
         serializer = ExpedienteListSerializer(queryset, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -727,13 +727,7 @@ class ExpedienteDetailView(APIView):
                 "solicitud_t01",
                 "solicitud_t01__solicitante",
             )
-            .prefetch_related(
-                "socios",
-                "cambios_estado",
-                "descargos__socio",
-                "descargos__decisiones_causal__autor",
-                "evidencias__socio",
-            )
+            .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .first()
         )
         if not expediente:
@@ -750,7 +744,7 @@ class ExpedienteDetailView(APIView):
         expediente = (
             Expediente.objects.filter(pk=pk)
             .select_related("socio", "socio__subcomision")
-            .prefetch_related("socios", "cambios_estado", "descargos", "evidencias")
+            .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .first()
         )
         if not expediente:

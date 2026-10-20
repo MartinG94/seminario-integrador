@@ -274,6 +274,10 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS4-02.5 Servicio frontend y DTOs [TDD]:** Métodos de detalle, historial y registro en `ExpedienteApiService`.
 - [x] **TS4-02.6 Panel "Causales T02" en el detalle del TD:** Aceptar/Rechazar, fundamento, comprobantes valorados e historial.
 - [x] **TS4-02.7 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff` y control contra `notasPO.md`.
+- [x] **TS4-02.8 Revisión PR — Rendimiento y consistencia [TDD]:** Sin N+1 en el listado de gestión y criterio único de comprobantes vigentes entre la regla sugerida y el detalle.
+- [x] **TS4-02.9 Revisión PR — Pruebas de aislamiento [TDD]:** Descargo de otro expediente (404), comprobante de otro imputado (400), T03 (400), historial para ADMIN (200) y anónimo (401).
+- [x] **TS4-02.10 Revisión PR — Evaluación en dos pasos en el detalle:** Tabla de Involucrados con "Evaluar justificación", panel con "Ver comprobante", Aprobar/Desaprobar, fundamento accesible e historial consultable tras la emisión.
+- [x] **TS4-02.11 Revisión PR — Datos de prueba:** Escenarios EXP-0901/2026 a EXP-0904/2026 en `seed_production_data`.
 
 ---
 

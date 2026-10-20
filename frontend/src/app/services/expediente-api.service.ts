@@ -172,6 +172,8 @@ export interface DescargoDetalleDTO {
   socio_id: number;
   socio_legajo: string;
   socio_nombre: string;
+  socio_first_name?: string;
+  socio_last_name?: string;
   tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
   causal: string;
   texto: string;
@@ -181,10 +183,21 @@ export interface DescargoDetalleDTO {
   decisiones_causal?: DecisionCausalDTO[];
 }
 
+export interface SocioInvolucradoDetalleDTO {
+  id: number;
+  legajo: string;
+  nombre: string;
+  first_name?: string;
+  last_name?: string;
+  grupo?: string;
+  estado?: string;
+}
+
 export interface ExpedienteDetalleDTO {
   id: number;
   numero: string;
   estado: string;
+  socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
 }
 

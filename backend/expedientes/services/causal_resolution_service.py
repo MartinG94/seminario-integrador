@@ -1,10 +1,10 @@
 """Servicio de aplicación para resolver causales T02 con fundamento trazable (S4-02)."""
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import Max, Q, QuerySet
+from django.db.models import Max, Q
 
 from expedientes.domain.causal_resolution import (
     CausalDecision,
@@ -43,15 +43,40 @@ class CausalResolutionValidationError(CausalResolutionError):
     pass
 
 
-def current_evidence_for(descargo: DescargoExpediente) -> QuerySet[EvidenciaDescargo]:
-    """Comprobantes vigentes del descargo, incluidos los aún no vinculados del mismo socio."""
-    return EvidenciaDescargo.objects.filter(
-        expediente_id=descargo.expediente_id, es_vigente=True
-    ).filter(Q(descargo=descargo) | Q(descargo__isnull=True, socio_id=descargo.socio_id))
+def evidence_belongs_to(evidencia: EvidenciaDescargo, descargo: DescargoExpediente) -> bool:
+    """Criterio único de comprobante vigente de un descargo.
+
+    Cuenta el vinculado al descargo y el aún no vinculado (huérfano) del mismo socio
+    dentro del expediente; nunca el de otro imputado.
+    """
+    if not evidencia.es_vigente or evidencia.expediente_id != descargo.expediente_id:
+        return False
+    if evidencia.descargo_id is not None:
+        return evidencia.descargo_id == descargo.id
+    return evidencia.socio_id == descargo.socio_id
 
 
-def suggested_for(descargo: DescargoExpediente) -> CausalDecision:
-    return suggested_decision(has_current_evidence=current_evidence_for(descargo).exists())
+def current_evidence_for(
+    descargo: DescargoExpediente,
+    evidencias: Iterable[EvidenciaDescargo] | None = None,
+) -> list[EvidenciaDescargo]:
+    """Comprobantes vigentes del descargo.
+
+    Con `evidencias` (p. ej. las prefetcheadas del expediente) filtra en memoria sin
+    consultar la base; sin ellas, consulta. Ambos caminos aplican `evidence_belongs_to`.
+    """
+    if evidencias is None:
+        evidencias = EvidenciaDescargo.objects.filter(
+            expediente_id=descargo.expediente_id, es_vigente=True
+        ).filter(Q(descargo=descargo) | Q(descargo__isnull=True, socio_id=descargo.socio_id))
+    return [ev for ev in evidencias if evidence_belongs_to(ev, descargo)]
+
+
+def suggested_for(
+    descargo: DescargoExpediente,
+    evidencias: Iterable[EvidenciaDescargo] | None = None,
+) -> CausalDecision:
+    return suggested_decision(has_current_evidence=bool(current_evidence_for(descargo, evidencias)))
 
 
 def _descargo_snapshot(descargo: DescargoExpediente) -> dict:
@@ -104,7 +129,7 @@ class CausalResolutionService:
                 "Sólo se resuelven acá las causales tipificadas del Formulario T02."
             )
 
-        current = list(current_evidence_for(descargo))
+        current = current_evidence_for(descargo)
         if evidencia_ids is None:
             valued = current
         else:

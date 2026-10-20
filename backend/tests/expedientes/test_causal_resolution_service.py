@@ -9,6 +9,7 @@ from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
+    Expediente,
     TipoDescargoEnum,
 )
 from expedientes.services.causal_resolution_service import (
@@ -16,6 +17,8 @@ from expedientes.services.causal_resolution_service import (
     CausalResolutionService,
     CausalResolutionStateError,
     CausalResolutionValidationError,
+    current_evidence_for,
+    suggested_for,
 )
 
 GROUNDS = "El certificado presentado no acredita la fecha de la inasistencia."
@@ -181,14 +184,71 @@ class TestEtapaYTipo:
             _decide(causal_descargo, causal_vocal.user, fundamento=GROUNDS)
 
     def test_descargo_from_another_expediente_is_not_found(
-        self, causal_descargo, causal_vocal
+        self, causal_descargo, causal_vocal, make_socio
     ) -> None:
+        otro_imputado = make_socio(legajo="76099")
+        otro_expediente = Expediente.objects.create(
+            numero="EXP-9999/2026",
+            socio=otro_imputado,
+            motivo="Otro motivo",
+            estado=EstadoExpedienteEnum.REVISION_RESOLUCION,
+        )
+        otro_descargo = DescargoExpediente.objects.create(
+            expediente=otro_expediente,
+            socio=otro_imputado,
+            tipo=TipoDescargoEnum.T02_CERTIFICADO,
+            causal="Enfermedad",
+        )
+
         with pytest.raises(CausalResolutionNotFound):
             CausalResolutionService.decide(
                 expediente_id=causal_descargo.expediente_id,
-                descargo_id=causal_descargo.id + 999,
+                descargo_id=otro_descargo.id,
                 decision=CausalDecision.ACCEPTED,
                 fundamento=GROUNDS,
                 evidencia_ids=None,
                 user=causal_vocal.user,
             )
+        assert not otro_descargo.decisiones_causal.exists()
+
+
+@pytest.mark.django_db
+class TestAislamientoMultiactor:
+    def test_current_evidence_includes_linked_and_orphan_of_same_socio_only(
+        self, multiactor
+    ) -> None:
+        ids = {ev.id for ev in current_evidence_for(multiactor["descargo"])}
+
+        assert ids == {multiactor["vinculada"].id, multiactor["huerfana"].id}
+
+    def test_evidence_of_another_socio_is_rejected_and_not_absorbed(
+        self, multiactor, causal_vocal
+    ) -> None:
+        with pytest.raises(CausalResolutionValidationError):
+            _decide(
+                multiactor["descargo"],
+                causal_vocal.user,
+                evidencia_ids=[multiactor["ajena_vinculada"].id],
+            )
+
+        assert not multiactor["descargo"].decisiones_causal.exists()
+        assert multiactor["ajena_vinculada"].id not in {
+            ev.id for ev in current_evidence_for(multiactor["descargo"])
+        }
+
+    def test_in_memory_evidence_uses_the_same_criterion(self, multiactor) -> None:
+        descargo = multiactor["descargo"]
+        prefetched = list(EvidenciaDescargo.objects.filter(expediente=descargo.expediente))
+
+        from_db = {ev.id for ev in current_evidence_for(descargo)}
+        in_memory = {ev.id for ev in current_evidence_for(descargo, prefetched)}
+
+        assert in_memory == from_db
+
+    def test_suggested_rule_ignores_other_socio_evidence(
+        self, causal_descargo, make_socio, make_evidencia
+    ) -> None:
+        otro = make_socio(legajo="76005")
+        make_evidencia(causal_descargo.expediente, otro)
+
+        assert suggested_for(causal_descargo) == CausalDecision.REJECTED

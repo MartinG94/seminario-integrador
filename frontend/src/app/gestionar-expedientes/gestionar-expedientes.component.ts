@@ -5,17 +5,34 @@ import { NotificationService, httpErrorMessage } from '../services/notification.
 import {
   DecisionCausal,
   DescargoDetalleDTO,
-  ExpedienteApiService
+  EvidenciaMetadata,
+  ExpedienteApiService,
+  ExpedienteDetalleDTO
 } from '../services/expediente-api.service';
 import { Subscription } from 'rxjs';
 
+// Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
 const ESTADOS_DECISION_CAUSAL = ['revision_resolucion', 'espera_resolucion'];
+// Consulta: desde la revisión y también después de emitida la resolución (EARS 8).
+const ESTADOS_CONSULTA_CAUSAL = [
+  ...ESTADOS_DECISION_CAUSAL, 'pendiente_firma', 'pendiente_correos', 'emitido'
+];
 export const MIN_FUNDAMENTO_CAUSAL = 20;
+export const MAX_FUNDAMENTO_CAUSAL = 5000;
 
 interface BorradorDecisionCausal {
   decision: DecisionCausal | '';
   fundamento: string;
-  evidenciaIds: string[];
+}
+
+/** Fila de la Tabla de Involucrados del detalle (notasPO §4). */
+export interface InvolucradoJustificacion {
+  socioId: number;
+  legajo: string;
+  grupo: string;
+  nombre: string;
+  apellido: string;
+  descargo: DescargoDetalleDTO | null;
 }
 
 @Component({
@@ -96,11 +113,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   failedToLoadBoard = false;
   cargando = false;
 
-  // Decisión por causal T02 (S4-02)
-  causalesT02: DescargoDetalleDTO[] = [];
-  cargandoCausales = false;
-  borradoresCausal: { [descargoId: number]: BorradorDecisionCausal } = {};
-  registrandoCausal: { [descargoId: number]: boolean } = {};
+  // Evaluación de justificaciones T02 dentro del detalle (S4-02)
+  readonly maxFundamento = MAX_FUNDAMENTO_CAUSAL;
+  involucradosJustificacion: InvolucradoJustificacion[] = [];
+  involucradoSeleccionado: InvolucradoJustificacion | null = null;
+  cargandoJustificaciones = false;
+  borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
+  registrandoCausal = false;
 
   private subs: Subscription[] = [];
 
@@ -115,8 +134,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.auth.tieneRol('TD', 'ADMIN');
   }
 
-  get puedeResolverCausales(): boolean {
-    return this.auth.tieneRol('TD');
+  get puedeConsultarJustificaciones(): boolean {
+    const estado = this.expedienteSeleccionado?.estado;
+    return !!estado && ESTADOS_CONSULTA_CAUSAL.includes(estado) && this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  get puedeEvaluarJustificaciones(): boolean {
+    const estado = this.expedienteSeleccionado?.estado;
+    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
   }
 
   ngOnInit(): void {
@@ -409,85 +434,157 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
-    this.causalesT02 = [];
-    if (ESTADOS_DECISION_CAUSAL.includes(exp.estado) && this.auth.tieneRol('TD', 'CD', 'ADMIN')) {
-      this.cargarCausalesT02(exp.id);
+    this.limpiarJustificaciones();
+    if (this.puedeConsultarJustificaciones) {
+      this.cargarJustificaciones(exp.id);
     }
   }
 
-  cargarCausalesT02(expedienteId: number | string): void {
-    this.cargandoCausales = true;
+  cargarJustificaciones(expedienteId: number | string): void {
+    this.cargandoJustificaciones = true;
     this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
       next: detalle => {
-        this.causalesT02 = (detalle.descargos || []).filter(d => d.tipo === 'T02_CERTIFICADO');
-        this.borradoresCausal = {};
-        this.causalesT02.forEach(d => {
-          this.borradoresCausal[d.id] = {
-            decision: '',
-            fundamento: '',
-            evidenciaIds: (d.evidencias || []).map(ev => ev.id)
-          };
-        });
-        this.cargandoCausales = false;
+        this.involucradosJustificacion = this.construirInvolucrados(detalle);
+        this.cargandoJustificaciones = false;
       },
       error: err => {
-        this.cargandoCausales = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar las causales.'));
+        this.cargandoJustificaciones = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar las justificaciones.'));
       }
     });
   }
 
+  private construirInvolucrados(detalle: ExpedienteDetalleDTO): InvolucradoJustificacion[] {
+    const descargos = detalle.descargos || [];
+    const porSocio = new Map(descargos.map(d => [d.socio_id, d]));
+    const filas: InvolucradoJustificacion[] = (detalle.socios || []).map(s => ({
+      socioId: s.id,
+      legajo: s.legajo,
+      grupo: s.grupo || '',
+      nombre: s.first_name ?? s.nombre,
+      apellido: s.last_name ?? '',
+      descargo: porSocio.get(s.id) || null
+    }));
+    // Descargos de socios que no figuran en el padrón del expediente (datos previos).
+    descargos
+      .filter(d => !filas.some(f => f.socioId === d.socio_id))
+      .forEach(d => filas.push({
+        socioId: d.socio_id,
+        legajo: d.socio_legajo,
+        grupo: '',
+        nombre: d.socio_first_name ?? d.socio_nombre,
+        apellido: d.socio_last_name ?? '',
+        descargo: d
+      }));
+    return filas;
+  }
+
+  private limpiarJustificaciones(): void {
+    this.involucradosJustificacion = [];
+    this.involucradoSeleccionado = null;
+    this.borradorCausal = { decision: '', fundamento: '' };
+    this.registrandoCausal = false;
+  }
+
+  esEvaluable(fila: InvolucradoJustificacion): boolean {
+    return fila.descargo?.tipo === 'T02_CERTIFICADO';
+  }
+
+  estadoJustificacion(fila: InvolucradoJustificacion): string {
+    const descargo = fila.descargo;
+    if (!descargo) return 'Sin justificación';
+    if (descargo.tipo === 'T03_EXTRAORDINARIO') return 'Extraordinaria (T03)';
+    const ultima = descargo.decisiones_causal?.[0];
+    if (!ultima) return 'Pendiente de evaluación';
+    return this.etiquetaDecision(ultima.decision);
+  }
+
   etiquetaDecision(decision?: DecisionCausal | ''): string {
-    if (decision === 'ACCEPTED') return 'Aceptar';
-    if (decision === 'REJECTED') return 'Rechazar';
+    if (decision === 'ACCEPTED') return 'Aprobada';
+    if (decision === 'REJECTED') return 'Desaprobada';
     return '';
   }
 
-  requiereFundamento(descargo: DescargoDetalleDTO): boolean {
-    const decision = this.borradoresCausal[descargo.id]?.decision;
-    return decision === 'REJECTED' || (!!decision && decision !== descargo.regla_sugerida);
+  sugerenciaSistema(descargo: DescargoDetalleDTO): string {
+    return descargo.regla_sugerida === 'ACCEPTED'
+      ? 'Aprobar (presentó comprobante vigente)'
+      : 'Desaprobar (no presentó comprobante)';
   }
 
-  evidenciaValorada(descargo: DescargoDetalleDTO, evidenciaId: string): boolean {
-    return !!this.borradoresCausal[descargo.id]?.evidenciaIds.includes(evidenciaId);
+  seleccionarInvolucrado(fila: InvolucradoJustificacion): void {
+    if (!this.esEvaluable(fila)) return;
+    this.involucradoSeleccionado = fila;
+    this.borradorCausal = { decision: '', fundamento: '' };
   }
 
-  alternarEvidencia(descargo: DescargoDetalleDTO, evidenciaId: string): void {
-    const borrador = this.borradoresCausal[descargo.id];
-    if (!borrador) return;
-    borrador.evidenciaIds = borrador.evidenciaIds.includes(evidenciaId)
-      ? borrador.evidenciaIds.filter(id => id !== evidenciaId)
-      : [...borrador.evidenciaIds, evidenciaId];
+  volverAListadoInvolucrados(): void {
+    this.involucradoSeleccionado = null;
+    this.borradorCausal = { decision: '', fundamento: '' };
   }
 
-  registrarDecisionCausal(descargo: DescargoDetalleDTO): void {
-    const borrador = this.borradoresCausal[descargo.id];
-    if (!this.expedienteSeleccionado || !borrador || this.registrandoCausal[descargo.id]) return;
+  elegirDecision(decision: DecisionCausal): void {
+    this.borradorCausal.decision = decision;
+  }
+
+  requiereFundamento(): boolean {
+    const decision = this.borradorCausal.decision;
+    const sugerida = this.involucradoSeleccionado?.descargo?.regla_sugerida;
+    return decision === 'REJECTED' || (!!decision && decision !== sugerida);
+  }
+
+  verComprobante(evidencia: EvidenciaMetadata): void {
+    if (!this.expedienteSeleccionado) return;
+    // La ventana se abre en el gesto del usuario para que el navegador no la bloquee.
+    const ventana = window.open('', '_blank');
+    this.expedienteApi.descargarEvidencia(this.expedienteSeleccionado.id, evidencia.id).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        if (ventana) {
+          ventana.location.href = url;
+        } else {
+          const enlace = document.createElement('a');
+          enlace.href = url;
+          enlace.download = evidencia.nombre_original || 'comprobante';
+          enlace.click();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      error: err => {
+        ventana?.close();
+        this.notifications.error(httpErrorMessage(err, 'No se pudo abrir el comprobante.'));
+      }
+    });
+  }
+
+  registrarDecisionCausal(): void {
+    const descargo = this.involucradoSeleccionado?.descargo;
+    if (!this.expedienteSeleccionado || !descargo || this.registrandoCausal) return;
+    const borrador = this.borradorCausal;
     if (!borrador.decision) {
-      this.notifications.error('Elegí si aceptás o rechazás la causal.');
+      this.notifications.error('Elegí si aprobás o desaprobás la justificación.');
       return;
     }
     const fundamento = borrador.fundamento.trim();
-    if (this.requiereFundamento(descargo) && fundamento.length < MIN_FUNDAMENTO_CAUSAL) {
+    if (this.requiereFundamento() && fundamento.length < MIN_FUNDAMENTO_CAUSAL) {
       this.notifications.error(`Escribí un fundamento de al menos ${MIN_FUNDAMENTO_CAUSAL} caracteres.`);
       return;
     }
 
-    this.registrandoCausal[descargo.id] = true;
+    this.registrandoCausal = true;
     this.expedienteApi.registrarDecisionCausal(this.expedienteSeleccionado.id, descargo.id, {
       decision: borrador.decision,
       fundamento,
-      evidencia_ids: borrador.evidenciaIds
+      // Se valoran los comprobantes vigentes que el vocal puede inspeccionar en el panel.
+      evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
     }).subscribe({
       next: decision => {
-        this.registrandoCausal[descargo.id] = false;
+        this.registrandoCausal = false;
         descargo.decisiones_causal = [decision, ...(descargo.decisiones_causal || [])];
-        borrador.decision = '';
-        borrador.fundamento = '';
+        this.borradorCausal = { decision: '', fundamento: '' };
         this.notifications.success(`Decisión registrada (versión ${decision.version}).`);
       },
       error: err => {
-        this.registrandoCausal[descargo.id] = false;
+        this.registrandoCausal = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la decisión.'));
       }
     });
@@ -533,7 +630,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
-    this.causalesT02 = [];
+    this.limpiarJustificaciones();
   }
 
   confirmarVotacion(): void {

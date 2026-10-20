@@ -9,7 +9,11 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from expedientes.domain.causal_resolution import MIN_GROUNDS_LENGTH, CausalDecision
+from expedientes.domain.causal_resolution import (
+    MIN_GROUNDS_LENGTH,
+    CausalDecision,
+    suggested_decision,
+)
 from expedientes.domain.descargo_rules import (
     MAX_DESCARGO_TEXT_LENGTH,
     descargo_text_too_long_message,
@@ -26,7 +30,7 @@ from expedientes.models import (
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
-from expedientes.services.causal_resolution_service import suggested_for
+from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
 
@@ -198,6 +202,8 @@ def _serializar_socio_involucrado(
         "id": socio.id,
         "legajo": legajo,
         "nombre": f"{socio.first_name} {socio.last_name}".strip(),
+        "first_name": socio.first_name,
+        "last_name": socio.last_name,
         "grupo": grupo,
         "estado": estado,
     }
@@ -431,15 +437,12 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         elif not is_authority:
             return []
 
-        evidencias_por_descargo: dict[int, list] = {}
-        for ev in obj.evidencias.all():
-            if ev.es_vigente:
-                k = ev.descargo_id or ev.socio_id
-                evidencias_por_descargo.setdefault(k, []).append(ev)
+        # Mismo criterio que el servicio de decisión, sobre las evidencias ya prefetcheadas.
+        evidencias = list(obj.evidencias.all())
 
         result = []
         for d in descargos_list:
-            evs = evidencias_por_descargo.get(d.id, evidencias_por_descargo.get(d.socio_id, []))
+            evs = current_evidence_for(d, evidencias)
             item = {
                 "id": d.id,
                 "socio_id": d.socio_id,
@@ -447,6 +450,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 "socio_nombre": f"{d.socio.first_name} {d.socio.last_name}".strip()
                 if d.socio
                 else "",
+                "socio_first_name": d.socio.first_name if d.socio else "",
+                "socio_last_name": d.socio.last_name if d.socio else "",
                 "tipo": d.tipo,
                 "causal": d.causal,
                 "archivo": d.archivo,
@@ -456,7 +461,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             }
             # La valoración del TD es reservada hasta la emisión (confidencialidad).
             if is_authority and d.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-                item["regla_sugerida"] = suggested_for(d).value
+                item["regla_sugerida"] = suggested_decision(has_current_evidence=bool(evs)).value
                 item["decisiones_causal"] = DecisionCausalSerializer(
                     d.decisiones_causal.all(), many=True
                 ).data

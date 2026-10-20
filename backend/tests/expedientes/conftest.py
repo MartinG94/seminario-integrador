@@ -50,15 +50,58 @@ def causal_descargo(causal_expediente, causal_imputado) -> DescargoExpediente:
 
 
 @pytest.fixture
-def causal_evidencia(causal_descargo) -> EvidenciaDescargo:
-    return EvidenciaDescargo.objects.create(
-        expediente=causal_descargo.expediente,
-        descargo=causal_descargo,
-        socio=causal_descargo.socio,
-        contenido_blob=PDF_BYTES,
-        nombre_original="certificado.pdf",
-        extension=".pdf",
-        mime_type="application/pdf",
-        tamanio_bytes=len(PDF_BYTES),
-        sha256_hash=hashlib.sha256(PDF_BYTES).hexdigest(),
+def make_evidencia():
+    """Crea un comprobante vigente; sin `descargo`, queda huérfano del socio."""
+
+    def _make(
+        expediente: Expediente,
+        socio: Socio,
+        descargo: DescargoExpediente | None = None,
+        nombre: str = "certificado.pdf",
+    ) -> EvidenciaDescargo:
+        return EvidenciaDescargo.objects.create(
+            expediente=expediente,
+            descargo=descargo,
+            socio=socio,
+            contenido_blob=PDF_BYTES,
+            nombre_original=nombre,
+            extension=".pdf",
+            mime_type="application/pdf",
+            tamanio_bytes=len(PDF_BYTES),
+            sha256_hash=hashlib.sha256(PDF_BYTES).hexdigest(),
+        )
+
+    return _make
+
+
+@pytest.fixture
+def causal_evidencia(causal_descargo, make_evidencia) -> EvidenciaDescargo:
+    return make_evidencia(
+        causal_descargo.expediente, causal_descargo.socio, descargo=causal_descargo
     )
+
+
+@pytest.fixture
+def multiactor(causal_descargo, make_socio, make_evidencia) -> dict:
+    """Expediente con dos imputados T02 y comprobantes vinculados y huérfanos cruzados."""
+    expediente = causal_descargo.expediente
+    otro = make_socio(legajo="76004")
+    expediente.socios.add(otro)
+    otro_descargo = DescargoExpediente.objects.create(
+        expediente=expediente,
+        socio=otro,
+        tipo=TipoDescargoEnum.T02_CERTIFICADO,
+        causal="Actividad laboral",
+    )
+    return {
+        "descargo": causal_descargo,
+        "otro_descargo": otro_descargo,
+        "vinculada": make_evidencia(
+            expediente, causal_descargo.socio, descargo=causal_descargo, nombre="propia.pdf"
+        ),
+        "huerfana": make_evidencia(expediente, causal_descargo.socio, nombre="huerfana.pdf"),
+        "ajena_vinculada": make_evidencia(
+            expediente, otro, descargo=otro_descargo, nombre="ajena.pdf"
+        ),
+        "ajena_huerfana": make_evidencia(expediente, otro, nombre="ajena-huerfana.pdf"),
+    }
