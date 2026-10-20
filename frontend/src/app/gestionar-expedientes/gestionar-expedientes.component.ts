@@ -3,11 +3,7 @@ import {
   TribunalDataService, 
   Expediente, 
   EstadoExpediente, 
-  NivelUrgencia,
-  ResponsableTribunal,
-  SocioInvolucrado,
-  CANONICAL_RESPONSABLES_TD,
-  CANONICAL_REGLAMENTOS_RESPALDANTES
+  NivelUrgencia
 } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
@@ -69,6 +65,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalDetalleAbierto = false;
   modalVotacionAbierto = false;
   modalFirmaAbierto = false;
+  modalSociosAbierto = false;
   expedienteSeleccionado: Expediente | null = null;
 
   // Votación
@@ -173,13 +170,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
-    // Filtro por socio en memoria (fallback / reactivo)
+    // Filtro por socio/creador/título en memoria (fallback / reactivo)
     if (this.filtroSocio.trim()) {
       const q = this.filtroSocio.trim().toLowerCase();
       result = result.filter(e =>
         (e.socio && e.socio.toLowerCase().includes(q)) ||
         (e.legajo && e.legajo.toLowerCase().includes(q)) ||
-        (e.numero && e.numero.toLowerCase().includes(q))
+        (e.numero && e.numero.toLowerCase().includes(q)) ||
+        (e.numero && this.formatCaseNumber(e.numero).toLowerCase().includes(q)) ||
+        (e.creador && e.creador.toLowerCase().includes(q)) ||
+        (e.titulo && e.titulo.toLowerCase().includes(q)) ||
+        (e.motivo && e.motivo.toLowerCase().includes(q)) ||
+        (e.sociosInvolucrados && e.sociosInvolucrados.some(s =>
+          (s.nombre && s.nombre.toLowerCase().includes(q)) ||
+          (s.legajo && s.legajo.toLowerCase().includes(q))
+        ))
       );
     }
 
@@ -203,17 +208,27 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       result = result.filter(e => (e.urgencia || 'normal') === urg);
     }
 
-    // Filtro por rango de fechas
+    // Filtro por rango de fechas (comparación YYYY-MM-DD ante timestamps ISO)
     if (this.filtroFechaDesde) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion >= this.filtroFechaDesde);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) >= this.filtroFechaDesde);
     }
     if (this.filtroFechaHasta) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion <= this.filtroFechaHasta);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) <= this.filtroFechaHasta);
     }
 
     result.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA: any;
+      let valB: any;
+      if (this.columnaOrden === 'titulo') {
+        valA = a.titulo || a.motivo || '';
+        valB = b.titulo || b.motivo || '';
+      } else if (this.columnaOrden === 'cantidadSocios') {
+        valA = this.getCantidadInvolucrados(a);
+        valB = this.getCantidadInvolucrados(b);
+      } else {
+        valA = (a as any)[this.columnaOrden] ?? '';
+        valB = (b as any)[this.columnaOrden] ?? '';
+      }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 
@@ -370,23 +385,51 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
   }
 
   abrirVotacion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
   abrirFirma(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalFirmaAbierto = true;
+  }
+
+  abrirModalSocios(exp: Expediente, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = true;
+  }
+
+  volverADetalle(): void {
+    this.modalSociosAbierto = false;
+    if (this.expedienteSeleccionado) {
+      this.abrirDetalle(this.expedienteSeleccionado);
+    }
   }
 
   cerrarModales(): void {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
   }
 
@@ -442,9 +485,36 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  getCantidadInvolucrados(exp: Expediente | null | undefined): number {
+    if (!exp) return 1;
+    if (exp.cantidadSocios && exp.cantidadSocios > 0) {
+      return exp.cantidadSocios;
+    }
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados.length;
+    }
+    return 1;
+  }
+
   formatCaseNumber(caseNumber: string): string {
-    const match = /^(?:EXP-)?(\d+)\/(\d{4})$/.exec(caseNumber);
-    return match ? `${Number(match[1]).toString().padStart(3, '0')}/${match[2]}` : caseNumber;
+    if (!caseNumber) return '';
+    // Formato 1: (EXP-)?<num>/<year>
+    let match = /^(?:EXP-)?(\d+)\/(\d{4})$/i.exec(caseNumber);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      const year = match[2];
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    // Formato 2: (EXP-)?<year>-<num>
+    match = /^(?:EXP-)?(\d{4})-(\d+)$/i.exec(caseNumber);
+    if (match) {
+      const year = match[1];
+      const num = parseInt(match[2], 10);
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    return caseNumber.replace(/^EXP-/i, '');
   }
 
   getUrgenciaLabel(urgencia?: string): string {
@@ -489,90 +559,27 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- Métodos de apoyo formato canónico Tribunal (S3-10) ---
-
-  getResponsablesTribunal(exp: Expediente | null): ResponsableTribunal[] {
-    if (!exp) return CANONICAL_RESPONSABLES_TD;
-    if (exp.responsablesTribunal && exp.responsablesTribunal.length > 0) {
-      return exp.responsablesTribunal;
-    }
-    if (exp.responsables && exp.responsables.length > 0) {
-      return exp.responsables;
-    }
-    return CANONICAL_RESPONSABLES_TD;
-  }
-
-  getReglamentosRespaldantes(exp: Expediente | null): string[] {
-    if (!exp) return CANONICAL_REGLAMENTOS_RESPALDANTES;
-    if (exp.reglamentosRespaldantes && exp.reglamentosRespaldantes.length > 0) {
-      return exp.reglamentosRespaldantes;
-    }
-    if (exp.reglamentos_respaldantes && exp.reglamentos_respaldantes.length > 0) {
-      return exp.reglamentos_respaldantes;
-    }
-    return CANONICAL_REGLAMENTOS_RESPALDANTES;
-  }
+  // --- Métodos de apoyo formato canónico Tribunal (S3-10 / SCRUM-81) ---
 
   getReglamentoAsociado(exp: Expediente | null): string {
-    if (!exp) return 'Reglamento Procesal Disciplinario 2026 (Art. 12)';
-    return exp.reglamentoAsociado || exp.reglamento_asociado || 'Reglamento Procesal Disciplinario 2026 (Art. 12)';
+    if (!exp) return 'Reglamento Procesal Disciplinario 2026';
+    const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
+    return reg || 'Reglamento Procesal Disciplinario 2026';
   }
 
-  getInvolucrados(exp: Expediente | null): SocioInvolucrado[] {
-    if (!exp) return [];
-    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
-      return exp.sociosInvolucrados;
-    }
-    if (exp.socios && exp.socios.length > 0) {
-      return exp.socios;
-    }
-
-    // Fallback con el socio principal del expediente
-    const estadoJust = exp.descargoPresentado || exp.descargo
-      ? 'Justificado'
-      : (exp.estado === 'justificando' ? 'En plazo' : 'No justificado');
-
-    const partes = (exp.socio || '').trim().split(' ');
-    const nombre = partes[0] || '—';
-    const apellido = partes.slice(1).join(' ') || '—';
-
-    return [
-      {
-        legajo: exp.legajo || '—',
-        nombre,
-        apellido,
-        grupo: 'G58',
-        estado_justificacion: estadoJust
+  formatSolicitante(exp: Expediente | null): string {
+    if (!exp) return 'Comisión Directiva';
+    const creador = (exp.creador || '').trim();
+    if (creador) {
+      // Si ya viene en formato "Apellido, Nombre (Legajo)" o "Nombre (Legajo)"
+      const match = /^(.+?)\s*\((.+?)\)$/.exec(creador);
+      if (match) {
+        const nombrePart = match[1].trim();
+        const legajoPart = match[2].trim();
+        return `${legajoPart} - ${nombrePart}`;
       }
-    ];
-  }
-
-  getEstadoJustificacionBadgeClass(estado?: string): string {
-    switch (estado) {
-      case 'Justificado':
-        return 'badge-mat-success';
-      case 'En plazo':
-        return 'badge-mat-warning';
-      case 'No justificado':
-      default:
-        return 'badge-mat-danger';
+      return creador;
     }
-  }
-
-  formatSancionSolicitada(puntos?: number): string {
-    if (puntos === undefined || puntos === null) return '0.0 pts';
-    return `${puntos > 0 ? '+' : ''}${puntos} pts`;
-  }
-
-  formatFechaSolicitud(fecha?: string): string {
-    if (!fecha) return '—';
-    if (fecha.includes('T')) {
-      fecha = fecha.split('T')[0];
-    }
-    const parts = fecha.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return fecha;
+    return exp.solicitante || 'Comisión Directiva';
   }
 }

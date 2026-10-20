@@ -9,8 +9,13 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from expedientes.domain.descargo_rules import (
+    MAX_DESCARGO_TEXT_LENGTH,
+    descargo_text_too_long_message,
+)
 from expedientes.models import (
     DescargoExpediente,
+    DescargoVersion,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
@@ -53,64 +58,161 @@ class EvidenciaMetadataSerializer(serializers.ModelSerializer):
         return ""
 
 
-REGLAMENTOS_VIGENTES_LIST = [
-    "Estatuto Social AVEIT (Reforma 2026)",
-    "Reglamento Procesal Disciplinario 2026",
-    "Reglamento Interno de Disciplina",
-]
-
-CANONICAL_RESPONSABLES_TD = [
-    {
-        "identificador": "Responsable 1",
-        "legajo": "11239",
-        "nombre": "Giuliano Toselli",
-        "grupo": "G57",
-    },
-    {
-        "identificador": "Responsable 2",
-        "legajo": "11737",
-        "nombre": "Catalina Cerda Gallego",
-        "grupo": "G58",
-    },
-    {
-        "identificador": "Responsable 3",
-        "legajo": "11735",
-        "nombre": "Candela Moreno Migliore",
-        "grupo": "G59",
-    },
-]
+def _formatear_socio_creador(socio: Socio | None) -> str:
+    if not socio:
+        return ""
+    last = (socio.last_name or "").strip()
+    first = (socio.first_name or "").strip()
+    legajo = (str(socio.legajo) if socio.legajo else "").strip()
+    nombre_completo = f"{last}, {first}".strip().strip(",")
+    if not nombre_completo:
+        nombre_completo = str(socio)
+    return f"{nombre_completo} ({legajo})" if legajo else nombre_completo
 
 
-def _obtener_responsables_td() -> list[dict[str, str]]:
-    td_socios = list(Socio.objects.filter(role=Role.TD, is_enabled=True).order_by("legajo")[:3])
-    if len(td_socios) >= 3:
-        res = []
-        for idx, s in enumerate(td_socios, start=1):
-            grupo = (
-                f"G{s.social_year}"
-                if s.social_year and s.social_year >= 50
-                else f"G{s.social_year or 58}"
-            )
-            res.append(
-                {
-                    "identificador": f"Responsable {idx}",
-                    "legajo": str(s.legajo),
-                    "nombre": f"{s.first_name} {s.last_name}".strip(),
-                    "grupo": grupo,
-                }
-            )
-        return res
-    return CANONICAL_RESPONSABLES_TD
-
-
-def _obtener_reglamentos_respaldantes(obj: Expediente) -> list[str]:
+def _obtener_creador_expediente(obj: Expediente, context: dict | None = None) -> str:
+    # 1. Si existe una solicitud T01, utilizar solicitud_t01.solicitante
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
-        if solicitud and solicitud.reglamentos_respaldantes:
-            return list(solicitud.reglamentos_respaldantes)
+        if solicitud and solicitud.solicitante:
+            return _formatear_socio_creador(solicitud.solicitante)
     except Exception:
         pass
-    return list(REGLAMENTOS_VIGENTES_LIST)
+
+    # 2. Si la causa se origina en inasistencia/evento/reunión (fallback con atributos dinámicos)
+    reunion_autoridad = (
+        getattr(obj, "creador_reunion", None)
+        or getattr(obj, "autoridad_evento", None)
+        or getattr(obj, "creador_evento", None)
+    )
+    if isinstance(reunion_autoridad, Socio):
+        return _formatear_socio_creador(reunion_autoridad)
+
+    # 3. En los demás casos, utilizar el actor del registro inicial de cambios_estado
+    cambios = list(obj.cambios_estado.all()) if hasattr(obj, "cambios_estado") else []
+    if cambios:
+        primer_cambio = sorted(cambios, key=lambda c: (c.fecha_hora, c.id))[0]
+        actor = (primer_cambio.actor or "").strip()
+        if actor:
+            actor_limpio = actor
+            for prefix in ("SOLICITANTE_", "TD_", "CD_"):
+                if actor_limpio.startswith(prefix):
+                    actor_limpio = actor_limpio[len(prefix) :]
+            # Optimización N+1: si el socio del expediente coincide con el actor
+            if obj.socio and str(obj.socio.legajo) == actor_limpio:
+                return _formatear_socio_creador(obj.socio)
+            # Chequear en los socios precargados de la causa
+            if hasattr(obj, "socios"):
+                for s in obj.socios.all():
+                    if str(s.legajo) == actor_limpio:
+                        return _formatear_socio_creador(s)
+            # Chequear o guardar en cache de context
+            cache = None
+            if context is not None:
+                cache = context.setdefault("_socio_actor_cache", {})
+                if actor_limpio in cache:
+                    socio_cached = cache[actor_limpio]
+                    return _formatear_socio_creador(socio_cached) if socio_cached else actor
+
+            try:
+                socio_actor = Socio.objects.filter(legajo=actor_limpio).first()
+                if cache is not None:
+                    cache[actor_limpio] = socio_actor
+                if socio_actor:
+                    return _formatear_socio_creador(socio_actor)
+            except Exception:
+                pass
+            return actor
+
+    return ""
+
+
+def _obtener_razon_expediente(obj: Expediente) -> str:
+    razon_directa = getattr(obj, "razon", None)
+    if razon_directa and str(razon_directa).strip():
+        return str(razon_directa).strip()
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud:
+            for attr in ("razon", "anexo_relato", "motivo"):
+                val = getattr(solicitud, attr, None)
+                if val and str(val).strip():
+                    return str(val).strip()
+    except Exception:
+        pass
+    return (obj.motivo or "").strip()
+
+
+def _cargar_mapa_grupos_legado() -> dict[str, str]:
+    """Obtiene en una única consulta el número de grupo (idGrupo) desde socio_estadoHistorial."""
+    from django.db import connection
+
+    mapa: dict[str, str] = {}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT eh.nroSocio, se.nroLegajo, eh.idGrupo
+                FROM socio_estadoHistorial eh
+                LEFT JOIN socio_estudio se ON se.nroSocio = eh.nroSocio
+                ORDER BY eh.fechaHora ASC, eh.idEstadoHistorial ASC
+                """
+            )
+            for nro_socio, nro_legajo, id_grupo in cursor.fetchall():
+                if id_grupo is not None:
+                    grupo_str = str(id_grupo)
+                    if nro_socio is not None:
+                        mapa[str(nro_socio)] = grupo_str
+                    if nro_legajo is not None:
+                        mapa[str(nro_legajo)] = grupo_str
+    except Exception:
+        pass
+    return mapa
+
+
+def _serializar_socio_involucrado(
+    socio: Socio, context: dict | None = None
+) -> dict[str, int | str]:
+    legajo = str(socio.legajo or "").strip()
+    grupo = ""
+    if context is not None:
+        if "_socio_grupo_cache" not in context:
+            context["_socio_grupo_cache"] = _cargar_mapa_grupos_legado()
+        grupo = context["_socio_grupo_cache"].get(legajo, "")
+    if not grupo and getattr(socio, "social_year", 0) and int(socio.social_year) > 0:
+        # Cálculo dinámico anual: en el año Y, el 1° año social corresponde al grupo (Y - 1963)
+        current_year = timezone.localdate().year
+        grupo = str((current_year - 1962) - int(socio.social_year))
+
+    if not getattr(socio, "is_enabled", True):
+        estado = "Inactivo"
+    else:
+        estado = (
+            socio.get_category_display() if hasattr(socio, "get_category_display") else "Activo"
+        )
+
+    return {
+        "id": socio.id,
+        "legajo": legajo,
+        "nombre": f"{socio.first_name} {socio.last_name}".strip(),
+        "grupo": grupo,
+        "estado": estado,
+    }
+
+
+def _obtener_titulo_expediente(obj: Expediente) -> str:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and getattr(solicitud, "titulo", None) and solicitud.titulo.strip():
+            return solicitud.titulo.strip()
+    except Exception:
+        pass
+
+    titulo_evento = getattr(obj, "titulo_evento", None) or getattr(obj, "titulo_hecho", None)
+    if titulo_evento and str(titulo_evento).strip():
+        return str(titulo_evento).strip()
+
+    return obj.motivo or ""
 
 
 def _obtener_reglamento_asociado(obj: Expediente) -> str:
@@ -122,67 +224,7 @@ def _obtener_reglamento_asociado(obj: Expediente) -> str:
             return solicitud.reglamentos_respaldantes[0]
     except Exception:
         pass
-    return "Reglamento Procesal Disciplinario 2026 (Art. 12)"
-
-
-def _obtener_creador_expediente(obj: Expediente) -> str:
-    try:
-        solicitud = getattr(obj, "solicitud_t01", None)
-        if solicitud and solicitud.solicitante:
-            s = solicitud.solicitante
-            return f"{s.first_name} {s.last_name} ({s.legajo})".strip()
-    except Exception:
-        pass
-    cambios = list(obj.cambios_estado.all()) if hasattr(obj, "cambios_estado") else []
-    if cambios:
-        primer = sorted(cambios, key=lambda c: (c.fecha_hora, c.id))[0]
-        if primer.actor and primer.actor != "SISTEMA":
-            return primer.actor
-    return "Comisión Directiva"
-
-
-def _obtener_socios_expediente(obj: Expediente) -> list[dict[str, Any]]:
-    socios = list(obj.socios.all())
-    if not socios and obj.socio:
-        socios = [obj.socio]
-
-    descargo_socio_ids: set[int] = set()
-    if hasattr(obj, "descargos"):
-        try:
-            descargo_socio_ids = {d.socio_id for d in obj.descargos.all()}
-        except Exception:
-            pass
-
-    result = []
-    for socio in socios:
-        has_descargo = (socio.id in descargo_socio_ids) or (
-            obj.socio_id == socio.id and bool(getattr(obj, "descargo_presentado", False))
-        )
-        if has_descargo:
-            estado_just = "Justificado"
-        elif obj.estado == EstadoExpedienteEnum.JUSTIFICANDO:
-            estado_just = "En plazo"
-        else:
-            estado_just = "No justificado"
-
-        grupo = (
-            f"G{socio.social_year}"
-            if socio.social_year and socio.social_year >= 50
-            else f"G{socio.social_year or 58}"
-        )
-
-        result.append(
-            {
-                "id": socio.id,
-                "legajo": socio.legajo,
-                "nombre": socio.first_name,
-                "apellido": socio.last_name,
-                "nombre_completo": f"{socio.first_name} {socio.last_name}".strip(),
-                "grupo": grupo,
-                "estado_justificacion": estado_just,
-            }
-        )
-    return result
+    return "Reglamento Procesal Disciplinario 2026"
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):
@@ -192,11 +234,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
-    titulo = serializers.SerializerMethodField()
-    creador = serializers.SerializerMethodField()
-    responsables = serializers.SerializerMethodField()
     reglamento_asociado = serializers.SerializerMethodField()
-    reglamentos_respaldantes = serializers.SerializerMethodField()
     descargo_presentado = serializers.SerializerMethodField()
     descargo_tipo = serializers.SerializerMethodField()
     descargo_causal = serializers.SerializerMethodField()
@@ -206,6 +244,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     esta_en_plazo = serializers.SerializerMethodField()
     horas_restantes = serializers.SerializerMethodField()
     socios = serializers.SerializerMethodField()
+    cantidad_socios = serializers.SerializerMethodField()
+    creador = serializers.SerializerMethodField()
+    razon = serializers.SerializerMethodField()
+    titulo = serializers.SerializerMethodField()
     historial = serializers.SerializerMethodField()
     evidencias = serializers.SerializerMethodField()
     descargos = serializers.SerializerMethodField()
@@ -217,17 +259,17 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "numero",
             "titulo",
             "motivo",
-            "creador",
+            "razon",
+            "reglamento_asociado",
             "puntos",
             "estado",
             "urgencia",
             "urgencia_display",
             "socio_nombre",
             "socio_legajo",
+            "creador",
             "socios",
-            "responsables",
-            "reglamento_asociado",
-            "reglamentos_respaldantes",
+            "cantidad_socios",
             "subcomision",
             "plazo_inicio_at",
             "plazo_limite_at",
@@ -248,8 +290,25 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
+    def get_cantidad_socios(self, obj: Expediente) -> int:
+        socios = list(obj.socios.all())
+        count = len(socios)
+        return count if count > 0 else 1
+
+    def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj, context=self.context)
+
+    def get_razon(self, obj: Expediente) -> str:
+        return _obtener_razon_expediente(obj)
+
+    def get_titulo(self, obj: Expediente) -> str:
+        return _obtener_titulo_expediente(obj)
+
+    def get_reglamento_asociado(self, obj: Expediente) -> str:
+        return _obtener_reglamento_asociado(obj)
+
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
-        descargos = list(obj.descargos.all())
+        descargos = [d for d in obj.descargos.all() if d.es_vigente]
         if not descargos:
             return None
         request = self.context.get("request")
@@ -278,7 +337,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
-            return bool(len(obj.descargos.all()) > 0 or obj.descargo_presentado)
+            vigentes = [d for d in obj.descargos.all() if d.es_vigente]
+            return bool(vigentes or obj.descargo_presentado)
         descargo = self._descargo_for_requester(obj)
         if descargo:
             return True
@@ -331,29 +391,11 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         horas = int(diff.total_seconds() // 3600)
         return max(0, horas)
 
-    def get_titulo(self, obj: Expediente) -> str:
-        try:
-            solicitud = getattr(obj, "solicitud_t01", None)
-            if solicitud and getattr(solicitud, "titulo", None) and solicitud.titulo.strip():
-                return solicitud.titulo.strip()
-        except Exception:
-            pass
-        return getattr(obj, "titulo", "") or obj.motivo
-
-    def get_creador(self, obj: Expediente) -> str:
-        return _obtener_creador_expediente(obj)
-
-    def get_responsables(self, obj: Expediente) -> list[dict[str, str]]:
-        return _obtener_responsables_td()
-
-    def get_reglamento_asociado(self, obj: Expediente) -> str:
-        return _obtener_reglamento_asociado(obj)
-
-    def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
-        return _obtener_reglamentos_respaldantes(obj)
-
-    def get_socios(self, obj: Expediente) -> list[dict[str, Any]]:
-        return _obtener_socios_expediente(obj)
+    def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
+        socios = list(obj.socios.all())
+        if not socios and obj.socio:
+            socios = [obj.socio]
+        return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
 
     def get_evidencias(self, obj: Expediente) -> list[dict]:
         request = self.context.get("request")
@@ -397,7 +439,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
         ) or user.is_staff
 
-        descargos_list = list(obj.descargos.all())
+        descargos_list = [d for d in obj.descargos.all() if d.es_vigente]
         if not is_authority and socio:
             descargos_list = [d for d in descargos_list if d.socio_id == socio.pk]
         elif not is_authority:
@@ -453,6 +495,48 @@ class TransicionExpedienteSerializer(serializers.Serializer):
     motivo = serializers.CharField(max_length=5000)
 
 
+class EvidenciaVersionSerializer(EvidenciaMetadataSerializer):
+    """Metadatos de una evidencia dentro de una versión (sin la vigencia actual)."""
+
+    class Meta(EvidenciaMetadataSerializer.Meta):
+        fields = [f for f in EvidenciaMetadataSerializer.Meta.fields if f != "es_vigente"]
+        read_only_fields = fields
+
+
+class DescargoVersionSerializer(serializers.ModelSerializer):
+    """Versión inmutable de un descargo para el historial por API (SCRUM-49)."""
+
+    operacion_display = serializers.CharField(source="get_operacion_display", read_only=True)
+    socio_id = serializers.IntegerField(source="descargo.socio_id", read_only=True)
+    socio_legajo = serializers.CharField(source="descargo.socio.legajo", read_only=True)
+    socio_nombre = serializers.SerializerMethodField()
+    evidencias = EvidenciaVersionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DescargoVersion
+        fields = [
+            "id",
+            "numero",
+            "operacion",
+            "operacion_display",
+            "tipo",
+            "causal",
+            "texto",
+            "archivo",
+            "evidencias",
+            "actor",
+            "socio_id",
+            "socio_legajo",
+            "socio_nombre",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_socio_nombre(self, obj: DescargoVersion) -> str:
+        socio = obj.descargo.socio
+        return f"{socio.first_name} {socio.last_name}".strip()
+
+
 class DescargoExpedienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DescargoExpediente
@@ -468,10 +552,8 @@ class PresentarDescargoSerializer(serializers.Serializer):
     texto = serializers.CharField(
         required=False,
         allow_blank=True,
-        max_length=2000,
-        error_messages={
-            "max_length": "El motivo o justificación no puede superar los 2000 caracteres.",
-        },
+        max_length=MAX_DESCARGO_TEXT_LENGTH,
+        error_messages={"max_length": descargo_text_too_long_message()},
     )
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(),
@@ -498,10 +580,8 @@ class PresentarDescargoSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
                 )
-            if len(texto) > 2000:
-                raise serializers.ValidationError(
-                    {"texto": "El motivo o justificación no puede superar los 2000 caracteres."}
-                )
+            if len(texto) > MAX_DESCARGO_TEXT_LENGTH:
+                raise serializers.ValidationError({"texto": descargo_text_too_long_message()})
             if len(evidencia_ids) > 5:
                 raise serializers.ValidationError(
                     {"evidencia_ids": "El Formulario T03 admite un máximo de 5 comprobantes."}
@@ -793,14 +873,13 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
-    titulo = serializers.SerializerMethodField()
-    creador = serializers.SerializerMethodField()
-    socios = serializers.SerializerMethodField()
-    responsables = serializers.SerializerMethodField()
-    reglamento_asociado = serializers.SerializerMethodField()
-    reglamentos_respaldantes = serializers.SerializerMethodField()
     transiciones_permitidas = serializers.SerializerMethodField()
     cantidad_socios = serializers.SerializerMethodField()
+    socios = serializers.SerializerMethodField()
+    creador = serializers.SerializerMethodField()
+    razon = serializers.SerializerMethodField()
+    titulo = serializers.SerializerMethodField()
+    reglamento_asociado = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -809,14 +888,13 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "numero",
             "titulo",
             "motivo",
-            "creador",
+            "razon",
+            "reglamento_asociado",
             "socio",
             "socio_nombre",
             "socio_legajo",
+            "creador",
             "socios",
-            "responsables",
-            "reglamento_asociado",
-            "reglamentos_respaldantes",
             "subcomision",
             "estado",
             "estado_display",
@@ -832,30 +910,28 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
 
-    def get_titulo(self, obj: Expediente) -> str:
-        solicitud = getattr(obj, "solicitud_t01", None)
-        if solicitud and getattr(solicitud, "titulo", None):
-            return solicitud.titulo
-        return f"Expediente Disciplinario {obj.numero}"
+    def get_cantidad_socios(self, obj: Expediente) -> int:
+        socios = list(obj.socios.all())
+        count = len(socios)
+        return count if count > 0 else 1
+
+    def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
+        socios = list(obj.socios.all())
+        if not socios and obj.socio:
+            socios = [obj.socio]
+        return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
 
     def get_creador(self, obj: Expediente) -> str:
-        return _obtener_creador_expediente(obj)
+        return _obtener_creador_expediente(obj, context=self.context)
 
-    def get_responsables(self, obj: Expediente) -> list[dict[str, str]]:
-        return _obtener_responsables_td()
+    def get_razon(self, obj: Expediente) -> str:
+        return _obtener_razon_expediente(obj)
+
+    def get_titulo(self, obj: Expediente) -> str:
+        return _obtener_titulo_expediente(obj)
 
     def get_reglamento_asociado(self, obj: Expediente) -> str:
         return _obtener_reglamento_asociado(obj)
-
-    def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
-        return _obtener_reglamentos_respaldantes(obj)
-
-    def get_socios(self, obj: Expediente) -> list[dict[str, Any]]:
-        return _obtener_socios_expediente(obj)
-
-    def get_cantidad_socios(self, obj: Expediente) -> int:
-        count = obj.socios.count()
-        return count if count > 0 else 1
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])
