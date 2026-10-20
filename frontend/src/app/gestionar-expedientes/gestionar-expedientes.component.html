@@ -39,12 +39,12 @@
         <!-- Fila de Filtros Explícitos (CA2 / S3-07): Socio, Estado, Urgencia, Fecha Desde, Fecha Hasta -->
         <div class="row pt-3 align-items-end">
           <div class="col-lg-3 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-socio">Socio (Legajo / Nombre):</label>
+            <label class="text-muted small font-weight-bold mb-1" for="filtro-socio">Búsqueda (Socio, Legajo, Creador o Título):</label>
             <div class="input-group no-border m-0">
               <input id="filtro-socio" 
                      type="text" 
                      class="form-control" 
-                     placeholder="Buscar por legajo o nombre..." 
+                     placeholder="Buscar por socio, legajo, creador o título..." 
                      [(ngModel)]="filtroSocio" 
                      (keyup.enter)="cargarDatosTablero()">
             </div>
@@ -159,10 +159,14 @@
               </span>
               <span class="card-points">{{ exp.puntos > 0 ? '+' : '' }}{{ exp.puntos }} pts</span>
             </div>
-            <h5 class="card-title-text" [title]="exp.motivo">{{ exp.motivo }}</h5>
+            <h5 class="card-title-text" [title]="exp.titulo || exp.motivo">{{ exp.titulo || exp.motivo }}</h5>
             
-            <div class="card-bottom">
+            <div class="card-bottom d-flex justify-content-between align-items-center">
               <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
+              <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
+                <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
+                <span>{{ getCantidadInvolucrados(exp) }}</span>
+              </span>
             </div>
           </div>
         </ng-container>
@@ -173,16 +177,16 @@
     <div *ngIf="vistaActual === 'tabla'" class="card">
       <div class="card-header card-header-primary">
         <h4 class="card-title">Detalle de Expedientes</h4>
-        <p class="card-category">Grilla interactiva para auditoría del Tribunal de Disciplina con ordenamiento dinámico por columnas.</p>
       </div>
       <div class="card-body">
         <div class="table-responsive explorer-table-container">
           <table class="table table-hover table-mat">
             <thead>
               <th (click)="cambiarOrden('numero')" style="cursor: pointer;">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('socio')" style="cursor: pointer;">Socio / N° de Socio <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('subcomision')" style="cursor: pointer;">Subcomisión <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('motivo')" style="cursor: pointer;">Motivo de la Causa <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('titulo')" style="cursor: pointer;">Título <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('creador')" style="cursor: pointer;">Creador <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('cantidadSocios')" style="cursor: pointer;">Involucrados <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+              <th (click)="cambiarOrden('fechaCreacion')" style="cursor: pointer;">Fecha <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('urgencia')" style="cursor: pointer;">Urgencia <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
               <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
@@ -192,18 +196,18 @@
               <tr *ngFor="let exp of expedientesFiltrados" 
                   tabindex="0"
                   role="row"
-                  [attr.aria-label]="'Expediente ' + exp.numero + ' de ' + exp.socio"
+                  [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ' - ' + (exp.titulo || exp.motivo)"
                   (click)="abrirDetalle(exp)" 
                   (keydown)="onTableKeyDown($event, exp)"
                   style="cursor: pointer;">
-                <td class="font-weight-bold text-dark">{{exp.numero}}</td>
-                <td>
-                  <div>{{exp.socio}}</div>
-                  <small class="text-muted">N° {{exp.legajo}}</small>
-                </td>
-                <td>{{exp.subcomision}}</td>
+                <td class="font-weight-bold text-dark">{{formatCaseNumber(exp.numero)}}</td>
                 <td style="max-width: 300px;">
-                  <div class="text-truncate" title="{{exp.motivo}}">{{exp.motivo}}</div>
+                  <div class="text-truncate" title="{{exp.titulo || exp.motivo}}">{{exp.titulo || exp.motivo}}</div>
+                </td>
+                <td>{{exp.creador || 'No especificado'}}</td>
+                <td>{{getCantidadInvolucrados(exp)}}</td>
+                <td>
+                  <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
                 </td>
                 <td>
                   <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
@@ -221,16 +225,27 @@
                   </span>
                 </td>
                 <td class="text-right" (click)="$event.stopPropagation()">
-                  <button mat-button class="btn btn-info btn-link btn-just-icon" (click)="abrirDetalle(exp)" title="Ver Detalle de Expediente" aria-label="Ver Detalle">
+                  <button mat-button 
+                          class="btn btn-info btn-link btn-just-icon" 
+                          (click)="abrirDetalle(exp)" 
+                          title="Ver Detalle de Expediente" 
+                          aria-label="Ver Detalle">
                     <i class="material-icons">visibility</i>
+                  </button>
+                  <button mat-button 
+                          class="btn btn-info btn-link btn-just-icon" 
+                          (click)="abrirModalSocios(exp, $event)" 
+                          title="Ver Involucrados" 
+                          aria-label="Ver Involucrados">
+                    <i class="material-icons">group</i>
                   </button>
                   <button *ngIf="puedeVotarOFirmar && exp.estado === 'revision_resolucion'" 
                           mat-button 
                           class="btn btn-warning btn-link btn-just-icon" 
                           (click)="abrirVotacion(exp)" 
-                          title="Votar Dictamen"
-                          aria-label="Votar Dictamen">
-                    <i class="material-icons">how_to_vote</i>
+                          title="Emitir Resolución"
+                          aria-label="Emitir Resolución">
+                    <i class="material-icons">gavel</i>
                   </button>
                   <button *ngIf="puedeVotarOFirmar && exp.estado === 'pendiente_correos'" 
                           mat-button 
@@ -256,26 +271,37 @@
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-primary">
-        <h4 class="card-title">Expediente: {{expedienteSeleccionado.numero}}</h4>
-        <p class="card-category">Socio: {{expedienteSeleccionado.socio}} &bull; N° de Socio: {{expedienteSeleccionado.legajo}}</p>
+        <h4 class="card-title">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
+        <p class="card-category">
+          <span>{{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</span>
+          <span *ngIf="expedienteSeleccionado.creador"> &bull; Creado por: {{expedienteSeleccionado.creador}}</span>
+        </p>
       </div>
       <div class="card-body">
         <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Subcomisión Asignada:</label>
-            <div class="font-weight-bold">{{expedienteSeleccionado.subcomision}}</div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Estado Procesal Oficial:</label>
+          <div class="col-12 col-sm-4 mb-3 d-flex align-items-center">
+            <label class="text-muted small mb-0 mr-2 text-nowrap">Estado:</label>
             <div>
               <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteSeleccionado.estado)">
                 {{getEstadoLabel(expedienteSeleccionado.estado)}}
               </span>
             </div>
           </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Nivel de Urgencia:</label>
-            <div class="d-flex align-items-center gap-2">
+          <div class="col-12 col-sm-4 mb-3 d-flex align-items-center">
+            <label class="text-muted small mb-0 mr-2 text-nowrap">Fecha:</label>
+            <div class="font-weight-bold">
+              {{expedienteSeleccionado.fechaCreacion | date:'dd/MM/yyyy'}}
+            </div>
+          </div>
+          <div class="col-12 col-sm-4 mb-3 d-flex align-items-center">
+            <label class="text-muted small mb-0 mr-2 text-nowrap">Involucrados:</label>
+            <div class="font-weight-bold">
+              {{getCantidadInvolucrados(expedienteSeleccionado)}}
+            </div>
+          </div>
+          <div class="col-12 col-sm-8 mb-3 d-flex align-items-center flex-wrap">
+            <label class="text-muted small mb-0 mr-2 text-nowrap">Urgencia:</label>
+            <div class="d-flex align-items-center">
               <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(expedienteSeleccionado.urgencia)">
                 <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i> {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
               </span>
@@ -295,15 +321,19 @@
               </div>
             </div>
           </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">Puntaje Comprometido:</label>
+          <div class="col-12 col-sm-4 mb-3 d-flex align-items-center">
+            <label class="text-muted small mb-0 mr-2 text-nowrap">Puntos:</label>
             <div class="font-weight-bold" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
               {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts
             </div>
           </div>
-          <div class="col-md-12 mb-3">
-            <label class="text-muted small">Motivo de la Causa Reglamentaria:</label>
-            <div class="p-2 bg-light rounded border">{{expedienteSeleccionado.motivo}}</div>
+          <div class="col-12 mb-3 d-flex align-items-center">
+            <label class="text-muted small mb-0 mr-2 text-nowrap">Título:</label>
+            <div class="p-2 bg-light rounded border font-weight-bold flex-grow-1">{{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</div>
+          </div>
+          <div class="col-12 mb-3 d-flex align-items-center">
+            <label class="text-muted small font-weight-bold mb-0 mr-2 text-nowrap">Razón:</label>
+            <div class="p-2 bg-light rounded border flex-grow-1">{{expedienteSeleccionado.razon || expedienteSeleccionado.motivo}}</div>
           </div>
         </div>
 
@@ -417,20 +447,40 @@
         </div>
 
       </div>
-      <div class="card-footer d-flex justify-content-end">
+      <div class="card-footer d-flex justify-content-end gap-2">
+        <button mat-button 
+                class="btn btn-info" 
+                (click)="abrirModalSocios(expedienteSeleccionado, $event)" 
+                title="Ver Involucrados">
+          <i class="material-icons" style="font-size: 16px;">group</i> Ver Involucrados
+        </button>
+        <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'revision_resolucion'" 
+                mat-raised-button 
+                class="btn btn-warning" 
+                (click)="abrirVotacion(expedienteSeleccionado)" 
+                title="Emitir Resolución">
+          <i class="material-icons" style="font-size: 16px;">gavel</i> Emitir Resolución
+        </button>
+        <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'pendiente_correos'" 
+                mat-raised-button 
+                class="btn btn-success" 
+                (click)="abrirFirma(expedienteSeleccionado)" 
+                title="Firmar Resolución">
+          <i class="material-icons" style="font-size: 16px;">draw</i> Firmar Resolución
+        </button>
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal 2: Votación Nominal Colegiada de Jueces -->
+<!-- Modal 2: Emitir Resolución -->
 <div *ngIf="modalVotacionAbierto" class="modal-backdrop-custom">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-warning">
-        <h4 class="card-title">Votación Nominal Colegiada del Tribunal</h4>
-        <p class="card-category">Expediente: {{expedienteSeleccionado.numero}} &bull; Imputado/Postulado: {{expedienteSeleccionado.socio}}</p>
+        <h4 class="card-title">Emitir Resolución</h4>
+        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
       <div class="card-body">
         <div class="alert alert-warning">
@@ -462,13 +512,13 @@
   </div>
 </div>
 
-<!-- Modal 3: Firma Digital Criptográfica -->
+<!-- Modal 3: Firmar Resolución -->
 <div *ngIf="modalFirmaAbierto" class="modal-backdrop-custom">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-success">
-        <h4 class="card-title">Aplicación de Firma Digital Criptográfica</h4>
-        <p class="card-category">Expediente: {{expedienteSeleccionado.numero}} &bull; Socio: {{expedienteSeleccionado.socio}}</p>
+        <h4 class="card-title">Firmar Resolución</h4>
+        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
       <div class="card-body">
         <div class="alert alert-info">
@@ -477,7 +527,7 @@
         </div>
 
         <div class="form-group">
-          <label class="font-weight-bold text-dark">Seleccione Magistrado Firmante:</label>
+          <label class="font-weight-bold text-dark">Firmante:</label>
           <select class="form-control" [(ngModel)]="juezFirmando">
             <option *ngFor="let j of juecesDisponibles" [value]="j">{{j}}</option>
           </select>
@@ -500,6 +550,46 @@
         <button mat-raised-button class="btn btn-success" (click)="confirmarFirma()">
           <i class="material-icons" style="font-size: 16px;">fingerprint</i> Aplicar Firma Digital
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4: Socios Involucrados (S3-08) -->
+<div *ngIf="modalSociosAbierto" class="modal-backdrop-custom">
+  <div class="modal-dialog-custom">
+    <div class="card" *ngIf="expedienteSeleccionado">
+      <div class="card-header card-header-info">
+        <h4 class="card-title">Socios Involucrados</h4>
+        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}}</p>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Socios involucrados en el expediente <strong>{{formatCaseNumber(expedienteSeleccionado.numero)}}</strong>:
+        </p>
+
+        <div class="table-responsive">
+          <table class="table table-hover table-mat">
+            <thead>
+              <th>N° de Socio / Legajo</th>
+              <th>Nombre y Apellido</th>
+              <th>Grupo</th>
+              <th>Estado</th>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || [])">
+                <td class="font-weight-bold text-dark">{{s.legajo}}</td>
+                <td>{{s.nombre}}</td>
+                <td>{{s.grupo || '-'}}</td>
+                <td>{{s.estado || 'Activo'}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-end gap-2">
+        <button mat-button class="btn btn-info" (click)="volverADetalle()" aria-label="Volver al detalle">Volver</button>
+        <button mat-button class="btn btn-default" (click)="cerrarModales()" aria-label="Cerrar modal">Cerrar</button>
       </div>
     </div>
   </div>

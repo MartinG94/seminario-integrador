@@ -88,7 +88,10 @@ class ExpedienteCollectionView(APIView):
 
     def get(self, request: Request) -> Response:
         queryset = Expediente.objects.select_related(
-            "socio", "socio__subcomision"
+            "socio",
+            "socio__subcomision",
+            "solicitud_t01",
+            "solicitud_t01__solicitante",
         ).prefetch_related(
             "socios",
             "cambios_estado",
@@ -718,7 +721,12 @@ class ExpedienteDetailView(APIView):
     def get(self, request: Request, pk: int) -> Response:
         expediente = (
             Expediente.objects.filter(pk=pk)
-            .select_related("socio", "socio__subcomision")
+            .select_related(
+                "socio",
+                "socio__subcomision",
+                "solicitud_t01",
+                "solicitud_t01__solicitante",
+            )
             .prefetch_related(
                 "socios",
                 "cambios_estado",
@@ -847,8 +855,13 @@ class BoardExpedientesView(APIView):
 
     def get(self, request: Request) -> Response:
         qs = (
-            Expediente.objects.select_related("socio", "socio__subcomision")
-            .prefetch_related("socios")
+            Expediente.objects.select_related(
+                "socio",
+                "socio__subcomision",
+                "solicitud_t01",
+                "solicitud_t01__solicitante",
+            )
+            .prefetch_related("socios", "cambios_estado")
             .all()
         )
         filterset = ExpedienteFilter(request.query_params, queryset=qs)

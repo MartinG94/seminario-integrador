@@ -74,6 +74,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalDetalleAbierto = false;
   modalVotacionAbierto = false;
   modalFirmaAbierto = false;
+  modalSociosAbierto = false;
   expedienteSeleccionado: Expediente | null = null;
 
   // Votación
@@ -189,13 +190,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get expedientesFiltrados(): Expediente[] {
     let result = [...this.expedientes];
 
-    // Filtro por socio en memoria (fallback / reactivo)
+    // Filtro por socio/creador/título en memoria (fallback / reactivo)
     if (this.filtroSocio.trim()) {
       const q = this.filtroSocio.trim().toLowerCase();
       result = result.filter(e =>
         (e.socio && e.socio.toLowerCase().includes(q)) ||
         (e.legajo && e.legajo.toLowerCase().includes(q)) ||
-        (e.numero && e.numero.toLowerCase().includes(q))
+        (e.numero && e.numero.toLowerCase().includes(q)) ||
+        (e.numero && this.formatCaseNumber(e.numero).toLowerCase().includes(q)) ||
+        (e.creador && e.creador.toLowerCase().includes(q)) ||
+        (e.titulo && e.titulo.toLowerCase().includes(q)) ||
+        (e.motivo && e.motivo.toLowerCase().includes(q)) ||
+        (e.sociosInvolucrados && e.sociosInvolucrados.some(s =>
+          (s.nombre && s.nombre.toLowerCase().includes(q)) ||
+          (s.legajo && s.legajo.toLowerCase().includes(q))
+        ))
       );
     }
 
@@ -219,17 +228,27 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       result = result.filter(e => (e.urgencia || 'normal') === urg);
     }
 
-    // Filtro por rango de fechas
+    // Filtro por rango de fechas (comparación YYYY-MM-DD ante timestamps ISO)
     if (this.filtroFechaDesde) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion >= this.filtroFechaDesde);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) >= this.filtroFechaDesde);
     }
     if (this.filtroFechaHasta) {
-      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion <= this.filtroFechaHasta);
+      result = result.filter(e => !e.fechaCreacion || e.fechaCreacion.slice(0, 10) <= this.filtroFechaHasta);
     }
 
     result.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA: any;
+      let valB: any;
+      if (this.columnaOrden === 'titulo') {
+        valA = a.titulo || a.motivo || '';
+        valB = b.titulo || b.motivo || '';
+      } else if (this.columnaOrden === 'cantidadSocios') {
+        valA = this.getCantidadInvolucrados(a);
+        valB = this.getCantidadInvolucrados(b);
+      } else {
+        valA = (a as any)[this.columnaOrden] ?? '';
+        valB = (b as any)[this.columnaOrden] ?? '';
+      }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 
@@ -386,6 +405,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
     this.causalesT02 = [];
     if (ESTADOS_DECISION_CAUSAL.includes(exp.estado) && this.auth.tieneRol('TD', 'CD', 'ADMIN')) {
@@ -473,18 +495,43 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   abrirVotacion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
   abrirFirma(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalSociosAbierto = false;
     this.modalFirmaAbierto = true;
+  }
+
+  abrirModalSocios(exp: Expediente, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expedienteSeleccionado = exp;
+    this.modalDetalleAbierto = false;
+    this.modalVotacionAbierto = false;
+    this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = true;
+  }
+
+  volverADetalle(): void {
+    this.modalSociosAbierto = false;
+    if (this.expedienteSeleccionado) {
+      this.abrirDetalle(this.expedienteSeleccionado);
+    }
   }
 
   cerrarModales(): void {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
+    this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
     this.causalesT02 = [];
   }
@@ -541,9 +588,36 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  getCantidadInvolucrados(exp: Expediente | null | undefined): number {
+    if (!exp) return 1;
+    if (exp.cantidadSocios && exp.cantidadSocios > 0) {
+      return exp.cantidadSocios;
+    }
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados.length;
+    }
+    return 1;
+  }
+
   formatCaseNumber(caseNumber: string): string {
-    const match = /^(?:EXP-)?(\d+)\/(\d{4})$/.exec(caseNumber);
-    return match ? `${Number(match[1]).toString().padStart(3, '0')}/${match[2]}` : caseNumber;
+    if (!caseNumber) return '';
+    // Formato 1: (EXP-)?<num>/<year>
+    let match = /^(?:EXP-)?(\d+)\/(\d{4})$/i.exec(caseNumber);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      const year = match[2];
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    // Formato 2: (EXP-)?<year>-<num>
+    match = /^(?:EXP-)?(\d{4})-(\d+)$/i.exec(caseNumber);
+    if (match) {
+      const year = match[1];
+      const num = parseInt(match[2], 10);
+      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
+      return `${numStr}/${year}`;
+    }
+    return caseNumber.replace(/^EXP-/i, '');
   }
 
   getUrgenciaLabel(urgencia?: string): string {

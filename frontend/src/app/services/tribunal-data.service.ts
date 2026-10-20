@@ -16,6 +16,14 @@ export type EstadoExpediente =
 
 export type NivelUrgencia = 'baja' | 'normal' | 'urgente';
 
+export interface SocioInvolucrado {
+  id: number | string;
+  legajo: string;
+  nombre: string;
+  grupo?: string;
+  estado?: string;
+}
+
 export interface BoardCaseDTO {
   id: number;
   numero: string;
@@ -29,10 +37,14 @@ export interface BoardCaseDTO {
   urgencia_display?: string;
   puntos: number;
   motivo: string;
+  titulo?: string;
+  razon?: string;
+  creador?: string;
   created_at: string;
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
   cantidad_socios?: number;
+  socios?: SocioInvolucrado[];
 }
 
 export interface BoardColumnDTO {
@@ -63,6 +75,9 @@ export interface Expediente {
   legajo: string;
   subcomision: string;
   motivo: string;
+  titulo?: string;
+  razon?: string;
+  creador?: string;
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;
@@ -73,6 +88,7 @@ export interface Expediente {
   tipo: 'falta' | 'merito';
   puntos: number;
   cantidadSocios?: number;
+  sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
   descargoPresentado?: boolean;
@@ -149,11 +165,18 @@ export class TribunalDataService {
       legajo: '74907',
       subcomision: 'Cómputos',
       motivo: 'Inasistencia no informada a asamblea general ordinaria',
+      titulo: 'Inasistencia no informada a asamblea general ordinaria',
+      razon: 'Ausencia registrada al cierre del acta de asamblea general ordinaria.',
+      creador: 'Rosales, Nicolás (408917)',
       fechaCreacion: '2026-03-01',
       estado: 'justificando',
       horasRestantes: 74,
       tipo: 'falta',
       puntos: -1.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907', grupo: '62', estado: 'Pasivo' }
+      ],
       plazoInicioAt: '2026-10-08T18:00:00-03:00',
       plazoLimiteAt: '2026-10-15T18:00:00-03:00',
       descargoPresentado: false
@@ -165,11 +188,19 @@ export class TribunalDataService {
       legajo: '85194',
       subcomision: 'Cómputos',
       motivo: 'Falta reiterada de entrega de informes operativos cuatrimestrales',
+      titulo: 'Falta reiterada de entrega de informes operativos cuatrimestrales',
+      razon: 'Vencimiento del plazo de presentación de informes operativos del cuatrimestre.',
+      creador: 'Sánchez, Diego Gabriel (87414)',
       fechaCreacion: '2026-03-02',
       estado: 'revision_resolucion',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.5,
+      cantidadSocios: 2,
+      sociosInvolucrados: [
+        { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194', grupo: '60', estado: 'Activo' },
+        { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414', grupo: '59', estado: 'Activo' }
+      ],
       descargo: {
         tipo: 'T02_CERTIFICADO',
         causal: 'Examen Académico Universitario en UTN FRC',
@@ -200,12 +231,18 @@ export class TribunalDataService {
       legajo: '408917',
       subcomision: 'Cómputos',
       motivo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
+      titulo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
+      razon: 'Organización integral y liderazgo en las jornadas tecnológicas solidarias.',
+      creador: 'Sánchez, Diego Gabriel (87414)',
       fechaCreacion: '2026-02-28',
       estado: 'pendiente_correos',
       horasRestantes: 0,
       tipo: 'merito',
       puntos: 2.0,
-
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
+      ],
       votacion: {
         votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE', 'Juez 3': 'FAVORABLE' },
         considerandos: 'Desempeño sobresaliente con impacto directo en la comunidad.',
@@ -224,11 +261,18 @@ export class TribunalDataService {
       legajo: 'LEG-6541',
       subcomision: 'Prensa y Difusión',
       motivo: 'Incumplimiento de tareas asignadas en cobertura institucional',
+      titulo: 'Incumplimiento de tareas asignadas en cobertura institucional',
+      razon: 'Falta de entrega del material audiovisual de cobertura institucional.',
+      creador: 'Rosales, Nicolás (408917)',
       fechaCreacion: '2026-02-15',
       estado: 'emitido',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -0.5,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541', grupo: '60', estado: 'Activo' }
+      ],
       firmas: {
         juecesFirmantes: ['Presidente TD', 'Vocal 1', 'Vocal 2'],
         hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
@@ -242,11 +286,18 @@ export class TribunalDataService {
       legajo: 'LEG-5412',
       subcomision: 'Deportes',
       motivo: 'Ausencia en convocatoria de reacondicionamiento edilicio',
+      titulo: 'Ausencia en convocatoria de reacondicionamiento edilicio',
+      razon: 'Inasistencia sin aviso previo a la jornada de reacondicionamiento.',
+      creador: 'Rosales, Nicolás (408917)',
       fechaCreacion: '2026-03-04',
       estado: 'creado',
       horasRestantes: 120,
       tipo: 'falta',
-      puntos: -1.0
+      puntos: -1.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '9', nombre: 'Martín Gómez', legajo: 'LEG-5412', grupo: '62', estado: 'Pasivo' }
+      ]
     },
     {
       id: 'EXP-2026-006',
@@ -255,11 +306,18 @@ export class TribunalDataService {
       legajo: '408917',
       subcomision: 'Cómputos',
       motivo: 'Retraso reiterado en entrega de actas de subcomisión',
+      titulo: 'Retraso reiterado en entrega de actas de subcomisión',
+      razon: 'Demora en la carga de actas de reuniones ordinarias de la subcomisión.',
+      creador: 'Sánchez, Diego Gabriel (87414)',
       fechaCreacion: '2026-03-02',
       estado: 'pendiente_firma',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -1.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
+      ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
         hashCriptografico: '',
@@ -273,11 +331,18 @@ export class TribunalDataService {
       legajo: '403655',
       subcomision: 'Cómputos',
       motivo: 'Incumplimiento de guardia de laboratorio informático',
+      titulo: 'Incumplimiento de guardia de laboratorio informático',
+      razon: 'Ausencia durante el turno asignado en el laboratorio informático.',
+      creador: 'Rosales, Nicolás (408917)',
       fechaCreacion: '2026-02-28',
       estado: 'pendiente_correos',
       horasRestantes: 0,
       tipo: 'falta',
       puntos: -2.0,
+      cantidadSocios: 1,
+      sociosInvolucrados: [
+        { id: '5', nombre: 'Axel René Villegas', legajo: '403655', grupo: '59', estado: 'Activo' }
+      ],
       firmas: {
         juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
         hashCriptografico: 'sha256-abc123789fed456',
@@ -474,7 +539,10 @@ export class TribunalDataService {
       legajo: c.socio_legajo,
       subcomision: c.subcomision,
       motivo: c.motivo,
-      fechaCreacion: c.created_at ? c.created_at.split('T')[0] : '',
+      titulo: c.titulo || c.motivo,
+      razon: c.razon || c.motivo,
+      creador: c.creador || '',
+      fechaCreacion: c.created_at || '',
       estado: c.estado,
       estadoDisplay: c.estado_display,
       urgencia,
@@ -483,7 +551,8 @@ export class TribunalDataService {
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',
       puntos: Number(c.puntos),
-      cantidadSocios: c.cantidad_socios || 1,
+      cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
+      sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
       plazoLimiteAt: c.plazo_limite_at || undefined
     };
   }
