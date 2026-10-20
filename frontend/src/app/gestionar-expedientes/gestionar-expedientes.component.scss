@@ -276,3 +276,40 @@ table.table-mat tbody tr:focus {
 }
 
 
+
+// Evaluación de justificaciones T02 (S4-02)
+.tabla-involucrados th {
+  color: var(--color-text-secondary);
+  font-family: var(--font-subtitle);
+  font-size: 12px;
+}
+
+.btn-evaluar-justificacion,
+.btn-ver-comprobante,
+.btn-aprobar-causal,
+.btn-desaprobar-causal,
+.btn-volver-involucrados {
+  .material-icons {
+    font-size: 16px;
+    vertical-align: middle;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.panel-evaluar-justificacion {
+  .seccion-titulo {
+    color: var(--color-primary);
+    font-family: var(--font-subtitle);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: none;
+  }
+
+  textarea:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+  }
+}

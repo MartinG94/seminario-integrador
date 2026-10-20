@@ -10,6 +10,7 @@ import { NotificationService } from '../services/notification.service';
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
+import { DecisionCausalDTO, DescargoDetalleDTO, ExpedienteApiService } from '../services/expediente-api.service';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -381,6 +382,290 @@ describe('GestionarExpedientesComponent', () => {
       expect(dataService.actualizarUrgencia).toHaveBeenCalledWith('1', 'urgente');
       expect(expMock.urgencia).toBe('urgente');
       expect(notifications.success).toHaveBeenCalledWith('Urgencia actualizada a "Urgente" exitosamente.');
+    });
+  });
+  describe('Evaluación de justificaciones T02 (S4-02)', () => {
+    let api: ExpedienteApiService;
+    const fundamento = 'El certificado no acredita la fecha de la reunión.';
+
+    const expRevision = {
+      id: '12',
+      numero: 'EXP-0012/2026',
+      socio: 'Ana Pérez',
+      legajo: '76001',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia',
+      fechaCreacion: '2026-10-01',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1
+    } as Expediente;
+
+    const descargoT02 = (): DescargoDetalleDTO => ({
+      id: 5,
+      socio_id: 3,
+      socio_legajo: '76001',
+      socio_nombre: 'Ana Pérez',
+      socio_first_name: 'Ana',
+      socio_last_name: 'Pérez',
+      tipo: 'T02_CERTIFICADO',
+      causal: 'Enfermedad certificada',
+      texto: 'Adjunto certificado.',
+      presentado_at: '2026-10-05T10:00:00Z',
+      evidencias: [{ id: 'ev-1', nombre_original: 'certificado.pdf' } as any],
+      regla_sugerida: 'ACCEPTED',
+      decisiones_causal: []
+    });
+
+    const descargoT03 = (): DescargoDetalleDTO => ({
+      ...descargoT02(),
+      id: 6,
+      socio_id: 4,
+      socio_legajo: '76002',
+      tipo: 'T03_EXTRAORDINARIO',
+      causal: '',
+      evidencias: [],
+      regla_sugerida: undefined,
+      decisiones_causal: undefined
+    });
+
+    const detalle = (estado = 'revision_resolucion') => ({
+      id: 12,
+      numero: 'EXP-0012/2026',
+      estado,
+      socios: [
+        { id: 3, legajo: '76001', nombre: 'Ana Pérez', first_name: 'Ana', last_name: 'Pérez', grupo: '59' },
+        { id: 4, legajo: '76002', nombre: 'Bruno Díaz', first_name: 'Bruno', last_name: 'Díaz', grupo: '60' },
+        { id: 7, legajo: '76003', nombre: 'Carla Gómez', first_name: 'Carla', last_name: 'Gómez', grupo: '61' }
+      ],
+      descargos: [descargoT02(), descargoT03()]
+    });
+
+    const decisionRegistrada = {
+      id: 1, version: 1, decision: 'REJECTED', decision_display: 'Rechazada'
+    } as DecisionCausalDTO;
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+    });
+
+    function abrirComo(rol: string, estado = 'revision_resolucion'): void {
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of(detalle(estado)));
+      component.abrirDetalle({ ...expRevision, estado } as Expediente);
+    }
+
+    function filaT02() {
+      return component.involucradosJustificacion.find(f => f.descargo?.id === 5)!;
+    }
+
+    function evaluarT02() {
+      abrirComo('TD');
+      const fila = filaT02();
+      component.seleccionarInvolucrado(fila);
+      return fila;
+    }
+
+    it('lista una fila por involucrado con su estado de justificación', () => {
+      abrirComo('TD');
+
+      expect(api.obtenerDetalleExpediente).toHaveBeenCalledWith('12');
+      const filas = component.involucradosJustificacion;
+      expect(filas.map(f => f.legajo)).toEqual(['76001', '76002', '76003']);
+      expect(filas.map(f => [f.nombre, f.apellido, f.grupo])).toEqual([
+        ['Ana', 'Pérez', '59'], ['Bruno', 'Díaz', '60'], ['Carla', 'Gómez', '61']
+      ]);
+      expect(filas.map(f => component.estadoJustificacion(f))).toEqual([
+        'Pendiente de evaluación', 'Extraordinaria (T03)', 'Sin justificación'
+      ]);
+    });
+
+    it('sólo permite evaluar las justificaciones T02', () => {
+      abrirComo('TD');
+      const [t02, t03, sinDescargo] = component.involucradosJustificacion;
+
+      expect(component.esEvaluable(t02)).toBeTrue();
+      expect(component.esEvaluable(t03)).toBeFalse();
+      expect(component.esEvaluable(sinDescargo)).toBeFalse();
+    });
+
+    it('no carga justificaciones antes de la etapa de revisión', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      spyOn(api, 'obtenerDetalleExpediente');
+
+      component.abrirDetalle({ ...expRevision, estado: 'justificando' } as Expediente);
+
+      expect(api.obtenerDetalleExpediente).not.toHaveBeenCalled();
+      expect(component.involucradosJustificacion).toEqual([]);
+    });
+
+    it('permite a la Comisión Directiva consultar después de emitida la resolución, sin registrar', () => {
+      abrirComo('CD', 'emitido');
+
+      expect(api.obtenerDetalleExpediente).toHaveBeenCalledWith('12');
+      expect(component.puedeConsultarJustificaciones).toBeTrue();
+      expect(component.puedeEvaluarJustificaciones).toBeFalse();
+    });
+
+    it('el Tribunal no puede registrar decisiones una vez emitida la resolución', () => {
+      abrirComo('TD', 'emitido');
+
+      expect(component.puedeConsultarJustificaciones).toBeTrue();
+      expect(component.puedeEvaluarJustificaciones).toBeFalse();
+    });
+
+    it('navega del listado al panel del involucrado y vuelve', () => {
+      const fila = evaluarT02();
+      expect(component.involucradoSeleccionado).toBe(fila);
+
+      component.volverAListadoInvolucrados();
+
+      expect(component.involucradoSeleccionado).toBeNull();
+      expect(component.modalDetalleAbierto).toBeTrue();
+    });
+
+    it('exige fundamento al desaprobar y no llama a la API sin él', () => {
+      evaluarT02();
+      spyOn(api, 'registrarDecisionCausal');
+      component.borradorCausal.decision = 'REJECTED';
+
+      expect(component.requiereFundamento()).toBeTrue();
+      component.registrarDecisionCausal();
+
+      expect(api.registrarDecisionCausal).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('Escribí un fundamento de al menos 20 caracteres.');
+    });
+
+    it('exige fundamento al apartarse de la sugerencia del sistema', () => {
+      const fila = evaluarT02();
+      fila.descargo!.regla_sugerida = 'REJECTED';
+      component.borradorCausal.decision = 'ACCEPTED';
+
+      expect(component.requiereFundamento()).toBeTrue();
+    });
+
+    it('aprueba siguiendo la sugerencia sin fundamento', () => {
+      evaluarT02();
+      component.borradorCausal.decision = 'ACCEPTED';
+
+      expect(component.requiereFundamento()).toBeFalse();
+    });
+
+    it('exige elegir aprobar o desaprobar', () => {
+      evaluarT02();
+      spyOn(api, 'registrarDecisionCausal');
+
+      component.registrarDecisionCausal();
+
+      expect(api.registrarDecisionCausal).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('Elegí si aprobás o desaprobás la justificación.');
+    });
+
+    it('registra la decisión valorando los comprobantes vigentes y actualiza el estado', () => {
+      const fila = evaluarT02();
+      spyOn(api, 'registrarDecisionCausal').and.returnValue(of(decisionRegistrada));
+      component.borradorCausal.decision = 'REJECTED';
+      component.borradorCausal.fundamento = `  ${fundamento}  `;
+
+      component.registrarDecisionCausal();
+
+      expect(api.registrarDecisionCausal).toHaveBeenCalledWith('12', 5, {
+        decision: 'REJECTED',
+        fundamento,
+        evidencia_ids: ['ev-1']
+      });
+      expect(fila.descargo!.decisiones_causal?.[0]).toBe(decisionRegistrada);
+      expect(component.estadoJustificacion(fila)).toBe('Desaprobada');
+      expect(component.borradorCausal.decision).toBe('');
+      expect(notifications.success).toHaveBeenCalledWith('Decisión registrada (versión 1).');
+    });
+
+    it('informa el error del servidor mediante el servicio de notificaciones', () => {
+      evaluarT02();
+      spyOn(api, 'registrarDecisionCausal').and.returnValue(
+        throwError(() => ({ status: 409, error: { detail: 'El expediente no admite decisiones.' } }))
+      );
+      component.borradorCausal.decision = 'ACCEPTED';
+
+      component.registrarDecisionCausal();
+
+      expect(notifications.error).toHaveBeenCalledWith('El expediente no admite decisiones.');
+      expect(component.registrandoCausal).toBeFalse();
+    });
+
+    it('abre el comprobante con la descarga segura de evidencias', () => {
+      evaluarT02();
+      const ventana = { location: { href: '' }, close: jasmine.createSpy('close') };
+      spyOn(window, 'open').and.returnValue(ventana as any);
+      spyOn(URL, 'createObjectURL').and.returnValue('blob:comprobante');
+      spyOn(api, 'descargarEvidencia').and.returnValue(of(new Blob(['%PDF'])));
+
+      component.verComprobante({ id: 'ev-1', nombre_original: 'certificado.pdf' } as any);
+
+      expect(api.descargarEvidencia).toHaveBeenCalledWith('12', 'ev-1');
+      expect(ventana.location.href).toBe('blob:comprobante');
+    });
+
+    it('cierra la ventana y avisa si no se puede abrir el comprobante', () => {
+      evaluarT02();
+      const ventana = { location: { href: '' }, close: jasmine.createSpy('close') };
+      spyOn(window, 'open').and.returnValue(ventana as any);
+      spyOn(api, 'descargarEvidencia').and.returnValue(throwError(() => ({ status: 403 })));
+
+      component.verComprobante({ id: 'ev-1', nombre_original: 'certificado.pdf' } as any);
+
+      expect(ventana.close).toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('No se pudo abrir el comprobante.');
+    });
+
+    it('muestra la tabla de involucrados con el botón Evaluar justificación sólo en T02', () => {
+      abrirComo('TD');
+      fixture.detectChanges();
+
+      const tabla: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-involucrados-justificacion"]');
+      expect(tabla).toBeTruthy();
+      expect(tabla.textContent).toContain('Pérez');
+      const botones = tabla.querySelectorAll('.btn-evaluar-justificacion');
+      expect(botones.length).toBe(1);
+      expect(botones[0].textContent).toContain('Evaluar justificación');
+      expect(botones[0].querySelector('.material-icons')?.textContent).toContain('gavel');
+    });
+
+    it('renderiza el panel de evaluación accesible del involucrado', () => {
+      abrirComo('TD');
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('.btn-evaluar-justificacion') as HTMLButtonElement).click();
+      component.borradorCausal.decision = 'REJECTED';
+      component.borradorCausal.fundamento = 'Hola';
+      fixture.detectChanges();
+
+      const panel: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-evaluar-justificacion"]');
+      expect(panel).toBeTruthy();
+      expect(panel.textContent).toContain('76001');
+      expect(panel.textContent).toContain('Enfermedad certificada');
+      expect(panel.textContent).toContain('Adjunto certificado.');
+      expect(panel.querySelector('.btn-ver-comprobante')?.textContent).toContain('VER COMPROBANTE');
+      expect(panel.querySelector('.btn-aprobar-causal')?.textContent).toContain('APROBAR');
+      expect(panel.querySelector('.btn-desaprobar-causal')?.textContent).toContain('DESAPROBAR');
+      expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
+
+      const textarea = panel.querySelector('textarea') as HTMLTextAreaElement;
+      expect(textarea.getAttribute('aria-required')).toBe('true');
+      const ayuda = panel.querySelector('#' + textarea.getAttribute('aria-describedby')!.split(' ')[0]);
+      expect(ayuda?.textContent).toContain('mínimo 20 caracteres');
+      expect(panel.querySelector('.contador-fundamento')?.textContent).toContain('4 / 5000');
+    });
+
+    it('muestra el panel en sólo lectura a la Comisión Directiva', () => {
+      abrirComo('CD', 'emitido');
+      component.seleccionarInvolucrado(filaT02());
+      fixture.detectChanges();
+
+      const panel: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-evaluar-justificacion"]');
+      expect(panel.querySelector('.btn-ver-comprobante')).toBeTruthy();
+      expect(panel.querySelector('.btn-aprobar-causal')).toBeNull();
+      expect(panel.querySelector('textarea')).toBeNull();
     });
   });
 
