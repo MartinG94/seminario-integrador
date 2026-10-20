@@ -224,6 +224,18 @@ def _obtener_titulo_expediente(obj: Expediente) -> str:
     return obj.motivo or ""
 
 
+def _obtener_reglamento_asociado(obj: Expediente) -> str:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and solicitud.causal:
+            return solicitud.causal
+        if solicitud and solicitud.reglamentos_respaldantes:
+            return solicitud.reglamentos_respaldantes[0]
+    except Exception:
+        pass
+    return "Reglamento Procesal Disciplinario 2026"
+
+
 class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
@@ -231,6 +243,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    reglamento_asociado = serializers.SerializerMethodField()
     descargo_presentado = serializers.SerializerMethodField()
     descargo_tipo = serializers.SerializerMethodField()
     descargo_causal = serializers.SerializerMethodField()
@@ -256,6 +269,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "titulo",
             "motivo",
             "razon",
+            "reglamento_asociado",
             "puntos",
             "estado",
             "urgencia",
@@ -298,6 +312,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
     def get_titulo(self, obj: Expediente) -> str:
         return _obtener_titulo_expediente(obj)
+
+    def get_reglamento_asociado(self, obj: Expediente) -> str:
+        return _obtener_reglamento_asociado(obj)
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
         descargos = [d for d in obj.descargos.all() if d.es_vigente]
@@ -922,6 +939,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     creador = serializers.SerializerMethodField()
     razon = serializers.SerializerMethodField()
     titulo = serializers.SerializerMethodField()
+    reglamento_asociado = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -931,6 +949,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "titulo",
             "motivo",
             "razon",
+            "reglamento_asociado",
             "socio",
             "socio_nombre",
             "socio_legajo",
@@ -970,6 +989,9 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     def get_titulo(self, obj: Expediente) -> str:
         return _obtener_titulo_expediente(obj)
+
+    def get_reglamento_asociado(self, obj: Expediente) -> str:
+        return _obtener_reglamento_asociado(obj)
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])
