@@ -431,7 +431,7 @@ class PresentarDescargoView(APIView):
             estado_anterior=expediente.estado,
             estado_nuevo=expediente.estado,
             actor=f"SOCIO_{socio.legajo}",
-            motivo="EliminaciÃ³n de descargo dentro del plazo reglamentario.",
+            motivo="Eliminación de descargo dentro del plazo reglamentario.",
         )
 
         return Response(
