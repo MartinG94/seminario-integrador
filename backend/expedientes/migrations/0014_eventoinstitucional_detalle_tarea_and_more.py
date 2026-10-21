@@ -40,4 +40,9 @@ class Migration(migrations.Migration):
             name='modo_convocatoria',
             field=models.CharField(choices=[('GRUPO', 'Por Grupo Social Completo'), ('SUBCOMISION', 'Por Subcomisión Completa'), ('ESTADO_SOCIAL', 'Por Estado Social (Juniors / Seniors)'), ('PERSONALIZADA', 'Lista Personalizada de Socios')], db_column='modo_convocatoria', default='PERSONALIZADA', max_length=30),
         ),
+        migrations.AlterField(
+            model_name='asistenciaevento',
+            name='estado_asistencia',
+            field=models.CharField(choices=[('PRESENTE', 'Presente'), ('TARDE_LEVE', 'Tardanza Leve (15-30 min)'), ('TARDE_GRAVE', 'Tardanza Grave (>30 min)'), ('RETIRO_ANTICIPADO_LEVE', 'Retiro Anticipado Leve (15-30 min)'), ('RETIRO_ANTICIPADO_GRAVE', 'Retiro Anticipado Grave (>30 min)'), ('AUSENTE', 'Ausente Injustificado'), ('JUSTIFICADO', 'Ausencia Justificada')], db_column='estado_asistencia', default='PRESENTE', max_length=30),
+        ),
     ]
