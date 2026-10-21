@@ -55,16 +55,28 @@ export class ResumenCierreDialogComponent implements OnInit {
       let norma = 'Asistencia conforme';
       let puntos = 0;
 
-      if (socio.estado_asistencia === 'PRESENTE' || socio.estado_asistencia === 'JUSTIFICADO') {
+      const estado = socio.estado_asistencia;
+      const esAusente = estado === 'AUSENTE' || estado === 'AUSENTE_INJUSTIFICADO';
+      const esTardeGrave =
+        estado === 'TARDE_GRAVE' ||
+        estado === 'TARDANZA_GRAVE' ||
+        estado === 'RETIRO_ANTICIPADO' ||
+        estado === 'RETIRO_ANTICIPADO_GRAVE';
+      const esTardeLeve =
+        estado === 'TARDE_LEVE' ||
+        estado === 'TARDANZA_LEVE' ||
+        estado === 'RETIRO_ANTICIPADO_LEVE';
+
+      if (estado === 'PRESENTE' || estado === 'JUSTIFICADO') {
         this.totalPresentes++;
         tipoActuacion = 'NINGUNA';
-        actuacionLabel = socio.estado_asistencia === 'PRESENTE' ? 'Presente en Sesión' : 'Ausencia Justificada';
+        actuacionLabel = estado === 'PRESENTE' ? 'Presente en Sesión' : 'Ausencia Justificada';
         norma = 'Art. 84';
       } else if (!esSancionable) {
         tipoActuacion = 'NINGUNA';
         actuacionLabel = 'Sin sanción (Evento Extemporáneo / No Sancionable)';
         norma = 'Art. 95 (Preaviso fuera de término)';
-      } else if (socio.estado_asistencia === 'AUSENTE_INJUSTIFICADO') {
+      } else if (esAusente) {
         tipoActuacion = 'EXPEDIENTE';
         this.totalExpedientes++;
 
@@ -83,17 +95,21 @@ export class ResumenCierreDialogComponent implements OnInit {
             norma = 'Art. 85.b R.I.';
           }
         } else {
-          puntos = -1.0;
+          const customPuntos =
+            evento.puntos_sancion != null && evento.puntos_sancion !== ''
+              ? -Math.abs(Number(evento.puntos_sancion))
+              : -1.0;
+          puntos = isNaN(customPuntos) ? -1.0 : customPuntos;
           actuacionLabel = `Expediente por Inasistencia a Actividad (${evento.tipo})`;
           norma = 'Art. 85.a/d R.I.';
         }
-      } else if (socio.estado_asistencia === 'TARDANZA_GRAVE' || socio.estado_asistencia === 'RETIRO_ANTICIPADO') {
+      } else if (esTardeGrave) {
         tipoActuacion = 'EXPEDIENTE';
         puntos = -0.5;
         this.totalExpedientes++;
         actuacionLabel = 'Expediente por Tardanza Grave (> 30 min)';
         norma = 'Art. 100.b R.I.';
-      } else if (socio.estado_asistencia === 'TARDANZA_LEVE') {
+      } else if (esTardeLeve) {
         tipoActuacion = 'APERCIBIMIENTO';
         puntos = 0;
         this.totalApercibimientos++;

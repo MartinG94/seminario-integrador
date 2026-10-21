@@ -644,7 +644,20 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     if (this.filtroEstado !== 'TODOS') {
       if (this.filtroEstado === 'TARDANZAS') {
         result = result.filter(
-          c => c.estado_asistencia === 'TARDANZA_LEVE' || c.estado_asistencia === 'TARDANZA_GRAVE'
+          c =>
+            c.estado_asistencia === 'TARDANZA_LEVE' ||
+            c.estado_asistencia === 'TARDE_LEVE' ||
+            c.estado_asistencia === 'TARDANZA_GRAVE' ||
+            c.estado_asistencia === 'TARDE_GRAVE'
+        );
+      } else if (
+        this.filtroEstado === 'AUSENTE_INJUSTIFICADO' ||
+        this.filtroEstado === 'AUSENTE'
+      ) {
+        result = result.filter(
+          c =>
+            c.estado_asistencia === 'AUSENTE_INJUSTIFICADO' ||
+            c.estado_asistencia === 'AUSENTE'
         );
       } else {
         result = result.filter(c => c.estado_asistencia === this.filtroEstado);
@@ -661,12 +674,18 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
   }
 
   get totalAusentes(): number {
-    return this.convocados.filter(c => c.estado_asistencia === 'AUSENTE_INJUSTIFICADO').length;
+    return this.convocados.filter(
+      c => c.estado_asistencia === 'AUSENTE_INJUSTIFICADO' || c.estado_asistencia === 'AUSENTE'
+    ).length;
   }
 
   get totalTardanzas(): number {
     return this.convocados.filter(
-      c => c.estado_asistencia === 'TARDANZA_LEVE' || c.estado_asistencia === 'TARDANZA_GRAVE'
+      c =>
+        c.estado_asistencia === 'TARDANZA_LEVE' ||
+        c.estado_asistencia === 'TARDE_LEVE' ||
+        c.estado_asistencia === 'TARDANZA_GRAVE' ||
+        c.estado_asistencia === 'TARDE_GRAVE'
     ).length;
   }
 
@@ -680,12 +699,26 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
   onCambiarEstadoSocio(socio: ConvocadoAsistenciaDTO): void {
     if (socio.estado_asistencia === 'PRESENTE' && !socio.motivo) {
       socio.motivo = 'En sede a tiempo';
-    } else if (socio.estado_asistencia === 'AUSENTE_INJUSTIFICADO' && !socio.motivo) {
+    } else if (
+      (socio.estado_asistencia === 'AUSENTE_INJUSTIFICADO' ||
+        socio.estado_asistencia === 'AUSENTE') &&
+      !socio.motivo
+    ) {
       socio.motivo = 'Inasistencia sin justificar';
-    } else if (socio.estado_asistencia === 'TARDANZA_LEVE' && !socio.motivo) {
+    } else if (
+      (socio.estado_asistencia === 'TARDANZA_LEVE' ||
+        socio.estado_asistencia === 'TARDE_LEVE') &&
+      !socio.motivo
+    ) {
       socio.motivo = 'Tardanza leve (15-30 min)';
-    } else if (socio.estado_asistencia === 'TARDANZA_GRAVE' && !socio.motivo) {
+    } else if (
+      (socio.estado_asistencia === 'TARDANZA_GRAVE' ||
+        socio.estado_asistencia === 'TARDE_GRAVE') &&
+      !socio.motivo
+    ) {
       socio.motivo = 'Tardanza grave (> 30 min)';
+    } else if (socio.estado_asistencia === 'JUSTIFICADO' && !socio.motivo) {
+      socio.motivo = 'Ausencia justificada con constancia';
     }
     this.ultimaModificacion = new Date();
   }
@@ -720,6 +753,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
 
     const payload: ReportarAsistenciaPayload = {
       estrategia: this.estrategiaActual,
+      metodo_captura: this.estrategiaActual,
       cerrar_evento: false,
       asistencias: this.convocados.map(c => ({
         socio_id: c.socio_id,
@@ -768,6 +802,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
 
     const payload: ReportarAsistenciaPayload = {
       estrategia: this.estrategiaActual,
+      metodo_captura: this.estrategiaActual,
       cerrar_evento: true,
       asistencias: this.convocados.map(c => ({
         socio_id: c.socio_id,
@@ -787,7 +822,13 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
         if (this.eventoActivo) {
           this.eventoActivo.estado = 'FINALIZADO';
         }
-        const msg = `Convocatoria cerrada formalmente. Se abrieron ${res.expedientes_generados} expedientes y se registraron ${res.apercibimientos_generados} apercibimientos.`;
+        const expGenerados =
+          res.expedientes_generados ??
+          (Array.isArray(res.expedientes_creados) ? res.expedientes_creados.length : 0);
+        const apercGenerados =
+          res.apercibimientos_generados ??
+          (Array.isArray(res.apercibimientos_creados) ? res.apercibimientos_creados.length : 0);
+        const msg = `Convocatoria cerrada formalmente. Se abrieron ${expGenerados} expedientes y se registraron ${apercGenerados} apercibimientos.`;
         this.notificationService.success(msg);
       },
       error: () => {

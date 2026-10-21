@@ -571,15 +571,18 @@
                                 (change)="onCambiarEstadoSocio(socio)"
                                 [ngClass]="{
                                   'text-success': socio.estado_asistencia === 'PRESENTE',
-                                  'text-danger': socio.estado_asistencia === 'AUSENTE_INJUSTIFICADO' || socio.estado_asistencia === 'TARDANZA_GRAVE',
-                                  'text-warning': socio.estado_asistencia === 'TARDANZA_LEVE',
+                                  'text-danger': socio.estado_asistencia === 'AUSENTE_INJUSTIFICADO' || socio.estado_asistencia === 'AUSENTE' || socio.estado_asistencia === 'TARDANZA_GRAVE' || socio.estado_asistencia === 'TARDE_GRAVE',
+                                  'text-warning': socio.estado_asistencia === 'TARDANZA_LEVE' || socio.estado_asistencia === 'TARDE_LEVE',
                                   'text-secondary': socio.estado_asistencia === 'JUSTIFICADO'
                                 }"
                               >
                                 <option value="PRESENTE">Presente</option>
-                                <option value="AUSENTE_INJUSTIFICADO">Ausente Injustificado</option>
-                                <option value="TARDANZA_LEVE">Tardanza Leve (15-30 min)</option>
-                                <option value="TARDANZA_GRAVE">Tardanza Grave (> 30 min)</option>
+                                <option *ngIf="socio.estado_asistencia !== 'AUSENTE'" value="AUSENTE_INJUSTIFICADO">Ausente Injustificado</option>
+                                <option *ngIf="socio.estado_asistencia === 'AUSENTE'" value="AUSENTE">Ausente Injustificado</option>
+                                <option *ngIf="socio.estado_asistencia !== 'TARDE_LEVE'" value="TARDANZA_LEVE">Tardanza Leve (15-30 min)</option>
+                                <option *ngIf="socio.estado_asistencia === 'TARDE_LEVE'" value="TARDE_LEVE">Tardanza Leve (15-30 min)</option>
+                                <option *ngIf="socio.estado_asistencia !== 'TARDE_GRAVE'" value="TARDANZA_GRAVE">Tardanza Grave (> 30 min)</option>
+                                <option *ngIf="socio.estado_asistencia === 'TARDE_GRAVE'" value="TARDE_GRAVE">Tardanza Grave (> 30 min)</option>
                                 <option value="JUSTIFICADO">Ausencia Justificada</option>
                               </select>
                             </td>

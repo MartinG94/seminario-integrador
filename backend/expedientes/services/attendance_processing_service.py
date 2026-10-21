@@ -25,13 +25,14 @@ from expedientes.models import (
     EstadoEventoEnum,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
-    ModoConvocatoriaEnum,
     SubtipoReunionEnum,
 )
 from expedientes.services.meeting_compliance_service import MeetingComplianceService
+from expedientes.services.meeting_notice_notification_service import (
+    MeetingNoticeNotificationService,
+)
 from expedientes.services.warning_accumulation_service import WarningAccumulationService
 from expedientes.services.workflow_service import ExpedienteWorkflowService
-from socios.models import Socio
 
 if TYPE_CHECKING:
     from expedientes.domain.ports import HolidayProviderPort
@@ -102,11 +103,9 @@ class AttendanceProcessingService:
         if reportado_por_id:
             evento.reportado_por_id = reportado_por_id
 
-        # Configurar cierre efectivo si aplica
+        # Configurar cierre efectivo si se informó explícitamente antes de evaluar plazo de reporte
         if fecha_hora_cierre_efectivo:
             evento.fecha_hora_cierre_efectivo = fecha_hora_cierre_efectivo
-        elif cerrar_evento and not evento.fecha_hora_cierre_efectivo:
-            evento.fecha_hora_cierre_efectivo = ahora
 
         # 1. Evaluar si el evento es sancionable (preaviso y reporte dentro de plazos)
         es_sancionable, motivo_no_sancionable = (
@@ -121,6 +120,8 @@ class AttendanceProcessingService:
 
         if cerrar_evento:
             evento.estado = EstadoEventoEnum.CERRADA
+            if not evento.fecha_hora_cierre_efectivo:
+                evento.fecha_hora_cierre_efectivo = evento.fecha_fin or ahora
 
         evento.save(
             update_fields=[
@@ -135,19 +136,9 @@ class AttendanceProcessingService:
         )
 
         # 2. Resolver nómina de convocados para la estrategia
-        convocados_ids: list[int] = []
-        if evento.modo_convocatoria == ModoConvocatoriaEnum.GRUPO and evento.grupo_convocado:
-            convocados_ids = list(
-                Socio.objects.filter(is_enabled=True)
-                .filter(legajo__isnull=False)
-                .values_list("id", flat=True)
-            )
-        elif evento.modo_convocatoria == ModoConvocatoriaEnum.SUBCOMISION and evento.subcomision_id:
-            convocados_ids = list(
-                Socio.objects.filter(
-                    is_enabled=True, subcomision_id=evento.subcomision_id
-                ).values_list("id", flat=True)
-            )
+        convocados_socios = MeetingNoticeNotificationService.resolve_convocados(evento)
+        if convocados_socios:
+            convocados_ids = [s.id for s in convocados_socios]
         else:
             convocados_ids = [m["socio_id"] for m in marcaciones if "socio_id" in m]
 
@@ -165,6 +156,13 @@ class AttendanceProcessingService:
 
         # 4. Persistir cada asistencia y derivar sanciones si corresponde
         for dto in records_dto:
+            prev_asistencia = AsistenciaEvento.objects.filter(
+                evento=evento, socio_id=dto.socio_id
+            ).first()
+            ya_procesado = bool(prev_asistencia and prev_asistencia.procesado_disciplinario)
+            ya_tenia_expediente = bool(prev_asistencia and prev_asistencia.expediente_generado_id)
+            ya_tenia_apercibimiento = bool(prev_asistencia and prev_asistencia.notificado)
+
             asistencia, _ = AsistenciaEvento.objects.update_or_create(
                 evento=evento,
                 socio_id=dto.socio_id,
@@ -178,20 +176,31 @@ class AttendanceProcessingService:
                     "dispositivo_id": dto.dispositivo_id,
                     "motivo": dto.motivo,
                     "observaciones": dto.observaciones,
-                    "procesado_disciplinario": True,
+                    "procesado_disciplinario": True if cerrar_evento else ya_procesado,
                 },
             )
 
-            # Si el evento NO es sancionable, no se emite ninguna sanción ni apercibimiento
-            if not es_sancionable:
-                asistencia.expediente_generado = None
-                asistencia.notificado = False
-                asistencia.save(update_fields=["expediente_generado", "notificado"])
+            # Si el evento NO es sancionable o si se trata de un guardado parcial (sin cierre),
+            # no se emite ninguna sanción ni apercibimiento aún
+            if not es_sancionable or not cerrar_evento:
+                if not es_sancionable:
+                    asistencia.expediente_generado = None
+                    asistencia.notificado = False
+                    asistencia.save(update_fields=["expediente_generado", "notificado"])
+                asistencias_guardadas.append(asistencia)
+                continue
+
+            # Idempotencia: si esta asistencia ya había generado expediente o apercibimiento,
+            # no duplicar actuaciones ante un reintento de cierre
+            if ya_procesado and (ya_tenia_expediente or ya_tenia_apercibimiento):
                 asistencias_guardadas.append(asistencia)
                 continue
 
             # Evento SANCIONABLE: Aplicar escala reglamentaria
-            if dto.estado_asistencia == EstadoAsistenciaEventoEnum.PRESENTE:
+            if dto.estado_asistencia in (
+                EstadoAsistenciaEventoEnum.PRESENTE,
+                EstadoAsistenciaEventoEnum.JUSTIFICADO,
+            ):
                 asistencia.expediente_generado = None
                 asistencia.notificado = False
                 asistencia.save(update_fields=["expediente_generado", "notificado"])
@@ -307,9 +316,13 @@ class AttendanceProcessingService:
 
         return {
             "evento_id": evento.id,
+            "estado_evento": evento.estado,
             "es_sancionable": es_sancionable,
             "motivo_no_sancionable": motivo_no_sancionable,
             "total_asistencias": len(asistencias_guardadas),
+            "asistencias_procesadas": len(asistencias_guardadas),
             "expedientes_creados": expedientes_creados,
             "apercibimientos_creados": apercibimientos_creados,
+            "expedientes_generados": len(expedientes_creados),
+            "apercibimientos_generados": len(apercibimientos_creados),
         }

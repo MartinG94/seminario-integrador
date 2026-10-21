@@ -49,11 +49,15 @@ export const AdminLayoutRoutes: Routes = [
     },
     { 
       path: 'eventos-asistencia',     
-      component: EventosAsistenciaComponent
+      component: EventosAsistenciaComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
     },
     {
       path: 'eventos',
-      component: EventosAsistenciaComponent
+      component: EventosAsistenciaComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
     },
     { path: 'dashboard',              component: DashboardComponent },
     { path: 'table-list',             component: TableListComponent },

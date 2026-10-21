@@ -125,12 +125,18 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
 class AsistenciaItemInputSerializer(serializers.Serializer):
     """Valida cada registro de asistencia con motivo circunstanciado obligatorio (CA10)."""
 
+    ESTADO_ALIASES: dict[str, str] = {
+        "AUSENTE_INJUSTIFICADO": EstadoAsistenciaEventoEnum.AUSENTE,
+        "TARDANZA_LEVE": EstadoAsistenciaEventoEnum.TARDE_LEVE,
+        "TARDANZA_GRAVE": EstadoAsistenciaEventoEnum.TARDE_GRAVE,
+        "RETIRO_ANTICIPADO": EstadoAsistenciaEventoEnum.RETIRO_ANTICIPADO_GRAVE,
+    }
+
     socio_id = serializers.IntegerField(
         required=True,
         help_text="ID del socio convocado.",
     )
-    estado_asistencia = serializers.ChoiceField(
-        choices=EstadoAsistenciaEventoEnum.choices,
+    estado_asistencia = serializers.CharField(
         required=True,
         help_text="Estado tipificado de la asistencia.",
     )
@@ -148,6 +154,15 @@ class AsistenciaItemInputSerializer(serializers.Serializer):
     minutos_tardanza = serializers.IntegerField(required=False, default=0, min_value=0)
     minutos_retiro_anticipado = serializers.IntegerField(required=False, default=0, min_value=0)
     observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_estado_asistencia(self, value: str) -> str:
+        normalized = self.ESTADO_ALIASES.get(value, value)
+        if normalized not in EstadoAsistenciaEventoEnum.values:
+            raise serializers.ValidationError(
+                f"Estado de asistencia '{value}' inválido. "
+                f"Opciones: {EstadoAsistenciaEventoEnum.values}"
+            )
+        return normalized
 
     def validate_socio_id(self, value: int) -> int:
         if not Socio.objects.filter(pk=value).exists():
@@ -180,6 +195,12 @@ class AsistenciaEventoBulkUpdateSerializer(serializers.Serializer):
         required=False,
         help_text="Estrategia de captura empleada.",
     )
+    estrategia = serializers.ChoiceField(
+        choices=MetodoCapturaAsistenciaEnum.choices,
+        required=False,
+        write_only=True,
+        help_text="Alias de estrategia de captura empleada.",
+    )
     fecha_reporte = serializers.DateTimeField(
         required=False,
         allow_null=True,
@@ -195,6 +216,11 @@ class AsistenciaEventoBulkUpdateSerializer(serializers.Serializer):
         default=True,
         help_text="Indica si debe marcarse el evento como CERRADO tras el procesamiento.",
     )
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if "estrategia" in attrs and attrs["estrategia"]:
+            attrs["metodo_captura"] = attrs.pop("estrategia")
+        return attrs
 
 
 ReportarAsistenciaSerializer = AsistenciaEventoBulkUpdateSerializer
@@ -308,6 +334,7 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
         return obj.asistencias.filter(
             estado_asistencia__in=[
                 EstadoAsistenciaEventoEnum.PRESENTE,
+                EstadoAsistenciaEventoEnum.JUSTIFICADO,
                 EstadoAsistenciaEventoEnum.TARDE_LEVE,
                 EstadoAsistenciaEventoEnum.TARDE_GRAVE,
             ]
@@ -578,8 +605,6 @@ class EventoInstitucionalCreateSerializer(serializers.ModelSerializer):
                     evento.id,
                     exc,
                 )
-
-        return evento
 
         return evento
 

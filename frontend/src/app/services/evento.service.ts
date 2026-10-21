@@ -136,8 +136,10 @@ export class EventoService {
     eventoId: number | string,
     payload?: Partial<ReportarAsistenciaPayload>
   ): Observable<ReportarAsistenciaResponse> {
+    const metodo = payload?.metodo_captura || payload?.estrategia || 'MANUAL';
     const body: ReportarAsistenciaPayload = {
-      estrategia: payload?.estrategia || 'MANUAL',
+      estrategia: metodo,
+      metodo_captura: metodo,
       asistencias: payload?.asistencias || [],
       cerrar_evento: true
     };

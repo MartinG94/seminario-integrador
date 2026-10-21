@@ -618,6 +618,7 @@ class EstadoAsistenciaEventoEnum(models.TextChoices):
     RETIRO_ANTICIPADO_LEVE = "RETIRO_ANTICIPADO_LEVE", "Retiro Anticipado Leve (15-30 min)"
     RETIRO_ANTICIPADO_GRAVE = "RETIRO_ANTICIPADO_GRAVE", "Retiro Anticipado Grave (>30 min)"
     AUSENTE = "AUSENTE", "Ausente Injustificado"
+    JUSTIFICADO = "JUSTIFICADO", "Ausencia Justificada"
 
 
 class MetodoCapturaAsistenciaEnum(models.TextChoices):

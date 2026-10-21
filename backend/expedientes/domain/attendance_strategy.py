@@ -59,6 +59,13 @@ class ManualAttendanceStrategy(AttendanceCaptureStrategy):
     Todo socio convocado no reportado en el payload pasa automáticamente a AUSENTE.
     """
 
+    ESTADO_ALIASES: dict[str, str] = {
+        "AUSENTE_INJUSTIFICADO": EstadoAsistenciaEventoEnum.AUSENTE,
+        "TARDANZA_LEVE": EstadoAsistenciaEventoEnum.TARDE_LEVE,
+        "TARDANZA_GRAVE": EstadoAsistenciaEventoEnum.TARDE_GRAVE,
+        "RETIRO_ANTICIPADO": EstadoAsistenciaEventoEnum.RETIRO_ANTICIPADO_GRAVE,
+    }
+
     def process(
         self,
         *,
@@ -73,9 +80,10 @@ class ManualAttendanceStrategy(AttendanceCaptureStrategy):
         for item in marcaciones:
             socio_id = item["socio_id"]
             reported_socio_ids.add(socio_id)
-            estado = item.get("estado_asistencia", EstadoAsistenciaEventoEnum.PRESENTE)
+            raw_estado = item.get("estado_asistencia", EstadoAsistenciaEventoEnum.PRESENTE)
+            estado = self.ESTADO_ALIASES.get(str(raw_estado), str(raw_estado))
             if estado not in EstadoAsistenciaEventoEnum.values:
-                raise ValueError(f"Estado de asistencia '{estado}' no es válido.")
+                raise ValueError(f"Estado de asistencia '{raw_estado}' no es válido.")
 
             minutos_tardanza = int(item.get("minutos_tardanza", 0))
             if estado == EstadoAsistenciaEventoEnum.TARDE_LEVE and minutos_tardanza == 0:

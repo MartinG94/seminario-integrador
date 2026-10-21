@@ -46,10 +46,15 @@ export type EstadoEvento =
 
 export type EstadoAsistenciaEvento =
   | 'PRESENTE'
+  | 'AUSENTE'
   | 'AUSENTE_INJUSTIFICADO'
+  | 'TARDE_LEVE'
   | 'TARDANZA_LEVE'
+  | 'TARDE_GRAVE'
   | 'TARDANZA_GRAVE'
   | 'RETIRO_ANTICIPADO'
+  | 'RETIRO_ANTICIPADO_LEVE'
+  | 'RETIRO_ANTICIPADO_GRAVE'
   | 'JUSTIFICADO';
 
 export type MetodoCapturaAsistencia = 'MANUAL' | 'BIOMETRICO';
@@ -194,6 +199,7 @@ export interface ReportarAsistenciaItemPayload {
 
 export interface ReportarAsistenciaPayload {
   estrategia?: MetodoCapturaAsistencia;
+  metodo_captura?: MetodoCapturaAsistencia;
   asistencias: ReportarAsistenciaItemPayload[];
   cerrar_evento?: boolean;
 }
@@ -215,12 +221,15 @@ export interface ReportarAsistenciaResultadoDetalle {
 export interface ReportarAsistenciaResponse {
   mensaje?: string;
   evento_id: number | string;
-  estado_evento: EstadoEvento;
+  estado_evento?: EstadoEvento;
   es_sancionable?: boolean;
   motivo_no_sancionable?: string | null;
-  asistencias_procesadas: number;
-  expedientes_generados: number;
-  apercibimientos_generados: number;
+  total_asistencias?: number;
+  asistencias_procesadas?: number;
+  expedientes_generados?: number;
+  apercibimientos_generados?: number;
+  expedientes_creados?: Array<{ socio_id: number; numero: string; puntos: number; tipo: string }>;
+  apercibimientos_creados?: Array<{ socio_id: number; id: number; origen_tipo: string; motivo: string }>;
   apercibimientos_consolidados?: number;
   detalles?: ReportarAsistenciaResultadoDetalle[];
 }

@@ -140,7 +140,10 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
 
         # Transiciones automáticas de ciclo de vida
         ahora = timezone.now()
-        limite_preaviso = ahora + timezone.timedelta(days=2)
+        try:
+            limite_preaviso = MeetingComplianceService.calculate_notice_deadline(ahora)
+        except Exception:
+            limite_preaviso = ahora + timezone.timedelta(days=2)
 
         # 1. Anulación automática: Si estaba en CREADO y falta menos de 2 días hábiles (o ya inició)
         qs.filter(
