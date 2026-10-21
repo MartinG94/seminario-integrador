@@ -5,7 +5,8 @@ from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from expedientes.models import Expediente, SolicitudT01
-from padron.models import Socio as PadronSocio, SocioEstudio
+from padron.models import Socio as PadronSocio
+from padron.models import SocioEstudio
 from socios.models import Role
 from tests.legacy_schema import create_legacy_record
 
@@ -521,10 +522,9 @@ def test_t01_rejects_invalid_urgency_on_create_and_update(
     assert "urgencia" in response.data
     assert SolicitudT01.objects.get(pk=data["id"]).urgencia == "urgente"
 
+
 @pytest.mark.django_db
-def test_gestion_expedientes_filtra_por_legajo_principal_y_adicional(
-    make_socio, authenticate
-):
+def test_gestion_expedientes_filtra_por_legajo_principal_y_adicional(make_socio, authenticate):
     operador = make_socio(legajo="82000", role=Role.CD)
     client = authenticate(operador)
 
@@ -572,9 +572,7 @@ def test_gestion_expedientes_filtra_por_legajo_principal_y_adicional(
 
 
 @pytest.mark.django_db
-def test_gestion_expedientes_resuelve_legajo_institucional_por_usuario(
-    make_socio, authenticate
-):
+def test_gestion_expedientes_resuelve_legajo_institucional_por_usuario(make_socio, authenticate):
     operador = make_socio(legajo="82010", role=Role.CD)
     client = authenticate(operador)
     socio_local = make_socio(legajo="local-82011", role=Role.SOCIO)

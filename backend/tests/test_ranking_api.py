@@ -381,9 +381,7 @@ class TestRankingFilteringAndOrdering:
                 socio_motivoCambioEstado=1,
             )
 
-        response = api_client.get(
-            "/api/v1/ranking/?ordering=grupo,apellido,nombre"
-        )
+        response = api_client.get("/api/v1/ranking/?ordering=grupo,apellido,nombre")
 
         assert response.status_code == status.HTTP_200_OK
         assert [item["id"] for item in response.json()] == [
