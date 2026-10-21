@@ -40,26 +40,28 @@ Documentos rectores innegociables:
     - Falta injustificada a Reunión Ordinaria de Subcomisión: **-1.0 punto** (Art. 85.b).
     - Falta injustificada a Reunión Extraordinaria aprobada por CD: **-1.5 puntos** (Art. 85.b).
     - Falta injustificada a Asamblea Ordinaria o Extraordinaria: **-2.0 puntos** (Art. 85.c).
-    - Falta injustificada a Actividad de Mantenimiento / Voluntariado: **-1.0 punto** (Art. 85.a/d).
+    - Falta injustificada a Actividad de Mantenimiento / Voluntariado: **-1.0 punto por defecto**, o el puntaje personalizado definido en `puntos_sancion` para la actividad (Art. 85.a/d).
     - Tardanza grave (> 30 min) o retiro anticipado grave (> 30 min): **-0.5 puntos** (Art. 100.b/d).
     - Tardanza leve (15-30 min) o retiro anticipado leve: **Apercibimiento / llamado de atención** (Art. 100.a/c).
 - **CA4 — Régimen de Acumulación Atómica de Apercibimientos 3:1:**
-  - Cuando un socio incurre en un apercibimiento o llamado de atención, el sistema registra el hecho en un libro mayor independiente sin modificar el saldo de puntos (los apercibimientos no son ±0,33 ni ±0,5).
-  - Cuando un socio acumula exactamente tres (3) apercibimientos pendientes, el sistema consolida la terna generando automáticamente un expediente formal por **-1.0 punto** neto una sola vez, marcando los apercibimientos como `CONSOLIDADO` para impedir dobles cómputos.
+  - Cuando un socio incurre en un apercibimiento o llamado de atención, el sistema registra y acumula el contador en la entidad preexistente `atencionFelicitacion` (PK `nroSocio`) sin modificar el saldo de puntos (los apercibimientos no son ±0,33 ni ±0,5).
+  - Cuando un socio acumula tres (3) llamados de atención pendientes (`llamadosAtencion >= 3`), el sistema consolida la terna generando automáticamente un expediente formal por **-1.0 punto** neto una sola vez y descuenta 3 del contador (`llamadosAtencion -= 3`) para impedir dobles cómputos. De manera simétrica, cada tres (3) felicitaciones acumulan un mérito de **+1.0 punto**.
 - **CA5 — Cero Sentencias UPDATE Manuales y Flujo Formal:**
   - Cuando se procesa el cierre de un evento con socios sancionables, el sistema genera de oficio expedientes en estado `CREADO` (`EXP-NNNN/YYYY`).
   - Ninguna operación de eventos o acumulación escribe o modifica directamente la columna `saldo` en la base de datos MySQL (cumplimiento estricto de la Regla Innegociable 3 y ADR-001). El impacto en el saldo solo ocurrirá cuando el Tribunal de Disciplina sustancie la causa y emita la resolución final colegiada.
-- **CA6 — Flexibilidad de Convocatoria a Individuos (Grupos, Subcomisiones y Listas Personalizadas):**
-  - Cuando una autoridad convoca a una reunión o actividad con fecha y hora, el sistema permite definir la nómina de convocados bajo tres modalidades combinables:
-    1. **Por Grupo Social Completo:** Convocatoria masiva a todos los socios pertenecientes a una cohorte específica (ej. todo el grupo `G58`, o `G57`, `G59`, `G60`).
-    2. **Por Subcomisión Completa:** Convocatoria masiva a todos los socios asignados a una subcomisión reglamentaria (ej. toda la Subcomisión de `Cómputos`, `RRHH`, etc.).
-    3. **Por Listas Personalizadas / Ad-Hoc de Gente (Mejora):** Convocatoria a una nómina ad-hoc mediante búsqueda y selección reactiva de socios (estilo Select2) por nombre, apellido o legajo, permitiendo además combinar un grupo o subcomisión base y agregar/quitar socios puntuales.
-- **CA7 — Notificación Automática por Correo Electrónico (Art. 95 R.I.):**
-  - Cuando una reunión o actividad institucional es creada y publicada formalmente en el sistema, el sistema genera y despacha de manera automática una notificación individual por correo electrónico a cada uno de los socios citados a través del servicio transaccional Outbox (`EmailDispatcherService`).
+- **CA6 — Flexibilidad de Convocatoria a Individuos (Grupos, Subcomisiones, Estado Social y Listas Personalizadas):**
+  - Cuando una autoridad convoca a una reunión o actividad con fecha y hora, el sistema permite definir la nómina de convocados (persistida en `tribunal_evento_convocado`) bajo cuatro modalidades:
+    1. **Por Grupo Social Completo (`GRUPO`):** Convocatoria masiva a todos los socios pertenecientes a una cohorte específica (ej. todo el grupo `G58`, o `G55`–`G60`).
+    2. **Por Subcomisión Completa (`SUBCOMISION`):** Convocatoria masiva a todos los socios asignados a una subcomisión reglamentaria (ej. toda la Subcomisión de `Cómputos`, `Finanzas`, etc.).
+    3. **Por Estado Social (`ESTADO_SOCIAL`):** Convocatoria masiva por tramo de carrera social (`JUNIORS` de 1° a 3° año social, o `SENIORS` de 4° año en adelante).
+    4. **Por Listas Personalizadas / Ad-Hoc de Gente (`PERSONALIZADA`):** Convocatoria a una nómina ad-hoc mediante búsqueda y selección reactiva de socios (estilo Select2) por nombre, apellido o legajo.
+- **CA7 — Notificación Automática por Correo Electrónico y Ciclo de Vida de 6 Estados (Art. 95 R.I.):**
+  - El ciclo de vida del evento contempla 6 estados formales: `CREADO`, `NOTIFICADO`, `EN_CURSO`, `ABIERTO`, `FINALIZADO` y `ANULADO`.
+  - Cuando una reunión o actividad institucional es notificada (al crearse con `notificar=True` o mediante la acción `/notificar/`), el sistema despacha de manera automática una notificación individual por correo electrónico a cada uno de los socios citados a través del servicio transaccional Outbox (`EmailDispatcherService`), y envía correos de disculpas si un evento notificado se anula (`/anular/`).
   - El correo notifica formalmente la citación con asunto claro, fecha, hora de inicio, lugar/modalidad (sede, externa o link virtual), tolerancia, carácter del evento (`OBLIGATORIA Y SANCIONABLE` o `NO SANCIONABLE`) y enlace seguro directo a la plataforma, cumplimentando la notificación exigida por el Art. 95 del Reglamento Interno.
 - **CA8 — Campos Mínimos Obligatorios y Fecha de Finalización Opcional:**
-  - Al dar de alta un evento, son obligatorios mínimos: `titulo` (título o denominación), `fecha_hora_inicio` (timestamp de inicio), `categoria` (`REUNION` o `ACTIVIDAD`), `tipo` (subtipo reglamentario correspondiente) y `modalidad` (`PRESENCIAL_SEDE`, `PRESENCIAL_EXTERNA` o `VIRTUAL`).
-  - El campo `fecha_hora_fin` es estrictamente **opcional** (`null=True`). La aplicación permite iniciar y gestionar eventos de duración abierta sin exigir una hora de finalización anticipada.
+  - Al dar de alta un evento, son obligatorios mínimos: `titulo` (`nombre`), `fecha_programada` (`fechaHoraInicio`), `categoria` (`REUNION` o `ACTIVIDAD`), `tipo` (subtipo reglamentario correspondiente) y `modalidad` (`PRESENCIAL_SEDE`, `PRESENCIAL_EXTERNA` o `VIRTUAL`). Para `ACTIVIDAD` es obligatorio consignar `detalle_tarea`.
+  - El campo `fecha_fin` (`fechaHoraFin`) es estrictamente **opcional** (`null=True`). La aplicación permite iniciar y gestionar eventos de duración abierta (estado `ABIERTO`) y fijar la hora de finalización con posterioridad (`/fijar-hora-fin/`).
 - **CA9 — Distinción Formal entre "Reunión" y "Actividad":**
   - El sistema distingue formalmente a nivel de base de datos, backend y frontend la categoría del evento:
     - `REUNION`: Ámbito deliberativo, reglamentario o asambleario (subtipos: `ORDINARIA`, `EXTRAORDINARIA`, `ASAMBLEA`, `PLENARIO`).

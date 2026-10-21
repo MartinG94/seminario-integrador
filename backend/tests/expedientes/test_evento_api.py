@@ -916,6 +916,57 @@ class TestRegistroApercibimientosAPI:
         assert res.data["estado_social_convocado"] == "JUNIORS"
         assert res.data["total_convocados"] >= 1
 
+    def test_reportar_asistencia_con_aliases_frontend_y_justificado(
+        self, api_client, cd_user, socio_user_1, socio_user_2
+    ):
+        """Acepta aliases del Frontend (AUSENTE_INJUSTIFICADO, TARDANZA_LEVE, JUSTIFICADO)."""
+        evento = EventoInstitucional.objects.create(
+            titulo="Reunión con Aliases Frontend",
+            categoria=CategoriaEventoEnum.REUNION,
+            tipo=SubtipoReunionEnum.ORDINARIA,
+            modalidad=ModalidadEventoEnum.PRESENCIAL_SEDE,
+            fecha_publicacion=timezone.now() - timedelta(days=5),
+            fecha_programada=timezone.now() + timedelta(days=3),
+            convocante=cd_user.socio,
+            es_sancionable=True,
+        )
+
+        api_client.force_authenticate(user=cd_user)
+        payload = {
+            "estrategia": "MANUAL",
+            "cerrar_evento": True,
+            "asistencias": [
+                {
+                    "socio_id": socio_user_1.socio.id,
+                    "estado_asistencia": "AUSENTE_INJUSTIFICADO",
+                    "motivo": "Inasistencia sin aviso",
+                },
+                {
+                    "socio_id": socio_user_2.socio.id,
+                    "estado_asistencia": "JUSTIFICADO",
+                    "motivo": "Certificado de examen final",
+                },
+            ],
+        }
+        res = api_client.post(
+            f"/api/v1/expedientes/eventos/{evento.id}/reportar-asistencia/",
+            payload,
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK, res.data
+        assert res.data["expedientes_generados"] == 1
+        assert res.data["apercibimientos_generados"] == 0
+        assert res.data["asistencias_procesadas"] == 2
+
+        # Idempotencia: reintentar cierre no debe duplicar expedientes
+        res_retry = api_client.post(
+            f"/api/v1/expedientes/eventos/{evento.id}/reportar-asistencia/",
+            payload,
+            format="json",
+        )
+        assert res_retry.status_code == status.HTTP_200_OK
+        assert res_retry.data["expedientes_generados"] == 0
+
 
 @pytest.mark.django_db
 class TestRutasDirectasEventosAPI:

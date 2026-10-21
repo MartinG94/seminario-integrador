@@ -115,6 +115,19 @@ describe('ResumenCierreDialogComponent (T16 / CA3 / CA4 / CA5 / CA9)', () => {
 
     const ausenteAsamblea = component.actuacionesPrevistas.find(a => a.socioId === 2);
     expect(ausenteAsamblea?.puntos).toBe(-2.0);
+
+    // Probar Actividad con puntos_sancion personalizado (-2.5)
+    component.data = {
+      ...dialogDataMock,
+      evento: { ...mockEventoActividad, puntos_sancion: -2.5 }
+    };
+    component.totalPresentes = 0;
+    component.totalExpedientes = 0;
+    component.totalApercibimientos = 0;
+    component.calcularActuaciones();
+
+    const ausenteActividadCustom = component.actuacionesPrevistas.find(a => a.socioId === 2);
+    expect(ausenteActividadCustom?.puntos).toBe(-2.5);
   });
 
   it('debe previsualizar 0 expedientes si el evento es NO SANCIONABLE (CA1 / CA2)', () => {

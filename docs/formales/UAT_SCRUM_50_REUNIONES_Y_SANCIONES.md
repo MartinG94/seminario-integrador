@@ -107,9 +107,9 @@ La base de datos cuenta con cuentas sembradas e idénticas credenciales seguras 
 
 | Paso | Acción del Usuario | Datos de Entrada | Resultado Esperado |
 |---|---|---|---|
-| 4.1 | Consultar el legajo del socio de prueba | Socio con 2 apercibimientos `PENDIENTE` | Libro mayor registra 2 llamadas de atención previas. Saldo actual: `0.00 pts`. |
-| 4.2 | Procesar una asistencia donde el socio incurre en un 3er apercibimiento | Estado: `TARDE_LEVE`, Motivo: *"Tercera tardanza acumulada del mes"* | El motor `WarningAccumulationService` adquiere lock `select_for_update()`. |
-| 4.3 | Verificación de Consolidación | Proceso automático | 1. Se genera un `lote_consolidacion` con UUID único.<br>2. Los 3 registros pasan de `PENDIENTE` a `CONSOLIDADO`.<br>3. Se abre un expediente disciplinario formal (`EXP-NNNN/2026`) en estado `CREADO` por **-1.00 punto** neto. |
+| 4.1 | Consultar el legajo del socio de prueba | Socio con 2 llamados de atención acumulados en `atencionFelicitacion` (`llamadosAtencion = 2`) | El contador del socio registra 2 llamados de atención previos. Saldo actual: `0.00 pts`. |
+| 4.2 | Procesar una asistencia donde el socio incurre en un 3er llamado de atención | Estado: `TARDE_LEVE`, Motivo: *"Tercera tardanza acumulada del mes"* | El motor `WarningAccumulationService` adquiere lock `select_for_update()` sobre `Socio` y `AtencionFelicitacion`. |
+| 4.3 | Verificación de Consolidación | Proceso automático | 1. El contador `llamadosAtencion` descuenta 3 unidades (vuelve a `0`).<br>2. La asistencia queda marcada con `notificado = True` y `fechaNotificacion`.<br>3. Se abre un expediente disciplinario formal (`EXP-NNNN/2026`) en estado `CREADO` por **-1.00 punto** neto. |
 | 4.4 | Auditoría en Base de Datos MySQL | Consulta SQL directa sobre `socios_socio` | **La columna `saldo` no sufre UPDATE manual y permanece en `0.00 pts`** (Regla Innegociable 3). |
 | 4.5 | Auditoría en Sala del Tribunal | Ingreso con usuario Tribunal (`408917`) | El expediente derivado de la consolidación aparece en la bandeja de entrada para sustanciación reglamentaria. |
 

@@ -37,58 +37,89 @@ La solución aplica los principios de Arquitectura Hexagonal / Domain-Driven Des
 
 ---
 
-## 2. Modelo Relacional de Base de Datos (MySQL 8.0)
+## 2. Modelo Relacional de Base de Datos Legacy AVEIT (MySQL 8.0)
 
-### 2.1 Tablas y Esquema DDL
+### 2.1 Tablas y Esquema DDL (Regla Innegociable 6 — Nomenclatura Legacy)
 
 ```sql
+-- 0. Categorías de Eventos Institucionales
+CREATE TABLE `tribunal_categoriaevento` (
+    `idCategoria` INT NOT NULL AUTO_INCREMENT,
+    `codigo` VARCHAR(20) NOT NULL UNIQUE,
+    `nombre` VARCHAR(50) NOT NULL,
+    PRIMARY KEY (`idCategoria`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 1. Eventos Institucionales: Reuniones y Actividades (CA1 / CA2 / CA8 / CA9 / CA10)
-CREATE TABLE `expedientes_evento` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `titulo` VARCHAR(200) NOT NULL,
+CREATE TABLE `tribunal_evento` (
+    `idEvento` INT NOT NULL AUTO_INCREMENT,
+    `nombre` VARCHAR(128) NOT NULL,
     `descripcion` LONGTEXT NOT NULL DEFAULT '',
-    `categoria` VARCHAR(20) NOT NULL, -- 'REUNION' o 'ACTIVIDAD'
-    `tipo` VARCHAR(30) NOT NULL,      -- Subtipo reglamentario según categoría
+    `categoria_id` INT NULL,
+    `categoria` VARCHAR(20) NOT NULL DEFAULT 'REUNION', -- 'REUNION' o 'ACTIVIDAD'
+    `tipo` VARCHAR(30) NOT NULL DEFAULT 'ORDINARIA',    -- Subtipo reglamentario según categoría
     `modalidad` VARCHAR(30) NOT NULL DEFAULT 'PRESENCIAL_SEDE', -- 'PRESENCIAL_SEDE', 'PRESENCIAL_EXTERNA', 'VIRTUAL'
     `ubicacion` VARCHAR(255) NULL,    -- Dirección física o enlace de videoconferencia
     `lugar` VARCHAR(200) NOT NULL DEFAULT 'Sede Central AVEIT',
     `fecha_publicacion` DATETIME(6) NOT NULL,
-    `fecha_programada` DATETIME(6) NOT NULL, -- Fecha y hora de inicio obligatoria
-    `fecha_fin` DATETIME(6) NULL,            -- Fecha y hora de finalización estrictamente opcional
+    `fechaHoraInicio` DATETIME(6) NOT NULL, -- Fecha y hora de inicio obligatoria
+    `fechaHoraFin` DATETIME(6) NULL,        -- Fecha y hora de finalización estrictamente opcional
+    `tieneHoraFin` TINYINT(1) NOT NULL DEFAULT 0,
     `fecha_hora_cierre_efectivo` DATETIME(6) NULL, -- Timestamp real de finalización/cierre
     `fecha_reporte` DATETIME(6) NULL,
-    `tolerancia_tardanza_minutos` SMALLINT UNSIGNED NOT NULL DEFAULT 15,
+    `toleranciaLeveMinutos` SMALLINT UNSIGNED NOT NULL DEFAULT 15,
+    `toleranciaGraveMinutos` SMALLINT UNSIGNED NOT NULL DEFAULT 30,
     `tolerancia_retiro_minutos` SMALLINT UNSIGNED NOT NULL DEFAULT 15,
-    `estado` VARCHAR(30) NOT NULL DEFAULT 'PROGRAMADA',
-    `modo_convocatoria` VARCHAR(30) NOT NULL DEFAULT 'PERSONALIZADA',
+    `estado` VARCHAR(30) NOT NULL DEFAULT 'CREADO', -- CREADO, NOTIFICADO, EN_CURSO, ABIERTO, FINALIZADO, ANULADO
+    `estadoEvento_id` INT NOT NULL DEFAULT 1,
+    `modo_convocatoria` VARCHAR(30) NOT NULL DEFAULT 'PERSONALIZADA', -- GRUPO, SUBCOMISION, ESTADO_SOCIAL, PERSONALIZADA
+    `afectados_id` INT NOT NULL DEFAULT 20,
     `grupo_convocado` VARCHAR(10) NULL,
+    `estado_social_convocado` VARCHAR(20) NULL, -- JUNIORS o SENIORS
+    `detalle_tarea` LONGTEXT NOT NULL DEFAULT '',
+    `puntos_sancion` DECIMAL(4, 2) NULL,
+    `motivo_cancelacion` LONGTEXT NULL,
     `es_obligatoria` TINYINT(1) NOT NULL DEFAULT 1,
     `es_sancionable` TINYINT(1) NOT NULL DEFAULT 0,
     `motivo_no_sancionable` LONGTEXT NULL,
-    `convocante_id` BIGINT NOT NULL,
+    `responsable_id` BIGINT NOT NULL,
     `subcomision_id` INT NULL,
     `reportado_por_id` BIGINT NULL,
     `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    PRIMARY KEY (`id`),
-    CONSTRAINT `fk_evento_convocante` FOREIGN KEY (`convocante_id`) REFERENCES `socios_socio` (`id`) ON DELETE PROTECT,
+    PRIMARY KEY (`idEvento`),
+    CONSTRAINT `fk_evento_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `socios_socio` (`id`) ON DELETE PROTECT,
     CONSTRAINT `fk_evento_subcomision` FOREIGN KEY (`subcomision_id`) REFERENCES `socios_subcomision` (`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_evento_reportante` FOREIGN KEY (`reportado_por_id`) REFERENCES `socios_socio` (`id`) ON DELETE SET NULL,
-    CONSTRAINT `chk_evento_publicacion_previa` CHECK (`fecha_publicacion` <= `fecha_programada`),
-    CONSTRAINT `chk_evento_fin_coherente` CHECK (`fecha_fin` IS NULL OR `fecha_fin` >= `fecha_programada`)
+    CONSTRAINT `chk_evento_publicacion_previa` CHECK (`fecha_publicacion` <= `fechaHoraInicio`),
+    CONSTRAINT `chk_evento_fin_coherente` CHECK (`fechaHoraFin` IS NULL OR `fechaHoraFin` >= `fechaHoraInicio`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX `idx_evento_fecha_prog_estado` ON `expedientes_evento` (`fecha_programada`, `estado`);
-CREATE INDEX `idx_evento_cat_tipo_sancionable` ON `expedientes_evento` (`categoria`, `tipo`, `es_sancionable`);
+CREATE INDEX `idx_evento_fechainicio_estado` ON `tribunal_evento` (`fechaHoraInicio`, `estado`);
+CREATE INDEX `idx_evento_cat_tipo_sanc` ON `tribunal_evento` (`categoria`, `tipo`, `es_sancionable`);
 
--- 2. Registros Individuales de Asistencia con Motivo Circunstanciado (CA10)
-CREATE TABLE `expedientes_asistencia_evento` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `evento_id` BIGINT NOT NULL,
+-- 2. Nómina de Socios Convocados a Evento (CA6)
+CREATE TABLE `tribunal_evento_convocado` (
+    `idConvocado` INT NOT NULL AUTO_INCREMENT,
+    `evento_id` INT NOT NULL,
     `socio_id` BIGINT NOT NULL,
-    `estado_asistencia` VARCHAR(30) NOT NULL,
-    `hora_registro` DATETIME(6) NULL,
-    `hora_salida` DATETIME(6) NULL,
+    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (`idConvocado`),
+    UNIQUE KEY `unique_convocado_evento_socio` (`evento_id`, `socio_id`),
+    CONSTRAINT `fk_convocado_evento` FOREIGN KEY (`evento_id`) REFERENCES `tribunal_evento` (`idEvento`) ON DELETE CASCADE,
+    CONSTRAINT `fk_convocado_socio` FOREIGN KEY (`socio_id`) REFERENCES `socios_socio` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Registros Individuales de Asistencia con Motivo Circunstanciado (CA10)
+CREATE TABLE `tribunal_asistente` (
+    `idAsistente` INT NOT NULL AUTO_INCREMENT,
+    `evento_id` INT NOT NULL,
+    `socio_id` BIGINT NOT NULL,
+    `estado_asistencia` VARCHAR(30) NOT NULL DEFAULT 'PRESENTE',
+    `fechaHoraLlegada` DATETIME(6) NULL,
+    `fechaHoraSalida` DATETIME(6) NULL,
+    `notificado` TINYINT(1) NOT NULL DEFAULT 0,
+    `fechaNotificacion` DATE NULL,
     `minutos_tardanza` INT UNSIGNED NOT NULL DEFAULT 0,
     `minutos_retiro_anticipado` INT UNSIGNED NOT NULL DEFAULT 0,
     `metodo_captura` VARCHAR(20) NOT NULL DEFAULT 'MANUAL',
@@ -97,43 +128,22 @@ CREATE TABLE `expedientes_asistencia_evento` (
     `observaciones` LONGTEXT NOT NULL DEFAULT '', -- Notas accesorias de la marcación
     `procesado_disciplinario` TINYINT(1) NOT NULL DEFAULT 0,
     `expediente_generado_id` BIGINT NULL,
-    `apercibimiento_generado_id` BIGINT NULL,
     `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    PRIMARY KEY (`id`),
+    PRIMARY KEY (`idAsistente`),
     UNIQUE KEY `unique_asistencia_per_evento_socio` (`evento_id`, `socio_id`),
-    CONSTRAINT `fk_asist_evento` FOREIGN KEY (`evento_id`) REFERENCES `expedientes_evento` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_asist_evento` FOREIGN KEY (`evento_id`) REFERENCES `tribunal_evento` (`idEvento`) ON DELETE CASCADE,
     CONSTRAINT `fk_asist_socio` FOREIGN KEY (`socio_id`) REFERENCES `socios_socio` (`id`) ON DELETE PROTECT,
     CONSTRAINT `fk_asist_expediente` FOREIGN KEY (`expediente_generado_id`) REFERENCES `expedientes_expediente` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Libro Mayor de Apercibimientos / Llamados de Atención (CA4)
-CREATE TABLE `expedientes_registro_apercibimiento` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `socio_id` BIGINT NOT NULL,
-    `origen_tipo` VARCHAR(30) NOT NULL,
-    `asistencia_id` BIGINT NULL,
-    `expediente_origen_id` BIGINT NULL,
-    `solicitud_t01_id` CHAR(36) NULL,
-    `fecha_hecho` DATE NOT NULL,
-    `motivo` LONGTEXT NOT NULL,
-    `articulo_reglamento` VARCHAR(50) NOT NULL DEFAULT 'Art. 83',
-    `estado` VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
-    `lote_consolidacion` CHAR(36) NULL,
-    `expediente_sancion_id` BIGINT NULL,
-    `fecha_consolidacion` DATETIME(6) NULL,
-    `actor_registro` VARCHAR(150) NOT NULL DEFAULT 'SISTEMA',
-    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    PRIMARY KEY (`id`),
-    CONSTRAINT `fk_aperc_socio` FOREIGN KEY (`socio_id`) REFERENCES `socios_socio` (`id`) ON DELETE PROTECT,
-    CONSTRAINT `fk_aperc_asistencia` FOREIGN KEY (`asistencia_id`) REFERENCES `expedientes_asistencia_reunion` (`id`) ON DELETE SET NULL,
-    CONSTRAINT `fk_aperc_exp_sancion` FOREIGN KEY (`expediente_sancion_id`) REFERENCES `expedientes_expediente` (`id`) ON DELETE PROTECT,
-    CONSTRAINT `chk_aperc_consolidado` CHECK (
-        (`estado` = 'CONSOLIDADO' AND `lote_consolidacion` IS NOT NULL AND `expediente_sancion_id` IS NOT NULL) OR
-        (`estado` <> 'CONSOLIDADO')
-    )
+-- 4. Control de Llamados de Atención y Felicitaciones por Socio (CA4 / Regla 3:1)
+CREATE TABLE `atencionFelicitacion` (
+    `nroSocio` BIGINT NOT NULL,
+    `felicitaciones` INT NOT NULL DEFAULT 0,
+    `llamadosAtencion` INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (`nroSocio`),
+    CONSTRAINT `fk_atencion_socio` FOREIGN KEY (`nroSocio`) REFERENCES `socios_socio` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX `idx_aperc_socio_est_created` ON `expedientes_registro_apercibimiento` (`socio_id`, `estado`, `created_at`);
 ```
 
 ---
@@ -169,17 +179,16 @@ El servicio `MeetingComplianceService` implementa:
    - Invoca `compute_business_deadline(base_timestamp, business_days=3)` (72 horas hábiles = 3 días hábiles).
    - Si `fecha_reporte > limite`, `es_sancionable = False` ("Reporte presentado fuera de las 72 hs hábiles").
 
-### 4.2 Acumulación Atómica 3:1 de Apercibimientos (CA4) y Concurrencia
-El servicio `WarningAccumulationService` asegura el aislamiento transaccional:
+### 4.2 Acumulación Atómica 3:1 de Apercibimientos y Felicitaciones (CA4) y Concurrencia
+El servicio `WarningAccumulationService` asegura el aislamiento transaccional sobre `atencionFelicitacion`:
 1. `transaction.atomic()` engloba todo el procesamiento.
 2. Bloqueo pesimista del socio: `Socio.objects.select_for_update().get(pk=socio_id)`.
-3. Inserción del apercibimiento en `PENDIENTE`.
-4. Búsqueda de pendientes bloqueados: `RegistroApercibimiento.objects.select_for_update().filter(socio=socio, estado='PENDIENTE').order_by('created_at')`.
-5. Si `len(pendientes) >= 3`:
-   - Se toma la terna más antigua (3 registros).
-   - Se genera el `UUID` del lote.
-   - Se crea el expediente de oficio por `-1.0` punto en estado `CREADO` (`ExpedienteWorkflowService.open_expediente`).
-   - Se actualizan los 3 registros a `CONSOLIDADO` con el ID del expediente.
+3. Bloqueo pesimista de su registro en `atencionFelicitacion`: `AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)`.
+4. Incremento del contador `llamadosAtencion += 1`.
+5. Si `llamadosAtencion >= 3`:
+   - Se descuenta la terna (`llamadosAtencion -= 3`).
+   - Se crea el expediente de oficio por `-1.00` punto en estado `CREADO` (`ExpedienteWorkflowService.open_expediente`).
+   - De igual forma, `register_felicitacion` acumula `felicitaciones += 1` y consolida cada 3 en un mérito de `+1.00` punto.
 
 ### 4.3 Generación de Sanciones Directas (CA3 / CA5 / CA9)
 En eventos sancionables (`es_sancionable = True`), las actuaciones se gradúan según categoría y tipo:
@@ -188,10 +197,11 @@ En eventos sancionables (`es_sancionable = True`), las actuaciones se gradúan s
   - Inasistencia injustificada a Extraordinaria: Expediente en estado `CREADO` por `-1.5` puntos (Art. 85.b).
   - Inasistencia injustificada a Asamblea: Expediente en estado `CREADO` por `-2.0` puntos (Art. 85.c).
 - **Categoría ACTIVIDAD:**
-  - Inasistencia injustificada a Mantenimiento / Voluntariado: Expediente en estado `CREADO` por `-1.0` punto (Art. 85.a/d).
+  - Inasistencia injustificada a Mantenimiento / Voluntariado / Jornada / Guardia: Expediente en estado `CREADO` por `-1.0` punto por defecto, o por el puntaje configurado en `puntos_sancion` (Art. 85.a/d).
 - **Graduaciones Comunes:**
   - Tardanza o Retiro grave (> 30 min): Expediente en estado `CREADO` por `-0.5` puntos (Art. 100.b/d).
-  - Tardanza o Retiro leve (15-30 min): Registro de apercibimiento derivado al motor 3:1 (Art. 100.a/c).
+  - Tardanza o Retiro leve (15-30 min): Registro de llamado de atención derivado al motor 3:1 en `atencionFelicitacion` (Art. 100.a/c).
+  - Ausencia Justificada (`JUSTIFICADO`) o Presente (`PRESENTE`): 0 puntos, sin actuación disciplinaria.
 
 ### 4.4 Servicio de Notificación Automática por Correo (CA7 / Art. 95 R.I.)
 El servicio `MeetingNoticeNotificationService` (`backend/expedientes/services/meeting_notice_service.py`):

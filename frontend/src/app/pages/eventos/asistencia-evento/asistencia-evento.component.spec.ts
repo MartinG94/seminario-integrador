@@ -205,4 +205,112 @@ describe('AsistenciaEventoComponent (Rediseño 2 Pestañas / SCRUM-50)', () => {
     expect(component.eventoActivo?.estado).toBe('FINALIZADO');
     expect(notificationSpy.success).toHaveBeenCalled();
   });
+
+  it('QA-FE-01: crearEventoSubmit debe crear el evento, resetear el formulario y cambiar a la pestaña Mis Eventos', () => {
+    const eventoCreado: EventoInstitucional = {
+      ...mockEvento,
+      id: 99,
+      titulo: 'Reunión Plenaria QA',
+      estado: 'NOTIFICADO'
+    };
+    eventoServiceSpy.crearEvento.and.returnValue(of(eventoCreado));
+
+    component.crearForm.patchValue({
+      titulo: 'Reunión Plenaria QA',
+      categoria: 'REUNION',
+      tipo: 'ORDINARIA',
+      modalidad: 'PRESENCIAL_SEDE',
+      fecha_programada: '2026-10-28T18:00',
+      modo_convocatoria: 'GRUPO',
+      grupo_convocado: 'G58',
+      notificar: true
+    });
+
+    component.crearEventoSubmit();
+
+    expect(eventoServiceSpy.crearEvento).toHaveBeenCalled();
+    expect(notificationSpy.success).toHaveBeenCalledWith(
+      'Evento "Reunión Plenaria QA" generado y notificado formalmente a los convocados.'
+    );
+    expect(component.tabActiva).toBe('mis-eventos');
+  });
+
+  it('QA-FE-02: confirmarHoraFin debe registrar la hora de fin y actualizar el estado del evento abierto', () => {
+    const eventoAbierto: EventoInstitucional = {
+      ...mockEvento,
+      id: 50,
+      estado: 'ABIERTO',
+      fecha_fin: null
+    };
+    eventoServiceSpy.fijarHoraFin.and.returnValue(
+      of({
+        detail: 'Fecha de finalización registrada exitosamente.',
+        evento: { ...eventoAbierto, estado: 'FINALIZADO', fecha_fin: '2026-10-20T20:00:00Z' }
+      })
+    );
+
+    component.abrirModalHoraFin(eventoAbierto);
+    expect(component.modalHoraFinVisible).toBeTrue();
+    component.horaFinInput = '2026-10-20T20:00';
+    component.confirmarHoraFin();
+
+    expect(eventoServiceSpy.fijarHoraFin).toHaveBeenCalled();
+    expect(eventoAbierto.estado).toBe('FINALIZADO');
+    expect(component.modalHoraFinVisible).toBeFalse();
+    expect(notificationSpy.success).toHaveBeenCalled();
+  });
+
+  it('QA-FE-03: confirmarAnulacion debe anular el evento con motivo y cerrar el modal', () => {
+    const eventoNotificado: EventoInstitucional = {
+      ...mockEvento,
+      id: 60,
+      estado: 'NOTIFICADO'
+    };
+    eventoServiceSpy.anularEvento.and.returnValue(
+      of({
+        detail: 'Evento anulado correctamente.',
+        evento: {
+          ...eventoNotificado,
+          estado: 'ANULADO',
+          motivo_cancelacion: 'Corte de suministro eléctrico en sede'
+        }
+      })
+    );
+
+    component.abrirModalAnular(eventoNotificado);
+    expect(component.modalAnularVisible).toBeTrue();
+    component.motivoAnulacionInput = 'Corte de suministro eléctrico en sede';
+    component.confirmarAnulacion();
+
+    expect(eventoServiceSpy.anularEvento).toHaveBeenCalledWith(
+      60,
+      'Corte de suministro eléctrico en sede'
+    );
+    expect(eventoNotificado.estado).toBe('ANULADO');
+    expect(component.modalAnularVisible).toBeFalse();
+    expect(notificationSpy.success).toHaveBeenCalled();
+  });
+
+  it('QA-FE-04: seleccionarSocio y removerSocio deben administrar la lista de convocatoria PERSONALIZADA', () => {
+    const socioMock = {
+      id: 777,
+      legajo: '74907',
+      first_name: 'Lucas',
+      last_name: 'Gastiaburu',
+      full_name: 'Lucas Gastiaburu',
+      email: 'lucas@aveit.org.ar',
+      role: 'SOCIO',
+      category: 'ACTIVE',
+      social_year: 3,
+      subcomision: 'Cómputos',
+      is_enabled: true
+    };
+
+    component.seleccionarSocio(socioMock as any);
+    expect(component.sociosSeleccionados.length).toBe(1);
+    expect(component.sociosSeleccionados[0].id).toBe(777);
+
+    component.removerSocio(777);
+    expect(component.sociosSeleccionados.length).toBe(0);
+  });
 });
