@@ -11,7 +11,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 | **Sprint 0** | 18/08 al 08/09 | **Fundacional:** Relevamiento, Anteproyecto, ERS, BPMN, Arquitectura, Acuerdos de Trabajo, Prototipado UX y Gobernanza SDD. | — | **Completado** |
 | **Sprint 1** | 09/09 al 22/09 | **Walking Skeleton:** Autenticación JWT, Roles RBAC, Padrón institucional, Ranking oficial de puntos y Legajo de socio. | `SCRUM-34` a `SCRUM-39` (20 SP) | **Completado (20 SP)** |
 | **Sprint 2** | 23/09 al 06/10 | **Expedientes, Notificaciones y Monitoreo:** Formulario T01 multi-socio, competencias (Arts. 21-26), Outbox email, Tablero 6 Estados y Mis Solicitudes T01. | `SCRUM-40` a `SCRUM-44`, `SCRUM-75` (23 SP) | **Completado (23 SP)** |
-| **Sprint 3** | 07/10 al 20/10 | **Descargos y Plazos Preclusivos:** Formularios T02 y T03 con adjuntos probatorios (PDF/imágenes) y temporizador regresivo de 5 días hábiles. | `SCRUM-45` a `SCRUM-50` (19 SP) | **Próximo a Iniciar / En Curso** |
+| **Sprint 3** | 08/10 al 20/10 | **Descargos, Evidencias, Calendario y Asistencias:** Formularios T02 y T03 con adjuntos protegidos, calendario de días hábiles, urgencia, asistencias y formato oficial del TD. | `SCRUM-45` a `SCRUM-50`, `SCRUM-76` a `SCRUM-84` (36 SP) | **Cierre / En Homologación (31/36 SP)** |
 | **Sprint 4** | 21/10 al 03/11 | **Sustanciación y Votación Colegiada:** Módulo 'Justificaciones' del TD, gestión de inhibiciones/suplencias, votación nominal remota y firma colegiada de Activos. | `SCRUM-51` a `SCRUM-56` (22 SP) | Planificado |
 | **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | Planificado |
 | **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | Planificado |
@@ -281,7 +281,22 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 12. Instrucciones para la Actualización de este Archivo
+## 12. Sprint 3 — Desglose Atómico: SCRUM-84 (Apertura y Cierre Sprint en Documentación)
+
+> **Tarea Metodológica:** SCRUM-84: Apertura y Cierre de Sprint 3 en Documentación (Definición de Producto y Seguimiento de Proyecto).  
+> **Responsable:** Lucas Martín Guillén (Scrum Master).  
+> **Criterios de Aceptación:** CA1 (Formalización de S3 Apertura y Cierre en `docs/gestion-proyecto/DEFINICION_DE_PRODUCTO_S3_APERTURA_Y_CIERRE.md`), CA2 (Actualización de Sección 2.6 en `docs/gestion-proyecto/Seguimiento de Proyecto.md` con métricas reales, DoD e incremento demostrado), CA3 (Retrospectiva del Sprint 3 con técnica Barco de Vela y plan de acción para Sprint 4), CA4 (Formato listo para copiar y pegar en los documentos de Google Drive compartidos con Cátedra).
+
+- [x] **TS3-84.1 Documentación S3 Apertura en Definición de Producto:** Formalización de objetivos, requerimientos funcionales (`RF-08`, `RF-09`, `RF-10`, `RF-14`, `RF-16`, `RF-17`, `RF-18`), criterios EARS/Gherkin y casos de uso impactados (`CU-05`, `CU-06`, `CU-13`, `CU-14`).
+- [x] **TS3-84.2 Documentación S3 Cierre en Definición de Producto:** Formalización de directivas del PO del 07/10/2026 (simplificación de votación en Sala TD, firmas con grupo Gxx y suplencias, formato canónico VISTO-CONSIDERANDO-RESUELVE, cambio terminológico a Revisores de Cuentas, regla 3:1 de apercibimientos inmutable), matriz de trazabilidad y Release Plan a Sprint 4.
+- [x] **TS3-84.3 Documentación S3 Apertura en Seguimiento de Proyecto:** Planificación y Sprint Backlog con 36 Story Points y 14 ítems en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.6.1).
+- [x] **TS3-84.4 Documentación S3 Cierre en Seguimiento de Proyecto:** Resultado final del sprint con desglose de 22 SP finalizados, 9 SP en Testing-Calidad, 5 SP en curso, DoD 100% verificado, incremento tangible y enlaces a PRs en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.6.2).
+- [x] **TS3-84.5 Retrospectiva y Mejora Continua de Sprint 3:** Sailboat Retrospective con vientos, anclas, rocas y plan de acción concreto (A1: merge y homologación de ramas; A2: foco en editor unificado de resoluciones) en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.6.3).
+- [x] **TS3-84.6 Entrega de Bloques para Google Drive:** Archivo `docs/gestion-proyecto/DEFINICION_DE_PRODUCTO_S3_APERTURA_Y_CIERRE.md` generado en Markdown limpio para volcado inmediato en Google Drive ("ctrl+C, ctrl+V").
+
+---
+
+## 13. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.
