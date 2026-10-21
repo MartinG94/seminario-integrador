@@ -108,12 +108,97 @@ export interface EvidenciaMetadata {
   created_at: string;
 }
 
+export type OperacionDescargo = 'PRESENTADO' | 'CORREGIDO' | 'RETIRADO';
+
+/** Versión inmutable de un descargo, tal como la devuelve el historial del backend. */
+export interface DescargoVersionDto {
+  id: number;
+  numero: number;
+  operacion: OperacionDescargo;
+  operacion_display: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal: string;
+  texto: string;
+  archivo: string;
+  evidencias: Partial<EvidenciaMetadata>[];
+  actor: string;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  created_at: string;
+}
+
 export interface PresentarDescargoPayload {
   tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
   causal?: string;
   archivo?: string;
   texto?: string;
   evidencia_ids?: string[];
+}
+
+export type DecisionCausal = 'ACCEPTED' | 'REJECTED';
+
+export interface EvidenciaValorada {
+  id: string;
+  nombre_original: string;
+  sha256_hash: string;
+}
+
+export interface DecisionCausalDTO {
+  id: number;
+  descargo: number;
+  version: number;
+  decision: DecisionCausal;
+  decision_display: string;
+  regla_sugerida: DecisionCausal;
+  regla_sugerida_display: string;
+  se_aparta_de_regla: boolean;
+  fundamento: string;
+  evidencias_valoradas: EvidenciaValorada[];
+  autor: string;
+  autor_legajo: string;
+  autor_rol: string;
+  created_at: string;
+}
+
+export interface RegistrarDecisionCausalPayload {
+  decision: DecisionCausal;
+  fundamento?: string;
+  evidencia_ids?: string[];
+}
+
+export interface DescargoDetalleDTO {
+  id: number;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  socio_first_name?: string;
+  socio_last_name?: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  causal: string;
+  texto: string;
+  presentado_at: string | null;
+  evidencias: EvidenciaMetadata[];
+  regla_sugerida?: DecisionCausal;
+  decisiones_causal?: DecisionCausalDTO[];
+}
+
+export interface SocioInvolucradoDetalleDTO {
+  id: number;
+  legajo: string;
+  nombre: string;
+  first_name?: string;
+  last_name?: string;
+  grupo?: string;
+  estado?: string;
+}
+
+export interface ExpedienteDetalleDTO {
+  id: number;
+  numero: string;
+  estado: string;
+  socios?: SocioInvolucradoDetalleDTO[];
+  descargos: DescargoDetalleDTO[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -219,6 +304,31 @@ export class ExpedienteApiService {
 
   eliminarDescargo(expedienteId: number | string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
+  }
+
+  obtenerDetalleExpediente(expedienteId: number | string): Observable<ExpedienteDetalleDTO> {
+    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/`);
+  }
+
+  listarDecisionesCausal(expedienteId: number | string, descargoId: number): Observable<DecisionCausalDTO[]> {
+    return this.http.get<DecisionCausalDTO[]>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/decisiones/`
+    );
+  }
+
+  registrarDecisionCausal(
+    expedienteId: number | string,
+    descargoId: number,
+    payload: RegistrarDecisionCausalPayload
+  ): Observable<DecisionCausalDTO> {
+    return this.http.post<DecisionCausalDTO>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/decisiones/`,
+      payload
+    );
+  }
+
+  obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
+    return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
 }
 

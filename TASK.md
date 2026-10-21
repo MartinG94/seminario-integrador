@@ -266,6 +266,21 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 9.1 Sprint 3 — Desglose Atómico: S3-05 / SCRUM-49 (Presentar T03 Extraordinario con Fundamento Libre)
+
+> **Historia de Usuario:** S3-05 / SCRUM-49: Presentar T03 extraordinario con fundamento libre.  
+> **Criterios de Aceptación:** CA1 (distinción T02/T03 sin regresiones; el cambio de modalidad en plazo queda como versión), CA2 (cada alta/corrección genera una versión inmutable con sus evidencias; el retiro no destruye datos), CA3 (mismo plazo y controles de acceso), límite de 5.000 caracteres y historial real desde la API. CA4 (vinculación de fundamento/precedente por el TD) se movió a SCRUM-53 por decisión del PO.
+
+- [x] **TS3-05.1 Límite de 5.000 Caracteres [TDD]:** Constante única `MAX_DESCARGO_TEXT_LENGTH` en `backend/expedientes/domain/descargo_rules.py`, usada por el serializer, y límite equivalente en el frontend.
+- [x] **TS3-05.2 Modelo de Versiones y Migraciones [TDD]:** `DescargoVersion` inmutable, evidencias protegidas contra borrado en cascada, migración de esquema `0013` y backfill reversible `0014` con la versión 1 de los descargos existentes.
+- [x] **TS3-05.3 Versionado, Retiro Lógico y Re-presentación [TDD]:** `PresentarDescargoView` versiona cada alta, corrección y cambio T02↔T03; el retiro pasa a ser lógico (`RETIRADO`, solo en estado `justificando` y dentro del plazo) y los lectores filtran por vigencia.
+- [x] **TS3-05.4 Endpoint de Historial `GET /descargo/versiones/` [TDD]:** Historial ordenado por `numero` con permisos por rol (socio titular, TD, CD y ADMIN).
+- [x] **TS3-05.5 Frontend: Historial desde la API y Panel de Detalle Sincronizado:** `obtenerVersionesDescargo` alimenta el «Registro de Operaciones y Auditoría» en `mis-expedientes`, el botón pasa a «Retirar Descargo» y el panel abierto se actualiza con la lista del backend.
+- [x] **TS3-05.6 Verificación Integral y Consistencia PO:** 633 tests de backend en Pytest y 238 de frontend en Karma en verde; `ruff check` y `ruff format --check` limpios; `notasPO.md` sin modificaciones.
+- [x] **TS3-05.7 Prueba Manual en Navegador:** Recorrido completo (presentar, corregir, retirar, re-presentar y ver historial) en `localhost:4200`, validado por el equipo.
+
+---
+
 ## 10. Sprint 3 — Investigación I+D: SCRUM-76 (Investigación y Especificación de IA — Laya System 1, Datos, Hardware y SLMs)
 
 > **Tarea de I+D:** SCRUM-76: Investigar Laya (System 1), requerimientos de fine-tuning/datos/hardware y evaluación de SLMs (<4B) con RAG, CAG y MAG.  
@@ -283,7 +298,27 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 11. Instrucciones para la Actualización de este Archivo
+## 11. Sprint 4 — Desglose Atómico: S4-02 (Resolver Causal T02 con Fundamento Trazable)
+
+> **Spec de Referencia:** [`specs/006-resolver-causal-t02/spec.md`](specs/006-resolver-causal-t02/spec.md)  
+> **Plan Técnico:** [`specs/006-resolver-causal-t02/plan.md`](specs/006-resolver-causal-t02/plan.md)  
+> **Tareas:** [`specs/006-resolver-causal-t02/tasks.md`](specs/006-resolver-causal-t02/tasks.md)
+
+- [x] **TS4-02.1 Dominio de decisión por causal [TDD]:** Regla sugerida y fundamento obligatorio al rechazar o apartarse de la regla.
+- [x] **TS4-02.2 Modelo inmutable y migración [TDD]:** `DecisionCausalDescargo` versionado por descargo, sin modificación ni eliminación.
+- [x] **TS4-02.3 Servicio de aplicación [TDD]:** Etapa procesal, T02, evidencia vigente, versión y copia del descargo valorado.
+- [x] **TS4-02.4 Endpoints REST y permisos [TDD]:** `GET`/`POST /api/v1/expedientes/{id}/descargos/{descargo_id}/decisiones/` (registro exclusivo TD).
+- [x] **TS4-02.5 Servicio frontend y DTOs [TDD]:** Métodos de detalle, historial y registro en `ExpedienteApiService`.
+- [x] **TS4-02.6 Panel "Causales T02" en el detalle del TD:** Aceptar/Rechazar, fundamento, comprobantes valorados e historial.
+- [x] **TS4-02.7 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff` y control contra `notasPO.md`.
+- [x] **TS4-02.8 Revisión PR — Rendimiento y consistencia [TDD]:** Sin N+1 en el listado de gestión y criterio único de comprobantes vigentes entre la regla sugerida y el detalle.
+- [x] **TS4-02.9 Revisión PR — Pruebas de aislamiento [TDD]:** Descargo de otro expediente (404), comprobante de otro imputado (400), T03 (400), historial para ADMIN (200) y anónimo (401).
+- [x] **TS4-02.10 Revisión PR — Evaluación en dos pasos en el detalle:** Tabla de Involucrados con "Evaluar justificación", panel con "Ver comprobante", Aprobar/Desaprobar, fundamento accesible e historial consultable tras la emisión.
+- [x] **TS4-02.11 Revisión PR — Datos de prueba:** Escenarios EXP-0901/2026 a EXP-0904/2026 en `seed_production_data`.
+
+---
+
+## 12. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

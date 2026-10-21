@@ -41,6 +41,14 @@ class TipoDescargoEnum(models.TextChoices):
     T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
 
 
+class OperacionDescargoEnum(models.TextChoices):
+    """Operaciones registradas en el historial inmutable de un descargo (SCRUM-49)."""
+
+    PRESENTADO = "PRESENTADO", "Descargo presentado"
+    CORREGIDO = "CORREGIDO", "Descargo corregido dentro del plazo"
+    RETIRADO = "RETIRADO", "Descargo retirado dentro del plazo"
+
+
 class TipoFeriadoEnum(models.TextChoices):
     """Tipos de feriados y días inhábiles procesales."""
 
@@ -385,6 +393,11 @@ class DescargoExpediente(models.Model):
     archivo = models.CharField(max_length=255, blank=True)
     texto = models.TextField(blank=True)
     presentado_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    es_vigente = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="False cuando el socio retiró el descargo dentro del plazo (baja lógica).",
+    )
 
     class Meta:
         db_table = "expedientes_descargo"
@@ -408,7 +421,7 @@ class EvidenciaDescargo(models.Model):
     )
     descargo = models.ForeignKey(
         DescargoExpediente,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="evidencias",
         null=True,
         blank=True,
@@ -440,6 +453,55 @@ class EvidenciaDescargo(models.Model):
         return f"{self.nombre_original} ({self.expediente.numero})"
 
 
+class DescargoVersion(models.Model):
+    """Versión inmutable de un descargo (solo-inserción).
+
+    La versión vigente es la de mayor ``numero``; si su operación es ``RETIRADO`` el socio
+    no tiene descargo vigente. Guarda una copia del contenido y el juego de evidencias de
+    ese momento, de modo que ninguna corrección o retiro destruya el rastro del escrito.
+    """
+
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="versiones",
+    )
+    numero = models.PositiveIntegerField()
+    operacion = models.CharField(max_length=20, choices=OperacionDescargoEnum.choices)
+    tipo = models.CharField(max_length=30, choices=TipoDescargoEnum.choices)
+    causal = models.CharField(max_length=255, blank=True)
+    archivo = models.CharField(max_length=255, blank=True)
+    texto = models.TextField(blank=True)
+    evidencias = models.ManyToManyField(
+        EvidenciaDescargo,
+        related_name="versiones",
+        blank=True,
+    )
+    actor = models.CharField(max_length=150)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_descargo_version"
+        ordering = ["numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["descargo", "numero"],
+                name="unique_version_numero_per_descargo",
+            )
+        ]
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Las versiones del descargo son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Las versiones del descargo no pueden eliminarse.")
+
+    def __str__(self) -> str:
+        return f"v{self.numero} {self.operacion} ({self.descargo.expediente.numero})"
+
+
 class AuditoriaDescargaEvidencia(models.Model):
     """Pista de auditoría inmutable de accesos y descargas de evidencia (CA4)."""
 
@@ -461,6 +523,72 @@ class AuditoriaDescargaEvidencia(models.Model):
 
     def __str__(self) -> str:
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
+
+
+class DecisionCausalEnum(models.TextChoices):
+    """Resultado de la valoración de una causal tipificada T02 (S4-02)."""
+
+    ACCEPTED = "ACCEPTED", "Aceptada"
+    REJECTED = "REJECTED", "Rechazada"
+
+
+class DecisionCausalDescargo(models.Model):
+    """Decisión inmutable y versionada de un vocal sobre la causal de un descargo T02.
+
+    Cada nueva valoración crea una versión; las anteriores se conservan (CA3).
+    Guarda una copia del descargo valorado sin modificar el original (CA4).
+    """
+
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.PROTECT,
+        related_name="decisiones_causal",
+    )
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="decisiones_causal",
+    )
+    version = models.PositiveIntegerField()
+    decision = models.CharField(max_length=10, choices=DecisionCausalEnum.choices)
+    regla_sugerida = models.CharField(max_length=10, choices=DecisionCausalEnum.choices)
+    se_aparta_de_regla = models.BooleanField(default=False)
+    fundamento = models.TextField(blank=True)
+    evidencias_valoradas = models.JSONField(default=list, blank=True)
+    descargo_snapshot = models.JSONField(default=dict)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="decisiones_causal",
+    )
+    autor_legajo = models.CharField(max_length=20)
+    autor_rol = models.CharField(max_length=20)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_decision_causal"
+        verbose_name = "Decisión sobre causal T02"
+        verbose_name_plural = "Decisiones sobre causales T02"
+        ordering = ["descargo_id", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["descargo", "version"],
+                name="unique_decision_version_per_descargo",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Descargo {self.descargo_id} v{self.version}: {self.get_decision_display()}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError(
+                "Una decisión registrada es inmutable; registrá una nueva versión."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Una decisión registrada no puede eliminarse.")
 
 
 class SolicitudT01(models.Model):

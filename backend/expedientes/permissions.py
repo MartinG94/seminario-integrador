@@ -19,6 +19,7 @@ __all__ = [
     "CanManageCalendar",
     "CanManageEventos",
     "CanOpenExpedientes",
+    "CanResolveCausal",
     "CanTransitionExpedientes",
     "IsComisionDirectivaOrAdmin",
     "IsImputadoOrTribunal",
@@ -52,6 +53,12 @@ class CanOpenExpedientes(HasAnyRole):
 
 class CanTransitionExpedientes(HasAnyRole):
     """Sólo el Tribunal puede hacer transiciones manuales."""
+
+    allowed_roles = (Role.TD,)
+
+
+class CanResolveCausal(HasAnyRole):
+    """Sólo los vocales del Tribunal resuelven causales T02 (S4-02)."""
 
     allowed_roles = (Role.TD,)
 
