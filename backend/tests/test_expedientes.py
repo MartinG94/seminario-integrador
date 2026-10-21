@@ -5,7 +5,10 @@ from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from expedientes.models import Expediente, SolicitudT01
+from padron.models import Socio as PadronSocio
+from padron.models import SocioEstudio
 from socios.models import Role
+from tests.legacy_schema import create_legacy_record
 
 
 @pytest.fixture
@@ -524,3 +527,83 @@ def test_t01_rejects_invalid_urgency_on_create_and_update(
     assert response.status_code == 400
     assert "urgencia" in response.data
     assert SolicitudT01.objects.get(pk=data["id"]).urgencia == "urgente"
+
+
+@pytest.mark.django_db
+def test_gestion_expedientes_filtra_por_legajo_principal_y_adicional(make_socio, authenticate):
+    operador = make_socio(legajo="82000", role=Role.CD)
+    client = authenticate(operador)
+
+    socio_buscado = make_socio(legajo="82001", role=Role.SOCIO)
+    socio_otro = make_socio(legajo="82002", role=Role.SOCIO)
+
+    principal = Expediente.objects.create(
+        numero="EXP-8201/2026",
+        socio=socio_buscado,
+        motivo="Causa principal del socio buscado",
+        puntos=-2,
+    )
+    principal.socios.add(socio_buscado)
+
+    adicional = Expediente.objects.create(
+        numero="EXP-8202/2026",
+        socio=socio_otro,
+        motivo="Causa compartida",
+        puntos=-1,
+    )
+    adicional.socios.add(socio_otro, socio_buscado)
+
+    ajeno = Expediente.objects.create(
+        numero="EXP-8203/2026",
+        socio=socio_otro,
+        motivo="Causa ajena",
+        puntos=-3,
+    )
+    ajeno.socios.add(socio_otro)
+
+    response = client.get(
+        "/api/v1/expedientes/gestion/",
+        {"legajo": socio_buscado.legajo},
+    )
+
+    assert response.status_code == 200
+
+    numeros = {item["numero"] for item in response.data}
+
+    assert numeros == {
+        principal.numero,
+        adicional.numero,
+    }
+    assert ajeno.numero not in numeros
+
+
+@pytest.mark.django_db
+def test_gestion_expedientes_resuelve_legajo_institucional_por_usuario(make_socio, authenticate):
+    operador = make_socio(legajo="82010", role=Role.CD)
+    client = authenticate(operador)
+    socio_local = make_socio(legajo="local-82011", role=Role.SOCIO)
+
+    padron_socio = create_legacy_record(
+        PadronSocio,
+        nroSocio=98211,
+        user_id=socio_local.user_id,
+    )
+    create_legacy_record(
+        SocioEstudio,
+        compositeKey=9821101,
+        socio=padron_socio,
+        nroLegajo=88211,
+        codEspecialidad=1,
+    )
+    expediente = Expediente.objects.create(
+        numero="EXP-8211/2026",
+        socio=socio_local,
+        motivo="Legajo institucional",
+        puntos=-1,
+    )
+    expediente.socios.add(socio_local)
+
+    response = client.get("/api/v1/expedientes/gestion/", {"legajo": "88211"})
+
+    assert response.status_code == 200
+    assert [item["numero"] for item in response.data] == [expediente.numero]

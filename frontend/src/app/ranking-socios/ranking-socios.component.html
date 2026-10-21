@@ -36,22 +36,7 @@
               <p class="card-category text-white-50">Cómputo neto de méritos, llamados de atención y estado reglamentario de los miembros.</p>
             </div>
             <div class="d-flex flex-wrap gap-2 align-items-center">
-              <div class="btn-group">
-                <button mat-raised-button 
-                        class="btn btn-sm" 
-                        [ngClass]="criterioOrden === 'merito' ? 'btn-white text-primary font-weight-bold' : 'btn-outline-white'"
-                        (click)="setOrden('merito')">
-                  <i class="material-icons" style="font-size: 16px;">trending_up</i> Más Reconocidos
-                </button>
-                <button mat-raised-button 
-                        class="btn btn-sm" 
-                        [ngClass]="criterioOrden === 'sancion' ? 'btn-white text-danger font-weight-bold' : 'btn-outline-white'"
-                        (click)="setOrden('sancion')">
-                  <i class="material-icons" style="font-size: 16px;">trending_down</i> Mayor Sanción
-                </button>
-              </div>
-
-              <select class="form-control ml-2 filtro-categoria"
+<select class="form-control ml-2 filtro-categoria"
                       [(ngModel)]="filtroCategoria" (ngModelChange)="paginaActual = 1">
                 <option value="">Todas las categorías</option>
                 <option value="ACTIVO">Activo</option>
@@ -93,12 +78,24 @@
                   <th>N° de Socio</th>
                   <th>Categoría</th>
                   <th>Subcomisión</th>
-                  <th class="text-center">Saldo</th>
+                  <th>Grupo</th>
+                  <th class="text-center"
+                      role="button"
+                      tabindex="0"
+                      (click)="alternarOrdenSaldo()"
+                      (keydown.enter)="alternarOrdenSaldo()"
+                      (keydown.space)="alternarOrdenSaldo(); $event.preventDefault()"
+                      title="Ordenar por saldo">
+                    Saldo
+                    <span *ngIf="ordenSaldo === 'desc'" aria-hidden="true">?</span>
+                    <span *ngIf="ordenSaldo === 'asc'" aria-hidden="true">?</span>
+                  </th>
                   <th>Reconciliación</th>
+                  <th>Expedientes</th>
                 </thead>
                 <tbody>
                   <tr *ngIf="sociosOrdenados.length === 0">
-                    <td colspan="7" class="text-center text-muted py-4">
+                    <td colspan="9" class="text-center text-muted py-4">
                       No se encontraron socios con los criterios seleccionados.
                     </td>
                   </tr>
@@ -117,6 +114,7 @@
                     <td>{{s.legajo}}</td>
                     <td>{{s.categoria}}</td>
                     <td>{{s.subcomision}}</td>
+                    <td>{{s.grupo || 'Sin grupo'}}</td>
                     <td class="text-center font-weight-bold" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
                       <div>{{s.saldo > 0 ? '+' : ''}}{{s.saldo | number:'1.2-2'}} pts</div>
                       <span class="badge-mat mt-1" [ngClass]="getBadgeClase(s)">
@@ -129,6 +127,18 @@
                         <div>Diferencia: {{s.diferencia != null && s.diferencia > 0 ? '+' : ''}}{{s.diferencia | number:'1.2-2'}} pts</div>
                         <small class="d-block text-muted">Histórico: {{s.saldoHistorico | number:'1.2-2'}} | General: {{s.saldoPuntajeGeneral | number:'1.2-2'}}</small>
                       </ng-container>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        (click)="$event.stopPropagation(); abrirExpedientesSocio(s)"
+                        (keydown.enter)="$event.stopPropagation()"
+                        (keydown.space)="$event.stopPropagation()"
+                        [attr.aria-label]="'Ver expedientes de ' + s.nombre + ' ' + s.apellido">
+                        <i class="material-icons" style="font-size: 16px;">folder_open</i>
+                        Expedientes
+                      </button>
                     </td>
                   </tr>
                 </tbody>

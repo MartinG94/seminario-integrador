@@ -24,6 +24,7 @@ describe('RankingSociosComponent', () => {
       apellido: 'Gómez',
       categoria: 'ACTIVO',
       subcomision: 'Cómputos',
+      grupo: 'G2',
       saldo: 5,
       saldoHistorico: 5,
       saldoPuntajeGeneral: 5,
@@ -37,6 +38,7 @@ describe('RankingSociosComponent', () => {
       apellido: 'Pérez',
       categoria: 'PASIVO',
       subcomision: 'Deportes',
+      grupo: 'G1',
       saldo: -1,
       saldoHistorico: -1,
       saldoPuntajeGeneral: -1,
@@ -92,6 +94,19 @@ describe('RankingSociosComponent', () => {
     expect(component.subcomisiones).toEqual(['Cómputos', 'Deportes']);
   });
 
+  it('debería mostrar la acción de Expedientes con su etiqueta accesible', () => {
+    fixture.detectChanges();
+
+    const contenido = fixture.nativeElement.textContent as string;
+    const boton = fixture.nativeElement.querySelector(
+      '[aria-label="Ver expedientes de Ana Gómez"]'
+    ) as HTMLButtonElement;
+
+    expect(contenido).toContain('Expedientes');
+    expect(contenido).not.toContain('Causas');
+    expect(boton).toBeTruthy();
+  });
+
   it('debería filtrar socios por categoría', () => {
     fixture.detectChanges();
 
@@ -129,36 +144,66 @@ describe('RankingSociosComponent', () => {
     expect(component.error).toBe('No se pudo cargar el ranking. Intentá nuevamente.');
   });
 
-  it('debería ordenar por mérito y desempatar por apellido y nombre', () => {
-    const crearSocio = (id: string, apellido: string, nombre: string, saldo: number): RankingSocio => ({
-      id, legajo: id, apellido, nombre, saldo,
-      categoria: 'ACTIVO', subcomision: 'Cómputos'
-    });
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([
-      crearSocio('1', 'Zapata', 'Ana', 5),
-      crearSocio('2', 'Alonso', 'Bruno', 5),
-      crearSocio('3', 'Alonso', 'Ana', 5),
-      crearSocio('4', 'Zapata', 'Zoe', 10),
-      crearSocio('5', 'Abad', 'Ana', -2)
-    ]));
-    fixture.detectChanges();
-    component.criterioOrden = 'merito';
 
-    expect(component.sociosOrdenados.map(s => s.id)).toEqual(['4', '3', '2', '1', '5']);
+  it('deber?a ordenar por grupo y desempatar por apellido y nombre', () => {
+    const crearSocio = (
+      id: string,
+      apellido: string,
+      nombre: string,
+      saldo: number,
+      grupo: string | null
+    ): RankingSocio => ({
+      id, legajo: id, apellido, nombre, saldo, grupo,
+      categoria: 'ACTIVO', subcomision: 'C?mputos'
+    });
+
+    rankingServiceSpy.obtenerRanking.and.returnValue(of([
+      crearSocio('1', 'Zapata', 'Ana', 5, 'G2'),
+      crearSocio('2', 'Alonso', 'Bruno', 5, 'G1'),
+      crearSocio('3', 'Alonso', 'Ana', 5, 'G1'),
+      crearSocio('4', 'Zapata', 'Zoe', 10, 'G1'),
+      crearSocio('5', 'Abad', 'Ana', -2, null)
+    ]));
+
+    fixture.detectChanges();
+
+    expect(component.sociosOrdenados.map(s => s.id)).toEqual([
+      '3', '2', '4', '1', '5'
+    ]);
   });
 
-  it('debería ordenar por sanción de menor a mayor saldo', () => {
+  it('deber?a ordenar por saldo descendente', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(of([
       { ...sociosMock[0], id: '1', saldo: 5 },
       { ...sociosMock[1], id: '2', saldo: -1 },
       { ...sociosMock[0], id: '3', saldo: -8 },
       { ...sociosMock[1], id: '4', saldo: 0 }
     ]));
-    fixture.detectChanges();
-    component.criterioOrden = 'sancion';
 
-    expect(component.sociosOrdenados.map(s => s.id)).toEqual(['3', '2', '4', '1']);
+    fixture.detectChanges();
+    component.ordenSaldo = 'desc';
+
+    expect(component.sociosOrdenados.map(s => s.id)).toEqual([
+      '1', '4', '2', '3'
+    ]);
   });
+
+  it('deber?a ordenar por saldo ascendente', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(of([
+      { ...sociosMock[0], id: '1', saldo: 5 },
+      { ...sociosMock[1], id: '2', saldo: -1 },
+      { ...sociosMock[0], id: '3', saldo: -8 },
+      { ...sociosMock[1], id: '4', saldo: 0 }
+    ]));
+
+    fixture.detectChanges();
+    component.ordenSaldo = 'asc';
+
+    expect(component.sociosOrdenados.map(s => s.id)).toEqual([
+      '3', '2', '4', '1'
+    ]);
+  });
+
 
   it('debería paginar 13 socios en una primera página de 10 y una segunda de 3', () => {
     const sociosPagina: RankingSocio[] = Array.from({ length: 13 }, (_, i) => ({
@@ -181,21 +226,26 @@ describe('RankingSociosComponent', () => {
     expect(component.totalPaginas).toBe(2);
   });
 
-  it('debería cambiar el criterio de orden y volver a la primera página', () => {
+
+  it('deber?a alternar saldo descendente, ascendente y volver al orden por grupo', () => {
     fixture.detectChanges();
     component.paginaActual = 2;
 
-    component.setOrden('sancion');
-
-    expect(component.criterioOrden).toBe('sancion');
+    component.alternarOrdenSaldo();
+    expect(component.ordenSaldo).toBe('desc');
     expect(component.paginaActual).toBe(1);
 
     component.paginaActual = 2;
-    component.setOrden('merito');
+    component.alternarOrdenSaldo();
+    expect(component.ordenSaldo).toBe('asc');
+    expect(component.paginaActual).toBe(1);
 
-    expect(component.criterioOrden).toBe('merito');
+    component.paginaActual = 2;
+    component.alternarOrdenSaldo();
+    expect(component.ordenSaldo).toBeNull();
     expect(component.paginaActual).toBe(1);
   });
+
 
   it('debería mostrar Coincide sin detalle cuando está reconciliado', () => {
     fixture.detectChanges();
@@ -242,8 +292,8 @@ describe('RankingSociosComponent', () => {
     const celda = filas[1].querySelector('.reconciliacion');
     expect(celda.textContent).toContain('Diferencia: -0.25 pts');
     expect(celda.textContent).not.toContain('Diferencia: +80.00 pts');
-    expect(filas[1].cells[5].textContent).toContain('-4.00 pts');
-    expect(filas[1].cells[5].textContent).toContain('Habilitado Regular');
+    expect(filas[1].cells[6].textContent).toContain('-4.00 pts');
+    expect(filas[1].cells[6].textContent).toContain('Habilitado Regular');
     expect(component.socios.find(s => s.id === '1').diferencia).toBe(-0.25);
   });
 

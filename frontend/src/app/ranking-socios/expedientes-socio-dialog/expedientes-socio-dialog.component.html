@@ -1,0 +1,76 @@
+<div class="causas-dialog">
+  <div class="dialog-header">
+    <div>
+      <h3 class="mb-1">Detalle de expedientes</h3>
+      <div class="text-muted">
+        {{ data.nombreSocio }} &bull; N.? de socio {{ data.legajo }}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-link"
+      aria-label="Cerrar"
+      (click)="cerrar()">
+      <i class="material-icons">close</i>
+    </button>
+  </div>
+
+  <div *ngIf="cargando" class="text-center text-muted py-4">
+    Cargando expedientes...
+  </div>
+
+  <div *ngIf="!cargando && error" class="text-center py-4">
+    <p class="text-danger">{{ error }}</p>
+    <button type="button" class="btn btn-sm btn-primary" (click)="cargarExpedientes()">
+      Reintentar
+    </button>
+  </div>
+
+  <div
+    *ngIf="!cargando && !error && expedientes.length === 0"
+    class="text-center text-muted py-4">
+    Este socio no posee expedientes registrados.
+  </div>
+
+  <div *ngIf="!cargando && !error && expedientes.length > 0">
+    <div *ngFor="let expediente of expedientes" class="causa-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <strong>{{ expediente.numero }}</strong>
+          <div class="small text-muted">
+            {{ expediente.created_at | date:'dd/MM/yyyy' }}
+          </div>
+        </div>
+
+        <span class="badge badge-secondary">
+          {{ expediente.urgencia_display }}
+        </span>
+      </div>
+
+      <div class="mt-2">
+        <strong>Estado:</strong> {{ expediente.estado }}
+      </div>
+
+      <div class="mt-1">
+        <strong>Puntos:</strong>
+        <span
+          class="font-weight-bold"
+          [ngClass]="puntosNumero(expediente) >= 0 ? 'text-success' : 'text-danger'">
+          {{ puntosNumero(expediente) > 0 ? '+' : '' }}{{ puntosNumero(expediente) | number:'1.2-2' }}
+        </span>
+      </div>
+
+      <div class="mt-2">
+        <strong>Motivo:</strong>
+        <div>{{ expediente.motivo }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-right mt-3">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="cerrar()">
+      Cerrar
+    </button>
+  </div>
+</div>

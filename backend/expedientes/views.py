@@ -76,7 +76,8 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
-from socios.models import Role
+from padron.models import SocioEstudio
+from socios.models import Role, Socio
 
 
 def _actor_for_user(user) -> str:
@@ -103,6 +104,25 @@ class ExpedienteCollectionView(APIView):
             "solicitud_t01",
             "solicitud_t01__solicitante",
         ).prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
+
+        # SCRUM-82: el legajo puede corresponder al socio principal o a cualquiera
+        # de los socios involucrados/adicionales.
+        legajo = request.query_params.get("legajo")
+        if legajo is not None and legajo.strip():
+            legajo = legajo.strip()
+            padron_user_ids = SocioEstudio.objects.filter(
+                nroLegajo=legajo,
+                socio__user_id__isnull=False,
+            ).values("socio__user_id")
+            local_socio_ids = Socio.objects.filter(
+                user_id__in=padron_user_ids,
+            ).values("pk")
+            queryset = queryset.filter(
+                Q(socio__legajo=legajo)
+                | Q(socios__legajo=legajo)
+                | Q(socio_id__in=local_socio_ids)
+                | Q(socios__id__in=local_socio_ids)
+            ).distinct()
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -118,7 +138,7 @@ class ExpedienteCollectionView(APIView):
                 urgencia=serializer.validated_data.get("urgencia", UrgenciaExpedienteEnum.NORMAL),
             )
         except IntegrityError as exc:
-            raise DRFValidationError("No se pudo asignar el número de expediente.") from exc
+            raise DRFValidationError("No se pudo asignar el nÃºmero de expediente.") from exc
         expediente = (
             Expediente.objects.select_related("socio", "socio__subcomision")
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
@@ -178,14 +198,14 @@ class MisExpedientesView(APIView):
 
 
 class PresentarDescargoView(APIView):
-    """Endpoint para presentación de descargo reglamentario (CA2 y buzzer-beater CA5).
+    """Endpoint para presentaciÃ³n de descargo reglamentario (CA2 y buzzer-beater CA5).
 
     Regla:
-    - Evaluación de plazo en el servidor con select_for_update().
+    - EvaluaciÃ³n de plazo en el servidor con select_for_update().
     - Acepta si now <= plazo_limite_at (inclusivo).
     - Rechaza con 409 Conflict si now > plazo_limite_at.
-    - Mientras el plazo siga abierto, un nuevo envío corrige el descargo ya presentado
-      (Notas del PO, ítem 31) y responde 200 OK en lugar de 201 Created.
+    - Mientras el plazo siga abierto, un nuevo envÃ­o corrige el descargo ya presentado
+      (Notas del PO, Ã­tem 31) y responde 200 OK en lugar de 201 Created.
     - Valida titularidad del socio sobre el expediente.
     """
 
@@ -215,29 +235,29 @@ class PresentarDescargoView(APIView):
                 and expediente.socio_id != socio.id
             ):
                 raise PermissionDenied(
-                    "No tiene autorización para presentar descargo en este expediente."
+                    "No tiene autorizaciÃ³n para presentar descargo en este expediente."
                 )
 
-            # Si no está en estado 'justificando'
+            # Si no estÃ¡ en estado 'justificando'
             if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
                 msg = (
-                    f"El expediente está en '{expediente.get_estado_display()}', "
+                    f"El expediente estÃ¡ en '{expediente.get_estado_display()}', "
                     "no admitiendo descargos."
                 )
                 return Response({"detail": msg}, status=status.HTTP_409_CONFLICT)
 
-            # Verificación del plazo perentorio en servidor
+            # VerificaciÃ³n del plazo perentorio en servidor
             if not expediente.esta_en_plazo(ahora=now):
                 return Response(
                     {
-                        "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                        "detail": "El plazo perentorio de 5 dÃ­as hÃ¡biles ha expirado.",
                         "plazo_limite_at": expediente.plazo_limite_at,
                         "server_time": now,
                     },
                     status=status.HTTP_409_CONFLICT,
                 )
 
-            # Registro o corrección del descargo dentro del plazo
+            # Registro o correcciÃ³n del descargo dentro del plazo
             validated_data = serializer.validated_data
             previo = DescargoExpediente.objects.filter(expediente=expediente, socio=socio).first()
             if previo is not None:
@@ -311,18 +331,18 @@ class PresentarDescargoView(APIView):
                 estado_nuevo=expediente.estado,
                 actor=f"SOCIO_{socio.legajo}",
                 motivo=(
-                    f"Corrección de descargo {validated_data['tipo']} dentro del plazo."
+                    f"CorrecciÃ³n de descargo {validated_data['tipo']} dentro del plazo."
                     if es_correccion
-                    else f"Presentación formal de descargo {validated_data['tipo']}."
+                    else f"PresentaciÃ³n formal de descargo {validated_data['tipo']}."
                 ),
             )
 
             return Response(
                 {
                     "detail": (
-                        "Descargo actualizado dentro de los términos reglamentarios."
+                        "Descargo actualizado dentro de los tÃ©rminos reglamentarios."
                         if es_correccion
-                        else "Descargo registrado dentro de los términos reglamentarios."
+                        else "Descargo registrado dentro de los tÃ©rminos reglamentarios."
                     ),
                     "expediente_id": expediente.id,
                     "descargo_presentado_at": now,
@@ -337,7 +357,7 @@ class PresentarDescargoView(APIView):
         return vigentes > 0 and vigentes >= expediente.socios.count()
 
     def delete(self, request: Request, pk: int) -> Response:
-        """Retiro lógico del descargo: registra la baja y conserva todo el historial."""
+        """Retiro lÃ³gico del descargo: registra la baja y conserva todo el historial."""
         socio = getattr(request.user, "socio", None)
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
@@ -355,12 +375,12 @@ class PresentarDescargoView(APIView):
 
         if not expediente.socios.filter(pk=socio.pk).exists() and expediente.socio_id != socio.id:
             raise PermissionDenied(
-                "No tiene autorización para gestionar el descargo de este expediente."
+                "No tiene autorizaciÃ³n para gestionar el descargo de este expediente."
             )
 
         if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
             msg = (
-                f"El expediente está en '{expediente.get_estado_display()}', "
+                f"El expediente estÃ¡ en '{expediente.get_estado_display()}', "
                 "no admitiendo el retiro del descargo."
             )
             return Response({"detail": msg}, status=status.HTTP_409_CONFLICT)
@@ -369,7 +389,7 @@ class PresentarDescargoView(APIView):
         if not expediente.esta_en_plazo(ahora=now):
             return Response(
                 {
-                    "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                    "detail": "El plazo perentorio de 5 dÃ­as hÃ¡biles ha expirado.",
                     "plazo_limite_at": expediente.plazo_limite_at,
                     "server_time": now,
                 },
@@ -382,7 +402,7 @@ class PresentarDescargoView(APIView):
         if descargo:
             DescargoVersionService.retirar(descargo, socio)
 
-        # Dar de baja evidencias del socio aún sin vincular a un descargo (es_vigente=False)
+        # Dar de baja evidencias del socio aÃºn sin vincular a un descargo (es_vigente=False)
         EvidenciaDescargo.objects.filter(expediente=expediente, socio=socio).update(
             es_vigente=False
         )
@@ -426,7 +446,7 @@ class DescargoVersionesView(APIView):
     - GET /api/v1/expedientes/<pk>/descargo/versiones/
     - IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto, mismos controles que la
       lectura de descargos).
-    - El socio imputado ve sólo sus versiones; TD, CD, ADMIN y staff ven las de todos.
+    - El socio imputado ve sÃ³lo sus versiones; TD, CD, ADMIN y staff ven las de todos.
     """
 
     permission_classes = [permissions.IsAuthenticated, IsImputadoOrTribunal]
@@ -455,10 +475,10 @@ class EvidenciaUploadView(APIView):
     """Endpoint para carga multipart protegida de comprobantes probatorios (CA1, CA2, CA3).
 
     - POST /api/v1/expedientes/<pk>/evidencia/
-    - Requiere autenticación.
+    - Requiere autenticaciÃ³n.
     - Valida titularidad del socio (imputado en la causa).
-    - Valida que el expediente esté en estado 'justificando' y dentro del plazo de 5 días hábiles.
-    - Valida cupos (T02 máx 3, T03 máx 5) y formatos válidos (PDF/JPG/PNG <= 5 MB).
+    - Valida que el expediente estÃ© en estado 'justificando' y dentro del plazo de 5 dÃ­as hÃ¡biles.
+    - Valida cupos (T02 mÃ¡x 3, T03 mÃ¡x 5) y formatos vÃ¡lidos (PDF/JPG/PNG <= 5 MB).
     - Persiste en BD LONGBLOB (Directiva PO).
     """
 
@@ -478,12 +498,12 @@ class EvidenciaUploadView(APIView):
 
         if not expediente.socios.filter(pk=socio.pk).exists() and expediente.socio_id != socio.id:
             raise PermissionDenied(
-                "No tiene autorización para presentar evidencias en este expediente."
+                "No tiene autorizaciÃ³n para presentar evidencias en este expediente."
             )
 
         if expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
             msg = (
-                f"El expediente está en '{expediente.get_estado_display()}', "
+                f"El expediente estÃ¡ en '{expediente.get_estado_display()}', "
                 "no admitiendo evidencias."
             )
             return Response({"detail": msg}, status=status.HTTP_409_CONFLICT)
@@ -492,7 +512,7 @@ class EvidenciaUploadView(APIView):
         if not expediente.esta_en_plazo(ahora=now):
             return Response(
                 {
-                    "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                    "detail": "El plazo perentorio de 5 dÃ­as hÃ¡biles ha expirado.",
                     "plazo_limite_at": expediente.plazo_limite_at,
                     "server_time": now,
                 },
@@ -548,7 +568,7 @@ class EvidenciaUploadView(APIView):
 
 
 class EvidenciaDownloadView(APIView):
-    """Endpoint para descarga segura y deserialización en streaming de evidencias (CA3, CA4).
+    """Endpoint para descarga segura y deserializaciÃ³n en streaming de evidencias (CA3, CA4).
 
     - GET /api/v1/expedientes/<pk>/evidencia/<uuid:evidencia_id>/
     - Protegido por IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto).
@@ -587,12 +607,12 @@ class EvidenciaDownloadView(APIView):
 
 
 class DispatchCaseOpeningView(APIView):
-    """Endpoint para que el Tribunal de Disciplina despache la notificación formal (CA1, CA3).
+    """Endpoint para que el Tribunal de Disciplina despache la notificaciÃ³n formal (CA1, CA3).
 
     - Protegido con IsAuthenticated e IsTribunalOrDirectiva.
-    - Transiciona atómicamente a Estado 2 ('justificando').
+    - Transiciona atÃ³micamente a Estado 2 ('justificando').
     - Congela plazo_inicio_at y plazo_limite_at.
-    - Encola en EmailOutbox con idempotency_key e intenta envío SMTP no bloqueante.
+    - Encola en EmailOutbox con idempotency_key e intenta envÃ­o SMTP no bloqueante.
     """
 
     permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
@@ -631,7 +651,7 @@ class DispatchCaseOpeningView(APIView):
             "outbox_id": outbox.id,
             "outbox_status": outbox.status,
             "idempotency_key": outbox.idempotency_key,
-            "mensaje": "Notificación de apertura despachada correctamente.",
+            "mensaje": "NotificaciÃ³n de apertura despachada correctamente.",
         }
         serializer = DispatchNotificationResponseSerializer(response_data)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -641,7 +661,7 @@ class DecisionCausalView(APIView):
     """Decisiones versionadas de un vocal sobre la causal T02 de un descargo (S4-02).
 
     - GET: historial de versiones (TD, CD y Administrador).
-    - POST: registra una nueva versión (sólo TD) sin modificar el descargo (CA4).
+    - POST: registra una nueva versiÃ³n (sÃ³lo TD) sin modificar el descargo (CA4).
     """
 
     def get_permissions(self) -> list[permissions.BasePermission]:
@@ -684,7 +704,7 @@ DespacharNotificacionAperturaView = DispatchCaseOpeningView
 
 
 class CaseNotificationAuditView(APIView):
-    """Endpoint para que operadores del Tribunal consulten la bitácora outbox (CA3).
+    """Endpoint para que operadores del Tribunal consulten la bitÃ¡cora outbox (CA3).
 
     - Protegido con IsAuthenticated e IsTribunalOrDirectiva.
     """
@@ -708,10 +728,10 @@ ExpedienteNotificacionesView = CaseNotificationAuditView
 
 
 class ExpedienteDetailView(APIView):
-    """Endpoint seguro de detalle de causa para el enlace provisto en la notificación (CA4).
+    """Endpoint seguro de detalle de causa para el enlace provisto en la notificaciÃ³n (CA4).
 
     - Protegido con IsAuthenticated e IsImputadoOrTribunal (RBAC por objeto).
-    - 401 si es anónimo.
+    - 401 si es anÃ³nimo.
     - 403 si es un socio ajeno a la causa.
     - 200 si es el socio imputado o integra TD/CD/Admin.
     """
@@ -755,7 +775,7 @@ class ExpedienteDetailView(APIView):
 
         if not IsTribunalOrDirectiva().has_permission(request, self):
             raise PermissionDenied(
-                "Solo integrantes del Tribunal o Comisión Directiva pueden actualizar la urgencia."
+                "Solo integrantes del Tribunal o ComisiÃ³n Directiva pueden actualizar la urgencia."
             )
 
         serializer = UpdateUrgenciaExpedienteSerializer(data=request.data)
@@ -866,7 +886,7 @@ class BoardExpedientesView(APIView):
 class TransicionarExpedienteView(APIView):
     """POST /api/v1/expedientes/<pk>/transicionar/
 
-    Ejecuta una transición de estado autorizada (S2-05 CA3).
+    Ejecuta una transiciÃ³n de estado autorizada (S2-05 CA3).
     Delega estrictamente en ExpedienteWorkflowService.transition().
     """
 
@@ -884,7 +904,7 @@ class TransicionarExpedienteView(APIView):
             )
 
         actor = _actor_for_user(request.user)
-        motivo = reason or f"Transición a {target_status}"
+        motivo = reason or f"TransiciÃ³n a {target_status}"
 
         try:
             expediente = ExpedienteWorkflowService.transition(
@@ -940,7 +960,7 @@ class MisSolicitudesT01View(APIView):
             else:
                 queryset = queryset.filter(expediente__estado=estado)
 
-        # Búsqueda por texto (título, motivo, causal, número o socios involucrados)
+        # BÃºsqueda por texto (tÃ­tulo, motivo, causal, nÃºmero o socios involucrados)
         search = request.query_params.get("search", "").strip()
         if search:
             queryset = queryset.filter(
@@ -957,7 +977,7 @@ class MisSolicitudesT01View(APIView):
 
 
 class CalendarioFeriadosView(APIView):
-    """Lectura autenticada y alta auditada en el único calendario institucional."""
+    """Lectura autenticada y alta auditada en el Ãºnico calendario institucional."""
 
     def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
@@ -990,7 +1010,7 @@ class CalendarioFeriadosView(APIView):
 
 
 class CalcularPlazoView(APIView):
-    """Simulación con el mismo calendario que los plazos de expedientes."""
+    """SimulaciÃ³n con el mismo calendario que los plazos de expedientes."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1007,7 +1027,7 @@ class CalcularPlazoView(APIView):
         current_date = start_at.date()
         counted_days = []
         excluded_days = []
-        weekday_names = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        weekday_names = ["Lunes", "Martes", "MiÃ©rcoles", "Jueves", "Viernes", "SÃ¡bado", "Domingo"]
         while current_date < deadline.date():
             current_date += timedelta(days=1)
             weekday = current_date.weekday()

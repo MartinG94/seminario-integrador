@@ -18,6 +18,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
     - apellido (string)
     - categoria ('ACTIVO' | 'PASIVO')
     - subcomision (string)
+    - grupo (string | null)
     - saldo (number)
     - saldoHistorico (number)
     - saldoPuntajeGeneral (number)
@@ -31,6 +32,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
     apellido = serializers.CharField()
     categoria = serializers.SerializerMethodField()
     subcomision = serializers.SerializerMethodField()
+    grupo = serializers.SerializerMethodField()
     saldo = serializers.SerializerMethodField()
     saldoHistorico = serializers.SerializerMethodField()
     saldoPuntajeGeneral = serializers.SerializerMethodField()
@@ -46,6 +48,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
             "apellido",
             "categoria",
             "subcomision",
+            "grupo",
             "saldo",
             "saldoHistorico",
             "saldoPuntajeGeneral",
@@ -82,6 +85,12 @@ class RankingSocioSerializer(serializers.ModelSerializer):
             return obj.subcomision.nombre if obj.subcomision else "Sin Subcomisión"
         except (Subcomision.DoesNotExist, AttributeError):
             return "Sin Subcomisión"
+
+    def get_grupo(self, obj: Socio) -> str | None:
+        grupo_id = getattr(obj, "grupo_id_calc", None)
+        if grupo_id is None:
+            return None
+        return f"G{grupo_id}"
 
     def _get_reconciliation(self, obj: Socio) -> tuple[Decimal, Decimal, Decimal, bool]:
         """Calcula o recupera del caché de instancia las cifras de reconciliación."""

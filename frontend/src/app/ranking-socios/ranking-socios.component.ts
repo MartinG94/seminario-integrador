@@ -4,6 +4,7 @@ import { RankingService } from '../services/ranking.service';
 import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
 import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
+import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expedientes-socio-dialog.component';
 
 @Component({
   selector: 'app-ranking-socios',
@@ -12,7 +13,7 @@ import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-d
 })
 export class RankingSociosComponent implements OnInit {
   socios: RankingSocio[] = [];
-  criterioOrden: 'merito' | 'sancion' = 'merito';
+  ordenSaldo: 'asc' | 'desc' | null = null;
   filtroTexto = '';
   filtroCategoria: 'ACTIVO' | 'PASIVO' | '' = '';
   filtroSubcomision = '';
@@ -37,6 +38,19 @@ export class RankingSociosComponent implements OnInit {
         socioId: socio.id,
         nombreSocio: `${socio.nombre} ${socio.apellido}`.trim(),
         saldo: socio.saldo
+      }
+    });
+  }
+
+  abrirExpedientesSocio(socio: RankingSocio): void {
+    if (!socio) return;
+
+    this.dialog.open(ExpedientesSocioDialogComponent, {
+      width: '100%',
+      maxWidth: '700px',
+      data: {
+        legajo: socio.legajo,
+        nombreSocio: `${socio.nombre} ${socio.apellido}`.trim()
       }
     });
   }
@@ -117,12 +131,21 @@ export class RankingSociosComponent implements OnInit {
     }
 
     list.sort((a, b) => {
-      const diferenciaSaldo = this.criterioOrden === 'merito'
-        ? b.saldo - a.saldo
-        : a.saldo - b.saldo;
+      if (this.ordenSaldo) {
+        const diferenciaSaldo = this.ordenSaldo === 'asc'
+          ? a.saldo - b.saldo
+          : b.saldo - a.saldo;
 
-      if (diferenciaSaldo !== 0) {
-        return diferenciaSaldo;
+        if (diferenciaSaldo !== 0) {
+          return diferenciaSaldo;
+        }
+      } else {
+        const grupoA = a.grupo ? parseInt(a.grupo.replace(/^G/i, ''), 10) : Number.MAX_SAFE_INTEGER;
+        const grupoB = b.grupo ? parseInt(b.grupo.replace(/^G/i, ''), 10) : Number.MAX_SAFE_INTEGER;
+
+        if (grupoA !== grupoB) {
+          return grupoA - grupoB;
+        }
       }
 
       const diferenciaApellido = a.apellido.localeCompare(b.apellido);
@@ -151,8 +174,15 @@ export class RankingSociosComponent implements OnInit {
     }
   }
 
-  setOrden(criterio: 'merito' | 'sancion'): void {
-    this.criterioOrden = criterio;
+  alternarOrdenSaldo(): void {
+    if (this.ordenSaldo === null) {
+      this.ordenSaldo = 'desc';
+    } else if (this.ordenSaldo === 'desc') {
+      this.ordenSaldo = 'asc';
+    } else {
+      this.ordenSaldo = null;
+    }
+
     this.paginaActual = 1;
   }
 
