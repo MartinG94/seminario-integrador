@@ -245,6 +245,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
         legajo: inv.legajo || '',
         first_name: inv.first_name || '',
         last_name: inv.last_name || '',
+        grupo: inv.grupo || null,
         subcomision: inv.subcomision ? { id: 0, name: inv.subcomision } : null,
         is_active: true
       }));

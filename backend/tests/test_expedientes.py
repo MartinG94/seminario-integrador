@@ -18,6 +18,7 @@ def padron_socio():
         last_name="Prueba",
         email="ana@example.test",
         subcomision=SimpleNamespace(id=1, name="Cómputos"),
+        grupo="G57",
         social_year=4,
         category=SimpleNamespace(value="ACTIVE"),
         is_active=True,
@@ -35,6 +36,7 @@ def padron_socio_2():
         last_name="Docente",
         email="carlos@example.test",
         subcomision=None,
+        grupo="G58",
         social_year=5,
         category=SimpleNamespace(value="ACTIVE"),
         is_active=True,
@@ -353,11 +355,15 @@ def test_emitir_con_multiples_socios_congela_snapshots(padron_repo, expediente_c
     assert response.status_code == 200, response.data
     assert len(response.data["snapshots_destinatarios"]) == 2
     assert response.data["snapshots_destinatarios"][0]["socio_id"] == 9001
+    assert response.data["snapshots_destinatarios"][0]["grupo"] == "G57"
     assert response.data["snapshots_destinatarios"][1]["socio_id"] == 9002
+    assert response.data["snapshots_destinatarios"][1]["grupo"] == "G58"
     assert response.data["snapshots_destinatarios"][1]["subcomision"] is None
     solicitud = SolicitudT01.objects.get(pk=data["id"])
     assert solicitud.estado == SolicitudT01.Estado.ISSUED
     assert len(solicitud.snapshot_emitido["destinatarios"]) == 2
+    assert solicitud.snapshot_emitido["destinatarios"][0]["grupo"] == "G57"
+    assert solicitud.snapshot_emitido["destinatarios"][1]["grupo"] == "G58"
 
 
 @pytest.mark.django_db

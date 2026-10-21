@@ -15,6 +15,7 @@ export interface SocioInvolucrado {
   first_name?: string;
   last_name?: string;
   subcomision?: string;
+  grupo?: string | null;
 }
 
 export interface ResolucionFinalInfo {
