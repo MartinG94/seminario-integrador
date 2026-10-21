@@ -5,8 +5,10 @@ Garantiza:
 2. Existencia y elegibilidad de todas las cuentas de login para expedientes y T01.
 3. Consistencia matemática estricta entre expedientes emitidos y saldo de puntos.
 4. Idempotencia total: puede ejecutarse múltiples veces sin duplicar registros.
+5. Escenarios de revisión de S4-02 (decisión por causal T02): EXP-0901/2026 a EXP-0904/2026.
 """
 
+import hashlib
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -19,19 +21,110 @@ from django.db import connection, transaction
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
+from expedientes.domain.causal_resolution import CausalDecision
 from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.models import (
     CambioEstadoExpediente,
+    DescargoExpediente,
     EstadoExpedienteEnum,
+    EvidenciaDescargo,
     Expediente,
     ExpedienteNumberSequence,
+    OperacionDescargoEnum,
+    TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
+from expedientes.services.causal_resolution_service import CausalResolutionService
+from expedientes.services.descargo_version_service import DescargoVersionService
 from socios.models import Role, Socio, Subcomision
 
 UserModel = get_user_model()
 
 DEMO_PASSWORD = "Aveit-Demo-2026!"
+
+# PDF mínimo válido para que "Ver comprobante" abra un archivo real en la revisión manual.
+DEMO_PDF = (
+    b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+    b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+    b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 144]>>endobj\n"
+    b"trailer<</Root 1 0 R>>\n%%EOF\n"
+)
+CAUSAL_GROUNDS = (
+    "El certificado no acredita la fecha de la reunión plenaria convocada por la subcomisión."
+)
+
+# Escenarios de revisión de S4-02:
+# (número, estado, motivo, [(legajo, tipo, causal, texto, con_comprobante)], decisiones T02)
+CAUSAL_T02_SCENARIOS = [
+    (
+        "EXP-0901/2026",
+        EstadoExpedienteEnum.REVISION_RESOLUCION,
+        "Inasistencia a reunión plenaria de subcomisión.",
+        [
+            (
+                "770001",
+                TipoDescargoEnum.T02_CERTIFICADO,
+                "Enfermedad certificada",
+                "Adjunto certificado médico del día de la reunión.",
+                True,
+            )
+        ],
+        [],
+    ),
+    (
+        "EXP-0902/2026",
+        EstadoExpedienteEnum.REVISION_RESOLUCION,
+        "Inasistencia a guardia programada de Cómputos.",
+        [
+            (
+                "770002",
+                TipoDescargoEnum.T02_CERTIFICADO,
+                "Actividad laboral",
+                "Tenía turno en el trabajo y no pude conseguir reemplazo.",
+                False,
+            )
+        ],
+        [],
+    ),
+    (
+        "EXP-0903/2026",
+        EstadoExpedienteEnum.ESPERA_RESOLUCION,
+        "Inasistencia grupal a jornada de mantenimiento del laboratorio.",
+        [
+            (
+                "770003",
+                TipoDescargoEnum.T02_CERTIFICADO,
+                "Examen universitario",
+                "Rendí un parcial en UTN FRC en el mismo horario.",
+                True,
+            ),
+            (
+                "770004",
+                TipoDescargoEnum.T03_EXTRAORDINARIO,
+                "",
+                "Tuve un problema familiar imprevisto que me impidió asistir.",
+                False,
+            ),
+            ("770006", None, "", "", False),
+        ],
+        [(CausalDecision.ACCEPTED, ""), (CausalDecision.REJECTED, CAUSAL_GROUNDS)],
+    ),
+    (
+        "EXP-0904/2026",
+        EstadoExpedienteEnum.EMITIDO,
+        "Inasistencia a asamblea ordinaria.",
+        [
+            (
+                "770007",
+                TipoDescargoEnum.T02_CERTIFICADO,
+                "Enfermedad certificada",
+                "Adjunto constancia de atención en guardia.",
+                True,
+            )
+        ],
+        [(CausalDecision.REJECTED, CAUSAL_GROUNDS)],
+    ),
+]
 
 TEAM_MEMBERS = [
     ("74907", "Gastiaburu", "Lucas", Role.SOCIO, 2, "Cómputos"),
@@ -369,6 +462,9 @@ class Command(BaseCommand):
             seq.last_value = len(expedientes_def)
             seq.save(update_fields=["last_value"])
 
+        # Escenarios S4-02 antes de sincronizar: el emitido impacta en el libro mayor.
+        self._sembrar_escenarios_causal_t02(actor_td=nicolas_socio)
+
         # 5. Sincronizar libro mayor (tribunal_puntajeaplicado) y caché (tribunal_puntajegeneral)
         # Consistencia: Sum(emitidos) == Sum(puntaje_aplicado) == puntajegeneral.puntos
         self._sincronizar_puntos_libro_mayor()
@@ -377,6 +473,82 @@ class Command(BaseCommand):
             self.style.SUCCESS("\n✓ Carga de datos completada exitosamente con consistencia total.")
         )
         self.stdout.write(f"Contraseña de demostración para todas las cuentas: {DEMO_PASSWORD}")
+
+    @transaction.atomic
+    def _sembrar_escenarios_causal_t02(self, actor_td: Socio) -> None:
+        """Siembra los escenarios de revisión de S4-02 (idempotente)."""
+        legajos = {legajo for _, _, _, invs, _ in CAUSAL_T02_SCENARIOS for legajo, *_ in invs}
+        socios = {s.legajo: s for s in Socio.objects.filter(legajo__in=legajos)}
+
+        for numero, estado, motivo, involucrados, decisiones in CAUSAL_T02_SCENARIOS:
+            exp, _ = Expediente.objects.update_or_create(
+                numero=numero,
+                defaults={
+                    "socio": socios[involucrados[0][0]],
+                    "estado": estado,
+                    "puntos": Decimal("-1.00"),
+                    "motivo": motivo,
+                    "urgencia": UrgenciaExpedienteEnum.NORMAL,
+                    "descargo_presentado": True,
+                },
+            )
+            exp.socios.set([socios[legajo] for legajo, *_ in involucrados])
+            if not exp.cambios_estado.exists():
+                CambioEstadoExpediente.objects.create(
+                    expediente=exp,
+                    estado_anterior=EstadoExpedienteEnum.CREADO,
+                    estado_nuevo=estado,
+                    actor=actor_td.legajo,
+                    motivo=motivo,
+                )
+
+            t02 = None
+            for legajo, tipo, causal, texto, con_comprobante in involucrados:
+                if tipo is None:
+                    continue  # Involucrado sin justificación presentada.
+                socio = socios[legajo]
+                descargo, creado = DescargoExpediente.objects.get_or_create(
+                    expediente=exp,
+                    socio=socio,
+                    defaults={"tipo": tipo, "causal": causal, "texto": texto},
+                )
+                if con_comprobante and not descargo.evidencias.exists():
+                    EvidenciaDescargo.objects.create(
+                        expediente=exp,
+                        descargo=descargo,
+                        socio=socio,
+                        contenido_blob=DEMO_PDF,
+                        nombre_original=f"comprobante-{legajo}.pdf",
+                        extension=".pdf",
+                        mime_type="application/pdf",
+                        tamanio_bytes=len(DEMO_PDF),
+                        sha256_hash=hashlib.sha256(DEMO_PDF).hexdigest(),
+                    )
+                if creado:
+                    DescargoVersionService.registrar_version(
+                        descargo, OperacionDescargoEnum.PRESENTADO, socio
+                    )
+                if tipo == TipoDescargoEnum.T02_CERTIFICADO:
+                    t02 = descargo
+
+            if t02 is not None and decisiones and not t02.decisiones_causal.exists():
+                # Las decisiones se registran en la etapa de resolución mediante el servicio
+                # (autoría, snapshot y versión reales); luego se fija el estado del escenario.
+                exp.estado = EstadoExpedienteEnum.ESPERA_RESOLUCION
+                exp.save(update_fields=["estado"])
+                for decision, fundamento in decisiones:
+                    CausalResolutionService.decide(
+                        expediente_id=exp.id,
+                        descargo_id=t02.id,
+                        decision=decision,
+                        fundamento=fundamento,
+                        evidencia_ids=None,
+                        user=actor_td.user,
+                    )
+                exp.estado = estado
+                exp.save(update_fields=["estado"])
+
+            self.stdout.write(f"+ Escenario S4-02 verificado: {numero} ({estado})")
 
     def _sincronizar_puntos_libro_mayor(self) -> None:
         """Sincroniza tribunal_puntajeaplicado y tribunal_puntajegeneral."""
