@@ -38,6 +38,7 @@ def _make_sample_socio_dto(socio_id: int = 1001, legajo: str = "85421") -> Socio
         email="esteban.perez@aveit.utn.edu.ar",
         subcomision=SubcomisionDTO(id=10, name="Tribunal de Disciplina"),
         social_year=4,
+        grupo="G57",
         category=SocioCategoryEnum.ACTIVE,
         is_active=True,
         membership_status=MembershipStatusEnum.ENABLED,
@@ -79,6 +80,7 @@ class TestPadronSocioDetailView:
         assert data["category"] == "ACTIVE"
         assert data["membership_status"] == "ENABLED"
         assert data["is_active"] is True
+        assert data["grupo"] == "G57"
         mock_repo.get_by_id.assert_called_once_with(1001)
 
     @patch("padron.views.get_padron_repository")
@@ -325,6 +327,7 @@ class TestPadronSocioListView:
         assert data["count"] == 1
         assert len(data["results"]) == 1
         assert data["results"][0]["socio_id"] == 1001
+        assert data["results"][0]["grupo"] == "G57"
 
     def test_invalid_query_params_returns_400(self) -> None:
         """Query parameters inválidos (categoría espuria o página negativa) retornan HTTP 400."""

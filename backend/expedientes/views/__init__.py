@@ -81,7 +81,8 @@ from expedientes.views.evento_views import (
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
-from socios.models import Role
+from padron.models import SocioEstudio
+from socios.models import Role, Socio
 
 
 def _actor_for_user(user) -> str:
@@ -108,6 +109,25 @@ class ExpedienteCollectionView(APIView):
             "solicitud_t01",
             "solicitud_t01__solicitante",
         ).prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
+
+        # SCRUM-82: el legajo puede corresponder al socio principal o a cualquiera
+        # de los socios involucrados/adicionales.
+        legajo = request.query_params.get("legajo")
+        if legajo is not None and legajo.strip():
+            legajo = legajo.strip()
+            padron_user_ids = SocioEstudio.objects.filter(
+                nroLegajo=legajo,
+                socio__user_id__isnull=False,
+            ).values("socio__user_id")
+            local_socio_ids = Socio.objects.filter(
+                user_id__in=padron_user_ids,
+            ).values("pk")
+            queryset = queryset.filter(
+                Q(socio__legajo=legajo)
+                | Q(socios__legajo=legajo)
+                | Q(socio_id__in=local_socio_ids)
+                | Q(socios__id__in=local_socio_ids)
+            ).distinct()
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )

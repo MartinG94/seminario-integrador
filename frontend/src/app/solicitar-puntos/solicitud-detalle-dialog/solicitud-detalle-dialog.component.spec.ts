@@ -1,4 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { SolicitudMonitoreo } from '../../services/expediente-api.service';
@@ -30,8 +34,8 @@ describe('SolicitudDetalleDialogComponent', () => {
     estado_procesal: 'en_descargo',
     estado_procesal_display: 'En Descargo',
     involucrados: [
-      { socio_id: 101, legajo: 'LEG-101', first_name: 'Carlos', last_name: 'Pérez', subcomision: 'Deportes' },
-      { socio_id: 102, legajo: 'LEG-102', first_name: 'Ana', last_name: 'Gómez', subcomision: 'Cómputos' },
+      { socio_id: 101, legajo: 'LEG-101', first_name: 'Carlos', last_name: 'Pérez', grupo: 'G57', subcomision: 'Deportes' },
+      { socio_id: 102, legajo: 'LEG-102', first_name: 'Ana', last_name: 'Gómez', grupo: 'G58', subcomision: 'Cómputos' },
     ],
     resolucion_final: null,
     created_at: '2026-03-15T09:30:00Z',
@@ -43,7 +47,13 @@ describe('SolicitudDetalleDialogComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [SolicitudDetalleDialogComponent],
-      imports: [MatIconModule],
+      imports: [
+        CommonModule,
+        MatIconModule,
+        MatButtonModule,
+        MatDialogModule,
+        NoopAnimationsModule,
+      ],
       providers: [
         { provide: MatDialogRef, useValue: dialogRefSpy },
         { provide: MAT_DIALOG_DATA, useValue: mockSolicitud },
@@ -81,6 +91,8 @@ describe('SolicitudDetalleDialogComponent', () => {
     expect(compiled.textContent).toContain('LEG-102');
     expect(compiled.textContent).toContain('Gómez, Ana');
     expect(compiled.textContent).toContain('Cómputos');
+    expect(compiled.textContent).toContain('G57');
+    expect(compiled.textContent).toContain('G58');
   });
 
   it('muestra la razón y fundamentos de la solicitud', () => {

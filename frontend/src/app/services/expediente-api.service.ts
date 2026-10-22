@@ -15,6 +15,7 @@ export interface SocioInvolucrado {
   first_name?: string;
   last_name?: string;
   subcomision?: string;
+  grupo?: string | null;
 }
 
 export interface ResolucionFinalInfo {
@@ -76,6 +77,17 @@ export interface SolicitudT01 {
   created_at: string;
   updated_at: string;
   issued_at: string | null;
+}
+
+export interface ExpedienteRankingDetalle {
+  id: number;
+  numero: string;
+  motivo: string;
+  puntos: number | string;
+  estado: string;
+  urgencia: string;
+  urgencia_display: string;
+  created_at: string;
 }
 
 export interface SolicitudT01Payload {
@@ -225,6 +237,14 @@ export class ExpedienteApiService {
 
   listarReglamentos(): Observable<{ reglamentos: string[] }> {
     return this.http.get<{ reglamentos: string[] }>(`${this.apiUrl}/reglamentos/`);
+  }
+
+  listarPorLegajo(legajo: string): Observable<ExpedienteRankingDetalle[]> {
+    const params = new HttpParams().set('legajo', legajo);
+    return this.http.get<ExpedienteRankingDetalle[]>(
+      `${this.apiUrl}/gestion/`,
+      { params }
+    );
   }
 
   listarMisSolicitudes(params?: { search?: string; estado?: string }): Observable<SolicitudMonitoreo[]> {

@@ -6,11 +6,19 @@ from pathlib import Path
 
 from django.db.backends.base.base import BaseDatabaseWrapper
 
-from padron.models import Socio, SocioEstado, SocioEstudio, Subcomision
+from padron.models import Socio, SocioEstado, SocioEstadoHistorial, SocioEstudio, Subcomision
 from ranking.management.commands.load_legacy_schema import Command as LoadLegacyCommand
 from ranking.models import PuntajeAplicado, PuntajeGeneral
 
-LEGACY_MODELS = (Subcomision, SocioEstado, Socio, SocioEstudio, PuntajeGeneral, PuntajeAplicado)
+LEGACY_MODELS = (
+    Subcomision,
+    SocioEstado,
+    Socio,
+    SocioEstudio,
+    SocioEstadoHistorial,
+    PuntajeGeneral,
+    PuntajeAplicado,
+)
 
 
 def create_legacy_record(model, **kwargs):

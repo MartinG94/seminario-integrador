@@ -760,7 +760,7 @@ class TestRegistroApercibimientosAPI:
     ):
         """Un evento en estado CREADO se notifica vía /notificar/, transicionando a NOTIFICADO."""
         api_client.force_authenticate(user=cd_user)
-        inicio = timezone.now() + timedelta(days=4)
+        inicio = timezone.now() + timedelta(days=5)
         payload = {
             "titulo": "Asamblea Extraordinaria",
             "categoria": CategoriaEventoEnum.REUNION,
@@ -862,7 +862,7 @@ class TestRegistroApercibimientosAPI:
     ):
         """Actividad exige detalle_tarea y permite puntaje de sanción configurable."""
         api_client.force_authenticate(user=cd_user)
-        inicio = timezone.now() + timedelta(days=4)
+        inicio = timezone.now() + timedelta(days=5)
 
         # 1. Sin detalle_tarea -> 400
         bad_payload = {
@@ -900,7 +900,7 @@ class TestRegistroApercibimientosAPI:
     ):
         """Convocatoria por ESTADO_SOCIAL filtra adecuadamente por año social."""
         api_client.force_authenticate(user=cd_user)
-        inicio = timezone.now() + timedelta(days=4)
+        inicio = timezone.now() + timedelta(days=5)
         payload = {
             "titulo": "Reunión de Integración Juniors",
             "categoria": CategoriaEventoEnum.REUNION,

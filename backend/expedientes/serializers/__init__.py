@@ -780,6 +780,7 @@ def _snapshot(socio):
         "last_name": socio.last_name,
         "email": socio.email,
         "subcomision": {"id": sub.id, "name": sub.name} if sub else None,
+        "grupo": getattr(socio, "grupo", None),
         "social_year": socio.social_year,
         "category": category,
         "is_active": socio.is_active,
@@ -1116,6 +1117,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
                         if isinstance(s.get("subcomision"), dict)
                         else (s.get("subcomision") or "Sin subcomisión")
                     ),
+                    "grupo": s.get("grupo"),
                 }
                 for s in obj.snapshots_destinatarios
             ]
@@ -1132,6 +1134,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
                         if isinstance(s.get("subcomision"), dict)
                         else (s.get("subcomision") or "Sin subcomisión")
                     ),
+                    "grupo": s.get("grupo"),
                 }
             ]
         socios_ids = obj.destinatarios_socios_ids or (
@@ -1147,6 +1150,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
                 "first_name": s.first_name,
                 "last_name": s.last_name,
                 "subcomision": s.subcomision.name if s.subcomision else "Sin subcomisión",
+                "grupo": getattr(s, "grupo", None),
             }
             for s in socios
         ]

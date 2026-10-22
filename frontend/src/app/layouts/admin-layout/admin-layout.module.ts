@@ -28,6 +28,7 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
+import { ExpedientesSocioDialogComponent } from '../../ranking-socios/expedientes-socio-dialog/expedientes-socio-dialog.component';
 import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
@@ -62,6 +63,7 @@ import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dial
     ReportesComponent,
     RankingSociosComponent,
     SocioLegajoDialogComponent,
+    ExpedientesSocioDialogComponent,
     SolicitarPuntosComponent,
     SolicitudDetalleDialogComponent,
     EventosAsistenciaComponent,
