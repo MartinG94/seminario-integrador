@@ -1,0 +1,44 @@
+.crear-evento-modal {
+  min-width: 580px;
+  max-width: 780px;
+
+  .modal-header {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1rem;
+    color: #333;
+
+    .modal-title {
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .modal-body {
+    max-height: 75vh;
+    overflow-y: auto;
+    padding-top: 1rem;
+  }
+
+  .btn-group-toggle .btn {
+    flex: 1;
+  }
+
+  .list-group {
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .spin {
+    animation: spin 1s infinite linear;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -86,5 +86,17 @@ def test_existing_environment_migrates_and_reapplies_without_breaking_read(
         assert client.get(url).status_code == 200
         assert legacy_model.objects.filter(calendario_version__version=1).count() == 16
     finally:
-        # Dejar siempre el esquema vigente para las siguientes pruebas.
+        # Dejar siempre el esquema vigente y canonical para las siguientes pruebas.
         MigrationExecutor(connection).migrate(latest)
+        from importlib import import_module
+        from types import SimpleNamespace
+
+        from django.apps import apps
+
+        from expedientes.models import CalendarioVersion
+
+        import_holidays = import_module(
+            "expedientes.migrations.0010_import_institutional_holidays"
+        ).import_current_holidays
+        CalendarioVersion.objects.filter(version=1).update(activa=True)
+        import_holidays(apps, SimpleNamespace(connection=connection))

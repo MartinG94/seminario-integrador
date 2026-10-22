@@ -1,0 +1,270 @@
+<div class="crear-evento-modal">
+  <div class="modal-header d-flex justify-content-between align-items-center">
+    <h4 class="modal-title font-weight-bold mb-0">
+      <i class="material-icons align-middle mr-2">event_available</i>
+      Programar Convocatoria Institucional
+    </h4>
+    <button type="button" class="close" aria-label="Cerrar" (click)="cancelar()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <form [formGroup]="form" (ngSubmit)="guardar()">
+      <!-- Categoría (REUNION vs ACTIVIDAD) -->
+      <div class="form-group mb-3">
+        <label class="font-weight-bold d-block text-secondary">Categoría Institucional *</label>
+        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+          <label class="btn btn-outline-primary" [class.active]="form.get('categoria')?.value === 'REUNION'">
+            <input type="radio" formControlName="categoria" value="REUNION" (change)="onCategoriaChange()">
+            <i class="material-icons mr-1">groups</i> Reunión
+          </label>
+          <label class="btn btn-outline-primary" [class.active]="form.get('categoria')?.value === 'ACTIVIDAD'">
+            <input type="radio" formControlName="categoria" value="ACTIVIDAD" (change)="onCategoriaChange()">
+            <i class="material-icons mr-1">handyman</i> Actividad
+          </label>
+        </div>
+      </div>
+
+      <!-- Título -->
+      <div class="form-group mb-3">
+        <label for="titulo" class="font-weight-bold text-secondary">Título de la Convocatoria *</label>
+        <input
+          id="titulo"
+          type="text"
+          class="form-control"
+          formControlName="titulo"
+          placeholder="Ej: Reunión Ordinaria de Consejo Directivo o Jornada de Mantenimiento"
+        />
+        <small class="text-danger" *ngIf="form.get('titulo')?.touched && form.get('titulo')?.hasError('required')">
+          El título es obligatorio.
+        </small>
+        <small class="text-danger" *ngIf="form.get('titulo')?.touched && form.get('titulo')?.hasError('minlength')">
+          El título debe tener al menos 3 caracteres.
+        </small>
+      </div>
+
+      <!-- Fila: Subtipo dinámico y Modalidad -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="tipo" class="font-weight-bold text-secondary">Subtipo Reglamentario *</label>
+          <select id="tipo" class="form-control" formControlName="tipo">
+            <option *ngFor="let opt of subtiposDisponibles" [value]="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="modalidad" class="font-weight-bold text-secondary">Modalidad *</label>
+          <select id="modalidad" class="form-control" formControlName="modalidad" (change)="onModalidadChange()">
+            <option value="PRESENCIAL_SEDE">Presencial en Sede AVEIT</option>
+            <option value="PRESENCIAL_EXTERNA">Presencial fuera de Sede</option>
+            <option value="VIRTUAL">Virtual / Videoconferencia</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Campo condicional para Ubicación o Enlace -->
+      <div class="form-group mb-3" *ngIf="form.get('modalidad')?.value === 'PRESENCIAL_SEDE'">
+        <label class="text-muted">Locación:</label>
+        <input type="text" class="form-control bg-light" value="Sede Central AVEIT (Bv. San Juan 1250)" readonly />
+      </div>
+
+      <div class="form-group mb-3" *ngIf="form.get('modalidad')?.value === 'PRESENCIAL_EXTERNA'">
+        <label for="ubicacion_externa" class="font-weight-bold text-secondary">Dirección / Locación Externa *</label>
+        <input
+          id="ubicacion_externa"
+          type="text"
+          class="form-control"
+          formControlName="ubicacion"
+          placeholder="Ej: Campus UTN FRC - Salón de Actos"
+        />
+        <small class="text-danger" *ngIf="form.get('ubicacion')?.touched && form.get('ubicacion')?.hasError('required')">
+          La dirección física es obligatoria para modalidad externa.
+        </small>
+      </div>
+
+      <div class="form-group mb-3" *ngIf="form.get('modalidad')?.value === 'VIRTUAL'">
+        <label for="ubicacion_virtual" class="font-weight-bold text-secondary">Enlace de Videoconferencia (Google Meet / Zoom) *</label>
+        <input
+          id="ubicacion_virtual"
+          type="text"
+          class="form-control"
+          formControlName="ubicacion"
+          placeholder="Ej: https://meet.google.com/abc-defg-hij"
+        />
+        <small class="text-danger" *ngIf="form.get('ubicacion')?.touched && form.get('ubicacion')?.hasError('required')">
+          El enlace de videoconferencia es obligatorio para modalidad virtual.
+        </small>
+      </div>
+
+      <!-- Fila: Fecha y Hora de Inicio (OBLIGATORIA) vs Fecha y Hora Fin (ESTRICTAMENTE OPCIONAL) -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="fecha_programada" class="font-weight-bold text-secondary">
+            Fecha y Hora de Inicio * <span class="badge badge-primary">Obligatorio</span>
+          </label>
+          <input
+            id="fecha_programada"
+            type="datetime-local"
+            class="form-control"
+            formControlName="fecha_programada"
+            (change)="verificarAntelacion()"
+          />
+          <small class="text-danger" *ngIf="form.get('fecha_programada')?.touched && form.get('fecha_programada')?.hasError('required')">
+            La fecha y hora de inicio es obligatoria.
+          </small>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="fecha_fin" class="font-weight-bold text-secondary">
+            Fecha y Hora de Fin <span class="badge badge-secondary">Estrictamente Opcional</span>
+          </label>
+          <input
+            id="fecha_fin"
+            type="datetime-local"
+            class="form-control"
+            formControlName="fecha_fin"
+          />
+          <small class="form-text text-muted">
+            Puede dejarse vacío si la duración de la sesión es abierta.
+          </small>
+        </div>
+      </div>
+
+      <!-- Banner semántico de Antelación Procesal (CA1 / 2 días hábiles) -->
+      <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center" *ngIf="antelacionAviso === 'NO_SANCIONABLE'">
+        <i class="material-icons mr-2 text-warning">warning</i>
+        <div>
+          <strong>Aviso de Plazo Procesal:</strong> La convocatoria cuenta con menos de 2 días hábiles de preaviso estatutario (CA1). La sesión se registrará con carácter <strong>NO SANCIONABLE</strong>.
+        </div>
+      </div>
+
+      <div class="alert alert-success py-2 px-3 mb-3 d-flex align-items-center" *ngIf="antelacionAviso === 'SANCIONABLE'">
+        <i class="material-icons mr-2 text-success">check_circle</i>
+        <div>
+          <strong>Convocatoria Reglamentaria:</strong> Cumple con el preaviso mínimo de 2 días hábiles. Las inasistencias injustificadas revestirán carácter sancionable.
+        </div>
+      </div>
+
+      <!-- Modo de Convocatoria -->
+      <div class="form-group mb-3">
+        <label class="font-weight-bold text-secondary">Modo de Convocatoria *</label>
+        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+          <label class="btn btn-outline-info" [class.active]="form.get('modo_convocatoria')?.value === 'GRUPO'">
+            <input type="radio" formControlName="modo_convocatoria" value="GRUPO" (change)="onModoConvocatoriaChange()">
+            Por Cohorte / Grupo
+          </label>
+          <label class="btn btn-outline-info" [class.active]="form.get('modo_convocatoria')?.value === 'SUBCOMISION'">
+            <input type="radio" formControlName="modo_convocatoria" value="SUBCOMISION" (change)="onModoConvocatoriaChange()">
+            Por Subcomisión
+          </label>
+          <label class="btn btn-outline-info" [class.active]="form.get('modo_convocatoria')?.value === 'PERSONALIZADA'">
+            <input type="radio" formControlName="modo_convocatoria" value="PERSONALIZADA" (change)="onModoConvocatoriaChange()">
+            Lista Personalizada
+          </label>
+        </div>
+      </div>
+
+      <!-- Convocatoria por Grupo -->
+      <div class="form-group mb-3" *ngIf="form.get('modo_convocatoria')?.value === 'GRUPO'">
+        <label for="grupo_convocado" class="font-weight-bold text-secondary">Seleccionar Cohorte / Grupo *</label>
+        <select id="grupo_convocado" class="form-control" formControlName="grupo_convocado">
+          <option value="G57">Grupo G57</option>
+          <option value="G58">Grupo G58 (Cohorte Activa)</option>
+          <option value="G59">Grupo G59</option>
+          <option value="G60">Grupo G60 (Ingresantes)</option>
+        </select>
+      </div>
+
+      <!-- Convocatoria por Subcomisión -->
+      <div class="form-group mb-3" *ngIf="form.get('modo_convocatoria')?.value === 'SUBCOMISION'">
+        <label for="subcomision_id" class="font-weight-bold text-secondary">Seleccionar Subcomisión *</label>
+        <select id="subcomision_id" class="form-control" formControlName="subcomision_id">
+          <option *ngFor="let sub of subcomisiones" [value]="sub.id">{{ sub.nombre }}</option>
+        </select>
+      </div>
+
+      <!-- Convocatoria Personalizada: Selector reactivo / autocompletado tipo Select2 -->
+      <div class="form-group mb-3" *ngIf="form.get('modo_convocatoria')?.value === 'PERSONALIZADA'">
+        <label class="font-weight-bold text-secondary">Buscar y Agregar Socios Convocados (Select2 / Autocomplete)</label>
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control"
+            [formControl]="filtroSocioControl"
+            placeholder="Escriba apellido, nombre o legajo del socio..."
+          />
+          <div class="input-group-append" *ngIf="buscandoSocios">
+            <span class="input-group-text"><i class="material-icons spin">refresh</i></span>
+          </div>
+        </div>
+
+        <!-- Coincidencias dinámicas reactivas -->
+        <div class="list-group mt-1 shadow-sm border" *ngIf="sociosEncontrados.length > 0">
+          <button
+            type="button"
+            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2"
+            *ngFor="let s of sociosEncontrados"
+            (click)="agregarSocioPersonalizado(s)"
+          >
+            <div>
+              <strong>{{ s.last_name }}, {{ s.first_name }}</strong>
+              <small class="text-muted ml-2">Legajo: {{ s.legajo }} - {{ s.subcomision || 'Sin subcomisión' }}</small>
+            </div>
+            <span class="badge badge-primary">+ Convocado</span>
+          </button>
+        </div>
+
+        <!-- Badges de Socios convocados -->
+        <div class="mt-2">
+          <label class="small text-muted d-block">Socios Convocados ({{ sociosSeleccionados.length }}):</label>
+          <span
+            *ngFor="let sel of sociosSeleccionados"
+            class="badge badge-info p-2 mr-1 mb-1 d-inline-flex align-items-center"
+          >
+            {{ sel.first_name }} {{ sel.last_name }} ({{ sel.legajo }})
+            <button
+              type="button"
+              class="close ml-2 text-white font-weight-bold"
+              aria-label="Quitar"
+              (click)="quitarSocioPersonalizado(sel.id)"
+            >
+              &times;
+            </button>
+          </span>
+          <small class="text-danger d-block" *ngIf="form.get('modo_convocatoria')?.value === 'PERSONALIZADA' && sociosSeleccionados.length === 0">
+            Debe seleccionar al menos un socio en la nómina.
+          </small>
+        </div>
+      </div>
+
+      <!-- Tolerancias de tardanza y retiro -->
+      <div class="row">
+        <div class="col-md-6 mb-2">
+          <label for="tol_tardanza" class="small text-muted">Tolerancia de Tardanza (minutos)</label>
+          <input id="tol_tardanza" type="number" class="form-control form-control-sm" formControlName="tolerancia_tardanza_minutos" min="0" max="60" />
+        </div>
+        <div class="col-md-6 mb-2">
+          <label for="tol_retiro" class="small text-muted">Tolerancia de Retiro Anticipado (minutos)</label>
+          <input id="tol_retiro" type="number" class="form-control form-control-sm" formControlName="tolerancia_retiro_minutos" min="0" max="60" />
+        </div>
+      </div>
+
+      <div class="modal-footer px-0 pb-0 mt-4 d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary mr-2" (click)="cancelar()">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="form.invalid || guardando || (form.get('modo_convocatoria')?.value === 'PERSONALIZADA' && sociosSeleccionados.length === 0)"
+        >
+          <i class="material-icons mr-1">send</i>
+          {{ guardando ? 'Publicando...' : 'Publicar y Notificar Convocatoria' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

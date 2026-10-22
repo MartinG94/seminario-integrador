@@ -1,8 +1,13 @@
 """Esquema y escrituras legadas exclusivos de la base de tests."""
 
+import re
 from datetime import date
+from pathlib import Path
+
+from django.db.backends.base.base import BaseDatabaseWrapper
 
 from padron.models import Socio, SocioEstado, SocioEstadoHistorial, SocioEstudio, Subcomision
+from ranking.management.commands.load_legacy_schema import Command as LoadLegacyCommand
 from ranking.models import PuntajeAplicado, PuntajeGeneral
 
 LEGACY_MODELS = (
@@ -81,3 +86,40 @@ def drop_legacy_tables(connection, created):
         for model in reversed(created):
             if model._meta.db_table in connection.introspection.table_names():
                 editor.delete_model(model)
+
+
+def create_seed_support_tables(connection: BaseDatabaseWrapper) -> list[str]:
+    """Completa el esquema externo del seed sin cargar datos ni tocar tablas gestionadas."""
+    sql_path = Path(__file__).resolve().parents[1] / "core" / "sql" / "02-initial-data.sql"
+    loader = LoadLegacyCommand()
+    statements = loader._split_sql_statements(sql_path.read_text(encoding="utf-8"))
+    existing = set(connection.introspection.table_names())
+    created: list[str] = []
+
+    with connection.cursor() as cursor:
+        for statement in statements:
+            match = re.match(r"CREATE TABLE IF NOT EXISTS `([\w]+)`", statement, re.IGNORECASE)
+            if not match:
+                continue
+            table = match.group(1)
+            if table in existing or not table.startswith(("socio_", "grupo_", "tribunal_")):
+                continue
+            ddl = (
+                loader._adapt_mysql_to_sqlite(statement)
+                if connection.vendor == "sqlite"
+                else [statement]
+            )
+            for command in ddl:
+                cursor.execute(command)
+            created.append(table)
+            existing.add(table)
+    return created
+
+
+def drop_seed_support_tables(connection: BaseDatabaseWrapper, created: list[str]) -> None:
+    """Retira exclusivamente las tablas creadas por esta preparación de pruebas."""
+    existing = set(connection.introspection.table_names())
+    with connection.cursor() as cursor:
+        for table in reversed(created):
+            if table in existing:
+                cursor.execute(f"DROP TABLE {connection.ops.quote_name(table)}")
