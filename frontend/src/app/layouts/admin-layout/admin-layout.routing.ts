@@ -49,12 +49,15 @@ export const AdminLayoutRoutes: Routes = [
     },
     { 
       path: 'eventos-asistencia',     
-      component: EnDesarrolloComponent,
-      data: {
-        titulo: 'Eventos & Asistencia',
-        descripcion: 'Programación de actividades institucionales obligatorias con registro digital de asistencia.',
-        icono: 'event_available'
-      }
+      component: EventosAsistenciaComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
+    },
+    {
+      path: 'eventos',
+      component: EventosAsistenciaComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
     },
     { path: 'dashboard',              component: DashboardComponent },
     { path: 'table-list',             component: TableListComponent },

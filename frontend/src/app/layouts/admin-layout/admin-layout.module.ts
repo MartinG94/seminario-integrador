@@ -33,6 +33,12 @@ import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitu
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
 
+import { AsistenciaEventoComponent } from '../../pages/eventos/asistencia-evento/asistencia-evento.component';
+import { CrearEventoDialogComponent } from '../../pages/eventos/dialogs/crear-evento-dialog/crear-evento-dialog.component';
+import { ResumenCierreDialogComponent } from '../../pages/eventos/dialogs/resumen-cierre-dialog/resumen-cierre-dialog.component';
+import { ProgramarReunionDialogComponent } from '../../eventos-asistencia/dialogs/programar-reunion-dialog/programar-reunion-dialog.component';
+import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dialogs/resumen-cierre-dialog/resumen-cierre-dialog.component';
+
 @NgModule({
   imports: [
     CommonModule,
@@ -61,6 +67,11 @@ import { CalendarioInstitucionalComponent } from '../../calendario-institucional
     SolicitarPuntosComponent,
     SolicitudDetalleDialogComponent,
     EventosAsistenciaComponent,
+    AsistenciaEventoComponent,
+    CrearEventoDialogComponent,
+    ResumenCierreDialogComponent,
+    ProgramarReunionDialogComponent,
+    ResumenCierreDialogComponentAlias,
     CalendarioInstitucionalComponent,
     DashboardComponent,
     TableListComponent,

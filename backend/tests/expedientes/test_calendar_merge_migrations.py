@@ -114,3 +114,15 @@ def test_calendar_and_urgency_upgrade_preserves_existing_records(previous_migrat
         assert isinstance(response.json(), list)
     finally:
         MigrationExecutor(connection).migrate(latest)
+        from importlib import import_module
+        from types import SimpleNamespace
+
+        from django.apps import apps
+
+        from expedientes.models import CalendarioVersion
+
+        import_holidays = import_module(
+            "expedientes.migrations.0010_import_institutional_holidays"
+        ).import_current_holidays
+        CalendarioVersion.objects.filter(version=1).update(activa=True)
+        import_holidays(apps, SimpleNamespace(connection=connection))

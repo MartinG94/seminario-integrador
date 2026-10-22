@@ -30,6 +30,15 @@ from expedientes.models import (
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
+from expedientes.serializers.evento_serializers import (
+    AsistenciaEventoBulkUpdateSerializer,
+    AsistenciaEventoSerializer,
+    AsistenciaItemInputSerializer,
+    EventoInstitucionalCreateSerializer,
+    EventoInstitucionalSerializer,
+    RegistroApercibimientoSerializer,
+    ReportarAsistenciaSerializer,
+)
 from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
@@ -1215,3 +1224,14 @@ class CalcularPlazoSerializer(serializers.Serializer):
         default_timezone=ZoneInfo("America/Argentina/Buenos_Aires")
     )
     business_days = serializers.IntegerField(min_value=1, default=5)
+
+
+__all__ = [
+    "AsistenciaEventoBulkUpdateSerializer",
+    "AsistenciaEventoSerializer",
+    "AsistenciaItemInputSerializer",
+    "EventoInstitucionalCreateSerializer",
+    "EventoInstitucionalSerializer",
+    "RegistroApercibimientoSerializer",
+    "ReportarAsistenciaSerializer",
+]

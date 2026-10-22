@@ -455,4 +455,95 @@ INSERT INTO `tribunal_puntajegeneral` (`socio_id`, `puntos`, `felicitaciones`, `
 (770013,-2.00, 0, 1)  -- -2.00 pts (1 llamado)
 ON DUPLICATE KEY UPDATE `puntos`=VALUES(`puntos`), `felicitaciones`=VALUES(`felicitaciones`), `llamadosAtencion`=VALUES(`llamadosAtencion`);
 
+-- --------------------------------------------------------------------------------------
+-- 6. EVENTOS INSTITUCIONALES, ASISTENCIAS Y APERCIBIMIENTOS (SPEC 005 / SCRUM-50)
+-- --------------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `expedientes_evento` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `titulo` varchar(200) NOT NULL,
+  `descripcion` longtext NOT NULL,
+  `categoria` varchar(20) NOT NULL,
+  `tipo` varchar(30) NOT NULL,
+  `modalidad` varchar(30) NOT NULL DEFAULT 'PRESENCIAL_SEDE',
+  `ubicacion` varchar(255) DEFAULT NULL,
+  `lugar` varchar(200) NOT NULL DEFAULT 'Sede Central AVEIT',
+  `fecha_publicacion` datetime(6) NOT NULL,
+  `fecha_programada` datetime(6) NOT NULL,
+  `fecha_fin` datetime(6) DEFAULT NULL,
+  `fecha_hora_cierre_efectivo` datetime(6) DEFAULT NULL,
+  `fecha_reporte` datetime(6) DEFAULT NULL,
+  `tolerancia_tardanza_minutos` smallint(5) unsigned NOT NULL DEFAULT 15,
+  `tolerancia_retiro_minutos` smallint(5) unsigned NOT NULL DEFAULT 15,
+  `estado` varchar(30) NOT NULL DEFAULT 'PROGRAMADA',
+  `modo_convocatoria` varchar(30) NOT NULL DEFAULT 'PERSONALIZADA',
+  `grupo_convocado` varchar(10) DEFAULT NULL,
+  `es_obligatoria` tinyint(1) NOT NULL DEFAULT 1,
+  `es_sancionable` tinyint(1) NOT NULL DEFAULT 0,
+  `motivo_no_sancionable` longtext DEFAULT NULL,
+  `convocante_id` bigint(20) NOT NULL,
+  `reportado_por_id` bigint(20) DEFAULT NULL,
+  `subcomision_id` bigint(20) DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_evento_fecha_prog_estado` (`fecha_programada`, `estado`),
+  KEY `idx_evento_cat_tipo_sanc` (`categoria`, `tipo`, `es_sancionable`),
+  KEY `fk_evento_convocante` (`convocante_id`),
+  KEY `fk_evento_subcomision` (`subcomision_id`),
+  KEY `fk_evento_reportado` (`reportado_por_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `expedientes_asistencia_evento` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `evento_id` bigint(20) NOT NULL,
+  `socio_id` bigint(20) NOT NULL,
+  `estado_asistencia` varchar(30) NOT NULL,
+  `hora_registro` datetime(6) DEFAULT NULL,
+  `hora_salida` datetime(6) DEFAULT NULL,
+  `minutos_tardanza` int(10) unsigned NOT NULL DEFAULT 0,
+  `minutos_retiro_anticipado` int(10) unsigned NOT NULL DEFAULT 0,
+  `metodo_captura` varchar(20) NOT NULL DEFAULT 'MANUAL',
+  `dispositivo_id` varchar(100) DEFAULT NULL,
+  `motivo` longtext NOT NULL,
+  `observaciones` longtext NOT NULL,
+  `procesado_disciplinario` tinyint(1) NOT NULL DEFAULT 0,
+  `expediente_generado_id` bigint(20) DEFAULT NULL,
+  `apercibimiento_generado_id` bigint(20) DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_asistencia_per_evento_socio` (`evento_id`, `socio_id`),
+  KEY `fk_asist_evento` (`evento_id`),
+  KEY `fk_asist_socio` (`socio_id`),
+  KEY `fk_asist_expediente` (`expediente_generado_id`),
+  KEY `fk_asist_apercibimiento` (`apercibimiento_generado_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `expedientes_registro_apercibimiento` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `socio_id` bigint(20) NOT NULL,
+  `origen_tipo` varchar(50) NOT NULL,
+  `asistencia_id` bigint(20) DEFAULT NULL,
+  `expediente_origen_id` bigint(20) DEFAULT NULL,
+  `solicitud_t01_id` char(32) DEFAULT NULL,
+  `fecha_hecho` date NOT NULL,
+  `motivo` longtext NOT NULL,
+  `articulo_reglamento` varchar(50) NOT NULL DEFAULT 'Art. 83',
+  `estado` varchar(20) NOT NULL DEFAULT 'PENDIENTE',
+  `lote_consolidacion` char(32) DEFAULT NULL,
+  `expediente_sancion_id` bigint(20) DEFAULT NULL,
+  `fecha_consolidacion` datetime(6) DEFAULT NULL,
+  `actor_registro` varchar(150) NOT NULL DEFAULT 'SISTEMA',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_aperc_socio_est_created` (`socio_id`, `estado`, `created_at`),
+  KEY `fk_aperc_socio` (`socio_id`),
+  KEY `fk_aperc_asistencia` (`asistencia_id`),
+  KEY `fk_aperc_exp_origen` (`expediente_origen_id`),
+  KEY `fk_aperc_exp_sancion` (`expediente_sancion_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE OR REPLACE VIEW `expedientes_evento_institucional` AS SELECT * FROM `expedientes_evento`;
+
 SET FOREIGN_KEY_CHECKS = 1;
+

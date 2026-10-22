@@ -17,4 +17,5 @@ urlpatterns = [
     path("api/ranking/", include("ranking.urls", namespace="ranking")),
     path("api/ranking", include(("ranking.urls", "ranking"), namespace="ranking-noslash")),
     path("api/v1/expedientes/", include("expedientes.urls")),
+    path("api/v1/eventos/", include("expedientes.urls_eventos")),
 ]

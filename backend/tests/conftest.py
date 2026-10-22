@@ -16,7 +16,37 @@ def api_client() -> APIClient:
 
 @pytest.fixture
 def subcomision(db) -> Subcomision:
-    return Subcomision.objects.create(name="Cómputos")
+    sub, _ = Subcomision.objects.get_or_create(name="Cómputos")
+    return sub
+
+
+@pytest.fixture(autouse=True)
+def ensure_calendar_seeded(request):
+    """Garantiza que el calendario y feriados institucionales canónicos estén sembrados."""
+    if not request.node.get_closest_marker("django_db"):
+        return
+    try:
+        from expedientes.models import Holiday
+
+        if not Holiday.objects.exists():
+            from importlib import import_module
+            from types import SimpleNamespace
+
+            from django.apps import apps
+            from django.db import connection
+
+            seed_0008 = import_module(
+                "expedientes.migrations.0008_seed_calendario_2026"
+            ).seed_calendario_2026
+            import_0010 = import_module(
+                "expedientes.migrations.0010_import_institutional_holidays"
+            ).import_current_holidays
+
+            editor = SimpleNamespace(connection=connection)
+            seed_0008(apps, editor)
+            import_0010(apps, editor)
+    except Exception:
+        pass
 
 
 @pytest.fixture
@@ -68,34 +98,20 @@ def authenticate(api_client):
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
     """Agrega el esquema externo sólo después de crear la base de pruebas."""
-    from pathlib import Path
-
-    from django.conf import settings
     from django.db import connection
 
-    from tests.legacy_schema import create_legacy_tables, drop_legacy_tables
+    from tests.legacy_schema import (
+        create_legacy_tables,
+        create_seed_support_tables,
+        drop_legacy_tables,
+        drop_seed_support_tables,
+    )
 
     with django_db_blocker.unblock():
         created = create_legacy_tables(connection)
-
-        init_sql_path = Path(settings.BASE_DIR) / "core" / "sql" / "02-initial-data.sql"
-        if not init_sql_path.exists():
-            init_sql_path = (
-                Path(settings.BASE_DIR).parent / "docker" / "mysql" / "init" / "02-initial-data.sql"
-            )
-        if init_sql_path.exists():
-            from ranking.management.commands.load_legacy_schema import Command as LoadCommand
-
-            cmd = LoadCommand()
-            with open(init_sql_path, encoding="utf-8") as f:
-                raw_sql = f.read()
-            raw_stmts = cmd._split_sql_statements(raw_sql)
-            with connection.cursor() as cursor:
-                for stmt in raw_stmts:
-                    s = stmt.strip()
-                    if s.upper().startswith("CREATE TABLE"):
-                        cursor.execute(s)
+        support_tables = create_seed_support_tables(connection)
 
     yield
     with django_db_blocker.unblock():
+        drop_seed_support_tables(connection, support_tables)
         drop_legacy_tables(connection, created)
