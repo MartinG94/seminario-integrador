@@ -651,75 +651,102 @@ El **Sprint 3** consolidó la bilateralidad y la transparencia del proceso disci
 
 #### 2.6.2. Resultado Final del Sprint e Incremento
 
-* **Sprint Goal Alcanzado:** **Sí (Alto Grado de Cumplimiento / 94.4%)**. Se implementaron con éxito los módulos críticos de descargos (T02/T03), la custodia segura de evidencias bajo estándar médico-legal, el calendario institucional de días hábiles, el clasificador de urgencia, la gestión de asistencias con sanciones automáticas 3:1, y la investigación formal de IA para clasificación de expedientes.
-* **Velocidad Real Lograda:** 
-  * **22 Story Points completados al 100% (DoD estricto verificado y mergeado en `main`)**.
-  * **9 Story Points en estado *Testing-Calidad* (código finalizado, suite completa pasando y listos para integración)**.
-  * **5 Story Points en curso activo (SCRUM-81 Sala TD al 80% y SCRUM-84 Documentación cerrada)**.
-* **Historias de Usuario Terminadas (cumpliendo 100% DoD):**
-  * `SCRUM-45` (S3-01): Calendario institucional único de días hábiles con 16 feriados nacionales oficiales de 2026, API REST de simulación, soporte de excepciones institucionales y notificaciones de 10s (PR #49 integrado a `main`, 537 tests backend, 205 tests frontend).
-  * `SCRUM-83` (S3-03): Formulario T02 de justificación tipificada con control autoritativo de plazos de 5 días hábiles en servidor y bloqueo de concurrencia buzzer-beater.
-  * `SCRUM-48` (S3-04): Módulo de custodia digital de evidencias con aislamiento RBAC por objeto, validación MIME y resguardo confidencial de comprobantes médicos (PR #53 integrado a `main`).
-  * `SCRUM-49` (S3-05): Formulario T03 extraordinario con fundamentación libre circunstanciada, límite de 4000 caracteres y trazabilidad perentoria.
-  * `SCRUM-78` (S3-07): Clasificador e indicador visual de urgencia con badges semánticos, realce de borde rojo en Kanban y selector en origen T01 (PR #50 integrado a `main`).
-  * `SCRUM-79` (S3-08): Acción y diálogo modal para visualizar múltiples socios involucrados en la tabla de gestión de expedientes.
-  * `SCRUM-76` (S3-PO1): Investigación técnica de viabilidad sobre SLMs locales (Laya) con primitivas tipadas `choice` y `score`, memoria técnica entregada al Tribunal, Cómputos y CD (PR #55 integrado a `main`).
-  * `SCRUM-77` (S3-PO2): Estabilización de base de datos MySQL en Docker y generación de fixtures ampliados de prueba con cohortes G57 a G60 y causas testigo.
-* **Historias en Testing-Calidad / Fase de Homologación:**
-  * `SCRUM-50` (S3-06): Eventos, asistencias y consolidación atómica 3:1 de apercibimientos (branch `feature/US-S3-06-sanciones-reuniones-solicitudes` con 100% tests en verde y documento UAT formalizado).
-  * `SCRUM-80` (S3-09): T01 con columna Grupo en tabla de involucrados y precisiones forenses en Hoja de Anexo.
-  * `SCRUM-82` (S3-11): Ranking de socios con ordenamiento múltiple anidado (Grupo ➔ Alfabético) y modal de detalle de causas.
-  * `SCRUM-52` (S4-02): Resolución y homologación de causales T02 con fundamento reglamentario trazable.
-* **Historias No Completadas / En Curso:**
-  * `SCRUM-81` (S3-10): Sala TD: Detalle de expediente según formato canónico del Tribunal (avance del 80%; maquetación visual completada, en proceso de enlace final con las firmas colegiadas).
-  * `SCRUM-84`: Tarea de Apertura y Cierre de Documentación (concluida en esta entrega).
+* **Sprint Goal Alcanzado:** **Sí (91.7% de los Story Points comprometidos finalizados e integrados en `main` — 33/36 SP)**. Se implementaron y fusionaron con éxito los módulos de descargos (T02/T03 con versionado inmutable y retiro lógico), la custodia segura de evidencias bajo estándar médico-legal, el calendario institucional de días hábiles, el clasificador de urgencia, el modal de socios múltiples, las mejoras en el Formulario T01 (columna Grupo y Hoja de Anexo), el ordenamiento anidado y detalle de causas en el Ranking, la resolución de causales T02 con fundamento trazable, la gestión de eventos y asistencias con sanciones automáticas 3:1 y la investigación formal de IA (Laya).
+* **Velocidad Real Lograda:**
+  * **33 Story Points completados al 100% (13 de 14 ítems en estado *Finalizado* en Jira, con DoD estricto verificado y PRs mergeados en `main`)**.
+  * **3 Story Points en curso traspasados al Sprint 4 (`SCRUM-81` Sala TD con avance del 80% integrado en PR #60, restando su consolidación con el visor unificado)**.
+* **Historias de Usuario y Tareas Terminadas (cumpliendo 100% DoD):**
+  * `SCRUM-45` (S3-01 - 3 SP): Calendario institucional único de días hábiles con 16 feriados nacionales oficiales de 2026, API REST de simulación, soporte de excepciones institucionales y notificaciones de 10s (PR #49 integrado a `main`).
+  * `SCRUM-83` (S3-03 - 5 SP): Formulario T02 de justificación tipificada con control autoritativo de plazos de 5 días hábiles en servidor y bloqueo de concurrencia buzzer-beater.
+  * `SCRUM-48` (S3-04 - 3 SP): Módulo de custodia digital de evidencias con aislamiento RBAC por objeto, validación de magic bytes/MIME y resguardo confidencial de comprobantes médicos (PR #53 integrado a `main`).
+  * `SCRUM-49` (S3-05 - 3 SP): Formulario T03 extraordinario con fundamentación libre circunstanciada hasta 5000 caracteres, versionado inmutable (`DescargoVersion`) y retiro lógico en plazo (PR #58 integrado a `main`).
+  * `SCRUM-78` (S3-07 - 2 SP): Clasificador e indicador visual de urgencia con badges semánticos, realce de borde rojo en Kanban y selector en origen T01 (PR #50 integrado a `main`).
+  * `SCRUM-79` (S3-08 - 2 SP): Acción y diálogo modal para visualizar múltiples socios involucrados en la tabla de gestión de expedientes (PR #57 integrado a `main`).
+  * `SCRUM-76` (S3-PO1 - 2 SP): Investigación técnica de viabilidad sobre SLMs locales (Laya) con primitivas tipadas `choice` y `score`, memoria técnica entregada al Tribunal, Cómputos y CD (PR #55 integrado a `main`).
+  * `SCRUM-77` (S3-PO2 - 2 SP): Estabilización de base de datos MySQL en Docker y generación de fixtures ampliados de prueba con cohortes G57 a G60 y causas testigo.
+  * `SCRUM-50` (S3-06 - 2 SP): Eventos institucionales, asistencias por patrón Strategy y consolidación atómica 3:1 de apercibimientos y felicitaciones alineada al esquema legacy (PR #56 integrado a `main`).
+  * `SCRUM-80` (S3-09 - 2 SP): T01 con columna Grupo en tabla de involucrados y precisiones forenses en Hoja de Anexo (PR #51 integrado a `main`).
+  * `SCRUM-82` (S3-11 - 2 SP): Ranking de socios con ordenamiento múltiple anidado (Grupo ➔ Alfabético), orden directo por Saldo y modal de detalle de causas por socio (PR #52 integrado a `main`).
+  * `SCRUM-52` (S4-02 - 3 SP): Resolución y homologación de causales T02 con regla sugerida, fundamento reglamentario trazable e historial inmutable (PR #59 integrado a `main`).
+  * `SCRUM-84` (S3-TAREA - 2 SP): Tarea de Apertura y Cierre de Sprint en Documentación formalizada en Definición de Producto y Seguimiento de Proyecto (PR #61).
+* **Historias en Curso Traspasadas al Sprint 4 (Carry-over):**
+  * `SCRUM-81` (S3-10 - 3 SP): Sala TD: Detalle de expediente según formato canónico del Tribunal (avance base integrado en PR #60; continúa en Sprint 4 en estado *En curso* para articularse con el visor autorizado y el editor de resoluciones).
 * **Incremento de Software Demostrado:**
-  1. Portal de presentación de descargos reglamentarios (T02 tipificado y T03 libre) con temporizador dinámico en tiempo real y bloqueo autoritativo en servidor ante vencimiento perentorio.
-  2. Bóveda digital de evidencias probatorias adjuntas con acceso restringido exclusivamente a las partes y al Tribunal de Disciplina.
+  1. Portal de presentación de descargos reglamentarios (T02 tipificado y T03 libre de hasta 5000 caracteres) con versionado inmutable, retiro lógico, temporizador dinámico en tiempo real y bloqueo autoritativo en servidor ante vencimiento perentorio.
+  2. Bóveda digital de evidencias probatorias adjuntas con validación binaria (magic bytes, SHA-256), auditoría de descargas y acceso restringido exclusivamente a las partes y al Tribunal de Disciplina.
   3. Módulo administrativo de Calendario Institucional con visualización de los 16 feriados oficiales 2026 y simulador de plazos interactivo.
-  4. Tablero de expedientes y listados tabulares con clasificador e indicadores semánticos de urgencia (Baja, Normal, Urgente) y modal de socios múltiples.
-  5. Módulo de Eventos y Asistencias con cálculo de antelación mínima (2 días hábiles), registro circunstanciado de ausencias, motor de apercibimientos 3:1 inmutable (cero sentencias UPDATE en MySQL) y desacoplamiento para lector de huellas mediante patrón Strategy.
-  6. Dataset enriquecido en MySQL con socios representativos de los grupos G57, G58, G59 y G60, subcomisiones y expedientes de prueba.
-  7. Suite de pruebas integral en verde: 677 pruebas backend en pytest y más de 200 pruebas unitarias en frontend (Angular Karma).
+  4. Tablero de expedientes, formulario T01 con columna Grupo y precisiones en Anexo, clasificador e indicadores semánticos de urgencia (Baja, Normal, Urgente), modal de socios múltiples y evaluación de causales T02 en dos pasos por el TD.
+  5. Ranking de socios con ordenamiento compuesto (Grupo ➔ Alfabético), orden por Saldo y consulta modal de expedientes por socio.
+  6. Módulo de Eventos y Asistencias en dos pestañas (`Generar Evento` y `Mis Eventos`) con ciclo de vida de 6 estados, antelación mínima de 2 días hábiles, reporte dentro de 72 hs hábiles, motor de apercibimientos 3:1 inmutable (cero sentencias UPDATE en MySQL) y desacoplamiento para lector biométrico mediante patrón Strategy.
+  7. Suite de pruebas integral en verde sobre `main`: **812 pruebas backend en `pytest`** (0 errores), linter `ruff` limpio en 174 archivos y más de 260 pruebas unitarias en frontend (Angular Karma).
 * **Enlace a la Demostración / Evidencia Técnica:**
-  - Pull Requests integrados en `main`: PR #49, PR #50, PR #53, PR #55.
-  - Ramas de feature listas para merge: `feature/US-S3-06-sanciones-reuniones-solicitudes`, `feature/SCRUM-80-t01-grupo-anexo`, `feature/SCRUM-82-ranking-orden-detalle`.
+  - Pull Requests integrados en `main`: PR #49 (`SCRUM-45`), PR #50 (`SCRUM-78`), PR #51 (`SCRUM-80`), PR #52 (`SCRUM-82`), PR #53 (`SCRUM-48`), PR #55 (`SCRUM-76`), PR #56 (`SCRUM-50`), PR #57 (`SCRUM-79`), PR #58 (`SCRUM-49`), PR #59 (`SCRUM-52`), PR #60 (`SCRUM-81`), PR #61 (`SCRUM-84`).
   - Documentos UAT: `docs/gestion-proyecto/UAT-PR49-calendario.md` y `docs/gestion-proyecto/UAT_SCRUM_50_REUNIONES_Y_SANCIONES.md`.
 
 ---
 
 #### 2.6.3. Retrospectiva y Mejora Continua
 
-* **Fecha de la Retrospectiva:** 20/10/2026
+* **Fecha de la Retrospectiva:** 20/10/2026 (cierre administrativo en Jira el 22/10/2026 tras la integración total de PRs en revisión).
 * **Técnica Utilizada:** *Barco de Vela (Sailboat Retrospective)*.
 * **¿Qué funcionó bien durante el Sprint? (Viento en las velas / Mantener):**
-  * • Excelente productividad del equipo: se abordaron 36 Story Points (superando ampliamente el pronóstico base) gracias a la modularización de tareas.
-  * • Incorporación de directivas tempranas del PO: los ajustes de `notasPO.md` del 07/10 evitaron desperdiciar esfuerzo en la votación nominal compleja.
-  * • Calidad y cobertura técnica de primer nivel: preservación estricta de la inmutabilidad de la base de datos (cero UPDATEs en saldos de puntos) y tests exhaustivos para cálculo de días hábiles.
-  * • Documentación rigurosa de guías de aceptación de usuario (UAT) para cada Pull Request relevante.
+  * • Excelente velocidad y capacidad de entrega del equipo: se completaron **33 Story Points** (incluyendo el adelanto de `SCRUM-52` del Sprint 4) gracias a la modularización en paralelo.
+  * • Incorporación oportuna de las directivas del PO (`notasPO.md` del 07/10): evitó retrabajo en la votación nominal compleja y alineó las pantallas con los formatos históricos reales del Tribunal de Disciplina.
+  * • Calidad técnica e inmutabilidad: preservación estricta de cero sentencias `UPDATE` en saldos de puntos, compatibilidad total con las tablas legacy de AVEIT y suite de 812 tests backend en verde.
+  * • Documentación rigurosa de guías de aceptación de usuario (UAT) para validar cada entrega.
 * **¿Qué no funcionó bien o generó fricciones? (Anclas / Detener):**
-  * • La coexistencia de múltiples ramas de feature concurrentes generó colisiones de merge en `urls.py`, `views.py` y migraciones de base de datos (`0011_merge_calendar_and_urgency`), requiriendo sesiones adicionales de sincronización.
-  * • La configuración heredada del linter de Angular (TSLint vs ESLint) generó advertencias durante las compilaciones locales, documentadas en el informe de UAT.
+  * • La coexistencia de múltiples ramas de feature abiertas en simultáneo generó colisiones de merge en `views/__init__.py`, `serializers/__init__.py`, `legacy_schema.py` y en el grafo de migraciones (`0011` a `0016`), requiriendo una instancia de conciliación técnica al cierre del sprint.
+  * • Diferencias de codificación de caracteres (UTF-8 vs Windows-1252) al resolver conflictos manuales en entornos Windows.
 * **¿Qué riesgos o amenazas detectamos? (Rocas / Anticipar):**
-  * • El Sprint 4 requiere rediseñar la emisión de resoluciones. Si se intenta reintroducir la votación nominal compleja descartada por el PO, se pondrá en riesgo el cronograma de entrega.
-  * • Acumulación de ramas en estado *Testing-Calidad*: es prioritario mergear formalmente las 4 ramas pendientes a `main` antes de arrancar los desarrollos del Sprint 4.
+  * • El Sprint 4 aborda el núcleo resolutivo del Tribunal de Disciplina (`SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`) y la apelación/adecuación de T01 (`SCRUM-70`). Es crítico mantener la premisa del PO de utilizar un editor unificado de resolución con fijación directa de puntaje final por socio, sin reintroducir flujos de votación nominal paso a paso.
 * **Plan de Acción de Mejora Continua para el Siguiente Sprint (Sprint 4):**
 
 | Acción de Mejora Concreta | Responsable de Seguimiento | Criterio de Éxito / Medición |
 | :--- | :--- | :--- |
-| **A1. Homologación y merge inmediato de ramas en Testing:** Mergear ordenadamente a `main` las ramas de SCRUM-50, SCRUM-80 y SCRUM-82 con resolución limpia de conflictos previo a ramificar Sprint 4. | Lucas Martín Guillén (SM)<br>Nicolás Rosales | 100% de ramas de S3 integradas en `main` con build y tests en verde. |
-| **A2. Foco exclusivo en el Editor Unificado de Resoluciones (Sprint 4):** Diseñar directamente el formulario unificado de redacción y fijación de puntajes por socio (Imagen 3 del TD), respetando las firmas con Grupo (Gxx) y suplencias sin votación paso a paso. | Diego Sánchez (PO)<br>Lucas Gastiaburu<br>Luis Urviola | Interfaz de emisión validada por el Tribunal de Disciplina en el primer tercio del Sprint 4. |
+| **A1. Integración temprana y control UTF-8 en PRs:** Integrar las ramas a `main` de forma continua durante el sprint verificando `ruff check`, `ruff format --check` y codificación UTF-8 limpia antes de aprobar cada PR. | Lucas Martín Guillén (SM)<br>Nicolás Rosales | Cero regresiones de codificación y cero ramas acumuladas al cierre del Sprint 4. |
+| **A2. Foco en el Visor Unificado y Editor de Resoluciones sin Votación Nominal:** Articular la finalización de `SCRUM-81` con `SCRUM-51` y `SCRUM-56`, implementando el recuadro unificado de redacción (`VISTO / CONSIDERANDO / SE RESUELVE`) y fijación de puntajes por socio conforme a la Imagen 3 del TD. | Diego Sánchez (PO)<br>Lucas Gastiaburu<br>Luis Urviola | Flujo completo de sustanciación y redacción de resolución validado por el PO en el Sprint 4. |
 
 ---
 
-### 2.7. Estructura de Seguimiento para Sprints Subsiguientes (Sprints 4 a 6)
+### 2.7. Sprint 4 (Sustanciación en Sala TD, Suplencias, Apelación T01 y Redacción de Resolución Oficial)
 
-A continuación se mantiene la estructura estandarizada que el equipo completará iteración tras iteración para documentar la planificación, ejecución y retrospectiva de los Sprints 4 a 6:
+El **Sprint 4** se centra en la etapa de **Sustanciación, Deliberación y Redacción de Resoluciones** por parte del Tribunal de Disciplina, incorporando las definiciones rectoras del Product Owner del 07/10/2026 (simplificación del juzgamiento sin votación nominal paso a paso, valoración de descargos extraordinarios T03 bajo sana crítica, gestión estatutaria de apartamientos/suplencias y tramitación de apelaciones/adecuaciones del T01).
 
-#### 2.7.1. Plantilla de Planificación y Sprint Backlog
+---
+
+#### 2.7.1. Planificación y Sprint Backlog (S4 Apertura)
+
+* **Sprint Nº:** 4
+* **Fecha de Inicio:** 22/10/2026 — **Fecha de Finalización:** 03/11/2026
+* **Scrum Master del Sprint:** Lucas Martín Guillén
+* **Sprint Goal (Objetivo del Sprint):** Consolidar la Sala del Tribunal de Disciplina con el visor autorizado de expedientes y evidencias, la valoración fundada de descargos extraordinarios T03 con antecedentes, la gestión estatutaria de apartamientos y suplencias por grupo Activo, la tramitación de apelaciones/adecuaciones del T01 y la redacción unificada de la resolución oficial con fijación directa del puntaje final aplicado por socio.
+* **Capacidad Disponible en el Sprint:** 154 horas-hombre brutas / ~115.5 horas efectivas de desarrollo (7 integrantes con dedicación de 11 hs/sem y Factor de Enfoque del 75%).
+* **Ajustes de Alcance respecto al Plan Inicial:**
+  * Se adelantó y completó en el Sprint 3 la historia **`SCRUM-52` (S4-02: Resolver causal T02 con fundamento trazable — 3 SP)**.
+  * Conforme a las directivas del PO (`notasPO.md` del 07/10/2026), se descartó la historia de votación nominal paso a paso (`S4-05`), unificando la fijación directa del puntaje final aplicado dentro de **`SCRUM-56` (S4-06)**.
+  * Se incorporó del Product Backlog la historia **`SCRUM-70` (PB-02: Tramitar apelación y adecuación del T01 — 5 SP)** y la culminación de **`SCRUM-81` (S3-10: Sala TD: Detalle de expediente según formato canónico del Tribunal — 3 SP)**.
+* **Velocidad Comprometida:** **22 Story Points** (distribuidos en 6 Historias de Usuario en el tablero activo de Jira).
+* **Sprint Backlog Comprometido (Sprint 4 Activo en Jira):**
+
+| ID Jira | ID Backlog | Título de la Historia de Usuario | Tareas Técnicas Asociadas | Responsable(s) Asignado(s) | SP | Estado Inicial |
+| :---: | :---: | :--- | :--- | :--- | :---: | :---: |
+| **SCRUM-81** | S3-10 | **Story:** Sala TD: Detalle de expediente según formato canónico del Tribunal | 1. Completar integración del detalle canónico (Imagen 2) en Sala TD.<br>2. Mostrar cabecera completa, Responsables 1, 2 y 3 con Grupo social (`Gxx`).<br>3. Exponer reglamentos respaldantes y tabla de involucrados con estado de justificación.<br>4. Verificación responsive e integración con visor de sustanciación. | Luis Urviola (SirL) | 3 | En curso |
+| **SCRUM-51** | S4-01 | **Story:** Revisar expediente y evidencia en un visor autorizado | 1. Visor cronológico unificado de T01, T02/T03 y evidencias probatorias.<br>2. Control estricto de acceso a datos médicos sólo para usuarios autorizados.<br>3. Registro de auditoría en cada consulta/descarga de evidencia sensible.<br>4. Alerta visual de archivos faltantes o dañados y diseño accesible/responsive. | Tomas Augusto Quiroz | 5 | To Do |
+| **SCRUM-53** | S4-03 | **Story:** Valorar T03 mediante antecedentes y sana crítica | 1. Registro de valoración extraordinaria con fundamento explícito obligatorio.<br>2. Búsqueda y vinculación de resoluciones emitidas autorizadas como precedentes.<br>3. Advertencia no bloqueante ante diferencias de graduación respecto a antecedentes.<br>4. Resguardo estricto de información médica para que no se filtre en publicaciones. | Axel Villegas | 3 | To Do |
+| **SCRUM-54** | S4-04 | **Story:** Gestionar apartamiento y suplencia conforme al Estatuto | 1. Modelar composición de 3 titulares y 3 suplentes por grupos Activos (4.º, 5.º y 6.º).<br>2. Implementar apartamiento por conflicto/involucramiento y reemplazo por suplente o ad hoc (Art. 95), sin recusación (prohibida por Art. 93).<br>3. Bloquear inmutablemente la composición del cuerpo y su causal antes de resolver.<br>4. Validar incompatibilidades estatutarias de cargos. | Lucas Gastiaburu | 3 | To Do |
+| **SCRUM-56** | S4-06 | **Story:** Redactar resolución oficial y fijar puntaje final aplicado sin votación nominal | 1. Editor unificado de resolución oficial conservando el número del expediente.<br>2. Plantilla versionada con estructura reglamentaria (`VISTO`, `CONSIDERANDO`, `SE RESUELVE`).<br>3. Fijación directa del puntaje final neto aplicado o medida individualizada por socio imputado.<br>4. Previsualización en formato oficial (Imagen 3) sin equivaler a emisión y sin adjuntos privados. | Nicolás Nazareno Rosales | 3 | To Do |
+| **SCRUM-70** | PB-02 | **Story:** Tramitar apelación y adecuación del T01 | 1. Recepción y registro de apelación de T01 por canal formal dentro del plazo parametrizado.<br>2. Flujo de debate y adecuación de puntos e involucrados conservando la versión original inmutable.<br>3. Notificación fundada de motivos al solicitante y a los socios solicitados.<br>4. Trazabilidad completa en el historial procesal conforme al Art. 14 del Reglamento Procesal 2026. | Tomas Augusto Quiroz | 5 | To Do |
+
+---
+
+### 2.8. Estructura de Seguimiento para Cierre de Sprint 4 y Sprints Subsiguientes (Sprints 5 y 6)
+
+A continuación se mantiene la estructura estandarizada que el equipo completará al cierre del Sprint 4 y en las iteraciones 5 y 6:
+
+#### 2.8.1. Plantilla de Planificación y Sprint Backlog
 *(Se completará al inicio de cada Sprint durante la Sprint Planning)*
 
-* **Sprint Nº:** [4 a 6]
+* **Sprint Nº:** [5 a 6]
 * **Fecha de Inicio:** [dd/mm/aaaa] — **Fecha de Finalización:** [dd/mm/aaaa]
 * **Scrum Master del Sprint:** Lucas Martín Guillén
 * **Sprint Goal (Objetivo del Sprint):** [Declaración concisa del valor de negocio a entregar en el incremento]
@@ -731,7 +758,7 @@ A continuación se mantiene la estructura estandarizada que el equipo completar�
 | :---: | :---: | :--- | :--- | :--- | :---: | :---: |
 | SCRUM-xx | Sx-xx | [Título de la Historia] | 1. [Tarea técnica 1]<br>2. [Tarea técnica 2] | [Nombre del desarrollador] | [x] | To Do |
 
-#### 2.7.2. Plantilla de Resultado Final del Sprint
+#### 2.8.2. Plantilla de Resultado Final del Sprint
 *(Se completará al cierre del Sprint tras la Sprint Review)*
 
 * **Sprint Goal Alcanzado:** [Sí / Parcial / No - Justificación]
@@ -741,7 +768,7 @@ A continuación se mantiene la estructura estandarizada que el equipo completar�
 * **Incremento de Software Demostrado:** [Resumen funcional del incremento desplegado en Staging y validado por el PO]
 * **Enlace a la Demostración / Evidencia Técnica:** [Link a release de GitHub, PRs o entorno de pruebas]
 
-#### 2.7.3. Plantilla de Retrospectiva
+#### 2.8.3. Plantilla de Retrospectiva
 *(Se completará al cierre del Sprint durante la Sprint Retrospective)*
 
 * **Fecha de la Retrospectiva:** [dd/mm/aaaa]

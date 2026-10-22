@@ -111,15 +111,16 @@ Durante el transcurso del Sprint 3 se formalizaron las conclusiones de las reuni
 
 | Requerimiento / Ítem | Estado de Implementación | Cobertura de Verificación |
 | :--- | :---: | :--- |
-| **RF-08 (Formulario T02 Tipificado)** | **100% Completado** | Validado con suite unitaria backend y componentes reactivos en frontend. Plazo hábil autoritativo verificado. |
-| **RF-09 (Formulario T03 Extraordinario)** | **100% Completado** | Verificado con límite de 4000 caracteres, saneamiento de entradas y acuse digital. |
-| **RF-10 (Custodia de Evidencias)** | **100% Completado** | PR #53 integrado a `main`. Validado aislamiento RBAC por objeto y sanitización de tipos MIME. |
+| **RF-08 (Formulario T02 Tipificado y Resolución Causal)** | **100% Completado** | Validado con suite unitaria backend y componentes reactivos en frontend (`SCRUM-83` y `SCRUM-52` / PR #59 integrados a `main`). |
+| **RF-09 (Formulario T03 Extraordinario y Versionado)** | **100% Completado** | PR #58 integrado a `main`. Límite de 5000 caracteres, versionado inmutable `DescargoVersion` y retiro lógico auditado. |
+| **RF-10 (Custodia de Evidencias)** | **100% Completado** | PR #53 integrado a `main`. Validado aislamiento RBAC por objeto, validación de magic bytes y sanitización MIME. |
 | **RF-14 (Calendario Institucional)** | **100% Completado** | PR #49 integrado a `main`. 16 feriados oficiales 2026 cargados, API REST y simulador interactivo verificados. |
-| **RF-16 (Clasificador de Urgencia)** | **100% Completado** | PR #50 integrado a `main`. Selector en T01, badges Kanban y filtros de tabla plenamente operativos. |
-| **RF-17 (Eventos, Asistencias y Sanciones)** | **En Testing-Calidad** | Rama `feature/US-S3-06-sanciones-reuniones-solicitudes` con 100% de tests en verde; UAT documentada en espera de homologación. |
-| **RF-18 (Sala TD: Detalle Canónico)** | **En Curso (80%)** | Rama de trabajo activa; maquetación alineada a la Imagen 2 oficial del TD. |
-| **I+D Asistencia IA (Laya)** | **100% Completado** | PR #55 integrado a `main`. Documento técnico de viabilidad de SLMs locales entregado a CD, TD y Cómputos. |
-| **Padrón y Seed Data MySQL (G57 a G60)** | **100% Completado** | Poblamiento de base de datos con cohortes reales y casos testigo para testing de integración. |
+| **RF-16 (Clasificador de Urgencia y Socios Múltiples)** | **100% Completado** | PR #50 y PR #57 integrados a `main`. Selector en T01, badges Kanban, filtros de tabla y modal de socios múltiples operativos. |
+| **RF-17 (Eventos, Asistencias y Sanciones 3:1)** | **100% Completado** | PR #56 integrado a `main`. Ciclo de vida de eventos en 6 estados, patrón Strategy, consolidación 3:1 y 812 tests backend en verde. |
+| **RF-18 (Sala TD: Detalle Canónico)** | **En Curso (80% - Continúa en S4)** | Avance base integrado (PR #60) y traspasado al Sprint 4 (`SCRUM-81`, 3 SP) para su enlace con el visor autorizado y resolución. |
+| **T01 Grupo + Anexo y Ranking Anidado** | **100% Completado** | PR #51 (`SCRUM-80`) y PR #52 (`SCRUM-82`) integrados a `main` con ordenamiento múltiple y modal de causas por socio. |
+| **I+D Asistencia IA (Laya)** | **100% Completado** | PR #55 (`SCRUM-76`) integrado a `main`. Documento técnico de viabilidad de SLMs locales entregado a CD, TD y Cómputos. |
+| **Padrón y Seed Data MySQL (G57 a G60)** | **100% Completado** | Poblamiento de base de datos (`SCRUM-77`) con cohortes reales y casos testigo para testing de integración. |
 
 ---
 
@@ -170,14 +171,15 @@ flowchart LR
 
 ### 2.4. Release Plan y Transición hacia el Sprint 4
 
-Al concluir el Sprint 3, la plataforma SGD-AVEIT alcanza una madurez funcional que habilita la entrada a la fase de **Sustanciación y Resolución Colegiada (Sprint 4: 21/10 al 03/11)**:
+Al concluir el Sprint 3 con **33 Story Points completados e integrados en `main`** (13 de 14 ítems en estado *Finalizado*), la plataforma SGD-AVEIT alcanza una madurez funcional sólida que habilita el inicio formal de la fase de **Sustanciación y Resolución Colegiada (Sprint 4: 22/10 al 03/11, 22 Story Points comprometidos)**:
 
-* **Sprint 4 (`SCRUM-51` a `SCRUM-56`):**
-  * Implementación del módulo de deliberación y análisis probatorio de descargos T02/T03 para los integrantes del Tribunal.
-  * Editor unificado de resoluciones oficiales con estructura VISTO / CONSIDERANDO / SE RESUELVE.
-  * Formulario de fijación de puntaje neto individualizado por socio involucrado.
-  * Suscripción formal y pie de firma colegiada identificando grupo social Gxx y suplencias.
-  * Despacho automático de la notificación resolutiva a Comisión Directiva y socio.
+* **Sprint 4 (`SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` y `SCRUM-81`):**
+  * **`SCRUM-51` (S4-01 - 5 SP):** Visor autorizado unificado para revisar cronológicamente T01, T02/T03 y evidencias probatorias con auditoría de consultas sensibles.
+  * **`SCRUM-53` (S4-03 - 3 SP):** Valoración de descargos extraordinarios T03 mediante antecedentes emitidos y sana crítica.
+  * **`SCRUM-54` (S4-04 - 3 SP):** Gestión de apartamiento por conflicto de interés y suplencia estatutaria (3 titulares y 3 suplentes por grupos Activos 4.º, 5.º y 6.º, sin recusación conforme Art. 93).
+  * **`SCRUM-56` (S4-06 - 3 SP):** Editor unificado de resolución oficial con estructura reglamentaria (`VISTO / CONSIDERANDO / SE RESUELVE`) y fijación de puntaje final neto aplicado por socio sin votación nominal.
+  * **`SCRUM-70` (PB-02 - 5 SP):** Tramitación de apelación y adecuación del Formulario T01 conforme al Art. 14 del Reglamento Procesal 2026.
+  * **`SCRUM-81` (S3-10 - 3 SP):** Consolidación final del detalle de expediente según formato canónico del Tribunal en la Sala TD (Imagen 2).
 
 ---
 *Documento aprobado y formalizado para la Cátedra de Seminario Integrador — Ciclo Lectivo 2026.*
