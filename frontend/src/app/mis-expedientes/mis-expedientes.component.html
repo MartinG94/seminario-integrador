@@ -35,8 +35,7 @@
       <div class="col-md-12">
         <div class="card">
           <div class="card-header card-header-primary">
-            <h4 class="card-title">Mis Expedientes y Descargos Reglamentarios</h4>
-            <p class="card-category">Registro formal de causas disciplinarias y reconocimientos institucionales asignados a tu número de socio.</p>
+            <h4 class="card-title mb-0">Mis Expedientes y Descargos</h4>
           </div>
           <div class="card-body">
             <div *ngIf="misExpedientes.length === 0" class="text-center py-5">
@@ -49,16 +48,16 @@
               <table class="table table-hover table-mat">
                 <thead class="text-primary">
                   <th class="sortable-th" (click)="cambiarOrden('numero')" title="Ordenar por N° Expediente">
-                    N° Expediente <i class="material-icons">{{getIconoOrden('numero')}}</i>
+                    Exp. <i class="material-icons">{{getIconoOrden('numero')}}</i>
                   </th>
-                  <th class="sortable-th" (click)="cambiarOrden('motivo')" title="Ordenar por Motivo">
-                    Motivo de la Causa <i class="material-icons">{{getIconoOrden('motivo')}}</i>
+                  <th class="sortable-th" (click)="cambiarOrden('titulo')" title="Ordenar por Título">
+                    Título <i class="material-icons">{{getIconoOrden('titulo')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('fechaCreacion')" title="Ordenar por Fecha">
-                    Fecha de Apertura <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
+                    Creado <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('puntos')" title="Ordenar por Puntos">
-                    Puntos en Trámite <i class="material-icons">{{getIconoOrden('puntos')}}</i>
+                    Puntos <i class="material-icons">{{getIconoOrden('puntos')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('estado')" title="Ordenar por Estado">
                     Estado <i class="material-icons">{{getIconoOrden('estado')}}</i>
@@ -67,12 +66,11 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let exp of expedientesOrdenados">
-                    <td class="font-weight-bold text-dark">{{exp.numero}}</td>
+                    <td class="font-weight-bold text-dark">{{formatCaseNumber(exp.numero)}}</td>
                     <td>
-                      <div>{{exp.motivo}}</div>
-                      <small class="text-muted">Subcomisión: {{exp.subcomision}}</small>
+                      <div class="font-weight-bold text-dark">{{exp.titulo || exp.motivo}}</div>
                     </td>
-                    <td>{{exp.fechaCreacion}}</td>
+                    <td>{{exp.fechaCreacion | date:'dd/MM/yyyy'}}</td>
                     <td>
                       <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
                         {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
@@ -110,7 +108,7 @@
       <div class="card-header card-header-info d-flex justify-content-between align-items-center">
         <div>
           <h4 class="card-title">Detalle del Expediente</h4>
-          <p class="card-category">{{expedienteDetalle?.numero}} &bull; Socio: {{socioActual}}</p>
+          <p class="card-category">{{formatCaseNumber(expedienteDetalle?.numero)}} &bull; Socio: {{socioActual}}</p>
         </div>
         <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModalDetalle()" title="Cerrar modal">
           <i class="material-icons">close</i>
@@ -122,22 +120,22 @@
             <tbody>
               <tr>
                 <th style="width: 35%;" class="text-muted">N° de Expediente:</th>
-                <td class="font-weight-bold text-dark">{{expedienteDetalle?.numero}}</td>
+                <td class="font-weight-bold text-dark">{{formatCaseNumber(expedienteDetalle?.numero)}}</td>
               </tr>
               <tr>
-                <th class="text-muted">Motivo / Causa:</th>
-                <td>{{expedienteDetalle?.motivo}}</td>
+                <th class="text-muted">Razón:</th>
+                <td class="text-dark">{{expedienteDetalle?.razon || expedienteDetalle?.motivo}}</td>
               </tr>
               <tr>
-                <th class="text-muted">Subcomisión de Origen:</th>
-                <td>{{expedienteDetalle?.subcomision}}</td>
+                <th class="text-muted">Solicitante:</th>
+                <td class="font-weight-bold text-dark">{{formatSolicitante(expedienteDetalle)}}</td>
               </tr>
               <tr>
-                <th class="text-muted">Fecha de Apertura:</th>
-                <td>{{expedienteDetalle?.fechaCreacion}}</td>
+                <th class="text-muted">Creado:</th>
+                <td>{{expedienteDetalle?.fechaCreacion | date:'dd/MM/yyyy'}}</td>
               </tr>
               <tr>
-                <th class="text-muted">Puntos en Trámite:</th>
+                <th class="text-muted">Puntos:</th>
                 <td>
                   <span class="font-weight-bold" [ngClass]="(expedienteDetalle?.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
                     {{(expedienteDetalle?.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle?.puntos}} pts
@@ -145,20 +143,20 @@
                 </td>
               </tr>
               <tr>
-                <th class="text-muted">Estado Procesal:</th>
+                <th class="text-muted">Estado:</th>
                 <td>
                   <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteDetalle?.estado || '', expedienteDetalle || undefined)">
                     {{expedienteDetalle ? getEstadoLabel(expedienteDetalle.estado, expedienteDetalle) : ''}}
                   </span>
                 </td>
               </tr>
-              <tr *ngIf="expedienteDetalle?.plazoLimiteAt">
+              <tr *ngIf="expedienteDetalle?.estado === 'justificando' && expedienteDetalle?.plazoLimiteAt">
                 <th class="text-muted">Vencimiento del Plazo:</th>
                 <td>
                   <div class="font-weight-bold text-dark">
                     {{expedienteDetalle ? getDeadlineLabel(expedienteDetalle) : ''}}
                   </div>
-                  <div class="small text-muted mt-1" *ngIf="expedienteDetalle?.estado === 'justificando'">
+                  <div class="small text-muted mt-1">
                     <i class="material-icons" style="font-size: 14px; vertical-align: middle;">timer</i>
                     Tiempo restante: {{expedienteDetalle ? getCountdownLabel(expedienteDetalle) : ''}}
                   </div>
@@ -217,7 +215,7 @@
               </div>
             </div>
             <div class="small text-muted text-right">
-              Fecha de registro: {{expedienteDetalle?.descargo?.fecha}}
+              Fecha de registro: {{expedienteDetalle?.descargo?.fecha | date:'dd/MM/yyyy HH:mm'}} hs
             </div>
           </div>
         </div>
@@ -225,7 +223,7 @@
         <div *ngIf="!expedienteDetalle?.descargo" class="mt-4 pt-3 border-top">
           <div class="alert alert-warning mb-0 d-flex align-items-center">
             <i class="material-icons mr-2">info</i>
-            <span>No se ha presentado justificativo reglamentario para este expediente aún.</span>
+            <span>{{ expedienteDetalle?.estado === 'emitido' ? 'Expediente resuelto sin descargo presentado.' : 'No se ha presentado justificativo reglamentario para este expediente aún.' }}</span>
           </div>
         </div>
 
@@ -319,7 +317,7 @@
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <div>
           <h4 class="card-title">{{esEdicion ? 'Editar Justificativo' : 'Añadir Justificativo'}}</h4>
-          <p class="card-category">Expediente: {{expedienteSeleccionado?.numero}} &bull; Socio: {{socioActual}}</p>
+          <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado?.numero)}} &bull; Socio: {{socioActual}}</p>
         </div>
         <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModal()" title="Cerrar ventana">
           <i class="material-icons">close</i>

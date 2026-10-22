@@ -15,6 +15,7 @@ import {
   ExpedienteDetalleDTO
 } from '../services/expediente-api.service';
 import { Subscription } from 'rxjs';
+import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
 const ESTADOS_DECISION_CAUSAL = ['revision_resolucion', 'espera_resolucion'];
@@ -702,24 +703,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   formatCaseNumber(caseNumber: string): string {
-    if (!caseNumber) return '';
-    // Formato 1: (EXP-)?<num>/<year>
-    let match = /^(?:EXP-)?(\d+)\/(\d{4})$/i.exec(caseNumber);
-    if (match) {
-      const num = parseInt(match[1], 10);
-      const year = match[2];
-      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
-      return `${numStr}/${year}`;
-    }
-    // Formato 2: (EXP-)?<year>-<num>
-    match = /^(?:EXP-)?(\d{4})-(\d+)$/i.exec(caseNumber);
-    if (match) {
-      const year = match[1];
-      const num = parseInt(match[2], 10);
-      const numStr = num < 1000 ? num.toString().padStart(3, '0') : num.toString();
-      return `${numStr}/${year}`;
-    }
-    return caseNumber.replace(/^EXP-/i, '');
+    return formatCaseNumberUtil(caseNumber);
   }
 
   getUrgenciaLabel(urgencia?: string): string {

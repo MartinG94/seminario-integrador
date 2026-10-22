@@ -264,6 +264,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socios = serializers.SerializerMethodField()
     cantidad_socios = serializers.SerializerMethodField()
     creador = serializers.SerializerMethodField()
+    solicitante = serializers.SerializerMethodField()
     razon = serializers.SerializerMethodField()
     titulo = serializers.SerializerMethodField()
     historial = serializers.SerializerMethodField()
@@ -286,6 +287,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "socio_nombre",
             "socio_legajo",
             "creador",
+            "solicitante",
             "socios",
             "cantidad_socios",
             "subcomision",
@@ -314,6 +316,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return count if count > 0 else 1
 
     def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj, context=self.context)
+
+    def get_solicitante(self, obj: Expediente) -> str:
         return _obtener_creador_expediente(obj, context=self.context)
 
     def get_razon(self, obj: Expediente) -> str:
@@ -947,6 +952,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     cantidad_socios = serializers.SerializerMethodField()
     socios = serializers.SerializerMethodField()
     creador = serializers.SerializerMethodField()
+    solicitante = serializers.SerializerMethodField()
     razon = serializers.SerializerMethodField()
     titulo = serializers.SerializerMethodField()
     reglamento_asociado = serializers.SerializerMethodField()
@@ -964,6 +970,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "socio_nombre",
             "socio_legajo",
             "creador",
+            "solicitante",
             "socios",
             "subcomision",
             "estado",
@@ -992,6 +999,9 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
 
     def get_creador(self, obj: Expediente) -> str:
+        return _obtener_creador_expediente(obj, context=self.context)
+
+    def get_solicitante(self, obj: Expediente) -> str:
         return _obtener_creador_expediente(obj, context=self.context)
 
     def get_razon(self, obj: Expediente) -> str:

@@ -4,6 +4,7 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
 import { ExpedienteApiService, EvidenciaMetadata, DescargoVersionDto, OperacionDescargo } from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
+import { formatCaseNumber, humanizeEstado } from '../utils/case-number.util';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -70,12 +71,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       if (!this.misExpedientes || this.misExpedientes.length === 0) {
         this.filtrarMisExpedientes();
       }
-      if (this.expedienteDetalle) {
-        const actualizado = list.find(e => e.id === this.expedienteDetalle!.id);
-        if (actualizado) {
-          this.expedienteDetalle = actualizado;
-        }
-      }
     });
     this.subs.push(subExp);
 
@@ -119,7 +114,16 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   private mapearExpedienteApi(raw: any): Expediente {
-    const descargoObj = raw.descargo_presentado ? {
+    const tieneDescargoReal = Boolean(
+      raw.descargo_presentado && (
+        (raw.descargo_texto && raw.descargo_texto.trim().length > 0) ||
+        raw.descargo_causal ||
+        raw.descargo_archivo ||
+        (raw.evidencias && raw.evidencias.length > 0)
+      )
+    );
+
+    const descargoObj = tieneDescargoReal ? {
       tipo: raw.descargo_tipo || 'T02_CERTIFICADO',
       causal: raw.descargo_causal,
       archivo: raw.descargo_archivo,
@@ -135,6 +139,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       legajo: raw.socio_legajo || '',
       subcomision: raw.subcomision || 'General',
       motivo: raw.motivo || '',
+      titulo: raw.titulo || raw.motivo || '',
+      razon: raw.razon || raw.motivo || '',
+      solicitante: raw.solicitante || raw.creador || '',
+      creador: raw.creador || raw.solicitante || '',
       fechaCreacion: raw.created_at || '',
       estado: raw.estado,
       urgencia: raw.urgencia,
@@ -237,6 +245,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = true;
     this.actualizarScrollBloqueo();
     this.cargarHistorialDescargo(exp.id);
+    this.expedienteApi.obtenerDetalleExpediente(exp.id).subscribe({
+      next: (detalle) => {
+        if (this.modalDetalleAbierto && this.expedienteDetalle?.id === String(detalle.id)) {
+          this.expedienteDetalle = this.mapearExpedienteApi(detalle);
+        }
+      },
+      error: () => {}
+    });
   }
 
   cerrarModalDetalle(): void {
@@ -421,7 +437,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     if (!exp.descargo) return;
     this.abrirConfirmacion(
       'Retirar descargo',
-      `¿Confirmas el retiro del descargo del expediente ${exp.numero}? Tu escrito y sus comprobantes quedan registrados en el historial y podrás presentar uno nuevo mientras el plazo siga abierto.`,
+      `¿Confirmas el retiro del descargo del expediente ${this.formatCaseNumber(exp.numero)}? Tu escrito y sus comprobantes quedan registrados en el historial y podrás presentar uno nuevo mientras el plazo siga abierto.`,
       () => {
         const perfil = this.auth.getPerfil();
         const nombre = perfil ? `${perfil.first_name} ${perfil.last_name}` : this.socioActual;
@@ -434,7 +450,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
             this.cargarMisExpedientes();
             this.refrescarHistorialSiEstaAbierto(exp.id);
             this.notifications.info(
-              `Descargo del expediente ${exp.numero} retirado. Queda registrado en el historial.`
+              `Descargo del expediente ${this.formatCaseNumber(exp.numero)} retirado. Queda registrado en el historial.`
             );
           },
           error: (err) => {
@@ -772,37 +788,62 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatCaseNumber(numero: string | null | undefined): string {
+    return formatCaseNumber(numero);
+  }
+
+  formatSolicitante(exp: Expediente | null | undefined): string {
+    if (!exp) return 'Comisión Directiva';
+    const creador = (exp.solicitante || exp.creador || '').trim();
+    if (creador) {
+      const match = /^(.+?)\s*\((.+?)\)$/.exec(creador);
+      if (match) {
+        const nombrePart = match[1].trim();
+        const legajoPart = match[2].trim();
+        return `${legajoPart} - ${nombrePart}`;
+      }
+      return creador;
+    }
+    return 'Comisión Directiva';
+  }
+
   getEstadoLabel(estado: string, exp?: Expediente): string {
-    if (estado === 'justificando' && exp) {
+    const normalizado = (estado || '').toLowerCase().trim();
+    if (normalizado === 'justificando' && exp) {
       if (this.esPlazoVencido(exp)) {
         return 'Resolviendo';
       }
       const tiempo = this.getCompactCountdownLabel(exp);
-      return tiempo ? `Justificando · ${tiempo}` : 'Justificando';
+      return tiempo ? `Justificando ${tiempo}` : 'Justificando';
     }
-    if (estado === 'revision_resolucion') {
-      return exp?.descargo ? 'Revisando Justificación' : 'Resolviendo';
+    if (normalizado === 'revision_resolucion') {
+      return 'En Revisión';
     }
 
-    switch (estado) {
-      case 'creado': return 'Expediente Creado';
+    switch (normalizado) {
+      case 'creado': return 'Creado';
       case 'justificando': return 'Justificando';
-      case 'revision_resolucion': return 'Revisando Justificación';
-      case 'pendiente_firma': return 'Pendiente de firma';
+      case 'revision_resolucion':
+      case 'espera_resolucion': return 'En Revisión';
+      case 'pendiente_firma': return 'Pendiente de Firma';
+      case 'pendiente_correos': return 'Pendiente de Envío';
       case 'emitido': return 'Emitido';
-      default: return estado;
+      default: return humanizeEstado(estado);
     }
   }
 
   getEstadoBadgeClass(estado: string, exp?: Expediente): string {
-    if (estado === 'justificando' && exp && this.esPlazoVencido(exp)) {
+    const normalizado = (estado || '').toLowerCase().trim();
+    if (normalizado === 'justificando' && exp && this.esPlazoVencido(exp)) {
       return 'badge-mat-danger';
     }
-    switch (estado) {
+    switch (normalizado) {
       case 'creado': return 'badge-mat-primary';
       case 'justificando': return 'badge-mat-warning';
-      case 'revision_resolucion': return 'badge-mat-info';
-      case 'pendiente_firma': return 'badge-mat-rose';
+      case 'revision_resolucion':
+      case 'espera_resolucion': return 'badge-mat-info';
+      case 'pendiente_firma': return 'badge-mat-primary';
+      case 'pendiente_correos': return 'badge-mat-rose';
       case 'emitido': return 'badge-mat-success';
       default: return 'badge-mat-primary';
     }
@@ -811,8 +852,16 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   get expedientesOrdenados(): Expediente[] {
     const lista = [...this.misExpedientes];
     lista.sort((a, b) => {
-      let valA = (a as any)[this.columnaOrden];
-      let valB = (b as any)[this.columnaOrden];
+      let valA: any = (a as any)[this.columnaOrden];
+      let valB: any = (b as any)[this.columnaOrden];
+      if (this.columnaOrden === 'titulo') {
+        valA = a.titulo || a.motivo || '';
+        valB = b.titulo || b.motivo || '';
+      }
+      if (this.columnaOrden === 'numero') {
+        valA = this.formatCaseNumber(a.numero);
+        valB = this.formatCaseNumber(b.numero);
+      }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 

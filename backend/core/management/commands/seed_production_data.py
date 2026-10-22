@@ -343,7 +343,7 @@ class Command(BaseCommand):
                 Decimal("-1.00"),
                 "Inasistencia injustificada a guardia programada de Cómputos.",
                 UrgenciaExpedienteEnum.NORMAL,
-                True,
+                False,
             ),
             (
                 "EXP-0002/2026",

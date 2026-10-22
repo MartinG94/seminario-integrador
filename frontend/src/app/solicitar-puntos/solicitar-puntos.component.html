@@ -378,7 +378,7 @@
                         <div class="font-weight-bold text-dark">{{ s.titulo || 'Sin título' }}</div>
                         <small class="text-muted">
                           {{ s.numero }}
-                          <ng-container *ngIf="s.numero_expediente"> &bull; Exp: {{ s.numero_expediente }}</ng-container>
+                          <ng-container *ngIf="s.numero_expediente"> &bull; Exp: {{ formatCaseNumber(s.numero_expediente) }}</ng-container>
                         </small>
                       </td>
 
