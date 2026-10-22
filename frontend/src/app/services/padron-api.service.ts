@@ -11,6 +11,7 @@ export interface PadronSocio {
   first_name: string;
   last_name: string;
   subcomision: { id: number; name: string } | null;
+  grupo?: string | null;
   is_active: boolean;
 }
 

@@ -207,7 +207,7 @@ class TestDatabasePadronAdapterRealDB:
         # Historial de estados (el más reciente debe prevalecer)
         _create_record(
             SocioEstadoHistorial,
-            idGrupo=1,
+            idGrupo=56,
             socio=self.socio1,
             fechaHora=datetime(2023, 1, 1, 10, 0, tzinfo=timezone.utc),
             codEstadoSocio=2,
@@ -215,7 +215,7 @@ class TestDatabasePadronAdapterRealDB:
         )
         _create_record(
             SocioEstadoHistorial,
-            idGrupo=1,
+            idGrupo=57,
             socio=self.socio1,
             fechaHora=datetime(2024, 1, 1, 10, 0, tzinfo=timezone.utc),
             codEstadoSocio=1,  # Más reciente -> ENABLED
@@ -254,6 +254,7 @@ class TestDatabasePadronAdapterRealDB:
         assert dto.subcomision.name == "Cómputos"
         assert dto.category == SocioCategoryEnum.ACTIVE
         assert dto.membership_status == MembershipStatusEnum.ENABLED
+        assert dto.grupo == "G57"
         assert dto.is_active is True
 
     def test_get_by_id_handles_missing_legajo_and_sentinel_subcomision(self) -> None:
@@ -262,7 +263,34 @@ class TestDatabasePadronAdapterRealDB:
         assert dto is not None
         assert dto.legajo is None
         assert dto.subcomision is None  # Centinela 99 limpiado
+        assert dto.grupo is None
         assert dto.category == SocioCategoryEnum.PASSIVE
+
+    def test_get_by_id_desempata_historial_por_id_mayor_con_misma_fecha(self) -> None:
+        """Ante igual fechaHora, prevalece el historial con mayor idEstadoHistorial."""
+        misma_fecha = datetime(2025, 1, 1, 10, 0, tzinfo=timezone.utc)
+        _create_record(
+            SocioEstadoHistorial,
+            idEstadoHistorial=9001,
+            idGrupo=58,
+            socio=self.socio1,
+            fechaHora=misma_fecha,
+            codEstadoSocio=1,
+            socio_motivoCambioEstado=1,
+        )
+        _create_record(
+            SocioEstadoHistorial,
+            idEstadoHistorial=9002,
+            idGrupo=59,
+            socio=self.socio1,
+            fechaHora=misma_fecha,
+            codEstadoSocio=1,
+            socio_motivoCambioEstado=1,
+        )
+
+        dto = self.adapter.get_by_id(101)
+        assert dto is not None
+        assert dto.grupo == "G59"
 
     def test_get_by_legajo_finds_record_via_exists_subquery(self) -> None:
         """get_by_legajo() ejecuta la subconsulta Exists sin requerir JOIN cartesiano."""

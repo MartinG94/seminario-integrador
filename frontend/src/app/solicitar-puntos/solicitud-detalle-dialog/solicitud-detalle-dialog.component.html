@@ -84,13 +84,15 @@
           <tr>
             <th style="width: 110px;">Legajo</th>
             <th>Apellido y Nombre</th>
-            <th>Grupo / Subcomisión</th>
+            <th>Grupo</th>
+            <th>Subcomisión</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let s of solicitud.involucrados">
             <td><span class="badge-mat badge-mat-info">{{ s.legajo || 'S/D' }}</span></td>
             <td class="font-weight-bold">{{ s.last_name }}, {{ s.first_name }}</td>
+            <td>{{ s.grupo || 'S/D' }}</td>
             <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
           </tr>
         </tbody>
@@ -119,12 +121,12 @@
           <strong>{{ solicitud.anexo_fecha }}</strong>
         </div>
         <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_lugar">
-          <small class="text-muted d-block">Lugar del hecho:</small>
+          <small class="text-muted d-block">Lugar o Evento del hecho:</small>
           <strong>{{ solicitud.anexo_lugar }}</strong>
         </div>
       </div>
       <div class="mb-2" *ngIf="solicitud.anexo_testigos">
-        <small class="text-muted d-block">Testigos presenciales:</small>
+        <small class="text-muted d-block">Testigos presenciales y participación:</small>
         <span>{{ solicitud.anexo_testigos }}</span>
       </div>
       <div *ngIf="solicitud.anexo_relato">

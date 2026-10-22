@@ -214,7 +214,8 @@
                       <tr>
                         <th style="width: 120px;">Legajo</th>
                         <th>Apellido y Nombre</th>
-                        <th>Grupo / Subcomisión</th>
+                        <th>Grupo</th>
+                        <th>Subcomisión</th>
                         <th class="text-right" style="width: 80px;" *ngIf="estado !== 'ISSUED'">Quitar</th>
                       </tr>
                     </thead>
@@ -222,6 +223,7 @@
                       <tr *ngFor="let s of sociosSeleccionados">
                         <td><span class="badge badge-info font-weight-bold">{{ s.legajo || 'S/D' }}</span></td>
                         <td class="font-weight-bold text-dark">{{ s.last_name }}, {{ s.first_name }}</td>
+                        <td>{{ s.grupo || 'S/D' }}</td>
                         <td>{{ s.subcomision?.name || 'Sin subcomisión' }}</td>
                         <td class="text-right" *ngIf="estado !== 'ISSUED'">
                           <button mat-icon-button color="warn" type="button" (click)="eliminarSocio(s.socio_id)" title="Quitar socio">
@@ -257,9 +259,9 @@
                       <input type="date" class="form-control" [(ngModel)]="anexoFecha" [disabled]="estado === 'ISSUED'">
                     </div>
                     <div class="col-md-8 form-group">
-                      <label class="form-label-custom">Lugar o evento</label>
+                      <label class="form-label-custom">Lugar o Evento del hecho</label>
                       <input class="form-control" 
-                             placeholder="Ej. Sede AVEIT, Laboratorio de Cómputos" 
+                             placeholder="Ej. Sede AVEIT, Asamblea o evento institucional" 
                              [(ngModel)]="anexoLugar" 
                              [disabled]="estado === 'ISSUED'">
                     </div>
@@ -267,7 +269,7 @@
                   <div class="form-group">
                     <label class="form-label-custom">Testigos presenciales y participación</label>
                     <input class="form-control" 
-                           placeholder="Nombres de testigos o cómo intervinieron" 
+                           placeholder="Indique quiénes fueron y cómo se involucraron o qué presenciaron" 
                            [(ngModel)]="anexoTestigos" 
                            [disabled]="estado === 'ISSUED'">
                   </div>

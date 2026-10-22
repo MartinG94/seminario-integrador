@@ -147,6 +147,7 @@ class TestSocioInstitucionalSerializer:
             email="esteban.perez@aveit.utn.edu.ar",
             subcomision=SubcomisionDTO(id=10, name="Tribunal de Disciplina"),
             social_year=4,
+            grupo="G57",
             category=SocioCategoryEnum.ACTIVE,
             is_active=True,
             membership_status=MembershipStatusEnum.ENABLED,
@@ -162,6 +163,7 @@ class TestSocioInstitucionalSerializer:
         assert data["email"] == "esteban.perez@aveit.utn.edu.ar"
         assert data["subcomision"] == {"id": 10, "name": "Tribunal de Disciplina"}
         assert data["social_year"] == 4
+        assert data["grupo"] == "G57"
         assert data["category"] == "ACTIVE"
         assert data["is_active"] is True
         assert data["membership_status"] == "ENABLED"
@@ -179,6 +181,7 @@ class TestSocioInstitucionalSerializer:
             email=None,
             subcomision=None,
             social_year=1,
+            grupo=None,
             category=SocioCategoryEnum.PASSIVE,
             is_active=False,
             membership_status=MembershipStatusEnum.TERMINATED,
@@ -191,6 +194,7 @@ class TestSocioInstitucionalSerializer:
         assert data["dni"] is None
         assert data["email"] is None
         assert data["subcomision"] is None
+        assert data["grupo"] is None
         assert data["category"] == "PASSIVE"
         assert data["is_active"] is False
         assert data["membership_status"] == "TERMINATED"

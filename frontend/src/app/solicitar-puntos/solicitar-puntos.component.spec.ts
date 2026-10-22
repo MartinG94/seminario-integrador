@@ -127,6 +127,7 @@ describe('SolicitarPuntosComponent', () => {
           legajo: '777',
           first_name: 'Ana',
           last_name: 'Prueba',
+          grupo: 'G57',
           subcomision: { id: 1, name: 'Cómputos' },
           is_active: true,
         },
@@ -135,6 +136,7 @@ describe('SolicitarPuntosComponent', () => {
           legajo: '888',
           first_name: 'Bruno',
           last_name: 'García',
+          grupo: 'G58',
           subcomision: null,
           is_active: true,
         },
@@ -316,6 +318,19 @@ describe('SolicitarPuntosComponent', () => {
     expect(pointsSelect?.selectedOptions[0]?.textContent?.trim()).toBe('-1.0 pts: Falta Media');
     component.guardarBorrador();
     expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.objectContaining({ puntos: -1 }));
+  });
+
+  it('muestra la columna Grupo y los grupos de los socios seleccionados en la tabla', () => {
+    component.agregarSocio(component.socios[0]);
+    fixture.detectChanges();
+
+    const tableHeaders = fixture.nativeElement.querySelectorAll('th');
+    const headerTexts = Array.from(tableHeaders).map((th: any) => th.textContent.trim());
+    expect(headerTexts).toContain('Grupo');
+
+    const tableCells = fixture.nativeElement.querySelectorAll('td');
+    const cellTexts = Array.from(tableCells).map((td: any) => td.textContent.trim());
+    expect(cellTexts).toContain('G57');
   });
 
   it('agrega socios seleccionados a la lista', () => {

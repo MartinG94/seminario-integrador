@@ -78,6 +78,7 @@ class SocioInstitucionalDTO:
     category: SocioCategoryEnum
     is_active: bool
     membership_status: MembershipStatusEnum
+    grupo: Optional[str] = None
 
 
 @dataclass(frozen=True)
