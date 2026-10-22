@@ -15,6 +15,7 @@ import { PadronApiService, PadronSocio } from '../services/padron-api.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import type { NivelUrgencia } from '../services/tribunal-data.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
+import { formatCaseNumber } from '../utils/case-number.util';
 
 @Component({
   selector: 'app-solicitar-puntos',
@@ -460,5 +461,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       ? 'El servicio no está disponible en este momento. Intentá nuevamente más tarde.'
       : 'No se pudo completar la operación.';
     this.notifications.error(httpErrorMessage(error, fallback));
+  }
+
+  formatCaseNumber(numero: string | null | undefined): string {
+    return formatCaseNumber(numero);
   }
 }

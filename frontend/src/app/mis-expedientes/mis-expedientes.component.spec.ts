@@ -380,7 +380,7 @@ describe('MisExpedientesComponent', () => {
 
       const compact = component.getCompactCountdownLabel(expEnPlazo);
       expect(compact).toBe('2d 04h');
-      expect(component.getEstadoLabel('justificando', expEnPlazo)).toBe('Justificando · 2d 04h');
+      expect(component.getEstadoLabel('justificando', expEnPlazo)).toBe('Justificando 2d 04h');
     });
 
     it('abre y cierra el modal de detalle del expediente', () => {
@@ -920,6 +920,64 @@ describe('MisExpedientesComponent', () => {
 
       // Debe mantenerse en 0 porque no tiene expedientes emitidos
       expect(component.saldoNeto).toBe(0);
+    });
+  });
+
+  describe('Unificación transversal de expedientes (<n>/<YYYY>) y estados sin guiones', () => {
+    it('formatea el identificador de expediente como <n>/<YYYY> sin ceros a la izquierda', () => {
+      expect(component.formatCaseNumber('EXP-0007/2026')).toBe('7/2026');
+      expect(component.formatCaseNumber('EXP-2026-0007')).toBe('7/2026');
+      expect(component.formatCaseNumber('007/2026')).toBe('7/2026');
+      expect(component.formatCaseNumber('7/2026')).toBe('7/2026');
+      expect(component.formatCaseNumber('EXP-0419/2025')).toBe('419/2025');
+      expect(component.formatCaseNumber('')).toBe('');
+      expect(component.formatCaseNumber(null)).toBe('');
+    });
+
+    it('formatea el solicitante correctamente', () => {
+      expect(component.formatSolicitante(null)).toBe('Comisión Directiva');
+      expect(component.formatSolicitante({ solicitante: 'Giuliano Toselli (11239)' } as any)).toBe('11239 - Giuliano Toselli');
+      expect(component.formatSolicitante({ creador: 'Toselli, Giuliano (11239)' } as any)).toBe('11239 - Toselli, Giuliano');
+      expect(component.formatSolicitante({} as any)).toBe('Comisión Directiva');
+    });
+
+    it('homologa estados y evita guiones o snake_case', () => {
+      expect(component.getEstadoLabel('espera_resolucion')).toBe('En Revisión');
+      expect(component.getEstadoLabel('ESPERA_RESOLUCION')).toBe('En Revisión');
+      expect(component.getEstadoLabel('revision_resolucion')).toBe('En Revisión');
+      expect(component.getEstadoLabel('creado')).toBe('Creado');
+      expect(component.getEstadoLabel('pendiente_firma')).toBe('Pendiente de Firma');
+      expect(component.getEstadoLabel('pendiente_correos')).toBe('Pendiente de Envío');
+      expect(component.getEstadoLabel('emitido')).toBe('Emitido');
+      // Fallback
+      expect(component.getEstadoLabel('otro_estado_proceso')).toBe('Otro Estado Proceso');
+    });
+
+    it('solo crea descargoObj si hay contenido real de descargo en la API', () => {
+      const rawVacio = {
+        id: 1,
+        numero: 'EXP-0001/2026',
+        descargo_presentado: true,
+        descargo_texto: null,
+        descargo_causal: null,
+        descargo_archivo: null,
+        evidencias: []
+      };
+      const mapeadoVacio = (component as any).mapearExpedienteApi(rawVacio);
+      expect(mapeadoVacio.descargo).toBeUndefined();
+
+      const rawValido = {
+        id: 3,
+        numero: 'EXP-0003/2026',
+        descargo_presentado: true,
+        descargo_texto: 'Presento constancia de examen',
+        descargo_causal: 'Examen Académico',
+        descargo_archivo: 'certificado.pdf',
+        evidencias: []
+      };
+      const mapeadoValido = (component as any).mapearExpedienteApi(rawValido);
+      expect(mapeadoValido.descargo).toBeDefined();
+      expect(mapeadoValido.descargo.texto).toBe('Presento constancia de examen');
     });
   });
 });

@@ -1,5 +1,6 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { formatCaseNumber, humanizeEstado } from '../../utils/case-number.util';
 
 import {
   ExpedienteApiService,
@@ -59,5 +60,13 @@ export class ExpedientesSocioDialogComponent implements OnInit {
 
   puntosNumero(expediente: ExpedienteRankingDetalle): number {
     return Number(expediente.puntos);
+  }
+
+  formatCaseNumber(numero: string | null | undefined): string {
+    return formatCaseNumber(numero);
+  }
+
+  humanizeEstado(estado: string | null | undefined): string {
+    return humanizeEstado(estado);
   }
 }

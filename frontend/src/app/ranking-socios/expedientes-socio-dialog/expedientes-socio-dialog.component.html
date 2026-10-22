@@ -37,7 +37,7 @@
     <div *ngFor="let expediente of expedientes" class="causa-card">
       <div class="d-flex justify-content-between align-items-start">
         <div>
-          <strong>{{ expediente.numero }}</strong>
+          <strong>{{ formatCaseNumber(expediente.numero) }}</strong>
           <div class="small text-muted">
             {{ expediente.created_at | date:'dd/MM/yyyy' }}
           </div>
@@ -49,7 +49,7 @@
       </div>
 
       <div class="mt-2">
-        <strong>Estado:</strong> {{ expediente.estado }}
+        <strong>Estado:</strong> {{ humanizeEstado(expediente.estado) }}
       </div>
 
       <div class="mt-1">
@@ -62,8 +62,8 @@
       </div>
 
       <div class="mt-2">
-        <strong>Motivo:</strong>
-        <div>{{ expediente.motivo }}</div>
+        <strong>Título:</strong>
+        <div>{{ expediente.titulo || expediente.motivo }}</div>
       </div>
     </div>
   </div>
