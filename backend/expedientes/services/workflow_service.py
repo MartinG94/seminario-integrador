@@ -94,8 +94,12 @@ class ExpedienteWorkflowService:
                 {"estado": "La transición debe avanzar exactamente al siguiente estado."}
             )
         momento = ahora or timezone.now()
+        # En los T01 el plazo efectivo es el último período de apelación abierto (PB-02).
+        from expedientes.services.t01_appeal_service import T01AppealService
+
+        plazo_efectivo = T01AppealService.effective_deadline(expediente)
         if expediente.estado == EstadoExpedienteEnum.JUSTIFICANDO and (
-            not expediente.plazo_limite_at or momento < expediente.plazo_limite_at
+            not plazo_efectivo or momento < plazo_efectivo
         ):
             raise ValidationError(
                 {
@@ -112,7 +116,9 @@ class ExpedienteWorkflowService:
         if estado_nuevo == EstadoExpedienteEnum.JUSTIFICANDO and not expediente.plazo_limite_at:
             start_at = momento
             expediente.plazo_inicio_at = start_at
-            expediente.plazo_limite_at = compute_business_deadline(
+            expediente.plazo_limite_at = T01AppealService.open_initial_periods(
+                expediente, start_at
+            ) or compute_business_deadline(
                 start_at=start_at,
                 business_days=5,
                 holiday_provider=DbHolidayProvider(),
@@ -125,5 +131,29 @@ class ExpedienteWorkflowService:
             estado_nuevo=estado_nuevo,
             actor=actor,
             motivo=motivo.strip(),
+        )
+        return expediente
+
+    @classmethod
+    @transaction.atomic
+    def reopen_appeal_period(cls, *, expediente_id: int, actor: str, motivo: str) -> Expediente:
+        """Devuelve un T01 en revisión al período de justificaciones (PB-02, CA5).
+
+        Única excepción al avance secuencial del Art. 12: la invoca la adecuación aprobada
+        por el TD para garantizar el derecho de defensa de los socios afectados.
+        """
+        expediente = Expediente.objects.select_for_update().get(pk=expediente_id)
+        if expediente.estado != EstadoExpedienteEnum.REVISION_RESOLUCION:
+            raise ValidationError(
+                {"estado": "Sólo un expediente en revisión puede reabrir el período de apelación."}
+            )
+        expediente.estado = EstadoExpedienteEnum.JUSTIFICANDO
+        expediente.save(update_fields=["estado", "updated_at"])
+        CambioEstadoExpediente.objects.create(
+            expediente=expediente,
+            estado_anterior=EstadoExpedienteEnum.REVISION_RESOLUCION,
+            estado_nuevo=EstadoExpedienteEnum.JUSTIFICANDO,
+            actor=actor,
+            motivo=motivo,
         )
         return expediente

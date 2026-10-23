@@ -96,6 +96,8 @@ export interface Expediente {
   sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
+  /** Originado en un T01: se apela en lugar de presentar T02/T03 (PB-02). */
+  esT01?: boolean;
   descargoPresentado?: boolean;
   descargo?: {
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';

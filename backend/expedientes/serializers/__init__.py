@@ -270,6 +270,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     historial = serializers.SerializerMethodField()
     evidencias = serializers.SerializerMethodField()
     descargos = serializers.SerializerMethodField()
+    es_t01 = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -305,6 +306,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "historial",
             "evidencias",
             "descargos",
+            "es_t01",
         ]
 
     def get_socio_nombre(self, obj: Expediente) -> str:
@@ -450,6 +452,13 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             }
             for change in changes
         ]
+
+    def get_es_t01(self, obj: Expediente) -> bool:
+        """En los expedientes de T01 se apela en lugar de presentar T02/T03 (PB-02)."""
+        try:
+            return obj.solicitud_t01 is not None
+        except SolicitudT01.DoesNotExist:
+            return False
 
     def get_descargos(self, obj: Expediente) -> list[dict]:
         request = self.context.get("request")
@@ -615,6 +624,27 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, allow_empty=True
     )
+
+
+class PlazoApelacionSerializer(serializers.Serializer):
+    """Plazo de apelación del T01 en días hábiles (PB-02)."""
+
+    dias_habiles = serializers.IntegerField()
+
+
+class ApelarT01Serializer(serializers.Serializer):
+    """Apelación del socio involucrado en un T01 (PB-02)."""
+
+    texto = serializers.CharField(allow_blank=True, max_length=10000)
+
+
+class AdecuarT01Serializer(serializers.Serializer):
+    """Adecuación de puntos e involucrados decidida en el debate del TD (PB-02)."""
+
+    puntos = serializers.DecimalField(max_digits=10, decimal_places=2)
+    socios = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=True)
+    motivos = serializers.CharField(allow_blank=True, max_length=5000)
+    reabrir_plazo = serializers.BooleanField(default=False)
 
 
 class PresentarDescargoSerializer(serializers.Serializer):

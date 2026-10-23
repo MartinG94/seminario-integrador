@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from expedientes.models import EstadoExpedienteEnum, Expediente
+from expedientes.services.t01_appeal_service import T01AppealService
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 
 logger = logging.getLogger(__name__)
@@ -60,10 +61,12 @@ class DeadlineEnforcementService:
                         continue
 
                     # Doble verificación bajo lock pesimista (Double-Checked Locking Pattern)
+                    # En los T01 rige el último período de apelación abierto (PB-02).
+                    plazo_efectivo = T01AppealService.effective_deadline(expediente)
                     if (
                         expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO
-                        or not expediente.plazo_limite_at
-                        or expediente.plazo_limite_at >= momento
+                        or not plazo_efectivo
+                        or plazo_efectivo >= momento
                     ):
                         continue
 

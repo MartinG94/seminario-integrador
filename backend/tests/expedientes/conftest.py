@@ -105,3 +105,49 @@ def multiactor(causal_descargo, make_socio, make_evidencia) -> dict:
         ),
         "ajena_huerfana": make_evidencia(expediente, otro, nombre="ajena-huerfana.pdf"),
     }
+
+
+# --- Expediente originado en un T01 (PB-02) ---
+
+
+@pytest.fixture
+def t01_solicitante(make_socio) -> Socio:
+    return make_socio(legajo="78001", role=Role.FISCALIZADORA, social_year=5)
+
+
+@pytest.fixture
+def t01_involucrados(make_socio) -> list[Socio]:
+    return [make_socio(legajo="78002"), make_socio(legajo="78003")]
+
+
+@pytest.fixture
+def t01_expediente(t01_solicitante, t01_involucrados) -> Expediente:
+    """Expediente CREADO vinculado a una solicitud T01 emitida (versión original inmutable)."""
+    from decimal import Decimal
+
+    from django.utils import timezone
+
+    from expedientes.models import SolicitudT01
+
+    expediente = Expediente.objects.create(
+        numero="EXP-0701/2026",
+        socio=t01_involucrados[0],
+        motivo="Uso indebido del laboratorio",
+        puntos=Decimal("-2"),
+        estado=EstadoExpedienteEnum.CREADO,
+    )
+    expediente.socios.set(t01_involucrados)
+    SolicitudT01.objects.create(
+        estado=SolicitudT01.Estado.ISSUED,
+        solicitante=t01_solicitante,
+        destinatarios_socios_ids=[s.id for s in t01_involucrados],
+        tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+        titulo="Uso indebido del laboratorio",
+        puntos=Decimal("-2"),
+        motivo="Uso indebido del laboratorio",
+        snapshot_emitido={"puntos": "-2.00", "titulo": "Uso indebido del laboratorio"},
+        numero_expediente="T01-2026-PB02TEST0001",
+        expediente=expediente,
+        issued_at=timezone.now(),
+    )
+    return expediente

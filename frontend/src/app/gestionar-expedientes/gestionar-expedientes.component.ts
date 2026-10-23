@@ -8,13 +8,18 @@ import {
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
+  ApelacionT01DTO,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
   ExpedienteApiService,
-  ExpedienteDetalleDTO
+  ExpedienteDetalleDTO,
+  HistorialT01DTO,
+  SocioT01DTO
 } from '../services/expediente-api.service';
-import { Subscription } from 'rxjs';
+import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
+import { Subject, Subscription, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
@@ -25,6 +30,15 @@ const ESTADOS_CONSULTA_CAUSAL = [
 ];
 export const MIN_FUNDAMENTO_CAUSAL = 20;
 export const MAX_FUNDAMENTO_CAUSAL = 5000;
+export const MIN_MOTIVOS_ADECUACION = 20;
+
+/** Borrador de la adecuación de puntos e involucrados del T01 (PB-02). */
+interface BorradorAdecuacion {
+  puntos: number | null;
+  socios: SocioT01DTO[];
+  motivos: string;
+  reabrirPlazo: boolean;
+}
 
 interface BorradorDecisionCausal {
   decision: DecisionCausal | '';
@@ -127,13 +141,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
 
+  // Apelación y adecuación del T01 (PB-02)
+  readonly minMotivosAdecuacion = MIN_MOTIVOS_ADECUACION;
+  historialT01: HistorialT01DTO | null = null;
+  cargandoT01 = false;
+  adecuando = false;
+  borradorAdecuacion: BorradorAdecuacion = { puntos: null, socios: [], motivos: '', reabrirPlazo: false };
+  busquedaSocioAdecuacion = '';
+  candidatosAdecuacion: SocioListItemDTO[] = [];
+  private busquedaSocio$ = new Subject<string>();
+
   private subs: Subscription[] = [];
 
   constructor(
     public dataService: TribunalDataService,
     private auth: AuthService,
     private notifications: NotificationService,
-    private expedienteApi: ExpedienteApiService
+    private expedienteApi: ExpedienteApiService,
+    private socioApi: SocioApiService
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -155,6 +180,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       this.expedientes = list;
     });
     this.subs.push(sub);
+
+    this.subs.push(this.busquedaSocio$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(termino => termino.trim().length < 3
+        ? of([] as SocioListItemDTO[])
+        : this.socioApi.searchSocios(termino).pipe(
+          map(respuesta => respuesta.results || []),
+          catchError(() => of([] as SocioListItemDTO[]))
+        ))
+    ).subscribe(socios => {
+      const actuales = new Set(this.borradorAdecuacion.socios.map(s => s.id));
+      this.candidatosAdecuacion = socios.filter(s => !actuales.has(s.id));
+    }));
 
     this.cargarDatosTablero();
   }
@@ -441,10 +480,131 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
     this.limpiarJustificaciones();
+    this.limpiarT01();
     if (this.puedeConsultarJustificaciones) {
       this.cargarJustificaciones(exp.id);
     }
+    if (this.puedeConsultarT01) {
+      this.cargarHistorialT01(exp.id);
+    }
   }
+
+  // --- Apelación y adecuación del T01 (PB-02, art. 14) ---
+
+  get puedeConsultarT01(): boolean {
+    return this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  /** El debate y la adecuación (OP 30) ocurren en "Justificaciones en revisión". */
+  get puedeAdecuarT01(): boolean {
+    return !!this.historialT01?.es_t01
+      && this.expedienteSeleccionado?.estado === 'revision_resolucion'
+      && this.auth.tieneRol('TD');
+  }
+
+  cargarHistorialT01(expedienteId: number | string): void {
+    this.cargandoT01 = true;
+    this.expedienteApi.obtenerHistorialT01(expedienteId).subscribe({
+      next: historial => {
+        this.cargandoT01 = false;
+        this.aplicarHistorialT01(historial);
+      },
+      error: err => {
+        this.cargandoT01 = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el historial del T01.'));
+      }
+    });
+  }
+
+  private aplicarHistorialT01(historial: HistorialT01DTO): void {
+    this.historialT01 = historial;
+    this.borradorAdecuacion = {
+      puntos: Number(historial.puntos_vigentes),
+      socios: [...(historial.involucrados || [])],
+      motivos: '',
+      reabrirPlazo: false
+    };
+    this.busquedaSocioAdecuacion = '';
+    this.candidatosAdecuacion = [];
+  }
+
+  private limpiarT01(): void {
+    this.historialT01 = null;
+    this.cargandoT01 = false;
+    this.adecuando = false;
+    this.busquedaSocioAdecuacion = '';
+    this.candidatosAdecuacion = [];
+  }
+
+  apelacionesDe(socioId: number): ApelacionT01DTO[] {
+    return (this.historialT01?.apelaciones || []).filter(a => a.socio_id === socioId);
+  }
+
+  buscarSocioAdecuacion(termino: string): void {
+    this.busquedaSocioAdecuacion = termino;
+    this.busquedaSocio$.next(termino);
+  }
+
+  agregarSocioAdecuacion(socio: SocioListItemDTO): void {
+    if (!this.borradorAdecuacion.socios.some(s => s.id === socio.id)) {
+      this.borradorAdecuacion.socios.push({
+        id: socio.id,
+        legajo: socio.legajo,
+        nombre: `${socio.first_name} ${socio.last_name} (N° ${socio.legajo})`
+      });
+    }
+    this.busquedaSocioAdecuacion = '';
+    this.candidatosAdecuacion = [];
+  }
+
+  quitarSocioAdecuacion(socioId: number): void {
+    this.borradorAdecuacion.socios = this.borradorAdecuacion.socios.filter(s => s.id !== socioId);
+  }
+
+  registrarAdecuacion(): void {
+    if (!this.expedienteSeleccionado || this.adecuando) return;
+    const borrador = this.borradorAdecuacion;
+    if (!borrador.socios.length) {
+      this.notifications.error('Debe quedar al menos un involucrado en el expediente.');
+      return;
+    }
+    if (borrador.puntos === null || isNaN(Number(borrador.puntos))) {
+      this.notifications.error('Indicá los puntos adecuados.');
+      return;
+    }
+    const motivos = borrador.motivos.trim();
+    if (motivos.length < MIN_MOTIVOS_ADECUACION) {
+      this.notifications.error(`Indicá los motivos de la adecuación con al menos ${MIN_MOTIVOS_ADECUACION} caracteres.`);
+      return;
+    }
+    this.adecuando = true;
+    this.expedienteApi.adecuarT01(this.expedienteSeleccionado.id, {
+      puntos: Number(borrador.puntos),
+      socios: borrador.socios.map(s => s.id),
+      motivos,
+      reabrir_plazo: borrador.reabrirPlazo
+    }).subscribe({
+      next: historial => {
+        this.adecuando = false;
+        this.aplicarHistorialT01(historial);
+        if (this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.puntos = Number(historial.puntos_vigentes);
+          this.expedienteSeleccionado.estado = historial.estado as EstadoExpediente;
+        }
+        this.notifications.success(
+          borrador.reabrirPlazo
+            ? 'Adecuación registrada. Se abrió un nuevo plazo de apelación y se notificaron los motivos.'
+            : 'Adecuación registrada. Se notificaron los motivos al solicitante y a los involucrados.'
+        );
+        this.cargarDatosTablero();
+      },
+      error: err => {
+        this.adecuando = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la adecuación.'));
+      }
+    });
+  }
+
 
   cargarJustificaciones(expedienteId: number | string): void {
     this.cargandoJustificaciones = true;
@@ -637,6 +797,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
     this.limpiarJustificaciones();
+    this.limpiarT01();
   }
 
   confirmarVotacion(): void {
