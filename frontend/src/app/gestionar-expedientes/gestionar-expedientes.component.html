@@ -356,6 +356,132 @@
           </div>
         </div>
 
+        <!-- Composición del Tribunal de la causa (S4-04): Arts. 92, 93 y 95 del Estatuto -->
+        <section *ngIf="puedeConsultarComposicion" class="mt-3 p-3 bg-light rounded border panel-composicion"
+                 aria-labelledby="titulo-composicion-tribunal">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+            <h5 id="titulo-composicion-tribunal" class="font-weight-bold text-dark mb-0">
+              <i class="material-icons text-info" aria-hidden="true" style="vertical-align: middle;">account_balance</i>
+              Responsables del Tribunal
+            </h5>
+            <div *ngIf="composicion" class="d-flex flex-wrap gap-1">
+              <span class="badge-mat estado-composicion"
+                    [ngClass]="composicion.constituida ? 'badge-mat-success' : 'badge-mat-warning'">
+                {{composicion.constituida ? 'Constituido' : 'Sin constituir'}}
+              </span>
+              <span *ngIf="composicion.es_ad_hoc" class="badge-mat badge-mat-rose badge-ad-hoc">Tribunal ad hoc</span>
+            </div>
+          </div>
+
+          <p *ngIf="cargandoComposicion" class="text-muted small mb-0" role="status">Cargando composición…</p>
+
+          <ng-container *ngIf="composicion && !cargandoComposicion">
+            <ul class="list-unstyled mb-2 lista-responsables">
+              <li *ngFor="let asiento of composicion.asientos; let i = index" class="py-1 border-bottom responsable-tribunal">
+                <span class="text-muted small d-block">Responsable {{i + 1}} · {{asiento.anio_social}}.º año</span>
+                <span *ngIf="asiento.firma" class="font-weight-bold">{{asiento.firma}}</span>
+                <span *ngIf="!asiento.firma" class="text-danger">Sin integrante habilitado</span>
+                <span *ngIf="asiento.reemplaza_a" class="small text-muted d-block">Reemplaza a {{asiento.reemplaza_a}}</span>
+              </li>
+            </ul>
+
+            <p *ngIf="composicion.constituida" class="small text-muted mb-2">
+              Constituido el {{composicion.constituida_at | date:'dd/MM/yyyy HH:mm'}} por {{composicion.constituida_por_legajo}}.
+              La composición y las causas de apartamiento ya no pueden modificarse.
+            </p>
+
+            <div *ngIf="composicion.apartamientos.length" class="mb-2">
+              <h6 class="seccion-titulo">Apartamientos</h6>
+              <ul class="list-unstyled small mb-0">
+                <li *ngFor="let a of composicion.apartamientos" class="mb-1 apartamiento-tribunal">
+                  <span class="font-weight-bold">{{a.nombre}}</span>
+                  ({{etiquetaCondicion(a.condicion)}}, {{a.anio_social}}.º año) · {{a.causa_display}}
+                  <div class="text-muted">{{a.fundamento}}</div>
+                </li>
+              </ul>
+            </div>
+
+            <p *ngIf="composicion.es_ad_hoc && !composicion.constituida" class="small mb-2 aviso-ad-hoc">
+              Hay integrantes involucrados que impiden integrar el Tribunal con suplentes. La Comisión Directiva
+              debe convocar a Asamblea para designar reemplazos de los mismos años sociales (Art. 95).
+            </p>
+
+            <ul *ngIf="composicion.observaciones.length" class="small text-danger mb-2 observaciones-composicion">
+              <li *ngFor="let o of composicion.observaciones">{{o}}</li>
+            </ul>
+
+            <!-- Designación ad hoc por Asamblea (TD o CD) -->
+            <div *ngIf="puedeDesignarAdHoc && composicion.pendientes_ad_hoc.length" class="mb-2">
+              <h6 class="seccion-titulo">Designaciones de Asamblea</h6>
+              <div *ngFor="let p of composicion.pendientes_ad_hoc" class="border rounded p-2 mb-2 designacion-ad-hoc">
+                <div class="small font-weight-bold mb-1">Reemplazo de {{p.nombre}} ({{p.anio_social}}.º año)</div>
+                <ng-container *ngIf="designaciones[p.socio_id] as borrador">
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label>Socio designado</mat-label>
+                    <input matInput
+                           [ngModel]="borrador.busqueda"
+                           (ngModelChange)="buscarCandidatos(p, $event)"
+                           [matAutocomplete]="autoDesignado"
+                           placeholder="Escribí al menos 3 caracteres..."
+                           [attr.aria-label]="'Socio designado para reemplazar a ' + p.nombre">
+                    <mat-autocomplete #autoDesignado="matAutocomplete" (optionSelected)="elegirCandidato(p, $event.option.value)">
+                      <mat-option *ngFor="let socio of borrador.candidatos" [value]="socio">
+                        {{nombreSocioPadron(socio)}}<ng-container *ngIf="socio.grupo"> - {{socio.grupo}}</ng-container>
+                      </mat-option>
+                    </mat-autocomplete>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label>Acta de Asamblea</mat-label>
+                    <input matInput maxlength="255" [(ngModel)]="borrador.acta"
+                           placeholder="Ej.: Acta de Asamblea Extraordinaria N° 3/2026">
+                  </mat-form-field>
+                  <div class="text-right">
+                    <button type="button" class="btn btn-sm btn-primary btn-registrar-designacion"
+                            [disabled]="procesandoComposicion"
+                            (click)="registrarDesignacion(p)">Registrar designación</button>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+
+            <!-- Apartamiento del propio integrante (sin recusación, Art. 93) -->
+            <div *ngIf="puedeApartarse" class="mb-2">
+              <button *ngIf="!apartamientoAbierto" type="button" class="btn btn-sm btn-outline-secondary btn-apartarme"
+                      (click)="apartamientoAbierto = true">
+                <i class="material-icons" aria-hidden="true">person_remove</i> Apartarme por conflicto de interés
+              </button>
+              <div *ngIf="apartamientoAbierto" class="form-group mb-0">
+                <label class="small font-weight-bold" for="fundamento-apartamiento">Fundamento del apartamiento (obligatorio)</label>
+                <textarea id="fundamento-apartamiento" class="form-control" rows="3" maxlength="5000"
+                          aria-describedby="ayuda-apartamiento" aria-required="true"
+                          [(ngModel)]="fundamentoApartamiento"></textarea>
+                <small id="ayuda-apartamiento" class="form-text text-muted">
+                  Mínimo {{minFundamentoApartamiento}} caracteres. Tu lugar lo ocupa el suplente de tu año.
+                </small>
+                <div class="text-right mt-1">
+                  <button type="button" class="btn btn-sm btn-link" (click)="apartamientoAbierto = false">Cancelar</button>
+                  <button type="button" class="btn btn-sm btn-primary btn-confirmar-apartamiento"
+                          [disabled]="procesandoComposicion" (click)="declararApartamiento()">Confirmar apartamiento</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Constitución inmutable antes de resolver (CA4) -->
+            <div *ngIf="puedeConstituir" class="text-right">
+              <button *ngIf="!confirmandoConstitucion" type="button" class="btn btn-sm btn-success btn-constituir"
+                      [disabled]="!composicion.puede_constituirse || procesandoComposicion"
+                      (click)="confirmandoConstitucion = true">
+                <i class="material-icons" aria-hidden="true">lock</i> Constituir Tribunal
+              </button>
+              <div *ngIf="confirmandoConstitucion" class="confirmar-constitucion" role="group" aria-label="Confirmar constitución">
+                <span class="small mr-2">La composición quedará fijada y no podrá modificarse.</span>
+                <button type="button" class="btn btn-sm btn-link" (click)="confirmandoConstitucion = false">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-success btn-confirmar-constitucion"
+                        [disabled]="procesandoComposicion" (click)="constituirTribunal()">Confirmar</button>
+              </div>
+            </div>
+          </ng-container>
+        </section>
 
         <!-- Descargo si existe -->
         <div *ngIf="expedienteSeleccionado.descargo" class="mt-3 p-3 bg-light rounded border">

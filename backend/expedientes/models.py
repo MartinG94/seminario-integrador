@@ -591,6 +591,160 @@ class DecisionCausalDescargo(models.Model):
         raise ValidationError("Una decisión registrada no puede eliminarse.")
 
 
+class CausaApartamientoEnum(models.TextChoices):
+    """Causas de apartamiento de un integrante del TD. Sin recusación (Art. 93, S4-04)."""
+
+    INVOLUCRADO = "INVOLUCRADO", "Involucrado en la causa (Art. 95)"
+    CONFLICTO_INTERES = "CONFLICTO_INTERES", "Conflicto de interés declarado"
+
+
+class CondicionIntegranteEnum(models.TextChoices):
+    """Condición con la que un socio integra el cuerpo de una causa (Arts. 92 y 95)."""
+
+    TITULAR = "TITULAR", "Titular"
+    SUPLENTE = "SUPLENTE", "Suplente"
+    AD_HOC = "AD_HOC", "Ad hoc"
+
+
+class InsertOnlyModel(models.Model):
+    """Registro sólo-inserción: no admite modificación ni eliminación (CA4, S4-04)."""
+
+    immutable_message = "El registro es inmutable."
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError(self.immutable_message)
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(self.immutable_message)
+
+
+class ApartamientoTribunal(InsertOnlyModel):
+    """Apartamiento declarado por el propio integrante del TD en una causa (S4-04).
+
+    El apartamiento por involucramiento se calcula y se congela al constituir el cuerpo.
+    """
+
+    immutable_message = "Un apartamiento registrado es inmutable."
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="apartamientos_tribunal"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="apartamientos_tribunal"
+    )
+    causa = models.CharField(max_length=20, choices=CausaApartamientoEnum.choices)
+    fundamento = models.TextField()
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_apartamiento_tribunal"
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "socio"], name="unique_apartamiento_per_expediente_socio"
+            )
+        ]
+
+
+class DesignacionAdHoc(InsertOnlyModel):
+    """Integrante ad hoc designado por Asamblea para reemplazar a un apartado (Art. 95)."""
+
+    immutable_message = "Una designación ad hoc registrada es inmutable."
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="designaciones_ad_hoc"
+    )
+    reemplaza_a = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="reemplazos_ad_hoc"
+    )
+    designado = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="designaciones_ad_hoc"
+    )
+    anio_social = models.PositiveSmallIntegerField()
+    acta_asamblea = models.CharField(max_length=255)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_designacion_ad_hoc"
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "reemplaza_a"], name="unique_ad_hoc_reemplazo"
+            ),
+            models.UniqueConstraint(
+                fields=["expediente", "designado"], name="unique_ad_hoc_designado"
+            ),
+        ]
+
+
+class ComposicionTribunal(InsertOnlyModel):
+    """Cuerpo constituido e inmutable que resuelve la causa (S4-04, CA4)."""
+
+    immutable_message = "La composición constituida del Tribunal es inmutable."
+
+    expediente = models.OneToOneField(
+        Expediente, on_delete=models.PROTECT, related_name="composicion_tribunal"
+    )
+    es_ad_hoc = models.BooleanField(default=False)
+    apartamientos = models.JSONField(default=list, blank=True)
+    constituida_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    constituida_por_legajo = models.CharField(max_length=20)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_composicion_tribunal"
+        verbose_name = "Composición del Tribunal"
+        verbose_name_plural = "Composiciones del Tribunal"
+
+
+class IntegranteComposicion(InsertOnlyModel):
+    """Integrante efectivo de un cuerpo constituido, con copia para el pie de firma."""
+
+    immutable_message = "La composición constituida del Tribunal es inmutable."
+
+    composicion = models.ForeignKey(
+        ComposicionTribunal, on_delete=models.PROTECT, related_name="integrantes"
+    )
+    anio_social = models.PositiveSmallIntegerField()
+    socio = models.ForeignKey("socios.Socio", on_delete=models.PROTECT, related_name="+")
+    condicion = models.CharField(max_length=10, choices=CondicionIntegranteEnum.choices)
+    nro_socio = models.PositiveIntegerField()
+    nombre_completo = models.CharField(max_length=200)
+    grupo = models.CharField(max_length=10, blank=True)
+    reemplaza_a = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = "expedientes_integrante_composicion"
+        ordering = ["anio_social"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["composicion", "anio_social"], name="unique_integrante_per_anio"
+            )
+        ]
+
+    @property
+    def firma(self) -> str:
+        """Pie de firma canónico: `[N° de Socio] - [Nombre] - [Gxx] [(Sup.)]` (notasPO §4)."""
+        partes = [str(self.nro_socio), self.nombre_completo]
+        if self.grupo:
+            partes.append(self.grupo)
+        firma = " - ".join(partes)
+        if self.condicion == CondicionIntegranteEnum.SUPLENTE:
+            firma += " (Sup.)"
+        elif self.condicion == CondicionIntegranteEnum.AD_HOC:
+            firma += " (Ad hoc)"
+        return firma
+
+
 class SolicitudT01(models.Model):
     class Estado(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"

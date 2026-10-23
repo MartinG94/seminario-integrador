@@ -617,6 +617,22 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     )
 
 
+class DeclararApartamientoSerializer(serializers.Serializer):
+    """Apartamiento del propio integrante por conflicto de interés (S4-04). Sin recusación."""
+
+    fundamento = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=5000
+    )
+
+
+class DesignarAdHocSerializer(serializers.Serializer):
+    """Integrante ad hoc designado por Asamblea para reemplazar a un apartado (Art. 95)."""
+
+    reemplaza_a = serializers.IntegerField(min_value=1)
+    designado_nro_socio = serializers.IntegerField(min_value=1)
+    acta_asamblea = serializers.CharField(max_length=255)
+
+
 class PresentarDescargoSerializer(serializers.Serializer):
     """Payload para presentación de descargo T02/T03."""
 

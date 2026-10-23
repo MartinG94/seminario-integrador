@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 
 from expedientes.models import (
     CambioEstadoExpediente,
+    ComposicionTribunal,
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
@@ -386,6 +387,13 @@ class TestExpedienteWorkflow:
             assert response.status_code == status.HTTP_200_OK
             if state == EstadoExpedienteEnum.JUSTIFICANDO:
                 _expire_deadline(created["id"])
+            if state == EstadoExpedienteEnum.ESPERA_RESOLUCION:
+                # El cuerpo debe quedar constituido antes de resolver (S4-04, CA4).
+                ComposicionTribunal.objects.create(
+                    expediente_id=created["id"],
+                    constituida_por=tribunal.user,
+                    constituida_por_legajo=tribunal.legajo,
+                )
 
         response = api_client.post(
             f"/api/v1/expedientes/{created['id']}/estado/",

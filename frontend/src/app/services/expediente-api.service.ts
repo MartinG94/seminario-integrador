@@ -213,6 +213,79 @@ export interface ExpedienteDetalleDTO {
   descargos: DescargoDetalleDTO[];
 }
 
+// --- Composición del Tribunal por causa (S4-04, Spec 007) ---
+
+export type CondicionIntegrante = 'TITULAR' | 'SUPLENTE' | 'AD_HOC';
+export type CausaApartamiento = 'INVOLUCRADO' | 'CONFLICTO_INTERES';
+
+export interface AsientoTribunalDTO {
+  anio_social: number;
+  socio_id: number | null;
+  nro_socio: number | null;
+  nombre: string;
+  grupo: string;
+  condicion: CondicionIntegrante | '';
+  firma: string;
+  reemplaza_a: string;
+}
+
+export interface IntegranteNominaDTO {
+  socio_id: number;
+  nro_socio: number;
+  nombre: string;
+  grupo: string;
+  anio_social: number;
+  condicion: CondicionIntegrante;
+  apartado: boolean;
+}
+
+export interface ApartamientoTribunalDTO {
+  socio_id: number;
+  nro_socio: number;
+  nombre: string;
+  anio_social: number;
+  condicion: CondicionIntegrante;
+  causa: CausaApartamiento;
+  causa_display: string;
+  fundamento: string;
+}
+
+export interface DesignacionAdHocDTO {
+  reemplaza_a_id: number;
+  designado_id: number;
+  designado: string;
+  anio_social: number;
+  acta_asamblea: string;
+  created_at: string;
+}
+
+export interface PendienteAdHocDTO {
+  socio_id: number;
+  nombre: string;
+  anio_social: number;
+}
+
+export interface ComposicionTribunalDTO {
+  constituida: boolean;
+  constituida_at: string | null;
+  constituida_por_legajo: string;
+  es_ad_hoc: boolean;
+  asientos: AsientoTribunalDTO[];
+  nomina: IntegranteNominaDTO[];
+  apartamientos: ApartamientoTribunalDTO[];
+  designaciones_ad_hoc: DesignacionAdHocDTO[];
+  pendientes_ad_hoc: PendienteAdHocDTO[];
+  observaciones: string[];
+  puede_constituirse: boolean;
+  usuario: { es_integrante: boolean; esta_apartado: boolean };
+}
+
+export interface DesignarAdHocPayload {
+  reemplaza_a: number;
+  designado_nro_socio: number;
+  acta_asamblea: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -349,6 +422,29 @@ export class ExpedienteApiService {
 
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
+  }
+
+  obtenerComposicionTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
+    return this.http.get<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/`);
+  }
+
+  /** Aparta al integrante autenticado: no existe la recusación (Art. 93). */
+  declararApartamiento(expedienteId: number | string, fundamento: string): Observable<ComposicionTribunalDTO> {
+    return this.http.post<ComposicionTribunalDTO>(
+      `${this.apiUrl}/${expedienteId}/composicion/apartamientos/`,
+      { fundamento }
+    );
+  }
+
+  designarAdHoc(expedienteId: number | string, payload: DesignarAdHocPayload): Observable<ComposicionTribunalDTO> {
+    return this.http.post<ComposicionTribunalDTO>(
+      `${this.apiUrl}/${expedienteId}/composicion/designaciones-ad-hoc/`,
+      payload
+    );
+  }
+
+  constituirTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
+    return this.http.post<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/constituir/`, {});
   }
 }
 

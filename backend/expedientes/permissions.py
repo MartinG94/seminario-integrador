@@ -15,7 +15,9 @@ from accounts.permissions import HasAnyRole, IsTribunalOrDirectiva
 from socios.models import Role
 
 __all__ = [
+    "CanConstituteTribunal",
     "CanCreateT01",
+    "CanDesignateAdHoc",
     "CanManageCalendar",
     "CanManageEventos",
     "CanOpenExpedientes",
@@ -61,6 +63,18 @@ class CanResolveCausal(HasAnyRole):
     """Sólo los vocales del Tribunal resuelven causales T02 (S4-02)."""
 
     allowed_roles = (Role.TD,)
+
+
+class CanConstituteTribunal(HasAnyRole):
+    """Sólo el Tribunal constituye su cuerpo y declara apartamientos propios (S4-04)."""
+
+    allowed_roles = (Role.TD,)
+
+
+class CanDesignateAdHoc(HasAnyRole):
+    """TD o CD registran la designación ad hoc resuelta por Asamblea (Art. 95, S4-04)."""
+
+    allowed_roles = (Role.TD, Role.CD)
 
 
 class CanCreateT01(HasAnyRole):
