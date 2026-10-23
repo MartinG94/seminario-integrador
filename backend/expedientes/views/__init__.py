@@ -29,11 +29,14 @@ from expedientes.models import (
     Expediente,
     Holiday,
     OperacionDescargoEnum,
+    ParametroPlazoApelacion,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
 from expedientes.permissions import (
+    CanAdjustT01,
     CanCreateT01,
+    CanManageAppealDeadline,
     CanManageCalendar,
     CanOpenExpedientes,
     CanResolveCausal,
@@ -42,6 +45,8 @@ from expedientes.permissions import (
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
+    AdecuarT01Serializer,
+    ApelarT01Serializer,
     AperturaExpedienteSerializer,
     CalcularPlazoSerializer,
     CalendarQuerySerializer,
@@ -54,6 +59,7 @@ from expedientes.serializers import (
     ExpedienteListSerializer,
     HolidaySerializer,
     MisSolicitudesT01Serializer,
+    PlazoApelacionSerializer,
     PresentarDescargoSerializer,
     RegistrarDecisionCausalSerializer,
     SolicitudT01Serializer,
@@ -74,6 +80,13 @@ from expedientes.services.opening_notification_service import (
     InvalidCaseStatusError,
     MissingSocioEmailError,
     OpeningNotificationService,
+)
+from expedientes.services.t01_appeal_service import (
+    T01AppealError,
+    T01AppealForbidden,
+    T01AppealNotFound,
+    T01AppealService,
+    T01AppealStateError,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
@@ -96,6 +109,7 @@ EXPEDIENTE_LIST_PREFETCH = (
     "descargos__socio",
     "descargos__decisiones_causal__autor",
     "evidencias__socio",
+    "solicitud_t01",
 )
 
 
@@ -220,6 +234,14 @@ class PresentarDescargoView(APIView):
         socio = getattr(request.user, "socio", None)
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
+
+        # En los T01 la apelación reemplaza al descargo T02/T03 (PB-02).
+        es_involucrado = Expediente.objects.filter(Q(socio=socio) | Q(socios=socio), pk=pk).exists()
+        if es_involucrado and SolicitudT01.objects.filter(expediente_id=pk).exists():
+            return Response(
+                {"detail": "Este expediente se originó en un T01: presentá tu apelación."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer = PresentarDescargoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -702,6 +724,113 @@ class DecisionCausalView(APIView):
         except CausalResolutionValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
+def _t01_error_response(exc: T01AppealError) -> Response:
+    if isinstance(exc, T01AppealNotFound):
+        raise NotFound(str(exc)) from exc
+    if isinstance(exc, T01AppealForbidden):
+        raise PermissionDenied(str(exc)) from exc
+    code = (
+        status.HTTP_409_CONFLICT
+        if isinstance(exc, T01AppealStateError)
+        else status.HTTP_400_BAD_REQUEST
+    )
+    return Response({"detail": str(exc)}, status=code)
+
+
+class PlazoApelacionView(APIView):
+    """Plazo de apelación del T01 en días hábiles (PB-02, CA1).
+
+    - GET: TD, CD y Administración.
+    - PUT: TD y Administración; registra un nuevo valor sin alterar períodos abiertos.
+    """
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "PUT":
+            return [permissions.IsAuthenticated(), CanManageAppealDeadline()]
+        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
+
+    @staticmethod
+    def _payload() -> dict:
+        ultimo = ParametroPlazoApelacion.objects.select_related("autor").first()
+        return {
+            "dias_habiles": ParametroPlazoApelacion.vigente(),
+            "actualizado_at": ultimo.created_at if ultimo else None,
+            "actualizado_por": ultimo.autor.get_username() if ultimo and ultimo.autor else "",
+        }
+
+    def get(self, request: Request) -> Response:
+        return Response(self._payload())
+
+    def put(self, request: Request) -> Response:
+        serializer = PlazoApelacionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            T01AppealService.set_business_days(
+                dias_habiles=serializer.validated_data["dias_habiles"], user=request.user
+            )
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
+        return Response(self._payload())
+
+
+class ApelacionT01View(APIView):
+    """El socio involucrado apela el T01 dentro de su plazo (PB-02, OP 20)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        serializer = ApelarT01Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            T01AppealService.present_appeal(
+                expediente_id=pk, user=request.user, texto=serializer.validated_data["texto"]
+            )
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
+        return Response(
+            T01AppealService.history(expediente_id=pk, user=request.user),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdecuacionT01View(APIView):
+    """El TD adecúa puntos e involucrados con motivos (PB-02, OP 30)."""
+
+    permission_classes = [permissions.IsAuthenticated, CanAdjustT01]
+
+    def post(self, request: Request, pk: int) -> Response:
+        serializer = AdecuarT01Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            T01AppealService.adjust(
+                expediente_id=pk,
+                user=request.user,
+                puntos=data["puntos"],
+                socio_ids=data["socios"],
+                motivos=data["motivos"],
+                reabrir_plazo=data["reabrir_plazo"],
+            )
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
+        return Response(
+            T01AppealService.history(expediente_id=pk, user=request.user),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class HistorialT01View(APIView):
+    """Trazabilidad del T01: original, períodos, apelaciones y adecuaciones (PB-02, CA4)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request, pk: int) -> Response:
+        try:
+            return Response(T01AppealService.history(expediente_id=pk, user=request.user))
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
 
 
 # Backward-compatible alias for existing imports

@@ -221,6 +221,8 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() in ("true", "1", "t")
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "notificaciones@aveit.utn.edu.ar")
+# Casilla del Tribunal que recibe la constancia de cada apelación de T01 (PB-02).
+TRIBUNAL_EMAIL = os.getenv("TRIBUNAL_EMAIL", "tribunal@aveit.utn.edu.ar")
 
 # Google OAuth2 Credentials (para integración con Gmail API / XOAUTH2)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")

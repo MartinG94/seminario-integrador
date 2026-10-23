@@ -980,4 +980,105 @@ describe('MisExpedientesComponent', () => {
       expect(mapeadoValido.descargo.texto).toBe('Presento constancia de examen');
     });
   });
+  describe('Apelación del T01 (PB-02)', () => {
+    const texto = 'No estuve presente en el laboratorio ese día; hay testigos.';
+    const futuro = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString();
+    const pasado = new Date(Date.now() - 3600 * 1000).toISOString();
+
+    const expT01 = {
+      id: '7',
+      numero: 'EXP-0701/2026',
+      socio: 'Ana Pérez',
+      legajo: '78002',
+      subcomision: 'Cómputos',
+      motivo: 'Uso indebido del laboratorio',
+      fechaCreacion: '2026-10-20',
+      estado: 'justificando',
+      horasRestantes: 72,
+      tipo: 'falta',
+      puntos: -2,
+      plazoLimiteAt: futuro,
+      esT01: true
+    } as Expediente;
+
+    const historial = (limite = futuro, apelaciones: any[] = []) => ({
+      es_t01: true,
+      estado: 'justificando',
+      plazo_dias_vigente: 5,
+      puntos_vigentes: '-2.00',
+      involucrados: [],
+      original: null,
+      periodos: [{ socio_id: 3, socio: 'Ana Pérez', origen: 'APERTURA', dias_habiles: 5, inicio_at: pasado, limite_at: limite, abierto: limite === futuro }],
+      apelaciones,
+      adecuaciones: [{
+        version: 1, puntos_anteriores: '-2.00', puntos_nuevos: '-1.50', socios_anteriores: [], socios_nuevos: [],
+        motivos: 'El debate atenuó la gravedad de la falta.', reabre_plazo: false, socios_con_nuevo_plazo: [],
+        autor_legajo: '78100', created_at: pasado
+      }]
+    });
+
+    function abrir(h = historial()): void {
+      component.abrirModalDetalle(expT01);
+      http.expectOne(`${apiUrl}/7/t01/historial/`).flush(h);
+      http.match(`${apiUrl}/7/`).forEach(r => r.flush({ id: 7, numero: 'EXP-0701/2026', estado: 'justificando', es_t01: true, plazo_limite_at: futuro }));
+      fixture.detectChanges();
+    }
+
+    it('mapea el origen T01 desde la API', () => {
+      expect((component as any).mapearExpedienteApi({ id: 1, es_t01: true }).esT01).toBeTrue();
+      expect((component as any).mapearExpedienteApi({ id: 2 }).esT01).toBeFalse();
+    });
+
+    it('muestra la apelación en lugar del justificativo T02/T03 y no consulta versiones de descargo', () => {
+      abrir();
+      http.expectNone(`${apiUrl}/7/descargo/versiones/`);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.seccion-apelacion')).toBeTruthy();
+      expect(compiled.textContent).not.toContain('Añadir Justificativo');
+      expect(compiled.querySelector('.btn-apelar')?.textContent).toContain('Apelar');
+      expect(compiled.querySelector('.adecuacion-t01')?.textContent).toContain('-2.00 → -1.50');
+    });
+
+    it('exige un texto mínimo antes de enviar', () => {
+      abrir();
+      component.abrirApelacion();
+      component.textoApelacion = 'No fui yo';
+      component.enviarApelacion();
+      http.expectNone(`${apiUrl}/7/apelacion/`);
+      expect(notifications.error).toHaveBeenCalledWith('Escribí tu apelación con al menos 20 caracteres.');
+    });
+
+    it('envía la apelación y muestra la versión registrada', () => {
+      abrir();
+      component.abrirApelacion();
+      component.textoApelacion = `  ${texto}  `;
+      component.enviarApelacion();
+
+      const req = http.expectOne(`${apiUrl}/7/apelacion/`);
+      expect(req.request.body).toEqual({ texto });
+      req.flush(historial(futuro, [{ socio_id: 3, socio: 'Ana Pérez', numero: 1, texto, created_at: pasado }]));
+      fixture.detectChanges();
+
+      expect(component.apelacionAbierta).toBeFalse();
+      expect(component.ultimaApelacion?.numero).toBe(1);
+      expect(notifications.success).toHaveBeenCalledWith('Apelación registrada. Te enviamos la constancia por mail.');
+      expect(fixture.nativeElement.querySelector('.btn-apelar').textContent).toContain('Editar apelación');
+    });
+
+    it('con el plazo vencido no permite apelar', () => {
+      abrir(historial(pasado));
+      expect(component.puedeApelar).toBeFalse();
+      expect(fixture.nativeElement.querySelector('.btn-apelar')).toBeNull();
+    });
+
+    it('informa el rechazo del servidor', () => {
+      abrir();
+      component.abrirApelacion();
+      component.textoApelacion = texto;
+      component.enviarApelacion();
+      http.expectOne(`${apiUrl}/7/apelacion/`).flush({ detail: 'Tu plazo de apelación venció.' }, { status: 409, statusText: 'Conflict' });
+      expect(notifications.error).toHaveBeenCalled();
+      expect(component.enviandoApelacion).toBeFalse();
+    });
+  });
 });

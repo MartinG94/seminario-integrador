@@ -313,3 +313,21 @@ table.table-mat tbody tr:focus {
     outline: 2px solid var(--color-border-focus);
   }
 }
+
+// Apelación y adecuación del T01 (PB-02)
+.panel-t01 {
+  .seccion-titulo {
+    color: var(--color-primary);
+    font-family: var(--font-subtitle);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: none;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}

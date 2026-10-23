@@ -1,16 +1,26 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
-import { DecisionCausalDTO, DescargoDetalleDTO, ExpedienteApiService } from '../services/expediente-api.service';
+import {
+  DecisionCausalDTO,
+  DescargoDetalleDTO,
+  ExpedienteApiService,
+  HistorialT01DTO
+} from '../services/expediente-api.service';
+import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -39,7 +49,11 @@ describe('GestionarExpedientesComponent', () => {
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
-        MatButtonModule
+        MatButtonModule,
+        MatAutocompleteModule,
+        MatFormFieldModule,
+        MatInputModule,
+        NoopAnimationsModule
       ],
       declarations: [GestionarExpedientesComponent],
       providers: [
@@ -941,6 +955,158 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnCerrar).toBeTruthy();
     });
   });
+  describe('Apelación y adecuación del T01 (PB-02)', () => {
+    let api: ExpedienteApiService;
+    let socioApi: SocioApiService;
+    const motivos = 'El debate acreditó que la falta fue compartida con un tercer socio.';
+
+    const expediente = {
+      id: '7',
+      numero: 'EXP-0701/2026',
+      socio: 'Ana Pérez',
+      legajo: '78002',
+      subcomision: 'Cómputos',
+      motivo: 'Uso indebido del laboratorio',
+      fechaCreacion: '2026-10-20',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -2
+    } as Expediente;
+
+    const historial = (cambios: Partial<HistorialT01DTO> = {}): HistorialT01DTO => ({
+      es_t01: true,
+      estado: 'revision_resolucion',
+      plazo_dias_vigente: 5,
+      puntos_vigentes: '-2.00',
+      involucrados: [
+        { id: 3, legajo: '78002', nombre: 'Ana Pérez (N° 78002)' },
+        { id: 4, legajo: '78003', nombre: 'Bruno Díaz (N° 78003)' }
+      ],
+      original: {
+        numero_t01: 'T01-2026-ABC',
+        tipo_accion: 'SANCTION',
+        emitido_at: '2026-10-15T10:00:00Z',
+        solicitante: 'Carla Gómez (N° 78001)',
+        snapshot: { puntos: '-2.00' }
+      },
+      periodos: [],
+      apelaciones: [
+        { socio_id: 3, socio: 'Ana Pérez (N° 78002)', numero: 1, texto: 'Primera versión de la apelación.', created_at: '2026-10-16T10:00:00Z' },
+        { socio_id: 3, socio: 'Ana Pérez (N° 78002)', numero: 2, texto: 'No estuve presente en el laboratorio.', created_at: '2026-10-17T10:00:00Z' }
+      ],
+      adecuaciones: [],
+      ...cambios
+    });
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      socioApi = TestBed.inject(SocioApiService);
+    });
+
+    function abrirComo(rol: string, dto: HistorialT01DTO = historial(), estado = 'revision_resolucion'): void {
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({ id: 7, numero: 'EXP-0701/2026', estado, socios: [], descargos: [] }));
+      spyOn(api, 'obtenerHistorialT01').and.returnValue(of(dto));
+      component.abrirDetalle({ ...expediente, estado } as Expediente);
+      fixture.detectChanges();
+    }
+
+    it('muestra el T01 original y la última versión de cada apelación', () => {
+      abrirComo('CD');
+      expect(api.obtenerHistorialT01).toHaveBeenCalledWith('7');
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.original-t01')?.textContent).toContain('T01-2026-ABC');
+      const filas = Array.from(compiled.querySelectorAll('.apelacion-socio')).map(el => el.textContent || '');
+      expect(filas[0]).toContain('versión 2');
+      expect(filas[0]).toContain('No estuve presente en el laboratorio.');
+      expect(filas[1]).toContain('Sin apelación');
+      expect(component.puedeAdecuarT01).toBeFalse();
+    });
+
+    it('no muestra el panel en expedientes que no vienen de un T01', () => {
+      abrirComo('TD', historial({ es_t01: false }));
+      expect((fixture.nativeElement as HTMLElement).querySelector('.panel-t01')).toBeNull();
+    });
+
+    it('sólo el TD adecúa y sólo en "Justificaciones en revisión"', () => {
+      abrirComo('TD', historial(), 'justificando');
+      expect(component.puedeAdecuarT01).toBeFalse();
+    });
+
+    it('prepara el borrador con los puntos e involucrados vigentes', () => {
+      abrirComo('TD');
+      expect(component.puedeAdecuarT01).toBeTrue();
+      expect(component.borradorAdecuacion.puntos).toBe(-2);
+      expect(component.borradorAdecuacion.socios.map(s => s.id)).toEqual([3, 4]);
+    });
+
+    it('busca socios para agregar sin repetir involucrados', fakeAsync(() => {
+      abrirComo('TD');
+      spyOn(socioApi, 'searchSocios').and.returnValue(of({
+        count: 2, next: null, previous: null,
+        results: [
+          { id: 4, legajo: '78003', first_name: 'Bruno', last_name: 'Díaz' } as SocioListItemDTO,
+          { id: 9, legajo: '78004', first_name: 'Dario', last_name: 'Luna' } as SocioListItemDTO
+        ]
+      }));
+      component.buscarSocioAdecuacion('lu');
+      tick(300);
+      expect(socioApi.searchSocios).not.toHaveBeenCalled();
+      component.buscarSocioAdecuacion('luna');
+      tick(300);
+      expect(component.candidatosAdecuacion.map(s => s.id)).toEqual([9]);
+
+      component.agregarSocioAdecuacion(component.candidatosAdecuacion[0]);
+      component.quitarSocioAdecuacion(4);
+      expect(component.borradorAdecuacion.socios.map(s => s.id)).toEqual([3, 9]);
+    }));
+
+    it('valida involucrados y motivos antes de enviar', () => {
+      abrirComo('TD');
+      spyOn(api, 'adecuarT01');
+      component.borradorAdecuacion.socios = [];
+      component.registrarAdecuacion();
+      expect(notifications.error).toHaveBeenCalledWith('Debe quedar al menos un involucrado en el expediente.');
+
+      component.borradorAdecuacion.socios = [{ id: 3, legajo: '78002', nombre: 'Ana' }];
+      component.borradorAdecuacion.motivos = 'Breve';
+      component.registrarAdecuacion();
+      expect(notifications.error).toHaveBeenCalledWith('Indicá los motivos de la adecuación con al menos 20 caracteres.');
+      expect(api.adecuarT01).not.toHaveBeenCalled();
+    });
+
+    it('registra la adecuación con nuevo plazo y actualiza el detalle', () => {
+      abrirComo('TD');
+      const actualizado = historial({ estado: 'justificando', puntos_vigentes: '-1.50' });
+      spyOn(api, 'adecuarT01').and.returnValue(of(actualizado));
+      component.borradorAdecuacion.puntos = -1.5;
+      component.borradorAdecuacion.motivos = `  ${motivos}  `;
+      component.borradorAdecuacion.reabrirPlazo = true;
+
+      component.registrarAdecuacion();
+
+      expect(api.adecuarT01).toHaveBeenCalledWith('7', {
+        puntos: -1.5,
+        socios: [3, 4],
+        motivos,
+        reabrir_plazo: true
+      });
+      expect(component.expedienteSeleccionado?.estado).toBe('justificando');
+      expect(component.expedienteSeleccionado?.puntos).toBe(-1.5);
+      expect(component.borradorAdecuacion.motivos).toBe('');
+      expect(notifications.success).toHaveBeenCalledWith(
+        'Adecuación registrada. Se abrió un nuevo plazo de apelación y se notificaron los motivos.'
+      );
+    });
+
+    it('informa el rechazo del servidor', () => {
+      abrirComo('TD');
+      spyOn(api, 'adecuarT01').and.returnValue(throwError(() => ({ status: 400, error: { detail: 'Sin cambios.' } })));
+      component.borradorAdecuacion.motivos = motivos;
+      component.registrarAdecuacion();
+      expect(notifications.error).toHaveBeenCalled();
+      expect(component.adecuando).toBeFalse();
+    });
+  });
 });
-
-

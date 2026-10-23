@@ -2,6 +2,8 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from expedientes.views import (
+    AdecuacionT01View,
+    ApelacionT01View,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
@@ -14,8 +16,10 @@ from expedientes.views import (
     EvidenciaUploadView,
     ExpedienteCollectionView,
     ExpedienteDetailView,
+    HistorialT01View,
     MisExpedientesView,
     MisSolicitudesT01View,
+    PlazoApelacionView,
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
@@ -39,6 +43,14 @@ urlpatterns = [
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
     ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
+    path(
+        "parametros/plazo-apelacion/",
+        PlazoApelacionView.as_view(),
+        name="parametro-plazo-apelacion",
+    ),
+    path("<int:pk>/apelacion/", ApelacionT01View.as_view(), name="t01-apelacion"),
+    path("<int:pk>/adecuaciones/", AdecuacionT01View.as_view(), name="t01-adecuaciones"),
+    path("<int:pk>/t01/historial/", HistorialT01View.as_view(), name="t01-historial"),
     path("", SolicitudT01CreateView.as_view(), name="solicitud-create"),
     path("gestion/", ExpedienteCollectionView.as_view(), name="expedientes"),
     path("mis-expedientes/", MisExpedientesView.as_view(), name="mis-expedientes"),
