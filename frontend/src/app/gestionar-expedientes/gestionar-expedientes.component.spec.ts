@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
 import { of, throwError } from 'rxjs';
@@ -940,6 +941,23 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnEmitir).toBeTruthy();
       expect(btnCerrar).toBeTruthy();
     });
+    it('debe navegar al visor de sustanciación al invocar abrirVisor', () => {
+      const router = TestBed.inject(Router);
+      const navigateSpy = spyOn(router, 'navigate');
+
+      component.abrirVisor(expMock);
+      expect(navigateSpy).toHaveBeenCalledWith(['/gestionar-expedientes', expMock.id, 'visor']);
+    });
+
+    it('debe renderizar el botón Sustanciar / Visor en el modal de detalle', () => {
+      component.abrirDetalle(expMock);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const btnVisor = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Sustanciar / Visor"]');
+      expect(btnVisor).toBeTruthy();
+    });
+
   });
 });
 

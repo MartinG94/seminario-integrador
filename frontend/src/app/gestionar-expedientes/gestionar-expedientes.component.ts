@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { 
   TribunalDataService, 
   Expediente, 
@@ -133,7 +134,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     public dataService: TribunalDataService,
     private auth: AuthService,
     private notifications: NotificationService,
-    private expedienteApi: ExpedienteApiService
+    private expedienteApi: ExpedienteApiService,
+    private router: Router
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -432,6 +434,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       }
       return;
     }
+  }
+
+  abrirVisor(exp: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!exp?.id) return;
+    this.router.navigate(['/gestionar-expedientes', exp.id, 'visor']);
   }
 
   abrirDetalle(exp: Expediente): void {

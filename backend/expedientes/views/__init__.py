@@ -76,6 +76,7 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
+from expedientes.views.visor_views import ExpedienteVisorView
 from expedientes.views.evento_views import (
     EventoInstitucionalViewSet,
     RegistroApercibimientoViewSet,
@@ -597,16 +598,19 @@ class EvidenciaDownloadView(APIView):
         else:
             ip_address = request.META.get("REMOTE_ADDR")
         user_agent = request.META.get("HTTP_USER_AGENT", "")
+        accion = request.query_params.get("accion", "descarga")
 
         EvidenceService.record_download_audit(
             evidencia=evidencia,
             user=request.user,
             ip_address=ip_address,
             user_agent=user_agent,
+            accion=accion,
         )
 
         response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
-        response["Content-Disposition"] = f'inline; filename="{evidencia.nombre_original}"'
+        disposition = "inline" if accion.lower() in ["ver", "consulta", "visualizar"] else "attachment"
+        response["Content-Disposition"] = f'{disposition}; filename="{evidencia.nombre_original}"'
         response["X-Content-Type-Options"] = "nosniff"
         return response
 
@@ -1073,4 +1077,5 @@ __all__ = [
     "EventoInstitucionalViewSet",
     "RegistroApercibimientoViewSet",
     "SocioApercibimientosView",
+    "ExpedienteVisorView",
 ]

@@ -30,6 +30,7 @@ from expedientes.models import (
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
+from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.serializers.evento_serializers import (
     AsistenciaEventoBulkUpdateSerializer,
     AsistenciaEventoSerializer,
@@ -1244,4 +1245,5 @@ __all__ = [
     "EventoInstitucionalSerializer",
     "RegistroApercibimientoSerializer",
     "ReportarAsistenciaSerializer",
+    "ExpedienteVisorSerializer",
 ]
