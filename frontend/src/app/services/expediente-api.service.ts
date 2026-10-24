@@ -205,6 +205,114 @@ export interface SocioInvolucradoDetalleDTO {
   estado?: string;
 }
 
+
+export interface ResponsableTdDTO {
+  titulo: string;
+  legajo: string;
+  nombre: string;
+  grupo: string;
+  es_suplente?: boolean;
+  display: string;
+}
+
+export interface EvidenciaVisorDTO {
+  id: string;
+  nombre_original: string;
+  extension: string;
+  mime_type: string;
+  tamanio_bytes: number;
+  sha256_hash: string;
+  sha256_valido: boolean;
+  archivo_danado: boolean;
+  es_vigente: boolean;
+  created_at: string;
+}
+
+export interface DescargoVisorDTO {
+  id: number;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  tipo_display: string;
+  causal: string;
+  texto: string;
+  archivo: string;
+  presentado_at: string | null;
+  contiene_datos_medicos?: boolean;
+  datos_medicos_restringidos?: boolean;
+  evidencias: EvidenciaVisorDTO[];
+  regla_sugerida?: DecisionCausal;
+  decisiones_causal?: DecisionCausalDTO[];
+}
+
+export interface InvolucradoVisorDTO {
+  id: number;
+  legajo: string;
+  nombre: string;
+  first_name?: string;
+  last_name?: string;
+  grupo?: string;
+  estado?: string;
+  tiene_descargo: boolean;
+  estado_descargo: 'PRESENTADO' | 'PLAZO_VENCIDO_SIN_DESCARGO' | 'PENDIENTE' | 'NO_INICIADO';
+  estado_descargo_display: string;
+  descargo?: DescargoVisorDTO | null;
+}
+
+export interface TimelineHitoDTO {
+  id: string | number;
+  fecha_hora: string;
+  tipo: string;
+  tipo_display: string;
+  titulo: string;
+  descripcion: string;
+  actor: string;
+  icono?: string;
+  color?: string;
+  es_secundario?: boolean;
+}
+
+export interface ExpedienteVisorData {
+  id: number;
+  numero: string;
+  anio: number;
+  titulo: string;
+  motivo: string;
+  razon: string;
+  causal: string;
+  reglamento_asociado: string;
+  reglamentos_respaldantes: string[];
+  puntos: number | string;
+  estado: string;
+  estado_display: string;
+  urgencia: NivelUrgencia;
+  urgencia_display: string;
+  fecha_solicitud: string;
+  created_at: string;
+  solicitante: {
+    legajo: string;
+    nombre: string;
+    grupo?: string;
+    display: string;
+  };
+  anexo: {
+    anexo_fecha: string | null;
+    anexo_lugar: string;
+    anexo_relato: string;
+    anexo_testigos: string;
+  };
+  plazo_inicio_at: string | null;
+  plazo_limite_at: string | null;
+  esta_en_plazo: boolean;
+  horas_restantes: number;
+  responsables_td: ResponsableTdDTO[];
+  involucrados: InvolucradoVisorDTO[];
+  timeline: TimelineHitoDTO[];
+  puede_resolver_causal?: boolean;
+  puede_dictar_resolucion?: boolean;
+}
+
 export interface ExpedienteDetalleDTO {
   id: number;
   numero: string;
@@ -308,8 +416,9 @@ export class ExpedienteApiService {
     return this.http.post<EvidenciaMetadata[]>(`${this.apiUrl}/${expedienteId}/evidencia/`, formData);
   }
 
-  descargarEvidencia(expedienteId: number | string, evidenciaId: string): Observable<Blob> {
+  descargarEvidencia(expedienteId: number | string, evidenciaId: string, accion: 'descarga' | 'ver' = 'descarga'): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${expedienteId}/evidencia/${evidenciaId}/`, {
+      params: { accion },
       responseType: 'blob'
     });
   }
@@ -350,5 +459,8 @@ export class ExpedienteApiService {
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
-}
 
+  obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {
+    return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
+  }
+}

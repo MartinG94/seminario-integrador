@@ -81,6 +81,7 @@ from expedientes.views.evento_views import (
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
 
@@ -597,12 +598,14 @@ class EvidenciaDownloadView(APIView):
         else:
             ip_address = request.META.get("REMOTE_ADDR")
         user_agent = request.META.get("HTTP_USER_AGENT", "")
+        accion = request.query_params.get("accion", "descarga")
 
         EvidenceService.record_download_audit(
             evidencia=evidencia,
             user=request.user,
             ip_address=ip_address,
             user_agent=user_agent,
+            accion=accion,
         )
 
         response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
@@ -1073,4 +1076,5 @@ __all__ = [
     "EventoInstitucionalViewSet",
     "RegistroApercibimientoViewSet",
     "SocioApercibimientosView",
+    "ExpedienteVisorView",
 ]

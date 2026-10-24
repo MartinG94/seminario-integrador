@@ -163,10 +163,20 @@
             
             <div class="card-bottom d-flex justify-content-between align-items-center">
               <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
-              <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
-                <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
-                <span>{{ getCantidadInvolucrados(exp) }}</span>
-              </span>
+              <div class="d-inline-flex align-items-center gap-2">
+                <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
+                  <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
+                  <span>{{ getCantidadInvolucrados(exp) }}</span>
+                </span>
+                <button mat-button 
+                        class="btn btn-primary btn-link btn-just-icon p-0 m-0 btn-abrir-visor"
+                        style="min-width: 24px; width: 24px; height: 24px;"
+                        (click)="abrirVisor(exp, $event)" 
+                        title="Sustanciar / Visor de Expediente" 
+                        aria-label="Sustanciar / Visor">
+                  <i class="material-icons" style="font-size: 16px;">menu_book</i>
+                </button>
+              </div>
             </div>
           </div>
         </ng-container>
@@ -231,6 +241,13 @@
                           title="Ver Detalle de Expediente" 
                           aria-label="Ver Detalle">
                     <i class="material-icons">visibility</i>
+                  </button>
+                  <button mat-button 
+                          class="btn btn-primary btn-link btn-just-icon btn-abrir-visor-tabla" 
+                          (click)="abrirVisor(exp, $event)" 
+                          title="Sustanciar / Visor de Expediente" 
+                          aria-label="Sustanciar / Visor">
+                    <i class="material-icons">menu_book</i>
                   </button>
                   <button mat-button 
                           class="btn btn-info btn-link btn-just-icon" 
@@ -544,6 +561,12 @@
 
       </div>
       <div class="card-footer d-flex justify-content-end gap-2">
+        <button mat-button 
+                class="btn btn-primary" 
+                (click)="abrirVisor(expedienteSeleccionado)" 
+                title="Sustanciar / Visor">
+          <i class="material-icons" style="font-size: 16px;">menu_book</i> Sustanciar / Visor
+        </button>
         <button mat-button 
                 class="btn btn-info" 
                 (click)="abrirModalSocios(expedienteSeleccionado, $event)" 

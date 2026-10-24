@@ -525,6 +525,39 @@ class AuditoriaDescargaEvidencia(models.Model):
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
+class AuditoriaConsultaExpediente(models.Model):
+    """Pista de auditoría inmutable de consultas en el visor autorizado (CA3)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.CASCADE,
+        related_name="consultas_auditadas",
+        db_index=True,
+    )
+    usuario = models.CharField(max_length=150)
+    legajo = models.CharField(max_length=50, blank=True)
+    rol = models.CharField(max_length=50)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_consulta"
+        ordering = ["-fecha_hora"]
+
+    def __str__(self) -> str:
+        return f"Consulta {self.expediente.numero} por {self.usuario} ({self.fecha_hora})"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Los registros de auditoría de consulta son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Los registros de auditoría de consulta no pueden eliminarse.")
+
+
 class DecisionCausalEnum(models.TextChoices):
     """Resultado de la valoración de una causal tipificada T02 (S4-02)."""
 

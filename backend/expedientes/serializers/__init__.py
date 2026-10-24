@@ -39,6 +39,7 @@ from expedientes.serializers.evento_serializers import (
     RegistroApercibimientoSerializer,
     ReportarAsistenciaSerializer,
 )
+from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
@@ -1244,4 +1245,5 @@ __all__ = [
     "EventoInstitucionalSerializer",
     "RegistroApercibimientoSerializer",
     "ReportarAsistenciaSerializer",
+    "ExpedienteVisorSerializer",
 ]
