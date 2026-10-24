@@ -6,25 +6,28 @@ Implementa:
 - CanCreateT01: Autoridades procesales habilitadas para crear y tramitar T01.
 - CanOpenExpedientes y CanTransitionExpedientes: Roles para apertura y
   transiciones manuales (PR #43).
+- IsNotInvolvedInExpediente: inhibición de las partes interesadas (S4-04).
 """
 
 from rest_framework.permissions import BasePermission
 
 from accounts import audit
 from accounts.permissions import HasAnyRole, IsTribunalOrDirectiva
+from expedientes.models import Expediente
+from expedientes.services.tribunal_composition_service import INVOLVED_MESSAGE, is_involved
 from socios.models import Role
 
 __all__ = [
-    "CanConstituteTribunal",
     "CanCreateT01",
-    "CanDesignateAdHoc",
     "CanManageCalendar",
     "CanManageEventos",
     "CanOpenExpedientes",
+    "CanRegisterAssemblyResolution",
     "CanResolveCausal",
     "CanTransitionExpedientes",
     "IsComisionDirectivaOrAdmin",
     "IsImputadoOrTribunal",
+    "IsNotInvolvedInExpediente",
     "IsTribunalOrDirectiva",
 ]
 
@@ -65,16 +68,24 @@ class CanResolveCausal(HasAnyRole):
     allowed_roles = (Role.TD,)
 
 
-class CanConstituteTribunal(HasAnyRole):
-    """Sólo el Tribunal constituye su cuerpo y declara apartamientos propios (S4-04)."""
+class CanRegisterAssemblyResolution(HasAnyRole):
+    """CD o Administración registran la Resolución por Asamblea Extraordinaria (Art. 95)."""
 
-    allowed_roles = (Role.TD,)
+    allowed_roles = (Role.CD, Role.ADMIN)
 
 
-class CanDesignateAdHoc(HasAnyRole):
-    """TD o CD registran la designación ad hoc resuelta por Asamblea (Art. 95, S4-04)."""
+class IsNotInvolvedInExpediente(BasePermission):
+    """Inhibe a las partes interesadas del expediente `pk` (Art. 95 Estatuto, Art. 24 RPD).
 
-    allowed_roles = (Role.TD, Role.CD)
+    Imputados y solicitantes no evalúan justificativos, no transicionan la causa ni
+    emiten o firman la resolución: responde 403 aunque tengan rol de Tribunal.
+    """
+
+    message = INVOLVED_MESSAGE
+
+    def has_permission(self, request, view) -> bool:
+        expediente = Expediente.objects.filter(pk=view.kwargs.get("pk")).first()
+        return expediente is None or not is_involved(expediente, request.user)
 
 
 class CanCreateT01(HasAnyRole):

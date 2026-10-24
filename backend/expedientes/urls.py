@@ -2,16 +2,13 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from expedientes.views import (
-    ApartamientoTribunalView,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
     CaseNotificationAuditView,
     ComposicionTribunalView,
-    ConstituirTribunalView,
     DecisionCausalView,
     DescargoVersionesView,
-    DesignacionAdHocView,
     DispatchCaseOpeningView,
     EventoInstitucionalViewSet,
     EvidenciaDownloadView,
@@ -23,6 +20,7 @@ from expedientes.views import (
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
+    ResolucionAsambleaView,
     SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
@@ -60,19 +58,9 @@ urlpatterns = [
         name="composicion-tribunal",
     ),
     path(
-        "<int:pk>/composicion/apartamientos/",
-        ApartamientoTribunalView.as_view(),
-        name="composicion-apartamientos",
-    ),
-    path(
-        "<int:pk>/composicion/designaciones-ad-hoc/",
-        DesignacionAdHocView.as_view(),
-        name="composicion-designaciones-ad-hoc",
-    ),
-    path(
-        "<int:pk>/composicion/constituir/",
-        ConstituirTribunalView.as_view(),
-        name="composicion-constituir",
+        "<int:pk>/resolucion-asamblea/",
+        ResolucionAsambleaView.as_view(),
+        name="resolucion-asamblea",
     ),
     path(
         "<int:pk>/descargo/versiones/",

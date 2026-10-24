@@ -314,7 +314,7 @@ table.table-mat tbody tr:focus {
   }
 }
 
-// Composición del Tribunal de la causa (S4-04)
+// Responsables del Tribunal de la causa (S4-04)
 .panel-composicion {
   .seccion-titulo {
     color: var(--color-primary);
@@ -324,21 +324,13 @@ table.table-mat tbody tr:focus {
     text-transform: none;
   }
 
-  .aviso-ad-hoc {
-    color: var(--color-warning);
-  }
-
-  .btn-apartarme,
-  .btn-constituir {
-    .material-icons {
-      font-size: 16px;
-      vertical-align: middle;
-    }
+  .btn-ver-acta .material-icons {
+    font-size: 16px;
+    vertical-align: middle;
   }
 
   button:focus-visible,
-  input:focus-visible,
-  textarea:focus-visible {
+  input:focus-visible {
     outline: 2px solid var(--color-border-focus);
     outline-offset: 2px;
   }

@@ -2,60 +2,35 @@
 
 ## 1. Esquema legacy
 
-- **Nómina del TD:** el legado ya la modela. El cargo de cada socio está en `socio_lista.idTipoSocio` (`socio_tipoSocio`: 10 = Titular TD, 11 = Suplente TD, 12 = Socio Ordinario, 1–9 y 13–15 = otros cargos) y el año social en `socio_lista.anoSocial`. Se lee en sólo lectura con `padron.models.Socio` y se vincula con la cuenta local por `socio_lista.user_id`. **No se crea una tabla de integrantes** (AGENTS.md, regla 6).
+- **Nómina del TD:** el legado ya la modela. El cargo de cada socio está en `socio_lista.idTipoSocio` (`socio_tipoSocio`: 10 = Titular TD, 11 = Suplente TD) y el año social en `socio_lista.anoSocial`. Se lee en sólo lectura con `padron.models.Socio` y se vincula con la cuenta local por `socio_lista.user_id`. **No se crea una tabla de integrantes** (AGENTS.md, regla 6).
 - **Grupo (Gxx):** último `socio_estadoHistorial.idGrupo` del socio.
-- **Composición por causa:** el legado sólo guarda tres firmantes en `tribunal_datosresolucion.responsable1..3`, ligados a `tribunal_expediente` (legado). No modela la causa del apartamiento, la condición Titular/Suplente/Ad hoc, el reemplazo ni el bloqueo, y el expediente nuevo vive en `expedientes_expediente`. Se crean tablas nuevas en el módulo `expedientes`.
+- **Responsables por causa:** el legado sólo guarda tres firmantes en `tribunal_datosresolucion.responsable1..3`, ligados a `tribunal_expediente` (legado). No modela condición Titular/Suplente, reemplazo ni apartados, y el expediente nuevo vive en `expedientes_expediente`. Se crean tablas nuevas en el módulo `expedientes`.
+- **Acta de Asamblea:** no existe en el legado; se guarda en base como los comprobantes de descargo (`BinaryField`, Directiva PO).
 
 ## 2. Arquitectura
 
 | Capa | Archivo | Responsabilidad |
 | :--- | :--- | :--- |
-| Dominio puro | `backend/expedientes/domain/tribunal_composition.py` | Validación de nómina (CA1/CA5), apartamiento, suplencia, caso ad hoc y validación de designados. Sin Django. |
+| Dominio puro | `backend/expedientes/domain/tribunal_composition.py` | Validación de nómina (CA1), apartamiento automático, suplencia y Casos A/B. Sin Django. |
 | Puerto/Adaptador | `backend/expedientes/services/tribunal_roster.py` | Lee la nómina y el cargo legado desde `socio_lista`. |
-| Persistencia | `backend/expedientes/models.py` | `ApartamientoTribunal`, `DesignacionAdHoc`, `ComposicionTribunal`, `IntegranteComposicion`; todas sólo-inserción. |
-| Aplicación | `backend/expedientes/services/tribunal_composition_service.py` | Transacciones con `select_for_update`, etapa procesal, permisos de apartados y constitución. |
-| Flujo | `backend/expedientes/services/workflow_service.py` | Bloquea `espera_resolucion → pendiente_correos` sin cuerpo constituido. |
-| API | `views`, `urls`, `serializers` | `GET /composicion/`, `POST /composicion/apartamientos/`, `POST /composicion/designaciones-ad-hoc/`, `POST /composicion/constituir/`. |
-| Frontend | `expediente-api.service.ts`, `gestionar-expedientes` | Panel "Composición del Tribunal" en el detalle del expediente. |
+| Persistencia | `backend/expedientes/models.py` | `ComposicionTribunal`, `IntegranteComposicion`, `ResolucionAsamblea`; sólo-inserción. |
+| Aplicación | `backend/expedientes/services/tribunal_composition_service.py` | Involucrados, consulta en vivo, estampado al resolver y aviso a CD por Outbox. |
+| Aplicación | `backend/expedientes/services/assembly_resolution_service.py` | Acta PDF y emisión del expediente por Asamblea. |
+| Flujo | `backend/expedientes/services/workflow_service.py` | Estampa (o inmoviliza) al pasar a `pendiente_correos`; encola el aviso al abrir. |
+| Permisos | `backend/expedientes/permissions.py` | `IsNotInvolvedInExpediente` (403) y `CanRegisterAssemblyResolution` (CD/Admin). |
+| API | `views`, `urls` | `GET /composicion/`, `GET/POST /resolucion-asamblea/`; inhibición en decisiones y transiciones. |
+| Frontend | `expediente-api.service.ts`, `gestionar-expedientes` | Panel "Responsables del Tribunal", aviso de participación restringida, aviso ad hoc y carga del acta. |
 
 ## 3. DDL
 
-**`expedientes_apartamiento_tribunal`** — apartamiento voluntario por conflicto (el involucramiento se calcula y se congela al constituir).
-
-| Columna | Tipo | Notas |
-| :--- | :--- | :--- |
-| `id` | BIGINT PK | |
-| `expediente_id` | FK → `expedientes_expediente` | `PROTECT` |
-| `socio_id` | FK → `socios_socio` | Integrante que se aparta; único con `expediente_id` |
-| `causa` | VARCHAR(20) | `CONFLICTO_INTERES` / `INVOLUCRADO` |
-| `fundamento` | TEXT | ≥ 20 caracteres |
-| `autor_id` | FK → `auth_user` | `PROTECT` |
-| `created_at` | DATETIME(6) | |
-
-**`expedientes_designacion_ad_hoc`**
-
-| Columna | Tipo | Notas |
-| :--- | :--- | :--- |
-| `id` | BIGINT PK | |
-| `expediente_id` | FK | `PROTECT` |
-| `reemplaza_a_id` | FK → `socios_socio` | Único con `expediente_id` |
-| `designado_id` | FK → `socios_socio` | Único con `expediente_id` |
-| `anio_social` | SMALLINT | 4, 5 o 6 |
-| `acta_asamblea` | VARCHAR(255) | Referencia del acta de Asamblea |
-| `autor_id` | FK → `auth_user` | |
-| `created_at` | DATETIME(6) | |
-
-**`expedientes_composicion_tribunal`** — una por expediente (`OneToOne`).
+**`expedientes_composicion_tribunal`** — una por expediente (`OneToOne`), estampada al resolver.
 
 | Columna | Tipo | Notas |
 | :--- | :--- | :--- |
 | `id` | BIGINT PK | |
 | `expediente_id` | FK única | `PROTECT` |
-| `es_ad_hoc` | BOOL | |
-| `apartamientos` | JSON | Copia de las causas: `[{socio_id, nro_socio, nombre, anio_social, condicion, causa, fundamento}]` |
-| `constituida_por_id` | FK → `auth_user` | |
-| `constituida_por_legajo` | VARCHAR(20) | |
-| `created_at` | DATETIME(6) | |
+| `apartados` | JSON | Copia de los integrantes involucrados: `[{socio_id, nro_socio, nombre, anio_social, condicion}]` |
+| `created_at` | DATETIME(6) | Momento del estampado |
 
 **`expedientes_integrante_composicion`** — tres filas por composición.
 
@@ -65,23 +40,38 @@
 | `composicion_id` | FK | Único con `anio_social` |
 | `anio_social` | SMALLINT | 4, 5 o 6 |
 | `socio_id` | FK → `socios_socio` | `PROTECT` |
-| `condicion` | VARCHAR(10) | `TITULAR` / `SUPLENTE` / `AD_HOC` |
+| `condicion` | VARCHAR(10) | `TITULAR` / `SUPLENTE` |
 | `nro_socio` | INT | Copia de `socio_lista.nroSocio` |
 | `nombre_completo` | VARCHAR(200) | Copia |
 | `grupo` | VARCHAR(10) | Copia (`G59`), puede ser vacío |
-| `reemplaza_a` | VARCHAR(200) | Integrante apartado al que reemplaza |
+| `reemplaza_a` | VARCHAR(200) | Titular involucrado al que reemplaza |
+
+**`expedientes_resolucion_asamblea`** — una por expediente (`OneToOne`).
+
+| Columna | Tipo | Notas |
+| :--- | :--- | :--- |
+| `id` | BIGINT PK | |
+| `expediente_id` | FK única | `PROTECT` |
+| `acta_blob` | LONGBLOB | PDF validado por magic bytes (≤ 5 MB) |
+| `acta_nombre` | VARCHAR(255) | Nombre sanitizado |
+| `acta_tamanio_bytes` | INT | |
+| `acta_sha256` | CHAR(64) | |
+| `registrada_por_id` | FK → `auth_user` | `PROTECT` |
+| `registrada_por_legajo` | VARCHAR(150) | |
+| `created_at` | DATETIME(6) | |
 
 ## 4. Algoritmo de composición
 
-1. Apartados = integrantes involucrados en el expediente (causa `INVOLUCRADO`, prevalece) ∪ apartamientos declarados (`CONFLICTO_INTERES`).
-2. Ad hoc = (≥ 2 involucrados del mismo año) ∨ (≥ 3 involucrados) ∨ (algún año con titular y suplente apartados).
-3. Asiento de cada año: titular → (ad hoc) reemplazo del titular → suplente → (ad hoc) reemplazo del suplente; el primero habilitado.
-4. Observaciones que impiden constituir: nómina inválida (CA1/CA5), asiento vacante, involucrado sin reemplazo en caso ad hoc.
+1. Involucrados = imputados ∪ solicitante del T01.
+2. Asiento de cada año: titular si no está involucrado; si no, suplente si no está involucrado; si no, vacante.
+3. Caso A = titular y suplente del mismo año involucrados. Caso B = tres o más integrantes involucrados. Cualquiera de los dos requiere Asamblea.
+4. Observaciones que impiden la resolución ordinaria: nómina inválida (CA1).
 
 ## 5. Decisiones y alternativas descartadas
 
-- **Nómina desde el legado** y no tabla propia de integrantes: el cargo ya está en `idTipoSocio` (regla 6). Se descartó usar `Socio.role = TD` porque no distingue titular de suplente.
-- **Sin endpoint de recusación** ni campo de socio destino en el apartamiento: el endpoint aparta siempre al usuario autenticado (Art. 93).
-- **Copia de la composición al constituir** en filas inmutables: la nómina legada cambia con cada mandato y la resolución debe conservar sus firmantes (pie de firma, notasPO §4).
-- **Guarda en el flujo** al pasar a `pendiente_correos` y no al entrar a `espera_resolucion`: el cuerpo puede cambiar mientras se revisan justificaciones; se congela antes de adoptar la resolución.
-- **Descartado:** escribir `tribunal_datosresolucion.responsable1..3`; pertenece al expediente legado y no guarda causa ni condición.
+- **Nómina desde el legado** y no tabla propia de integrantes: el cargo ya está en `idTipoSocio` (regla 6).
+- **Inhibición como permiso DRF** reutilizable sobre el `pk` de la URL: un único punto para decisiones, transiciones y Asamblea.
+- **Estampado dentro de la transición** a `pendiente_correos` y no con un botón: la composición cambia con los imputados hasta adoptar la resolución (revisión del PO).
+- **Aviso idempotente** con `idempotency_key` del Outbox por expediente: se evalúa al abrir y al vincular el solicitante sin duplicar correos.
+- **Descartado (revisión del PO):** apartamiento voluntario por conflicto de interés, designación manual de integrantes ad hoc y constitución manual del cuerpo.
+- **Descartado:** escribir `tribunal_datosresolucion.responsable1..3`; pertenece al expediente legado.

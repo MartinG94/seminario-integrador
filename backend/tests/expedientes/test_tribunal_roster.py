@@ -5,7 +5,7 @@ import pytest
 from expedientes.domain.tribunal_composition import Condition
 from expedientes.services.tribunal_roster import LegacyTribunalRosterAdapter
 from socios.models import Role
-from tests.expedientes.conftest import CARGO_SUPLENTE_TD, CARGO_TITULAR_TD
+from tests.expedientes.conftest import CARGO_TITULAR_TD
 
 pytestmark = pytest.mark.django_db
 
@@ -60,30 +60,3 @@ def test_integrante_con_rol_de_comision_directiva_es_incompatible(make_legacy_so
     make_legacy_socio(81004, 4, CARGO_TITULAR_TD, Role.CD)
     (entry,) = LegacyTribunalRosterAdapter().load().entries
     assert entry.member.other_position == "Comisión Directiva"
-
-
-def test_designado_con_cargo_legado_es_incompatible(make_legacy_socio):
-    tesorero = make_legacy_socio(90005, 5, cargo=5)
-    entry = LegacyTribunalRosterAdapter().entry_for(tesorero)
-    assert entry is not None
-    assert entry.member.condition == Condition.AD_HOC
-    assert entry.member.other_position == "Tesorero"
-
-
-def test_designado_socio_ordinario_es_compatible(make_legacy_socio):
-    ordinario = make_legacy_socio(90005, 5, grupo=58)
-    entry = LegacyTribunalRosterAdapter().entry_for(ordinario)
-    assert entry.member.other_position is None
-    assert entry.member.social_year == 5
-    assert entry.grupo == "G58"
-
-
-def test_designado_integrante_del_tribunal_ocupa_cargo(make_legacy_socio):
-    suplente = make_legacy_socio(82005, 5, CARGO_SUPLENTE_TD, Role.TD)
-    entry = LegacyTribunalRosterAdapter().entry_for(suplente)
-    assert entry.member.other_position == "Suplente del Tribunal de Disciplina"
-
-
-def test_designado_ausente_del_padron(make_socio):
-    socio = make_socio(legajo="90777", social_year=5)
-    assert LegacyTribunalRosterAdapter().entry_for(socio) is None

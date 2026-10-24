@@ -156,37 +156,31 @@ describe('ExpedienteApiService', () => {
     expect(versiones[0].numero).toBe(1);
   });
 
-  describe('composición del Tribunal (S4-04)', () => {
-    const base = `${environment.apiUrl}/expedientes/12/composicion/`;
+  describe('Tribunal de la causa (S4-04)', () => {
+    const base = `${environment.apiUrl}/expedientes/12`;
 
     it('consulta la composición de la causa', () => {
       service.obtenerComposicionTribunal(12).subscribe(c => expect(c.asientos.length).toBe(3));
-      const req = http.expectOne(base);
+      const req = http.expectOne(`${base}/composicion/`);
       expect(req.request.method).toBe('GET');
       req.flush({ asientos: [{}, {}, {}] });
     });
 
-    it('declara el apartamiento propio sin indicar a otro integrante', () => {
-      service.declararApartamiento(12, 'Comparto vivienda con el socio imputado.').subscribe();
-      const req = http.expectOne(`${base}apartamientos/`);
+    it('registra la Resolución por Asamblea con el acta en PDF', () => {
+      const acta = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' });
+      service.registrarResolucionAsamblea(12, acta).subscribe();
+      const req = http.expectOne(`${base}/resolucion-asamblea/`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ fundamento: 'Comparto vivienda con el socio imputado.' });
+      expect((req.request.body as FormData).get('acta')).toBe(acta);
       req.flush({});
     });
 
-    it('registra la designación ad hoc de Asamblea', () => {
-      service.designarAdHoc(12, { reemplaza_a: 3, designado_nro_socio: 90041, acta_asamblea: 'Acta 3/2026' }).subscribe();
-      const req = http.expectOne(`${base}designaciones-ad-hoc/`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ reemplaza_a: 3, designado_nro_socio: 90041, acta_asamblea: 'Acta 3/2026' });
-      req.flush({});
-    });
-
-    it('constituye el cuerpo', () => {
-      service.constituirTribunal(12).subscribe(c => expect(c.constituida).toBeTrue());
-      const req = http.expectOne(`${base}constituir/`);
-      expect(req.request.method).toBe('POST');
-      req.flush({ constituida: true });
+    it('descarga el acta de la Asamblea', () => {
+      service.descargarActaAsamblea(12).subscribe(blob => expect(blob.size).toBe(3));
+      const req = http.expectOne(`${base}/resolucion-asamblea/`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['pdf']));
     });
   });
 });

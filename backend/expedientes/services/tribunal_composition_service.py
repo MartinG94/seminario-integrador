@@ -1,46 +1,55 @@
-"""Servicio de aplicación para constituir el Tribunal de cada causa (S4-04).
+"""Servicio de aplicación del Tribunal que interviene en cada causa (S4-04).
 
-Orquesta la nómina legada, los apartamientos declarados y las designaciones ad hoc
-con el dominio puro `tribunal_composition`, y congela el cuerpo antes de resolver.
+Sin trámites manuales (Notas del PO sobre PR #63):
+- Inhibición: ningún socio involucrado (imputado o solicitante) interviene en el
+  juzgamiento (Art. 95 Estatuto y Art. 24 RPD).
+- Suplencia automática: la composición se calcula en tiempo real y se estampa de forma
+  inmutable al adoptar la resolución.
+- Casos A y B del Art. 95: se inmoviliza la resolución ordinaria, se avisa a Comisión
+  Directiva por Outbox y la causa concluye con la Resolución por Asamblea Extraordinaria.
 """
 
 from dataclasses import dataclass
 
-from django.db import transaction
+from django.conf import settings
 
-from expedientes.domain.tribunal_composition import (
-    Composition,
-    CompositionError,
-    Condition,
-    Member,
-    SeparationCause,
-    compose,
-    validate_conflict_grounds,
-    validate_designation,
-)
+from expedientes.domain.tribunal_composition import Composition, Condition, compose
 from expedientes.models import (
-    ApartamientoTribunal,
-    CausaApartamientoEnum,
     ComposicionTribunal,
     CondicionIntegranteEnum,
-    DesignacionAdHoc,
     EstadoExpedienteEnum,
     Expediente,
     IntegranteComposicion,
+    ResolucionAsamblea,
+    SolicitudT01,
 )
 from expedientes.services.tribunal_roster import LegacyTribunalRosterAdapter, Roster, RosterEntry
+from notifications.models import EmailOutbox
+from notifications.services import EmailDispatcherService
+from socios.models import Role
 
-# La composición se gestiona hasta que se adopta la resolución (CA4).
-COMPOSABLE_STATES = (
-    EstadoExpedienteEnum.CREADO,
-    EstadoExpedienteEnum.JUSTIFICANDO,
+# Etapas en las que la causa ya puede resolverse por Asamblea: vencido el período de
+# justificaciones, para no cercenar el derecho de defensa.
+ASSEMBLY_STATES = (
     EstadoExpedienteEnum.REVISION_RESOLUCION,
     EstadoExpedienteEnum.ESPERA_RESOLUCION,
+)
+ASSEMBLY_ROLES = (Role.CD, Role.ADMIN)
+AD_HOC_NOTICE_KEY = "td-ad-hoc-expediente-{expediente_id}"
+
+INVOLVED_MESSAGE = (
+    "Participación restringida: sos parte interesada en este expediente (imputado o "
+    "solicitante). Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del "
+    "Estatuto y Art. 24 del Reglamento Procesal."
+)
+AD_HOC_MESSAGE = (
+    "La causa requiere Tribunal Ad-Hoc / intervención de Asamblea (Art. 95 del Estatuto): "
+    "no puede resolverla el Tribunal ordinario."
 )
 
 
 class TribunalCompositionError(Exception):
-    """Error base de la constitución del Tribunal."""
+    """Error base del Tribunal de la causa."""
 
 
 class TribunalCompositionNotFound(TribunalCompositionError):
@@ -53,61 +62,41 @@ class TribunalCompositionStateError(TribunalCompositionError):
         self.observaciones = observaciones or []
 
 
-class TribunalCompositionValidationError(TribunalCompositionError):
-    pass
-
-
-class TribunalCompositionForbidden(TribunalCompositionError):
-    pass
-
-
 @dataclass(frozen=True)
 class _LiveState:
     roster: Roster
     composition: Composition
-    involved_ids: set[int]
-    designees: dict[int, RosterEntry]
-    conflicts: dict[int, ApartamientoTribunal]
-    issues: list[str]
 
-    def entry(self, socio_id: int) -> RosterEntry | None:
-        for entry in self.roster.entries:
-            if entry.socio.id == socio_id:
-                return entry
-        return self.designees.get(socio_id)
+    @property
+    def issues(self) -> list[str]:
+        return [*self.roster.issues, *self.composition.issues]
+
+    def entry(self, socio_id: int) -> RosterEntry:
+        return next(e for e in self.roster.entries if e.socio.id == socio_id)
 
 
-def _involved_ids(expediente: Expediente) -> set[int]:
-    return {expediente.socio_id, *expediente.socios.values_list("pk", flat=True)}
+def involved_socio_ids(expediente: Expediente) -> set[int]:
+    """Partes interesadas: imputados y quien solicitó la apertura o la sanción (Art. 24 RPD)."""
+    ids = {expediente.socio_id, *expediente.socios.values_list("pk", flat=True)}
+    solicitante_id = (
+        SolicitudT01.objects.filter(expediente=expediente)
+        .values_list("solicitante_id", flat=True)
+        .first()
+    )
+    if solicitante_id is not None:
+        ids.add(solicitante_id)
+    return ids
+
+
+def is_involved(expediente: Expediente, user) -> bool:
+    socio = getattr(user, "socio", None)
+    return socio is not None and socio.id in involved_socio_ids(expediente)
 
 
 def _live_state(expediente: Expediente) -> _LiveState:
-    adapter = LegacyTribunalRosterAdapter()
-    roster = adapter.load()
-    involved_ids = _involved_ids(expediente)
-    conflicts = {a.socio_id: a for a in expediente.apartamientos_tribunal.all()}
-
-    designees: dict[int, RosterEntry] = {}
-    replacements: dict[int, Member] = {}
-    issues = list(roster.issues)
-    for designacion in expediente.designaciones_ad_hoc.select_related("designado"):
-        entry = adapter.entry_for(designacion.designado)
-        if entry is None:
-            issues.append(
-                f"El designado N° {designacion.designado.legajo} ya no figura en el padrón vigente."
-            )
-            continue
-        designees[entry.socio.id] = entry
-        replacements[designacion.reemplaza_a_id] = entry.member
-
-    composition = compose(
-        roster.members,
-        involved_ids=involved_ids,
-        conflict_ids=set(conflicts),
-        replacements=replacements,
-    )
-    issues.extend(composition.issues)
-    return _LiveState(roster, composition, involved_ids, designees, conflicts, issues)
+    roster = LegacyTribunalRosterAdapter().load()
+    composition = compose(roster.members, involved_ids=involved_socio_ids(expediente))
+    return _LiveState(roster, composition)
 
 
 def _signature(entry: RosterEntry, condition: Condition) -> str:
@@ -119,66 +108,46 @@ def _signature(entry: RosterEntry, condition: Condition) -> str:
     ).firma
 
 
-def _separations(state: _LiveState) -> list[dict]:
+def _separated(state: _LiveState) -> list[dict]:
     rows = []
-    for entry in state.roster.entries:
-        cause = state.composition.separations.get(entry.socio.id)
-        if cause is None:
-            continue
-        declared = state.conflicts.get(entry.socio.id)
+    for member in state.composition.separated:
+        entry = state.entry(member.socio_id)
         rows.append(
             {
                 "socio_id": entry.socio.id,
                 "nro_socio": entry.nro_socio,
                 "nombre": entry.nombre,
-                "anio_social": entry.member.social_year,
-                "condicion": str(entry.member.condition),
-                "causa": str(cause),
-                "causa_display": CausaApartamientoEnum(str(cause)).label,
-                "fundamento": (
-                    declared.fundamento
-                    if declared and cause == SeparationCause.CONFLICT
-                    else "Figura entre los socios involucrados del expediente."
-                ),
+                "anio_social": member.social_year,
+                "condicion": str(member.condition),
             }
         )
     return rows
 
 
-def _expediente_or_404(expediente_id: int, *, lock: bool = False) -> Expediente:
-    queryset = Expediente.objects.select_for_update() if lock else Expediente.objects
-    expediente = queryset.filter(pk=expediente_id).first()
+def _expediente_or_404(expediente_id: int) -> Expediente:
+    expediente = Expediente.objects.filter(pk=expediente_id).first()
     if expediente is None:
         raise TribunalCompositionNotFound("Expediente no encontrado.")
     return expediente
 
 
-def _ensure_mutable(expediente: Expediente) -> None:
-    if ComposicionTribunal.objects.filter(expediente=expediente).exists():
-        raise TribunalCompositionStateError(
-            "El cuerpo del Tribunal ya está constituido; su composición es inmutable."
-        )
-    if expediente.estado not in COMPOSABLE_STATES:
-        raise TribunalCompositionStateError(
-            f"El expediente está en '{expediente.get_estado_display()}' "
-            "y ya no admite cambios en la composición del Tribunal."
-        )
-
-
-def _ensure_not_separated(state: _LiveState, user) -> None:
-    socio = getattr(user, "socio", None)
-    if socio is not None and socio.id in state.composition.separations:
-        raise TribunalCompositionForbidden(
-            "Estás apartado de esta causa y no podés intervenir en la integración del Tribunal."
-        )
+def _assembly_payload(resolucion: ResolucionAsamblea | None) -> dict | None:
+    if resolucion is None:
+        return None
+    return {
+        "acta_nombre": resolucion.acta_nombre,
+        "registrada_at": resolucion.created_at,
+        "registrada_por_legajo": resolucion.registrada_por_legajo,
+    }
 
 
 class TribunalCompositionService:
     @staticmethod
     def describe(expediente_id: int, user=None) -> dict:
-        """Composición de la causa; con `user`, indica si integra la nómina o está apartado."""
-        socio_id = getattr(getattr(user, "socio", None), "id", None)
+        """Responsables de la causa: estampados si ya se resolvió, o calculados en vivo."""
         expediente = _expediente_or_404(expediente_id)
+        involved = is_involved(expediente, user)
+        resolucion = ResolucionAsamblea.objects.filter(expediente=expediente).first()
         composicion = (
             ComposicionTribunal.objects.filter(expediente=expediente)
             .prefetch_related("integrantes")
@@ -186,10 +155,8 @@ class TribunalCompositionService:
         )
         if composicion is not None:
             return {
-                "constituida": True,
-                "constituida_at": composicion.created_at,
-                "constituida_por_legajo": composicion.constituida_por_legajo,
-                "es_ad_hoc": composicion.es_ad_hoc,
+                "estampada": True,
+                "estampada_at": composicion.created_at,
                 "asientos": [
                     {
                         "anio_social": integrante.anio_social,
@@ -203,27 +170,19 @@ class TribunalCompositionService:
                     }
                     for integrante in composicion.integrantes.all()
                 ],
-                "nomina": [],
-                "apartamientos": composicion.apartamientos,
-                "designaciones_ad_hoc": [],
-                "pendientes_ad_hoc": [],
+                "apartados": composicion.apartados,
+                "requiere_ad_hoc": False,
+                "motivos_ad_hoc": [],
                 "observaciones": [],
-                "puede_constituirse": False,
-                "usuario": {
-                    "es_integrante": any(
-                        i.socio_id == socio_id for i in composicion.integrantes.all()
-                    ),
-                    "esta_apartado": any(
-                        a.get("socio_id") == socio_id for a in composicion.apartamientos
-                    ),
-                },
+                "resolucion_asamblea": None,
+                "puede_registrar_asamblea": False,
+                "usuario": {"esta_involucrado": involved},
             }
 
         state = _live_state(expediente)
         seats = []
         for seat in state.composition.seats:
             entry = state.entry(seat.member.socio_id) if seat.member else None
-            replaced = state.entry(seat.replaces.socio_id) if seat.replaces else None
             seats.append(
                 {
                     "anio_social": seat.social_year,
@@ -233,161 +192,62 @@ class TribunalCompositionService:
                     "grupo": entry.grupo if entry else "",
                     "condicion": str(seat.member.condition) if seat.member else "",
                     "firma": _signature(entry, seat.member.condition) if entry else "",
-                    "reemplaza_a": replaced.member.label if replaced else "",
+                    "reemplaza_a": seat.replaces.label if seat.replaces else "",
                 }
             )
-        separated = state.composition.separations
+        role = getattr(getattr(user, "socio", None), "role", None)
         return {
-            "constituida": False,
-            "constituida_at": None,
-            "constituida_por_legajo": "",
-            "es_ad_hoc": state.composition.ad_hoc,
+            "estampada": False,
+            "estampada_at": None,
             "asientos": seats,
-            "nomina": [
-                {
-                    "socio_id": entry.socio.id,
-                    "nro_socio": entry.nro_socio,
-                    "nombre": entry.nombre,
-                    "grupo": entry.grupo,
-                    "anio_social": entry.member.social_year,
-                    "condicion": str(entry.member.condition),
-                    "apartado": entry.socio.id in separated,
-                }
-                for entry in state.roster.entries
-            ],
-            "apartamientos": _separations(state),
-            "designaciones_ad_hoc": [
-                {
-                    "reemplaza_a_id": designacion.reemplaza_a_id,
-                    "designado_id": designacion.designado_id,
-                    "designado": (
-                        state.designees[designacion.designado_id].member.label
-                        if designacion.designado_id in state.designees
-                        else designacion.designado.legajo
-                    ),
-                    "anio_social": designacion.anio_social,
-                    "acta_asamblea": designacion.acta_asamblea,
-                    "created_at": designacion.created_at,
-                }
-                for designacion in expediente.designaciones_ad_hoc.all()
-            ],
-            "pendientes_ad_hoc": [
-                {"socio_id": m.socio_id, "nombre": m.label, "anio_social": m.social_year}
-                for m in state.composition.pending_replacements
-            ],
+            "apartados": _separated(state),
+            "requiere_ad_hoc": state.composition.requires_ad_hoc,
+            "motivos_ad_hoc": list(state.composition.ad_hoc_reasons),
             "observaciones": state.issues,
-            "puede_constituirse": not state.issues and expediente.estado in COMPOSABLE_STATES,
-            "usuario": {
-                "es_integrante": any(e.socio.id == socio_id for e in state.roster.entries),
-                "esta_apartado": socio_id in separated,
-            },
+            "resolucion_asamblea": _assembly_payload(resolucion),
+            "puede_registrar_asamblea": (
+                state.composition.requires_ad_hoc
+                and resolucion is None
+                and expediente.estado in ASSEMBLY_STATES
+                and role in ASSEMBLY_ROLES
+                and not involved
+            ),
+            "usuario": {"esta_involucrado": involved},
         }
 
     @staticmethod
-    @transaction.atomic
-    def declare_conflict(*, expediente_id: int, user, fundamento: str) -> ApartamientoTribunal:
-        """Apartamiento voluntario del propio integrante; no existe la recusación (Art. 93)."""
-        expediente = _expediente_or_404(expediente_id, lock=True)
-        _ensure_mutable(expediente)
-        state = _live_state(expediente)
-        socio = getattr(user, "socio", None)
-        if socio is None or not any(e.socio.id == socio.id for e in state.roster.entries):
-            raise TribunalCompositionValidationError(
-                "Sólo un integrante de la nómina del Tribunal puede apartarse a sí mismo; "
-                "no existe la recusación (Art. 93 del Estatuto)."
-            )
-        if socio.id in state.involved_ids:
-            raise TribunalCompositionValidationError(
-                "Ya estás apartado de la causa por estar involucrado en ella (Art. 95)."
-            )
-        if socio.id in state.conflicts:
-            raise TribunalCompositionValidationError(
-                "Ya registraste tu apartamiento en esta causa."
-            )
-        fundamento = fundamento.strip()
-        try:
-            validate_conflict_grounds(fundamento)
-        except CompositionError as exc:
-            raise TribunalCompositionValidationError(str(exc)) from exc
-        return ApartamientoTribunal.objects.create(
-            expediente=expediente,
-            socio=socio,
-            causa=CausaApartamientoEnum.CONFLICTO_INTERES,
-            fundamento=fundamento,
-            autor=user,
-        )
+    def requires_ad_hoc(expediente: Expediente) -> bool:
+        return _live_state(expediente).composition.requires_ad_hoc
 
     @staticmethod
-    @transaction.atomic
-    def designate_ad_hoc(
-        *,
-        expediente_id: int,
-        user,
-        reemplaza_a_id: int,
-        designado_nro_socio: int,
-        acta_asamblea: str,
-    ) -> DesignacionAdHoc:
-        """Registra el integrante ad hoc designado por Asamblea (Art. 95)."""
-        expediente = _expediente_or_404(expediente_id, lock=True)
-        _ensure_mutable(expediente)
-        state = _live_state(expediente)
-        _ensure_not_separated(state, user)
+    def stamp_for_resolution(expediente: Expediente) -> ComposicionTribunal | None:
+        """Congela los responsables al adoptar la resolución ordinaria (CA4).
 
-        replaced = next((e for e in state.roster.entries if e.socio.id == reemplaza_a_id), None)
-        if replaced is None:
-            raise TribunalCompositionValidationError(
-                "El socio a reemplazar no integra la nómina del Tribunal."
-            )
-        designee = LegacyTribunalRosterAdapter().entry_for_nro_socio(designado_nro_socio)
-        if designee is None:
-            raise TribunalCompositionValidationError(
-                "El socio designado no figura en el padrón institucional vigente "
-                "o no tiene cuenta en el sistema."
-            )
-        try:
-            validate_designation(
-                composition=state.composition,
-                replaced=replaced.member,
-                designee=designee.member,
-                roster=state.roster.members,
-                involved_ids=state.involved_ids,
-            )
-        except CompositionError as exc:
-            raise TribunalCompositionValidationError(str(exc)) from exc
-        return DesignacionAdHoc.objects.create(
-            expediente=expediente,
-            reemplaza_a=replaced.socio,
-            designado=designee.socio,
-            anio_social=replaced.member.social_year,
-            acta_asamblea=acta_asamblea.strip(),
-            autor=user,
-        )
-
-    @staticmethod
-    @transaction.atomic
-    def constitute(*, expediente_id: int, user) -> ComposicionTribunal:
-        """Congela el cuerpo efectivo y las causas de apartamiento (CA4)."""
-        expediente = _expediente_or_404(expediente_id, lock=True)
-        _ensure_mutable(expediente)
+        Se invoca dentro de la transacción del pase a `Pendiente de firma y envío`. Si la
+        causa la resolvió la Asamblea, no hay cuerpo ordinario que estampar.
+        """
+        if ResolucionAsamblea.objects.filter(expediente=expediente).exists():
+            return None
+        existing = ComposicionTribunal.objects.filter(expediente=expediente).first()
+        if existing is not None:
+            return existing
         state = _live_state(expediente)
-        _ensure_not_separated(state, user)
+        if state.composition.requires_ad_hoc:
+            raise TribunalCompositionStateError(
+                AD_HOC_MESSAGE, observaciones=list(state.composition.ad_hoc_reasons)
+            )
         if state.issues:
             raise TribunalCompositionStateError(
-                "No se puede constituir el cuerpo del Tribunal: " + state.issues[0],
+                "No se puede resolver: el Tribunal no está integrado conforme al Estatuto. "
+                + state.issues[0],
                 observaciones=state.issues,
             )
 
-        socio = getattr(user, "socio", None)
         composicion = ComposicionTribunal.objects.create(
-            expediente=expediente,
-            es_ad_hoc=state.composition.ad_hoc,
-            apartamientos=_separations(state),
-            constituida_por=user,
-            constituida_por_legajo=socio.legajo if socio else user.get_username(),
+            expediente=expediente, apartados=_separated(state)
         )
         for seat in state.composition.seats:
             entry = state.entry(seat.member.socio_id)
-            replaced = state.entry(seat.replaces.socio_id) if seat.replaces else None
             IntegranteComposicion.objects.create(
                 composicion=composicion,
                 anio_social=seat.social_year,
@@ -396,6 +256,47 @@ class TribunalCompositionService:
                 nro_socio=entry.nro_socio,
                 nombre_completo=entry.nombre,
                 grupo=entry.grupo,
-                reemplaza_a=replaced.member.label if replaced else "",
+                reemplaza_a=seat.replaces.label if seat.replaces else "",
             )
         return composicion
+
+    @staticmethod
+    def notify_if_ad_hoc(expediente: Expediente) -> EmailOutbox | None:
+        """Encola, una sola vez, el aviso a Comisión Directiva para convocar a Asamblea."""
+        state = _live_state(expediente)
+        if not state.composition.requires_ad_hoc:
+            return None
+        apartados = "\n".join(
+            f"- {state.entry(m.socio_id).member.label}, {m.social_year}.º año "
+            f"({'Titular' if m.condition == Condition.TITULAR else 'Suplente'})"
+            for m in state.composition.separated
+        )
+        motivos = "\n".join(f"- {motivo}" for motivo in state.composition.ad_hoc_reasons)
+        outbox, _ = EmailDispatcherService.create_or_get_outbox(
+            {
+                "to": [settings.COMISION_DIRECTIVA_EMAIL],
+                "subject": (
+                    f"Expediente {expediente.numero}: requiere Tribunal Ad-Hoc / "
+                    "convocatoria a Asamblea (Art. 95)"
+                ),
+                "body_text": (
+                    "Estimada Comisión Directiva:\n\n"
+                    f"El expediente {expediente.numero} no puede ser resuelto por el Tribunal "
+                    "de Disciplina ordinario porque:\n"
+                    f"{motivos}\n\n"
+                    f"Integrantes del Tribunal involucrados en la causa:\n{apartados}\n\n"
+                    "Conforme al Art. 95 del Estatuto, corresponde convocar de inmediato a "
+                    "Asamblea General. Los imputados conservan su plazo para presentar los "
+                    "formularios T02/T03. Concluida la Asamblea, registrá en el sistema la "
+                    "Resolución por Asamblea Extraordinaria con el PDF del acta.\n\n"
+                    "Sistema de Gestión Disciplinaria A.V.E.I.T."
+                ),
+                "idempotency_key": AD_HOC_NOTICE_KEY.format(expediente_id=expediente.pk),
+                "metadata": {
+                    "tipo": "AVISO_TRIBUNAL_AD_HOC",
+                    "expediente_id": expediente.pk,
+                    "expediente_numero": expediente.numero,
+                },
+            }
+        )
+        return outbox

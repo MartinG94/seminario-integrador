@@ -617,22 +617,6 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     )
 
 
-class DeclararApartamientoSerializer(serializers.Serializer):
-    """Apartamiento del propio integrante por conflicto de interés (S4-04). Sin recusación."""
-
-    fundamento = serializers.CharField(
-        required=False, allow_blank=True, default="", max_length=5000
-    )
-
-
-class DesignarAdHocSerializer(serializers.Serializer):
-    """Integrante ad hoc designado por Asamblea para reemplazar a un apartado (Art. 95)."""
-
-    reemplaza_a = serializers.IntegerField(min_value=1)
-    designado_nro_socio = serializers.IntegerField(min_value=1)
-    acta_asamblea = serializers.CharField(max_length=255)
-
-
 class PresentarDescargoSerializer(serializers.Serializer):
     """Payload para presentación de descargo T02/T03."""
 
@@ -941,6 +925,13 @@ class EmitirT01Serializer(serializers.Serializer):
                 logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
 
         solicitud.save()
+        if solicitud.expediente_id:
+            from expedientes.services.tribunal_composition_service import (
+                TribunalCompositionService,
+            )
+
+            # El solicitante también es parte interesada (Art. 24 RPD).
+            TribunalCompositionService.notify_if_ad_hoc(solicitud.expediente)
         return solicitud
 
 

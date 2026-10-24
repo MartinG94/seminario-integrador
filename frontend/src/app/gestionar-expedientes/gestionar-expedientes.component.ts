@@ -14,10 +14,8 @@ import {
   DescargoDetalleDTO,
   EvidenciaMetadata,
   ExpedienteApiService,
-  ExpedienteDetalleDTO,
-  PendienteAdHocDTO
+  ExpedienteDetalleDTO
 } from '../services/expediente-api.service';
-import { PadronApiService, PadronSocio } from '../services/padron-api.service';
 import { Subscription } from 'rxjs';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 
@@ -29,15 +27,6 @@ const ESTADOS_CONSULTA_CAUSAL = [
 ];
 export const MIN_FUNDAMENTO_CAUSAL = 20;
 export const MAX_FUNDAMENTO_CAUSAL = 5000;
-export const MIN_FUNDAMENTO_APARTAMIENTO = 20;
-
-/** Borrador de designación ad hoc de Asamblea para un integrante apartado (S4-04). */
-interface BorradorDesignacion {
-  busqueda: string;
-  candidatos: PadronSocio[];
-  socio: PadronSocio | null;
-  acta: string;
-}
 
 interface BorradorDecisionCausal {
   decision: DecisionCausal | '';
@@ -140,17 +129,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
 
-  // Composición del Tribunal de la causa (S4-04): apartamiento, suplencia y ad hoc
-  readonly minFundamentoApartamiento = MIN_FUNDAMENTO_APARTAMIENTO;
+  // Tribunal de la causa (S4-04): inhibición, suplencia automática y Asamblea (Art. 95)
   composicion: ComposicionTribunalDTO | null = null;
   cargandoComposicion = false;
   procesandoComposicion = false;
-  apartamientoAbierto = false;
-  fundamentoApartamiento = '';
-  confirmandoConstitucion = false;
-  designaciones: { [socioId: number]: BorradorDesignacion } = {};
-  private sociosPadron: PadronSocio[] = [];
-  private padronSolicitado = false;
+  actaAsamblea: File | null = null;
 
   private subs: Subscription[] = [];
 
@@ -158,8 +141,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     public dataService: TribunalDataService,
     private auth: AuthService,
     private notifications: NotificationService,
-    private expedienteApi: ExpedienteApiService,
-    private padronApi: PadronApiService
+    private expedienteApi: ExpedienteApiService
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -173,7 +155,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get puedeEvaluarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
-    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
+    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD') && !this.usuarioInvolucrado;
   }
 
   ngOnInit(): void {
@@ -476,27 +458,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- Composición del Tribunal (S4-04) ---
+  // --- Tribunal de la causa (S4-04) ---
 
   get puedeConsultarComposicion(): boolean {
     return this.auth.tieneRol('TD', 'CD', 'ADMIN');
   }
 
-  private get composicionEditable(): boolean {
-    return !!this.composicion && !this.composicion.constituida && !this.composicion.usuario?.esta_apartado;
+  /** Parte interesada (imputado o solicitante): no interviene en el juzgamiento (Art. 95 y Art. 24 RPD). */
+  get usuarioInvolucrado(): boolean {
+    return !!this.composicion?.usuario?.esta_involucrado;
   }
 
-  /** Sólo el propio integrante se aparta: no existe la recusación (Art. 93). */
-  get puedeApartarse(): boolean {
-    return this.composicionEditable && this.auth.tieneRol('TD') && !!this.composicion?.usuario?.es_integrante;
+  /** Emitir o firmar sólo con responsables calculados, sin inhibición ni caso de Asamblea. */
+  get puedeResolverExpedienteSeleccionado(): boolean {
+    return this.puedeVotarOFirmar && !!this.composicion && !this.usuarioInvolucrado && !this.composicion.requiere_ad_hoc;
   }
 
-  get puedeDesignarAdHoc(): boolean {
-    return this.composicionEditable && !!this.composicion?.es_ad_hoc && this.auth.tieneRol('TD', 'CD');
-  }
-
-  get puedeConstituir(): boolean {
-    return this.composicionEditable && this.auth.tieneRol('TD');
+  get puedeRegistrarAsamblea(): boolean {
+    return !!this.composicion?.puede_registrar_asamblea && this.auth.tieneRol('CD', 'ADMIN');
   }
 
   cargarComposicion(expedienteId: number | string): void {
@@ -504,7 +483,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteApi.obtenerComposicionTribunal(expedienteId).subscribe({
       next: composicion => {
         this.cargandoComposicion = false;
-        this.aplicarComposicion(composicion);
+        this.composicion = composicion;
       },
       error: err => {
         this.cargandoComposicion = false;
@@ -513,143 +492,67 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
-  private aplicarComposicion(composicion: ComposicionTribunalDTO): void {
-    this.composicion = composicion;
-    // Conserva los borradores de los apartados que siguen pendientes de reemplazo.
-    const anteriores = this.designaciones;
-    this.designaciones = {};
-    (composicion.pendientes_ad_hoc || []).forEach(p => {
-      this.designaciones[p.socio_id] = anteriores[p.socio_id] || { busqueda: '', candidatos: [], socio: null, acta: '' };
-    });
-    if (this.puedeDesignarAdHoc && composicion.pendientes_ad_hoc?.length && !this.padronSolicitado) {
-      this.padronSolicitado = true;
-      this.padronApi.listarSocios().subscribe({
-        next: socios => (this.sociosPadron = socios),
-        error: err => {
-          this.padronSolicitado = false;
-          this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el padrón de socios.'));
-        }
-      });
-    }
-  }
-
   private limpiarComposicion(): void {
     this.composicion = null;
     this.cargandoComposicion = false;
     this.procesandoComposicion = false;
-    this.apartamientoAbierto = false;
-    this.fundamentoApartamiento = '';
-    this.confirmandoConstitucion = false;
-    this.designaciones = {};
+    this.actaAsamblea = null;
   }
 
   etiquetaCondicion(condicion: CondicionIntegrante | ''): string {
     switch (condicion) {
       case 'TITULAR': return 'Titular';
       case 'SUPLENTE': return 'Suplente';
-      case 'AD_HOC': return 'Ad hoc';
       default: return '';
     }
   }
 
-  nombreSocioPadron(socio: PadronSocio | null): string {
-    if (!socio) return '';
-    return `${socio.socio_id} - ${socio.first_name} ${socio.last_name}`.trim();
+  seleccionarActaAsamblea(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.actaAsamblea = input.files?.[0] ?? null;
   }
 
-  buscarCandidatos(pendiente: PendienteAdHocDTO, termino: string): void {
-    const borrador = this.designaciones[pendiente.socio_id];
-    if (!borrador) return;
-    borrador.busqueda = termino;
-    borrador.socio = null;
-    const texto = termino.trim().toLowerCase();
-    if (texto.length < 3) {
-      borrador.candidatos = [];
-      return;
-    }
-    const nomina = new Set((this.composicion?.nomina || []).map(n => n.nro_socio));
-    borrador.candidatos = this.sociosPadron
-      .filter(s => !nomina.has(s.socio_id))
-      .filter(s => [String(s.socio_id), s.legajo, s.first_name, s.last_name]
-        .some(valor => !!valor && valor.toLowerCase().includes(texto)))
-      .slice(0, 20);
-  }
-
-  elegirCandidato(pendiente: PendienteAdHocDTO, socio: PadronSocio): void {
-    const borrador = this.designaciones[pendiente.socio_id];
-    if (!borrador) return;
-    borrador.socio = socio;
-    borrador.busqueda = this.nombreSocioPadron(socio);
-    borrador.candidatos = [];
-  }
-
-  registrarDesignacion(pendiente: PendienteAdHocDTO): void {
-    const borrador = this.designaciones[pendiente.socio_id];
-    if (!this.expedienteSeleccionado || !borrador || this.procesandoComposicion) return;
-    if (!borrador.socio) {
-      this.notifications.error('Elegí del padrón al socio designado por la Asamblea.');
-      return;
-    }
-    const acta = borrador.acta.trim();
-    if (!acta) {
-      this.notifications.error('Indicá el acta de la Asamblea que designó al integrante ad hoc.');
+  registrarResolucionAsamblea(): void {
+    if (!this.expedienteSeleccionado || this.procesandoComposicion) return;
+    if (!this.actaAsamblea) {
+      this.notifications.error('Adjuntá el acta de la Asamblea Extraordinaria en PDF.');
       return;
     }
     this.procesandoComposicion = true;
-    this.expedienteApi.designarAdHoc(this.expedienteSeleccionado.id, {
-      reemplaza_a: pendiente.socio_id,
-      designado_nro_socio: borrador.socio.socio_id,
-      acta_asamblea: acta
-    }).subscribe({
+    this.expedienteApi.registrarResolucionAsamblea(this.expedienteSeleccionado.id, this.actaAsamblea).subscribe({
       next: composicion => {
         this.procesandoComposicion = false;
-        this.aplicarComposicion(composicion);
-        this.notifications.success('Designación ad hoc registrada.');
+        this.actaAsamblea = null;
+        this.composicion = composicion;
+        this.notifications.success('Resolución por Asamblea registrada. El expediente fue emitido.');
+        this.cargarDatosTablero();
       },
       error: err => {
         this.procesandoComposicion = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la designación ad hoc.'));
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la Resolución por Asamblea.'));
       }
     });
   }
 
-  declararApartamiento(): void {
-    if (!this.expedienteSeleccionado || this.procesandoComposicion) return;
-    const fundamento = this.fundamentoApartamiento.trim();
-    if (fundamento.length < MIN_FUNDAMENTO_APARTAMIENTO) {
-      this.notifications.error(`Escribí un fundamento de al menos ${MIN_FUNDAMENTO_APARTAMIENTO} caracteres.`);
-      return;
-    }
-    this.procesandoComposicion = true;
-    this.expedienteApi.declararApartamiento(this.expedienteSeleccionado.id, fundamento).subscribe({
-      next: composicion => {
-        this.procesandoComposicion = false;
-        this.apartamientoAbierto = false;
-        this.fundamentoApartamiento = '';
-        this.aplicarComposicion(composicion);
-        this.notifications.success('Apartamiento registrado. Tu lugar lo ocupa el suplente de tu año.');
+  verActaAsamblea(): void {
+    if (!this.expedienteSeleccionado) return;
+    const ventana = window.open('', '_blank');
+    this.expedienteApi.descargarActaAsamblea(this.expedienteSeleccionado.id).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        if (ventana) {
+          ventana.location.href = url;
+        } else {
+          const enlace = document.createElement('a');
+          enlace.href = url;
+          enlace.download = this.composicion?.resolucion_asamblea?.acta_nombre || 'acta-asamblea.pdf';
+          enlace.click();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
       },
       error: err => {
-        this.procesandoComposicion = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar el apartamiento.'));
-      }
-    });
-  }
-
-  constituirTribunal(): void {
-    if (!this.expedienteSeleccionado || this.procesandoComposicion) return;
-    this.procesandoComposicion = true;
-    this.expedienteApi.constituirTribunal(this.expedienteSeleccionado.id).subscribe({
-      next: composicion => {
-        this.procesandoComposicion = false;
-        this.confirmandoConstitucion = false;
-        this.aplicarComposicion(composicion);
-        this.notifications.success('Tribunal constituido. La composición ya no puede modificarse.');
-      },
-      error: err => {
-        this.procesandoComposicion = false;
-        this.confirmandoConstitucion = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo constituir el Tribunal.'));
+        ventana?.close();
+        this.notifications.error(httpErrorMessage(err, 'No se pudo abrir el acta de la Asamblea.'));
       }
     });
   }

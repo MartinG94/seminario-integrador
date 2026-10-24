@@ -4,10 +4,6 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
@@ -20,7 +16,6 @@ import {
   DescargoDetalleDTO,
   ExpedienteApiService
 } from '../services/expediente-api.service';
-import { PadronApiService, PadronSocio } from '../services/padron-api.service';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -49,11 +44,7 @@ describe('GestionarExpedientesComponent', () => {
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
-        MatButtonModule,
-        MatAutocompleteModule,
-        MatFormFieldModule,
-        MatInputModule,
-        NoopAnimationsModule
+        MatButtonModule
       ],
       declarations: [GestionarExpedientesComponent],
       providers: [
@@ -942,6 +933,19 @@ describe('GestionarExpedientesComponent', () => {
 
     it('debe conservar las acciones existentes en el pie del modal', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
+      // "Emitir Resolución" espera los responsables calculados (inhibición, S4-04).
+      spyOn(TestBed.inject(ExpedienteApiService), 'obtenerComposicionTribunal').and.returnValue(of({
+        estampada: false,
+        estampada_at: null,
+        asientos: [],
+        apartados: [],
+        requiere_ad_hoc: false,
+        motivos_ad_hoc: [],
+        observaciones: [],
+        resolucion_asamblea: null,
+        puede_registrar_asamblea: false,
+        usuario: { esta_involucrado: false }
+      }));
       component.abrirDetalle(expMock);
       fixture.detectChanges();
 
@@ -955,10 +959,8 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnCerrar).toBeTruthy();
     });
   });
-  describe('Composición del Tribunal: apartamiento y suplencia (S4-04)', () => {
+  describe('Tribunal de la causa: inhibición, suplencia y Asamblea (S4-04)', () => {
     let api: ExpedienteApiService;
-    let padron: PadronApiService;
-    const fundamento = 'Comparto vivienda con el socio imputado en la causa.';
 
     const expediente = {
       id: '12',
@@ -975,45 +977,33 @@ describe('GestionarExpedientesComponent', () => {
     } as Expediente;
 
     const composicion = (cambios: Partial<ComposicionTribunalDTO> = {}): ComposicionTribunalDTO => ({
-      constituida: false,
-      constituida_at: null,
-      constituida_por_legajo: '',
-      es_ad_hoc: false,
+      estampada: false,
+      estampada_at: null,
       asientos: [
         { anio_social: 4, socio_id: 1, nro_socio: 81004, nombre: 'Giuliano Toselli', grupo: 'G57', condicion: 'TITULAR', firma: '81004 - Giuliano Toselli - G57', reemplaza_a: '' },
         { anio_social: 5, socio_id: 4, nro_socio: 82005, nombre: 'Abril Gusella', grupo: 'G58', condicion: 'SUPLENTE', firma: '82005 - Abril Gusella - G58 (Sup.)', reemplaza_a: 'Catalina Cerda (N° 81005)' },
         { anio_social: 6, socio_id: 5, nro_socio: 81006, nombre: 'Candela Moreno', grupo: 'G59', condicion: 'TITULAR', firma: '81006 - Candela Moreno - G59', reemplaza_a: '' }
       ],
-      nomina: [
-        { socio_id: 1, nro_socio: 81004, nombre: 'Giuliano Toselli', grupo: 'G57', anio_social: 4, condicion: 'TITULAR', apartado: false },
-        { socio_id: 3, nro_socio: 81005, nombre: 'Catalina Cerda', grupo: 'G58', anio_social: 5, condicion: 'TITULAR', apartado: true }
+      apartados: [
+        { socio_id: 3, nro_socio: 81005, nombre: 'Catalina Cerda', anio_social: 5, condicion: 'TITULAR' }
       ],
-      apartamientos: [
-        { socio_id: 3, nro_socio: 81005, nombre: 'Catalina Cerda', anio_social: 5, condicion: 'TITULAR', causa: 'INVOLUCRADO', causa_display: 'Involucrado en la causa (Art. 95)', fundamento: 'Figura entre los socios involucrados del expediente.' }
-      ],
-      designaciones_ad_hoc: [],
-      pendientes_ad_hoc: [],
+      requiere_ad_hoc: false,
+      motivos_ad_hoc: [],
       observaciones: [],
-      puede_constituirse: true,
-      usuario: { es_integrante: true, esta_apartado: false },
+      resolucion_asamblea: null,
+      puede_registrar_asamblea: false,
+      usuario: { esta_involucrado: false },
       ...cambios
     });
 
-    const adHoc = () => composicion({
-      es_ad_hoc: true,
-      puede_constituirse: false,
-      pendientes_ad_hoc: [{ socio_id: 1, nombre: 'Giuliano Toselli (N° 81004)', anio_social: 4 }],
-      observaciones: ['Falta designar por Asamblea el reemplazo ad hoc de Giuliano Toselli (N° 81004) (4.º año).']
+    const casoCritico = (cambios: Partial<ComposicionTribunalDTO> = {}) => composicion({
+      requiere_ad_hoc: true,
+      motivos_ad_hoc: ['El titular y el suplente del 5.º año están involucrados en la causa (Art. 95 del Estatuto).'],
+      ...cambios
     });
-
-    const candidatos: PadronSocio[] = [
-      { socio_id: 90041, legajo: '90041', first_name: 'Lara', last_name: 'Quiroga', subcomision: null, grupo: 'G57', is_active: true },
-      { socio_id: 81004, legajo: '81004', first_name: 'Giuliano', last_name: 'Toselli', subcomision: null, grupo: 'G57', is_active: true }
-    ];
 
     beforeEach(() => {
       api = TestBed.inject(ExpedienteApiService);
-      padron = TestBed.inject(PadronApiService);
       spyOn(api, 'obtenerDetalleExpediente').and.returnValue(
         of({ id: 12, numero: 'EXP-0012/2026', estado: 'revision_resolucion', socios: [], descargos: [] })
       );
@@ -1026,25 +1016,24 @@ describe('GestionarExpedientesComponent', () => {
       fixture.detectChanges();
     }
 
-    it('muestra los tres responsables con pie de firma, condición y apartamientos', () => {
+    const compiled = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+    it('muestra los tres responsables con pie de firma y los apartados', () => {
       abrirComo('TD');
 
       expect(api.obtenerComposicionTribunal).toHaveBeenCalledWith('12');
-      const compiled = fixture.nativeElement as HTMLElement;
-      const responsables = Array.from(compiled.querySelectorAll('.responsable-tribunal')).map(el => el.textContent || '');
+      const responsables = Array.from(compiled().querySelectorAll('.responsable-tribunal')).map(el => el.textContent || '');
       expect(responsables.length).toBe(3);
       expect(responsables[1]).toContain('82005 - Abril Gusella - G58 (Sup.)');
       expect(responsables[1]).toContain('Reemplaza a Catalina Cerda (N° 81005)');
-      expect(compiled.querySelector('.apartamiento-tribunal')?.textContent).toContain('Involucrado en la causa (Art. 95)');
+      expect(compiled().querySelector('.apartado-tribunal')?.textContent).toContain('81005 - Catalina Cerda');
     });
 
-    it('CD consulta sin acciones de constitución ni apartamiento', () => {
-      abrirComo('CD');
-      expect(component.puedeConstituir).toBeFalse();
-      expect(component.puedeApartarse).toBeFalse();
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.btn-constituir')).toBeNull();
-      expect(compiled.querySelector('.btn-apartarme')).toBeNull();
+    it('no ofrece trámites manuales de apartamiento, ad hoc ni constitución', () => {
+      abrirComo('TD');
+      expect(compiled().querySelector('.btn-apartarme')).toBeNull();
+      expect(compiled().querySelector('.designacion-ad-hoc')).toBeNull();
+      expect(compiled().querySelector('.btn-constituir')).toBeNull();
     });
 
     it('un socio sin rol de autoridad no consulta la composición', () => {
@@ -1062,136 +1051,80 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.composicion).toBeNull();
     });
 
-    describe('apartamiento propio (sin recusación, Art. 93)', () => {
-      it('sólo un integrante de la nómina puede apartarse', () => {
-        abrirComo('TD', composicion({ usuario: { es_integrante: false, esta_apartado: false } }));
-        expect(component.puedeApartarse).toBeFalse();
+    describe('inhibición de involucrados (Art. 95 y Art. 24 RPD)', () => {
+      it('muestra el banner y oculta decisión de justificativos y transición', () => {
+        abrirComo('TD', composicion({ usuario: { esta_involucrado: true } }));
+
+        const banner = compiled().querySelector('.banner-involucrado');
+        expect(banner?.textContent).toContain('Participación restringida');
+        expect(banner?.textContent).toContain('Tu lugar lo ocupa automáticamente tu suplente');
+        expect(component.puedeEvaluarJustificaciones).toBeFalse();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
+        const footer = compiled().querySelector('.card-footer')?.textContent || '';
+        expect(footer).not.toContain('Emitir Resolución');
       });
 
-      it('un integrante ya apartado no gestiona la composición', () => {
-        abrirComo('TD', composicion({ usuario: { es_integrante: true, esta_apartado: true } }));
-        expect(component.puedeApartarse).toBeFalse();
-        expect(component.puedeConstituir).toBeFalse();
-      });
-
-      it('exige un fundamento mínimo antes de enviar', () => {
+      it('un vocal no involucrado puede evaluar y resolver', () => {
         abrirComo('TD');
-        spyOn(api, 'declararApartamiento');
-        component.fundamentoApartamiento = 'Breve';
-        component.declararApartamiento();
-        expect(api.declararApartamiento).not.toHaveBeenCalled();
-        expect(notifications.error).toHaveBeenCalledWith('Escribí un fundamento de al menos 20 caracteres.');
-      });
-
-      it('registra el apartamiento del propio integrante y actualiza el cuerpo', () => {
-        abrirComo('TD');
-        const actualizada = composicion({ usuario: { es_integrante: true, esta_apartado: true } });
-        spyOn(api, 'declararApartamiento').and.returnValue(of(actualizada));
-        component.apartamientoAbierto = true;
-        component.fundamentoApartamiento = '  ' + fundamento + '  ';
-
-        component.declararApartamiento();
-
-        expect(api.declararApartamiento).toHaveBeenCalledWith('12', fundamento);
-        expect(component.composicion).toBe(actualizada);
-        expect(component.apartamientoAbierto).toBeFalse();
-        expect(notifications.success).toHaveBeenCalled();
+        expect(compiled().querySelector('.banner-involucrado')).toBeNull();
+        expect(component.puedeEvaluarJustificaciones).toBeTrue();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
+        expect(compiled().querySelector('.card-footer')?.textContent).toContain('Emitir Resolución');
       });
     });
 
-    describe('Tribunal ad hoc (Art. 95)', () => {
-      beforeEach(() => {
-        spyOn(padron, 'listarSocios').and.returnValue(of(candidatos));
+    describe('Tribunal Ad-Hoc / Asamblea (Art. 95)', () => {
+      it('inmoviliza la resolución ordinaria y muestra el aviso', () => {
+        abrirComo('TD', casoCritico());
+        expect(compiled().querySelector('.aviso-ad-hoc')?.textContent).toContain('Tribunal Ad-Hoc');
+        expect(compiled().querySelector('.lista-responsables')).toBeNull();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
+        expect(component.puedeRegistrarAsamblea).toBeFalse();
       });
 
-      it('carga el padrón y busca candidatos excluyendo a la nómina', () => {
-        abrirComo('CD', adHoc());
-        const pendiente = component.composicion!.pendientes_ad_hoc[0];
-
-        expect(padron.listarSocios).toHaveBeenCalledTimes(1);
-        expect(component.puedeDesignarAdHoc).toBeTrue();
-        component.buscarCandidatos(pendiente, 'gi');
-        expect(component.designaciones[1].candidatos).toEqual([]);
-        component.buscarCandidatos(pendiente, '900');
-        expect(component.designaciones[1].candidatos.map(s => s.socio_id)).toEqual([90041]);
-        component.buscarCandidatos(pendiente, 'toselli');
-        expect(component.designaciones[1].candidatos).toEqual([]);
-        expect((fixture.nativeElement as HTMLElement).querySelector('.aviso-ad-hoc')).toBeTruthy();
-      });
-
-      it('exige socio del padrón y acta de Asamblea', () => {
-        abrirComo('TD', adHoc());
-        spyOn(api, 'designarAdHoc');
-        const pendiente = component.composicion!.pendientes_ad_hoc[0];
-
-        component.registrarDesignacion(pendiente);
-        expect(notifications.error).toHaveBeenCalledWith('Elegí del padrón al socio designado por la Asamblea.');
-
-        component.elegirCandidato(pendiente, candidatos[0]);
-        component.registrarDesignacion(pendiente);
-        expect(notifications.error).toHaveBeenCalledWith('Indicá el acta de la Asamblea que designó al integrante ad hoc.');
-        expect(api.designarAdHoc).not.toHaveBeenCalled();
-      });
-
-      it('registra la designación con el N° de socio del padrón', () => {
-        abrirComo('TD', adHoc());
-        const completa = composicion({ es_ad_hoc: true });
-        spyOn(api, 'designarAdHoc').and.returnValue(of(completa));
-        const pendiente = component.composicion!.pendientes_ad_hoc[0];
-
-        component.elegirCandidato(pendiente, candidatos[0]);
-        component.designaciones[1].acta = ' Acta de Asamblea N° 3/2026 ';
-        component.registrarDesignacion(pendiente);
-
-        expect(api.designarAdHoc).toHaveBeenCalledWith('12', {
-          reemplaza_a: 1,
-          designado_nro_socio: 90041,
-          acta_asamblea: 'Acta de Asamblea N° 3/2026'
+      it('CD sube el acta y el expediente se emite', () => {
+        abrirComo('CD', casoCritico({ puede_registrar_asamblea: true }));
+        const emitida = casoCritico({
+          resolucion_asamblea: { acta_nombre: 'acta.pdf', registrada_at: '2026-10-23T12:00:00Z', registrada_por_legajo: '77010' }
         });
-        expect(component.composicion).toBe(completa);
-        expect(notifications.success).toHaveBeenCalledWith('Designación ad hoc registrada.');
-      });
-    });
+        spyOn(api, 'registrarResolucionAsamblea').and.returnValue(of(emitida));
+        const acta = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' });
 
-    describe('constitución inmutable (CA4)', () => {
-      it('no permite constituir con observaciones pendientes', () => {
-        abrirComo('TD', adHoc());
-        const boton = (fixture.nativeElement as HTMLElement).querySelector('.btn-constituir') as HTMLButtonElement;
-        expect(boton.disabled).toBeTrue();
-      });
-
-      it('pide confirmación y fija la composición', () => {
-        abrirComo('TD');
-        const constituida = composicion({
-          constituida: true,
-          constituida_at: '2026-10-22T12:00:00Z',
-          constituida_por_legajo: '81004',
-          puede_constituirse: false
-        });
-        spyOn(api, 'constituirTribunal').and.returnValue(of(constituida));
-
-        (fixture.nativeElement.querySelector('.btn-constituir') as HTMLButtonElement).click();
+        component.seleccionarActaAsamblea({ target: { files: [acta] } } as unknown as Event);
         fixture.detectChanges();
-        expect(api.constituirTribunal).not.toHaveBeenCalled();
-        (fixture.nativeElement.querySelector('.btn-confirmar-constitucion') as HTMLButtonElement).click();
+        (compiled().querySelector('.btn-registrar-asamblea') as HTMLButtonElement).click();
         fixture.detectChanges();
 
-        expect(api.constituirTribunal).toHaveBeenCalledWith('12');
-        expect(component.composicion?.constituida).toBeTrue();
-        expect(component.puedeConstituir).toBeFalse();
-        expect(component.puedeApartarse).toBeFalse();
-        expect(fixture.nativeElement.querySelector('.estado-composicion').textContent).toContain('Constituido');
+        expect(api.registrarResolucionAsamblea).toHaveBeenCalledWith('12', acta);
+        expect(notifications.success).toHaveBeenCalledWith('Resolución por Asamblea registrada. El expediente fue emitido.');
+        expect(compiled().querySelector('.resolucion-asamblea')?.textContent).toContain('77010');
+        expect(compiled().querySelector('.registrar-asamblea')).toBeNull();
+      });
+
+      it('exige el acta antes de enviar', () => {
+        abrirComo('CD', casoCritico({ puede_registrar_asamblea: true }));
+        spyOn(api, 'registrarResolucionAsamblea');
+        component.registrarResolucionAsamblea();
+        expect(api.registrarResolucionAsamblea).not.toHaveBeenCalled();
+        expect(notifications.error).toHaveBeenCalledWith('Adjuntá el acta de la Asamblea Extraordinaria en PDF.');
       });
 
       it('informa el rechazo del servidor', () => {
-        abrirComo('TD');
-        spyOn(api, 'constituirTribunal').and.returnValue(
-          throwError(() => ({ status: 409, error: { detail: 'Ya está constituido.' } }))
+        abrirComo('CD', casoCritico({ puede_registrar_asamblea: true }));
+        spyOn(api, 'registrarResolucionAsamblea').and.returnValue(
+          throwError(() => ({ status: 409, error: { detail: 'La causa no requiere intervención de Asamblea.' } }))
         );
-        component.constituirTribunal();
+        component.actaAsamblea = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' });
+        component.registrarResolucionAsamblea();
         expect(notifications.error).toHaveBeenCalled();
         expect(component.procesandoComposicion).toBeFalse();
       });
+    });
+
+    it('muestra los responsables estampados en la resolución', () => {
+      abrirComo('TD', composicion({ estampada: true, estampada_at: '2026-10-22T12:00:00Z', apartados: [] }));
+      expect(compiled().querySelector('.estado-composicion')?.textContent).toContain('Estampado en la resolución');
+      expect(compiled().querySelectorAll('.responsable-tribunal').length).toBe(3);
     });
   });
 });

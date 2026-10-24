@@ -29,18 +29,19 @@ from expedientes.models import (
     Expediente,
     Holiday,
     OperacionDescargoEnum,
+    ResolucionAsamblea,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
 from expedientes.permissions import (
-    CanConstituteTribunal,
     CanCreateT01,
-    CanDesignateAdHoc,
     CanManageCalendar,
     CanOpenExpedientes,
+    CanRegisterAssemblyResolution,
     CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
+    IsNotInvolvedInExpediente,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
@@ -49,9 +50,7 @@ from expedientes.serializers import (
     CalendarQuerySerializer,
     CaseNotificationAuditSerializer,
     DecisionCausalSerializer,
-    DeclararApartamientoSerializer,
     DescargoVersionSerializer,
-    DesignarAdHocSerializer,
     DispatchNotificationResponseSerializer,
     EmitirT01Serializer,
     EvidenciaMetadataSerializer,
@@ -64,6 +63,7 @@ from expedientes.serializers import (
     TransicionExpedienteSerializer,
     UpdateUrgenciaExpedienteSerializer,
 )
+from expedientes.services.assembly_resolution_service import AssemblyResolutionService
 from expedientes.services.board_service import build_board_payload
 from expedientes.services.causal_resolution_service import (
     CausalResolutionNotFound,
@@ -81,7 +81,6 @@ from expedientes.services.opening_notification_service import (
 )
 from expedientes.services.tribunal_composition_service import (
     TribunalCompositionError,
-    TribunalCompositionForbidden,
     TribunalCompositionNotFound,
     TribunalCompositionService,
     TribunalCompositionStateError,
@@ -167,7 +166,7 @@ class ExpedienteCollectionView(APIView):
 
 
 class TransicionExpedienteView(APIView):
-    permission_classes = [CanTransitionExpedientes]
+    permission_classes = [CanTransitionExpedientes, IsNotInvolvedInExpediente]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = TransicionExpedienteSerializer(data=request.data)
@@ -682,7 +681,11 @@ class DecisionCausalView(APIView):
 
     def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
-            return [permissions.IsAuthenticated(), CanResolveCausal()]
+            return [
+                permissions.IsAuthenticated(),
+                CanResolveCausal(),
+                IsNotInvolvedInExpediente(),
+            ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
     def get(self, request: Request, pk: int, descargo_id: int) -> Response:
@@ -718,8 +721,6 @@ class DecisionCausalView(APIView):
 def _composition_error_response(exc: TribunalCompositionError) -> Response:
     if isinstance(exc, TribunalCompositionNotFound):
         raise NotFound(str(exc)) from exc
-    if isinstance(exc, TribunalCompositionForbidden):
-        raise PermissionDenied(str(exc)) from exc
     if isinstance(exc, TribunalCompositionStateError):
         return Response(
             {"detail": str(exc), "observaciones": exc.observaciones},
@@ -729,7 +730,7 @@ def _composition_error_response(exc: TribunalCompositionError) -> Response:
 
 
 class ComposicionTribunalView(APIView):
-    """Composición del Tribunal que interviene en la causa (S4-04): TD, CD y Administrador."""
+    """Responsables del Tribunal que interviene en la causa (S4-04): TD, CD y Administrador."""
 
     permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
 
@@ -740,59 +741,44 @@ class ComposicionTribunalView(APIView):
             return _composition_error_response(exc)
 
 
-class ApartamientoTribunalView(APIView):
-    """El integrante autenticado se aparta por conflicto de interés. Sin recusación (Art. 93)."""
+class ResolucionAsambleaView(APIView):
+    """Resolución por Asamblea Extraordinaria cuando no interviene el TD (Art. 95).
 
-    permission_classes = [permissions.IsAuthenticated, CanConstituteTribunal]
+    - GET: descarga el acta en PDF (TD, CD y Administrador).
+    - POST: CD o Administración suben el acta y la causa se emite.
+    """
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "POST":
+            return [
+                permissions.IsAuthenticated(),
+                CanRegisterAssemblyResolution(),
+                IsNotInvolvedInExpediente(),
+            ]
+        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
+
+    def get(self, request: Request, pk: int) -> HttpResponse:
+        resolucion = ResolucionAsamblea.objects.filter(expediente_id=pk).first()
+        if resolucion is None:
+            raise NotFound("La causa no tiene Resolución por Asamblea registrada.")
+        response = HttpResponse(bytes(resolucion.acta_blob), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{resolucion.acta_nombre}"'
+        return response
 
     def post(self, request: Request, pk: int) -> Response:
-        serializer = DeclararApartamientoSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        archivo = request.FILES.get("acta")
+        if archivo is None:
+            return Response(
+                {"detail": "Adjuntá el acta de la Asamblea en PDF."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
-            TribunalCompositionService.declare_conflict(
+            AssemblyResolutionService.register(
                 expediente_id=pk,
                 user=request.user,
-                fundamento=serializer.validated_data["fundamento"],
+                content=archivo.read(),
+                filename=archivo.name,
             )
-        except TribunalCompositionError as exc:
-            return _composition_error_response(exc)
-        return Response(
-            TribunalCompositionService.describe(pk, request.user), status=status.HTTP_201_CREATED
-        )
-
-
-class DesignacionAdHocView(APIView):
-    """Registra el integrante ad hoc designado por Asamblea (Art. 95): TD o CD."""
-
-    permission_classes = [permissions.IsAuthenticated, CanDesignateAdHoc]
-
-    def post(self, request: Request, pk: int) -> Response:
-        serializer = DesignarAdHocSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-        try:
-            TribunalCompositionService.designate_ad_hoc(
-                expediente_id=pk,
-                user=request.user,
-                reemplaza_a_id=data["reemplaza_a"],
-                designado_nro_socio=data["designado_nro_socio"],
-                acta_asamblea=data["acta_asamblea"],
-            )
-        except TribunalCompositionError as exc:
-            return _composition_error_response(exc)
-        return Response(
-            TribunalCompositionService.describe(pk, request.user), status=status.HTTP_201_CREATED
-        )
-
-
-class ConstituirTribunalView(APIView):
-    """Congela la composición y las causas de apartamiento antes de resolver (CA4)."""
-
-    permission_classes = [permissions.IsAuthenticated, CanConstituteTribunal]
-
-    def post(self, request: Request, pk: int) -> Response:
-        try:
-            TribunalCompositionService.constitute(expediente_id=pk, user=request.user)
         except TribunalCompositionError as exc:
             return _composition_error_response(exc)
         return Response(
@@ -991,7 +977,11 @@ class TransicionarExpedienteView(APIView):
     Delega estrictamente en ExpedienteWorkflowService.transition().
     """
 
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         # Aceptar tanto to_status/justificacion como estado/motivo
