@@ -609,10 +609,7 @@ class EvidenciaDownloadView(APIView):
         )
 
         response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
-        disposition = (
-            "inline" if accion.lower() in ["ver", "consulta", "visualizar"] else "attachment"
-        )
-        response["Content-Disposition"] = f'{disposition}; filename="{evidencia.nombre_original}"'
+        response["Content-Disposition"] = f'inline; filename="{evidencia.nombre_original}"'
         response["X-Content-Type-Options"] = "nosniff"
         return response
 
