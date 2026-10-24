@@ -4,7 +4,7 @@ Verifica:
 - CA1: Vista dedicada con cabecera TD, 3 jueces con grupo Gxx y timeline cronológico.
 - CA2: Confidencialidad médica estricta (TD, CD, ADMIN y socio imputado titular).
 - CA3: Auditoría inmutable de accesos en expedientes_auditoria_consulta.
-- CA4: Integridad documental SHA-256 (flags sha256_valido, archivo_danado) y rotulado de "Plazo vencido sin descargo".
+- CA4: Integridad documental SHA-256 y rotulado de "Plazo vencido sin descargo".
 - Rechazo HTTP 403 a socios ordinarios no imputados.
 """
 
@@ -237,9 +237,9 @@ class TestVisorExpedienteAPI:
         ).count()
         assert conteo_final == conteo_inicial + 1
 
-        registro = AuditoriaConsultaExpediente.objects.filter(
-            expediente=expediente_causa
-        ).latest("fecha_hora")
+        registro = AuditoriaConsultaExpediente.objects.filter(expediente=expediente_causa).latest(
+            "fecha_hora"
+        )
         assert registro.usuario == "11239"
         assert registro.legajo == "11239"
         assert registro.rol == "TD"
@@ -284,12 +284,10 @@ class TestVisorExpedienteAPI:
             es_vigente=True,
         )
 
-        # 1. Socio 2 (co-imputado) consulta el visor: puede entrar pero datos médicos de socio 1 están enmascarados
+        # 1. Socio 2 consulta el visor: entra pero datos médicos de socio 1 se enmascaran
         client_coimputado = APIClient()
         client_coimputado.force_authenticate(user=socio_imputado_2.user)
-        resp_coimputado = client_coimputado.get(
-            f"/api/v1/expedientes/{expediente_causa.id}/visor/"
-        )
+        resp_coimputado = client_coimputado.get(f"/api/v1/expedientes/{expediente_causa.id}/visor/")
         assert resp_coimputado.status_code == status.HTTP_200_OK
 
         involucrado_1_data = next(
@@ -389,7 +387,7 @@ class TestVisorExpedienteAPI:
     def test_visor_rotula_plazo_vencido_sin_descargo(
         self, expediente_causa, vocal_td, socio_imputado_2
     ) -> None:
-        """CA4: Rotula 'Plazo vencido sin descargo' cuando expiró el plazo y el imputado no justificó."""
+        """CA4: Rotula plazo vencido cuando expiró el plazo y no hubo descargo."""
         # Configurar expediente con plazo expirado
         expediente_causa.plazo_limite_at = timezone.now() - timedelta(hours=1)
         expediente_causa.estado = EstadoExpedienteEnum.REVISION_RESOLUCION

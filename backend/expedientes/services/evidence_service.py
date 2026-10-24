@@ -104,7 +104,9 @@ class EvidenceService:
         socio = getattr(user, "socio", None)
         rol = socio.role if socio else (Role.ADMIN if user.is_staff else "DESCONOCIDO")
 
-        action_name = "consulta" if accion.lower() in ["ver", "consulta", "visualizar"] else "descarga"
+        action_name = (
+            "consulta" if accion.lower() in ["ver", "consulta", "visualizar"] else "descarga"
+        )
 
         # Registrar también en el módulo de auditoría de seguridad
         audit.log_access_granted(

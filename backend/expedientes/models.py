@@ -525,8 +525,6 @@ class AuditoriaDescargaEvidencia(models.Model):
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
-
-
 class AuditoriaConsultaExpediente(models.Model):
     """Pista de auditoría inmutable de consultas en el visor autorizado (CA3)."""
 
@@ -558,6 +556,7 @@ class AuditoriaConsultaExpediente(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Los registros de auditoría de consulta no pueden eliminarse.")
+
 
 class DecisionCausalEnum(models.TextChoices):
     """Resultado de la valoración de una causal tipificada T02 (S4-02)."""

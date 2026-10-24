@@ -1,10 +1,10 @@
-"""Serializadores y utilidades de dominio para el Visor Autorizado de Expedientes (US S4-01 / SCRUM-51).
+"""Serializadores y utilidades de dominio para el Visor Autorizado (US S4-01 / SCRUM-51).
 
 Implementa:
-- CA1: Visor dedicado con cabecera oficial TD, composición colegiada de 3 jueces con grupo Gxx y timeline cronológico.
-- CA2: Confidencialidad médica estricta (RBAC por campo/objeto: TD, CD, ADMIN y socio imputado titular).
+- CA1: Visor dedicado con cabecera oficial TD, composición colegiada de 3 jueces con grupo Gxx.
+- CA2: Confidencialidad médica estricta (RBAC por campo/objeto: TD, CD, ADMIN y titular).
 - CA3: Trazabilidad de auditoría de consultas y descargas.
-- CA4: Integridad documental SHA-256 (flags sha256_valido, archivo_danado) y rotulado explícito de 'Plazo vencido sin descargo'.
+- CA4: Integridad documental SHA-256 y rotulado explícito de 'Plazo vencido sin descargo'.
 """
 
 import hashlib
@@ -19,7 +19,6 @@ from expedientes.domain.causal_resolution import suggested_decision
 from expedientes.models import (
     AuditoriaDescargaEvidencia,
     DecisionCausalDescargo,
-    DescargoExpediente,
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
@@ -30,7 +29,7 @@ from socios.models import Role, Socio
 
 
 def check_evidencia_integrity(ev: EvidenciaDescargo) -> tuple[bool, bool]:
-    """Verifica si el hash SHA-256 del contenido binario almacenado concuerda con sha256_hash registrado.
+    """Verifica si el SHA-256 del binario almacenado concuerda con sha256_hash registrado.
 
     Retorna (sha256_valido, archivo_danado).
     """
@@ -68,7 +67,7 @@ def es_causal_medica(causal: str, texto: str = "") -> bool:
 
 
 def tiene_acceso_medico(user: Any, socio_imputado_id: int) -> bool:
-    """Verifica si el usuario solicitante tiene autorización para ver datos médicos reservados (CA2).
+    """Verifica si el usuario solicitante puede ver datos médicos reservados (CA2).
 
     Autorizados:
     - Integrantes de TD, CD y ADMIN.
@@ -102,7 +101,9 @@ def cargar_mapa_grupos() -> dict[str, str]:
             )
             for nro_socio, nro_legajo, id_grupo in cursor.fetchall():
                 if id_grupo is not None:
-                    grupo_str = f"G{id_grupo}" if not str(id_grupo).startswith("G") else str(id_grupo)
+                    grupo_str = (
+                        f"G{id_grupo}" if not str(id_grupo).startswith("G") else str(id_grupo)
+                    )
                     if nro_socio is not None:
                         mapa[str(nro_socio)] = grupo_str
                     if nro_legajo is not None:
@@ -139,24 +140,28 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
                 grupo = f"G{(current_year - 1962) - int(soc.social_year)}"
             if not grupo:
                 grupo = default_fallbacks[i]["grupo"]
-            responsables.append({
-                "titulo": titulo,
-                "legajo": legajo,
-                "nombre": nombre,
-                "grupo": grupo,
-                "es_suplente": False,
-                "display": f"{legajo} - {nombre} - {grupo}",
-            })
+            responsables.append(
+                {
+                    "titulo": titulo,
+                    "legajo": legajo,
+                    "nombre": nombre,
+                    "grupo": grupo,
+                    "es_suplente": False,
+                    "display": f"{legajo} - {nombre} - {grupo}",
+                }
+            )
         else:
             fb = default_fallbacks[i]
-            responsables.append({
-                "titulo": titulo,
-                "legajo": fb["legajo"],
-                "nombre": fb["nombre"],
-                "grupo": fb["grupo"],
-                "es_suplente": False,
-                "display": f"{fb['legajo']} - {fb['nombre']} - {fb['grupo']}",
-            })
+            responsables.append(
+                {
+                    "titulo": titulo,
+                    "legajo": fb["legajo"],
+                    "nombre": fb["nombre"],
+                    "grupo": fb["grupo"],
+                    "es_suplente": False,
+                    "display": f"{fb['legajo']} - {fb['nombre']} - {fb['grupo']}",
+                }
+            )
     return responsables
 
 
@@ -199,17 +204,19 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
         creador_display = formatear_actor(s.legajo)
 
     fecha_creacion = expediente.created_at or timezone.now()
-    hitos.append({
-        "id": f"creacion-{expediente.id}",
-        "fecha_hora": fecha_creacion.isoformat(),
-        "tipo": "CREACION",
-        "tipo_display": "Apertura formal de expediente",
-        "titulo": f"Apertura formal: {expediente.numero}",
-        "descripcion": f"Causa formalizada con motivo: '{expediente.motivo}'.",
-        "actor": creador_display,
-        "icono": "folder_open",
-        "color": "#1e3a8a",
-    })
+    hitos.append(
+        {
+            "id": f"creacion-{expediente.id}",
+            "fecha_hora": fecha_creacion.isoformat(),
+            "tipo": "CREACION",
+            "tipo_display": "Apertura formal de expediente",
+            "titulo": f"Apertura formal: {expediente.numero}",
+            "descripcion": f"Causa formalizada con motivo: '{expediente.motivo}'.",
+            "actor": creador_display,
+            "icono": "folder_open",
+            "color": "#1e3a8a",
+        }
+    )
 
     # 2. Hito de notificación y plazo preclusivo (si aplica)
     if expediente.plazo_inicio_at:
@@ -218,74 +225,81 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
             if expediente.plazo_limite_at
             else "s/d"
         )
-        hitos.append({
-            "id": f"plazo-{expediente.id}",
-            "fecha_hora": expediente.plazo_inicio_at.isoformat(),
-            "tipo": "NOTIFICACION_PLAZO",
-            "tipo_display": "Notificación procesal de apertura",
-            "titulo": "Inicio de plazo de justificaciones (5 días hábiles)",
-            "descripcion": f"Plazo perentorio congelado hasta el {limite_str}.",
-            "actor": "Tribunal de Disciplina",
-            "icono": "schedule",
-            "color": "#d97706",
-        })
+        hitos.append(
+            {
+                "id": f"plazo-{expediente.id}",
+                "fecha_hora": expediente.plazo_inicio_at.isoformat(),
+                "tipo": "NOTIFICACION_PLAZO",
+                "tipo_display": "Notificación procesal de apertura",
+                "titulo": "Inicio de plazo de justificaciones (5 días hábiles)",
+                "descripcion": f"Plazo perentorio congelado hasta el {limite_str}.",
+                "actor": "Tribunal de Disciplina",
+                "icono": "schedule",
+                "color": "#d97706",
+            }
+        )
 
     # 3. Presentaciones de descargos (incluye versiones históricas si existen)
     for d in expediente.descargos.all():
         fecha_desc = d.presentado_at or expediente.created_at or timezone.now()
-        soc_display = (
-            formatear_actor(d.socio.legajo)
-            if d.socio
-            else "Socio imputado"
+        soc_display = formatear_actor(d.socio.legajo) if d.socio else "Socio imputado"
+        estado_vig = "Vigente" if d.es_vigente else "Retirado"
+        desc_desc = f"Modalidad: {d.get_tipo_display()}. Estado: {estado_vig}."
+        hitos.append(
+            {
+                "id": f"descargo-{d.id}",
+                "fecha_hora": fecha_desc.isoformat(),
+                "tipo": "DESCARGO",
+                "tipo_display": f"Presentación de {d.get_tipo_display()}",
+                "titulo": f"Descargo presentado por {soc_display}",
+                "descripcion": desc_desc,
+                "actor": soc_display,
+                "icono": "description",
+                "color": "#059669",
+            }
         )
-        hitos.append({
-            "id": f"descargo-{d.id}",
-            "fecha_hora": fecha_desc.isoformat(),
-            "tipo": "DESCARGO",
-            "tipo_display": f"Presentación de {d.get_tipo_display()}",
-            "titulo": f"Descargo presentado por {soc_display}",
-            "descripcion": f"Modalidad: {d.get_tipo_display()}. Estado: {'Vigente' if d.es_vigente else 'Retirado'}.",
-            "actor": soc_display,
-            "icono": "description",
-            "color": "#059669",
-        })
 
     # 4. Decisiones tomadas por vocales sobre causales T02 (S4-02)
     for dec in expediente.decisiones_causal.all():
         autor_fmt = formatear_actor(dec.autor_legajo)
-        hitos.append({
-            "id": f"decision-causal-{dec.id}",
-            "fecha_hora": dec.created_at.isoformat(),
-            "tipo": "DECISION_CAUSAL",
-            "tipo_display": f"Valoración de causal T02 (v{dec.version})",
-            "titulo": f"Decisión de causal: {dec.get_decision_display()} (v{dec.version})",
-            "descripcion": f"Resolución: {dec.get_decision_display()}. Fundamento: {dec.fundamento or 'Sin observaciones'}.",
-            "actor": autor_fmt,
-            "icono": "gavel",
-            "color": "#7c3aed",
-        })
+        fundamento_txt = dec.fundamento or "Sin observaciones"
+        desc_dec = f"Resolución: {dec.get_decision_display()}. Fundamento: {fundamento_txt}."
+        hitos.append(
+            {
+                "id": f"decision-causal-{dec.id}",
+                "fecha_hora": dec.created_at.isoformat(),
+                "tipo": "DECISION_CAUSAL",
+                "tipo_display": f"Valoración de causal T02 (v{dec.version})",
+                "titulo": f"Decisión de causal: {dec.get_decision_display()} (v{dec.version})",
+                "descripcion": desc_dec,
+                "actor": autor_fmt,
+                "icono": "gavel",
+                "color": "#7c3aed",
+            }
+        )
 
     # 5. Historial de transiciones de estado
     for c in expediente.cambios_estado.all():
         if c.estado_anterior:
             actor_c = formatear_actor(c.actor)
-            hitos.append({
-                "id": f"cambio-estado-{c.id}",
-                "fecha_hora": c.fecha_hora.isoformat(),
-                "tipo": "CAMBIO_ESTADO",
-                "tipo_display": f"Transición de estado: {c.estado_nuevo}",
-                "titulo": f"Estado procesal actualizado: {c.estado_nuevo}",
-                "descripcion": f"Motivo registrado: {c.motivo or 'Cambio formal de etapa procesal'}.",
-                "actor": actor_c,
-                "icono": "sync_alt",
-                "color": "#2563eb",
-            })
+            motivo_c = c.motivo or "Cambio formal de etapa procesal"
+            hitos.append(
+                {
+                    "id": f"cambio-estado-{c.id}",
+                    "fecha_hora": c.fecha_hora.isoformat(),
+                    "tipo": "CAMBIO_ESTADO",
+                    "tipo_display": f"Transición de estado: {c.estado_nuevo}",
+                    "titulo": f"Estado procesal actualizado: {c.estado_nuevo}",
+                    "descripcion": f"Motivo registrado: {motivo_c}.",
+                    "actor": actor_c,
+                    "icono": "sync_alt",
+                    "color": "#2563eb",
+                }
+            )
 
     # 6. Descargas y consultas de documentos probatorios auditadas (AuditoriaDescargaEvidencia)
     descargas = (
-        AuditoriaDescargaEvidencia.objects.filter(
-            evidencia__descargo__expediente=expediente
-        )
+        AuditoriaDescargaEvidencia.objects.filter(evidencia__descargo__expediente=expediente)
         .select_related("evidencia")
         .order_by("fecha_hora")
     )
@@ -307,18 +321,20 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
             desc = f"Documento '{doc_nombre}' descargado."
             icono = "file_download"
 
-        hitos.append({
-            "id": f"descarga-{dsc.id}",
-            "fecha_hora": dsc.fecha_hora.isoformat(),
-            "tipo": tipo_key,
-            "tipo_display": tipo_disp,
-            "titulo": titulo,
-            "descripcion": desc,
-            "actor": actor_dsc,
-            "icono": icono,
-            "color": "#94a3b8",
-            "es_secundario": True,
-        })
+        hitos.append(
+            {
+                "id": f"descarga-{dsc.id}",
+                "fecha_hora": dsc.fecha_hora.isoformat(),
+                "tipo": tipo_key,
+                "tipo_display": tipo_disp,
+                "titulo": titulo,
+                "descripcion": desc,
+                "actor": actor_dsc,
+                "icono": icono,
+                "color": "#94a3b8",
+                "es_secundario": True,
+            }
+        )
 
     # Orden descendente canónico: lo más nuevo primero
     hitos.sort(key=lambda h: h["fecha_hora"], reverse=True)
@@ -567,9 +583,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                 estado_social = "Inactivo"
             else:
                 estado_social = (
-                    soc.get_category_display()
-                    if hasattr(soc, "get_category_display")
-                    else "Activo"
+                    soc.get_category_display() if hasattr(soc, "get_category_display") else "Activo"
                 )
 
             # Buscar descargo vigente del socio
@@ -649,19 +663,21 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                     estado_descargo = "NO_INICIADO"
                     estado_descargo_display = "Plazo no iniciado"
 
-            involucrados_data.append({
-                "id": soc.id,
-                "legajo": legajo,
-                "nombre": f"{soc.first_name} {soc.last_name}".strip(),
-                "first_name": soc.first_name,
-                "last_name": soc.last_name,
-                "grupo": grupo,
-                "estado": estado_social,
-                "tiene_descargo": tiene_descargo,
-                "estado_descargo": estado_descargo,
-                "estado_descargo_display": estado_descargo_display,
-                "descargo": descargo_dto,
-            })
+            involucrados_data.append(
+                {
+                    "id": soc.id,
+                    "legajo": legajo,
+                    "nombre": f"{soc.first_name} {soc.last_name}".strip(),
+                    "first_name": soc.first_name,
+                    "last_name": soc.last_name,
+                    "grupo": grupo,
+                    "estado": estado_social,
+                    "tiene_descargo": tiene_descargo,
+                    "estado_descargo": estado_descargo,
+                    "estado_descargo_display": estado_descargo_display,
+                    "descargo": descargo_dto,
+                }
+            )
 
         return involucrados_data
 

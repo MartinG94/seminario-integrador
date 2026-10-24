@@ -76,12 +76,12 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
-from expedientes.views.visor_views import ExpedienteVisorView
 from expedientes.views.evento_views import (
     EventoInstitucionalViewSet,
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
 
@@ -609,7 +609,9 @@ class EvidenciaDownloadView(APIView):
         )
 
         response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
-        disposition = "inline" if accion.lower() in ["ver", "consulta", "visualizar"] else "attachment"
+        disposition = (
+            "inline" if accion.lower() in ["ver", "consulta", "visualizar"] else "attachment"
+        )
         response["Content-Disposition"] = f'{disposition}; filename="{evidencia.nombre_original}"'
         response["X-Content-Type-Options"] = "nosniff"
         return response

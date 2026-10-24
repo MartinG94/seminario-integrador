@@ -12,14 +12,13 @@ from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 
 
 class ExpedienteVisorView(APIView):
-    """Vista dedicada de pantalla completa para la sustanciación y visor de causas (CA1, CA2, CA3, CA4)."""
+    """Vista dedicada de pantalla completa para visor de causas (CA1 a CA4)."""
 
     permission_classes = [IsAuthenticated, IsImputadoOrTribunal]
 
     def get(self, request, pk: int) -> Response:
         expediente = get_object_or_404(
-            Expediente.objects.select_related("socio", "solicitud_t01")
-            .prefetch_related(
+            Expediente.objects.select_related("socio", "solicitud_t01").prefetch_related(
                 "socios",
                 "descargos__socio",
                 "descargos__decisiones_causal",

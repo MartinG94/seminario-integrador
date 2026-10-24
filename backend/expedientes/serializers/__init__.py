@@ -30,7 +30,6 @@ from expedientes.models import (
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
-from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.serializers.evento_serializers import (
     AsistenciaEventoBulkUpdateSerializer,
     AsistenciaEventoSerializer,
@@ -40,6 +39,7 @@ from expedientes.serializers.evento_serializers import (
     RegistroApercibimientoSerializer,
     ReportarAsistenciaSerializer,
 )
+from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
