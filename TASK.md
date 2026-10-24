@@ -334,7 +334,24 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 13. Instrucciones para la Actualización de este Archivo
+## 13. Sprint 4 — Desglose Atómico: S4-04 / SCRUM-54 (Gestionar Apartamiento y Suplencia conforme al Estatuto)
+
+> **Spec de Referencia:** [`specs/007-apartamiento-suplencia/spec.md`](specs/007-apartamiento-suplencia/spec.md)  
+> **Plan Técnico:** [`specs/007-apartamiento-suplencia/plan.md`](specs/007-apartamiento-suplencia/plan.md)  
+> **Tareas:** [`specs/007-apartamiento-suplencia/tasks.md`](specs/007-apartamiento-suplencia/tasks.md)
+
+- [x] **TS4-04.1 Dominio de composición [TDD]:** Nómina 3 + 3 por 4.º, 5.º y 6.º año, incompatibilidad de cargos, apartamiento automático, suplencia y Casos A/B del Art. 95.
+- [x] **TS4-04.2 Nómina desde el padrón legado [TDD]:** Lectura de `socio_lista.idTipoSocio` (10 Titular, 11 Suplente) y `anoSocial`, sin tablas nuevas de integrantes.
+- [x] **TS4-04.3 Modelos inmutables y migración [TDD]:** `ComposicionTribunal`, `IntegranteComposicion` y `ResolucionAsamblea` sólo-inserción (migración `0017`).
+- [x] **TS4-04.4 Servicio de aplicación [TDD]:** Involucrados (imputados y solicitante), estampado al pasar a `Pendiente de firma y envío`, inmovilización por Casos A/B y aviso a CD por Outbox.
+- [x] **TS4-04.5 Inhibición y endpoints REST [TDD]:** 403 a involucrados en decisiones y transiciones; `GET /composicion/` y `GET/POST /resolucion-asamblea/`; sin endpoints de trámite manual.
+- [x] **TS4-04.6 Servicio frontend y DTOs [TDD]:** Consulta de responsables, registro y descarga del acta de Asamblea en `ExpedienteApiService`.
+- [x] **TS4-04.7 Panel "Responsables del Tribunal" en el detalle:** Pie de firma con grupo y condición, aviso de participación restringida, aviso ad hoc y carga del acta por CD/Admin.
+- [x] **TS4-04.8 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build de producción y control contra `notasPO.md` y la revisión del PO sobre el PR #63.
+
+---
+
+## 14. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

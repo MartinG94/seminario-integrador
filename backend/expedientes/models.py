@@ -591,6 +591,115 @@ class DecisionCausalDescargo(models.Model):
         raise ValidationError("Una decisión registrada no puede eliminarse.")
 
 
+class CondicionIntegranteEnum(models.TextChoices):
+    """Condición con la que un socio integra el cuerpo de una causa (Arts. 92 y 95)."""
+
+    TITULAR = "TITULAR", "Titular"
+    SUPLENTE = "SUPLENTE", "Suplente"
+
+
+class InsertOnlyModel(models.Model):
+    """Registro sólo-inserción: no admite modificación ni eliminación (CA4, S4-04)."""
+
+    immutable_message = "El registro es inmutable."
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError(self.immutable_message)
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(self.immutable_message)
+
+
+class ComposicionTribunal(InsertOnlyModel):
+    """Cuerpo efectivo del Tribunal, estampado al adoptar la resolución (S4-04, CA4).
+
+    La composición se calcula en tiempo real mientras la causa se tramita y se congela
+    al pasar a `Pendiente de firma y envío`, junto con los integrantes apartados.
+    """
+
+    immutable_message = "La composición estampada del Tribunal es inmutable."
+
+    expediente = models.OneToOneField(
+        Expediente, on_delete=models.PROTECT, related_name="composicion_tribunal"
+    )
+    apartados = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_composicion_tribunal"
+        verbose_name = "Composición del Tribunal"
+        verbose_name_plural = "Composiciones del Tribunal"
+
+
+class IntegranteComposicion(InsertOnlyModel):
+    """Integrante efectivo de un cuerpo estampado, con copia para el pie de firma."""
+
+    immutable_message = "La composición estampada del Tribunal es inmutable."
+
+    composicion = models.ForeignKey(
+        ComposicionTribunal, on_delete=models.PROTECT, related_name="integrantes"
+    )
+    anio_social = models.PositiveSmallIntegerField()
+    socio = models.ForeignKey("socios.Socio", on_delete=models.PROTECT, related_name="+")
+    condicion = models.CharField(max_length=10, choices=CondicionIntegranteEnum.choices)
+    nro_socio = models.PositiveIntegerField()
+    nombre_completo = models.CharField(max_length=200)
+    grupo = models.CharField(max_length=10, blank=True)
+    reemplaza_a = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = "expedientes_integrante_composicion"
+        ordering = ["anio_social"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["composicion", "anio_social"], name="unique_integrante_per_anio"
+            )
+        ]
+
+    @property
+    def firma(self) -> str:
+        """Pie de firma canónico: `[N° de Socio] - [Nombre] - [Gxx] [(Sup.)]` (notasPO §4)."""
+        partes = [str(self.nro_socio), self.nombre_completo]
+        if self.grupo:
+            partes.append(self.grupo)
+        firma = " - ".join(partes)
+        if self.condicion == CondicionIntegranteEnum.SUPLENTE:
+            firma += " (Sup.)"
+        return firma
+
+
+class ResolucionAsamblea(InsertOnlyModel):
+    """Resolución por Asamblea Extraordinaria cuando no puede intervenir el TD (Art. 95).
+
+    Guarda el acta en PDF, igual que los comprobantes de descargo (Directiva PO).
+    """
+
+    immutable_message = "La resolución por Asamblea registrada es inmutable."
+
+    expediente = models.OneToOneField(
+        Expediente, on_delete=models.PROTECT, related_name="resolucion_asamblea"
+    )
+    acta_blob = models.BinaryField()
+    acta_nombre = models.CharField(max_length=255)
+    acta_tamanio_bytes = models.PositiveIntegerField()
+    acta_sha256 = models.CharField(max_length=64)
+    registrada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    registrada_por_legajo = models.CharField(max_length=150)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_resolucion_asamblea"
+        verbose_name = "Resolución por Asamblea Extraordinaria"
+        verbose_name_plural = "Resoluciones por Asamblea Extraordinaria"
+
+
 class SolicitudT01(models.Model):
     class Estado(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"

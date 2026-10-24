@@ -313,3 +313,25 @@ table.table-mat tbody tr:focus {
     outline: 2px solid var(--color-border-focus);
   }
 }
+
+// Responsables del Tribunal de la causa (S4-04)
+.panel-composicion {
+  .seccion-titulo {
+    color: var(--color-primary);
+    font-family: var(--font-subtitle);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: none;
+  }
+
+  .btn-ver-acta .material-icons {
+    font-size: 16px;
+    vertical-align: middle;
+  }
+
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}

@@ -282,6 +282,11 @@
         </button>
       </div>
       <div class="card-body">
+        <div *ngIf="usuarioInvolucrado" class="alert alert-warning d-flex align-items-start banner-involucrado" role="alert">
+          <i class="material-icons mr-2" aria-hidden="true">warning</i>
+          <span><strong>Participación restringida:</strong> Sos parte interesada en este expediente (imputado o solicitante).
+            Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del Estatuto y Art. 24 del Reglamento Procesal.</span>
+        </div>
         <div class="row">
           <!-- Fila 1: Estado (col-md-2), Fecha de Solicitud (col-md-2), Título (col-md-3), Motivo (col-md-5) -->
           <div class="col-12 col-sm-6 col-md-2 mb-3">
@@ -356,6 +361,80 @@
           </div>
         </div>
 
+        <!-- Responsables del Tribunal de la causa (S4-04): Arts. 92 y 95 del Estatuto -->
+        <section *ngIf="puedeConsultarComposicion" class="mt-3 p-3 bg-light rounded border panel-composicion"
+                 aria-labelledby="titulo-composicion-tribunal">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+            <h5 id="titulo-composicion-tribunal" class="font-weight-bold text-dark mb-0">
+              <i class="material-icons text-info" aria-hidden="true" style="vertical-align: middle;">account_balance</i>
+              Responsables del Tribunal
+            </h5>
+            <div *ngIf="composicion" class="d-flex flex-wrap gap-1">
+              <span *ngIf="composicion.estampada" class="badge-mat badge-mat-success estado-composicion">Estampado en la resolución</span>
+              <span *ngIf="composicion.requiere_ad_hoc" class="badge-mat badge-mat-rose badge-ad-hoc">Tribunal Ad-Hoc / Asamblea</span>
+            </div>
+          </div>
+
+          <p *ngIf="cargandoComposicion" class="text-muted small mb-0" role="status">Cargando responsables…</p>
+
+          <ng-container *ngIf="composicion && !cargandoComposicion">
+            <ul *ngIf="!composicion.requiere_ad_hoc" class="list-unstyled mb-2 lista-responsables">
+              <li *ngFor="let asiento of composicion.asientos; let i = index" class="py-1 border-bottom responsable-tribunal">
+                <span class="text-muted small d-block">Responsable {{i + 1}} · {{asiento.anio_social}}.º año</span>
+                <span *ngIf="asiento.firma" class="font-weight-bold">{{asiento.firma}}</span>
+                <span *ngIf="!asiento.firma" class="text-danger">Sin integrante habilitado</span>
+                <span *ngIf="asiento.reemplaza_a" class="small text-muted d-block">Reemplaza a {{asiento.reemplaza_a}}</span>
+              </li>
+            </ul>
+
+            <p *ngIf="composicion.estampada" class="small text-muted mb-2">
+              Responsables fijados al adoptar la resolución el {{composicion.estampada_at | date:'dd/MM/yyyy HH:mm'}}.
+            </p>
+
+            <div *ngIf="composicion.apartados.length" class="mb-2">
+              <h6 class="seccion-titulo">Integrantes apartados por involucramiento (Art. 95)</h6>
+              <ul class="list-unstyled small mb-0">
+                <li *ngFor="let a of composicion.apartados" class="mb-1 apartado-tribunal">
+                  <span class="font-weight-bold">{{a.nro_socio}} - {{a.nombre}}</span>
+                  ({{etiquetaCondicion(a.condicion)}}, {{a.anio_social}}.º año)
+                </li>
+              </ul>
+            </div>
+
+            <div *ngIf="composicion.requiere_ad_hoc" class="alert alert-warning py-2 px-3 mb-2 aviso-ad-hoc" role="status">
+              <strong>La causa requiere Tribunal Ad-Hoc / intervención de Asamblea (Art. 95 del Estatuto).</strong>
+              <ul class="mb-1 pl-3">
+                <li *ngFor="let motivo of composicion.motivos_ad_hoc">{{motivo}}</li>
+              </ul>
+              <span *ngIf="!composicion.resolucion_asamblea">
+                El Tribunal ordinario no puede resolverla. Se avisó a Comisión Directiva para convocar a Asamblea General;
+                los imputados conservan su plazo para presentar los formularios T02/T03.
+              </span>
+            </div>
+
+            <ul *ngIf="composicion.observaciones.length" class="small text-danger mb-2 observaciones-composicion">
+              <li *ngFor="let o of composicion.observaciones">{{o}}</li>
+            </ul>
+
+            <!-- Resolución por Asamblea Extraordinaria: CD o Administración suben el acta (Art. 95) -->
+            <div *ngIf="composicion.resolucion_asamblea as r" class="small mb-2 resolucion-asamblea">
+              Resuelto por Asamblea Extraordinaria · registrado por {{r.registrada_por_legajo}} el {{r.registrada_at | date:'dd/MM/yyyy HH:mm'}}.
+              <button type="button" class="btn btn-sm btn-link btn-ver-acta" (click)="verActaAsamblea()">
+                <i class="material-icons" aria-hidden="true">description</i> Ver acta
+              </button>
+            </div>
+            <div *ngIf="puedeRegistrarAsamblea" class="form-group mb-0 registrar-asamblea">
+              <label class="small font-weight-bold" for="acta-asamblea">Acta de la Asamblea Extraordinaria (PDF)</label>
+              <input id="acta-asamblea" type="file" class="form-control-file" accept="application/pdf,.pdf"
+                     (change)="seleccionarActaAsamblea($event)">
+              <div class="text-right mt-1">
+                <button type="button" class="btn btn-sm btn-primary btn-registrar-asamblea"
+                        [disabled]="procesandoComposicion || !actaAsamblea"
+                        (click)="registrarResolucionAsamblea()">Registrar resolución y emitir</button>
+              </div>
+            </div>
+          </ng-container>
+        </section>
 
         <!-- Descargo si existe -->
         <div *ngIf="expedienteSeleccionado.descargo" class="mt-3 p-3 bg-light rounded border">
@@ -550,14 +629,14 @@
                 title="Ver Involucrados">
           <i class="material-icons" style="font-size: 16px;">group</i> Ver Involucrados
         </button>
-        <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'revision_resolucion'" 
+        <button *ngIf="puedeResolverExpedienteSeleccionado && expedienteSeleccionado.estado === 'revision_resolucion'" 
                 mat-raised-button 
                 class="btn btn-warning" 
                 (click)="abrirVotacion(expedienteSeleccionado)" 
                 title="Emitir Resolución">
           <i class="material-icons" style="font-size: 16px;">gavel</i> Emitir Resolución
         </button>
-        <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'pendiente_correos'" 
+        <button *ngIf="puedeResolverExpedienteSeleccionado && expedienteSeleccionado.estado === 'pendiente_correos'" 
                 mat-raised-button 
                 class="btn btn-success" 
                 (click)="abrirFirma(expedienteSeleccionado)" 

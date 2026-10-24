@@ -8,6 +8,8 @@ import {
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
+  ComposicionTribunalDTO,
+  CondicionIntegrante,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
@@ -127,6 +129,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
 
+  // Tribunal de la causa (S4-04): inhibición, suplencia automática y Asamblea (Art. 95)
+  composicion: ComposicionTribunalDTO | null = null;
+  cargandoComposicion = false;
+  procesandoComposicion = false;
+  actaAsamblea: File | null = null;
+
   private subs: Subscription[] = [];
 
   constructor(
@@ -147,7 +155,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get puedeEvaluarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
-    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
+    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD') && !this.usuarioInvolucrado;
   }
 
   ngOnInit(): void {
@@ -441,9 +449,112 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.modalDetalleAbierto = true;
     this.limpiarJustificaciones();
+    this.limpiarComposicion();
     if (this.puedeConsultarJustificaciones) {
       this.cargarJustificaciones(exp.id);
     }
+    if (this.puedeConsultarComposicion) {
+      this.cargarComposicion(exp.id);
+    }
+  }
+
+  // --- Tribunal de la causa (S4-04) ---
+
+  get puedeConsultarComposicion(): boolean {
+    return this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  /** Parte interesada (imputado o solicitante): no interviene en el juzgamiento (Art. 95 y Art. 24 RPD). */
+  get usuarioInvolucrado(): boolean {
+    return !!this.composicion?.usuario?.esta_involucrado;
+  }
+
+  /** Emitir o firmar sólo con responsables calculados, sin inhibición ni caso de Asamblea. */
+  get puedeResolverExpedienteSeleccionado(): boolean {
+    return this.puedeVotarOFirmar && !!this.composicion && !this.usuarioInvolucrado && !this.composicion.requiere_ad_hoc;
+  }
+
+  get puedeRegistrarAsamblea(): boolean {
+    return !!this.composicion?.puede_registrar_asamblea && this.auth.tieneRol('CD', 'ADMIN');
+  }
+
+  cargarComposicion(expedienteId: number | string): void {
+    this.cargandoComposicion = true;
+    this.expedienteApi.obtenerComposicionTribunal(expedienteId).subscribe({
+      next: composicion => {
+        this.cargandoComposicion = false;
+        this.composicion = composicion;
+      },
+      error: err => {
+        this.cargandoComposicion = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la composición del Tribunal.'));
+      }
+    });
+  }
+
+  private limpiarComposicion(): void {
+    this.composicion = null;
+    this.cargandoComposicion = false;
+    this.procesandoComposicion = false;
+    this.actaAsamblea = null;
+  }
+
+  etiquetaCondicion(condicion: CondicionIntegrante | ''): string {
+    switch (condicion) {
+      case 'TITULAR': return 'Titular';
+      case 'SUPLENTE': return 'Suplente';
+      default: return '';
+    }
+  }
+
+  seleccionarActaAsamblea(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.actaAsamblea = input.files?.[0] ?? null;
+  }
+
+  registrarResolucionAsamblea(): void {
+    if (!this.expedienteSeleccionado || this.procesandoComposicion) return;
+    if (!this.actaAsamblea) {
+      this.notifications.error('Adjuntá el acta de la Asamblea Extraordinaria en PDF.');
+      return;
+    }
+    this.procesandoComposicion = true;
+    this.expedienteApi.registrarResolucionAsamblea(this.expedienteSeleccionado.id, this.actaAsamblea).subscribe({
+      next: composicion => {
+        this.procesandoComposicion = false;
+        this.actaAsamblea = null;
+        this.composicion = composicion;
+        this.notifications.success('Resolución por Asamblea registrada. El expediente fue emitido.');
+        this.cargarDatosTablero();
+      },
+      error: err => {
+        this.procesandoComposicion = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la Resolución por Asamblea.'));
+      }
+    });
+  }
+
+  verActaAsamblea(): void {
+    if (!this.expedienteSeleccionado) return;
+    const ventana = window.open('', '_blank');
+    this.expedienteApi.descargarActaAsamblea(this.expedienteSeleccionado.id).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        if (ventana) {
+          ventana.location.href = url;
+        } else {
+          const enlace = document.createElement('a');
+          enlace.href = url;
+          enlace.download = this.composicion?.resolucion_asamblea?.acta_nombre || 'acta-asamblea.pdf';
+          enlace.click();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      error: err => {
+        ventana?.close();
+        this.notifications.error(httpErrorMessage(err, 'No se pudo abrir el acta de la Asamblea.'));
+      }
+    });
   }
 
   cargarJustificaciones(expedienteId: number | string): void {
@@ -637,6 +748,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.expedienteSeleccionado = null;
     this.limpiarJustificaciones();
+    this.limpiarComposicion();
   }
 
   confirmarVotacion(): void {

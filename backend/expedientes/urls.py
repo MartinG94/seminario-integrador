@@ -6,6 +6,7 @@ from expedientes.views import (
     CalcularPlazoView,
     CalendarioFeriadosView,
     CaseNotificationAuditView,
+    ComposicionTribunalView,
     DecisionCausalView,
     DescargoVersionesView,
     DispatchCaseOpeningView,
@@ -19,6 +20,7 @@ from expedientes.views import (
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
+    ResolucionAsambleaView,
     SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
@@ -49,6 +51,16 @@ urlpatterns = [
         "<int:pk>/descargos/<int:descargo_id>/decisiones/",
         DecisionCausalView.as_view(),
         name="descargo-decisiones-causal",
+    ),
+    path(
+        "<int:pk>/composicion/",
+        ComposicionTribunalView.as_view(),
+        name="composicion-tribunal",
+    ),
+    path(
+        "<int:pk>/resolucion-asamblea/",
+        ResolucionAsambleaView.as_view(),
+        name="resolucion-asamblea",
     ),
     path(
         "<int:pk>/descargo/versiones/",
