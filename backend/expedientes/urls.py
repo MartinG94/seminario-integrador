@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from expedientes.views import (
+    AntecedenteT03View,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
@@ -25,6 +26,7 @@ from expedientes.views import (
     SolicitudT01EmitView,
     TransicionarExpedienteView,
     TransicionExpedienteView,
+    ValoracionT03View,
 )
 
 app_name = "expedientes"
@@ -43,12 +45,18 @@ urlpatterns = [
     path("gestion/", ExpedienteCollectionView.as_view(), name="expedientes"),
     path("mis-expedientes/", MisExpedientesView.as_view(), name="mis-expedientes"),
     path("mis-solicitudes/", MisSolicitudesT01View.as_view(), name="mis-solicitudes"),
+    path("antecedentes/", AntecedenteT03View.as_view(), name="antecedente-t03"),
     path("<int:pk>/estado/", TransicionExpedienteView.as_view(), name="transicionar-expediente"),
     path("<int:pk>/descargo/", PresentarDescargoView.as_view(), name="presentar-descargo"),
     path(
         "<int:pk>/descargos/<int:descargo_id>/decisiones/",
         DecisionCausalView.as_view(),
         name="descargo-decisiones-causal",
+    ),
+    path(
+        "<int:pk>/descargos/<int:descargo_id>/valoraciones-t03/",
+        ValoracionT03View.as_view(),
+        name="descargo-valoraciones-t03",
     ),
     path(
         "<int:pk>/descargo/versiones/",

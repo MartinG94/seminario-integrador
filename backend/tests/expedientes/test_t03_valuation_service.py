@@ -346,17 +346,16 @@ class TestInterestedPartyInhibition:
 
 
 class TestLookupAntecedent:
-    """RF-16 y RF-20: ficha mínima del antecedente, sin datos del descargo ni evidencia."""
+    """RF-16: el servicio resuelve el expediente emitido y su fecha de emisión (D4 y D6)."""
 
     @pytest.mark.parametrize("text", ["904/2026", "0904/2026", "EXP-0904/2026", " exp-904/2026 "])
     def test_finds_emitted_case_by_any_accepted_number(self, make_expediente, text) -> None:
         emitted = make_expediente("EXP-0904/2026", motivo="Inasistencia a la reunión plenaria")
 
-        card = T03ValuationService.lookup_antecedent(text)
+        found = T03ValuationService.lookup_antecedent(text)
 
-        assert card.id == emitted.id
-        assert card.numero == "EXP-0904/2026"
-        assert card.motivo == "Inasistencia a la reunión plenaria"
+        assert found.expediente.id == emitted.id
+        assert found.expediente.numero == "EXP-0904/2026"
 
     def test_emission_date_is_last_transition_to_emitido(self, make_expediente) -> None:
         emitted = make_expediente("EXP-0904/2026")
@@ -396,22 +395,6 @@ class TestLookupAntecedent:
 
         assert card.fecha_emision == Expediente.objects.get(pk=emitted.pk).updated_at
 
-    def test_regulation_comes_from_t01_request(self, make_expediente, make_socio) -> None:
-        emitted = make_expediente("EXP-0904/2026")
-        SolicitudT01.objects.create(
-            solicitante=make_socio(legajo="77010"),
-            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
-            causal="Art. 86 del Reglamento Interno",
-            puntos=-1,
-            destinatarios_socios_ids=[emitted.socio_id],
-            estado=SolicitudT01.Estado.ISSUED,
-            expediente=emitted,
-        )
-
-        card = T03ValuationService.lookup_antecedent("904/2026")
-
-        assert card.reglamento_invocado == "Art. 86 del Reglamento Interno"
-
     def test_not_emitted_case_is_not_found(self, make_expediente) -> None:
         make_expediente("EXP-0904/2026", estado=EstadoExpedienteEnum.PENDIENTE_CORREOS)
 
@@ -427,29 +410,9 @@ class TestLookupAntecedent:
         with pytest.raises(T03ValuationValidationError, match="número de expediente"):
             T03ValuationService.lookup_antecedent(text)
 
-    def test_card_of_medical_case_has_no_descargo_text_causal_or_evidence(
-        self, make_expediente, make_evidencia
-    ) -> None:
-        emitted = make_expediente("EXP-0904/2026", motivo="Inasistencia a la reunión plenaria")
-        socio = emitted.socio
-        descargo = DescargoExpediente.objects.create(
-            expediente=emitted,
-            socio=socio,
-            tipo=TipoDescargoEnum.T02_CERTIFICADO,
-            causal="Enfermedad certificada: gastroenteritis aguda",
-            texto="Adjunto certificado médico con diagnóstico y reposo.",
-        )
-        make_evidencia(emitted, socio, descargo=descargo, nombre="certificado-medico.pdf")
+    def test_returns_only_the_case_and_its_emission_date(self, make_expediente) -> None:
+        make_expediente("EXP-0904/2026")
 
-        card = T03ValuationService.lookup_antecedent("904/2026")
+        found = T03ValuationService.lookup_antecedent("904/2026")
 
-        assert set(asdict(card)) == {
-            "id",
-            "numero",
-            "fecha_emision",
-            "motivo",
-            "reglamento_invocado",
-        }
-        rendered = repr(asdict(card)).lower()
-        for sensitive in ("gastroenteritis", "certificado", "diagnóstico", "reposo"):
-            assert sensitive not in rendered
+        assert set(asdict(found)) == {"expediente", "fecha_emision"}

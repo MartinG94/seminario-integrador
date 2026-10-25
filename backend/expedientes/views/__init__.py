@@ -38,10 +38,12 @@ from expedientes.permissions import (
     CanOpenExpedientes,
     CanResolveCausal,
     CanTransitionExpedientes,
+    CanValueT03,
     IsImputadoOrTribunal,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
+    AntecedenteT03Serializer,
     AperturaExpedienteSerializer,
     CalcularPlazoSerializer,
     CalendarQuerySerializer,
@@ -56,9 +58,11 @@ from expedientes.serializers import (
     MisSolicitudesT01Serializer,
     PresentarDescargoSerializer,
     RegistrarDecisionCausalSerializer,
+    RegistrarValoracionT03Serializer,
     SolicitudT01Serializer,
     TransicionExpedienteSerializer,
     UpdateUrgenciaExpedienteSerializer,
+    ValoracionT03Serializer,
 )
 from expedientes.services.board_service import build_board_payload
 from expedientes.services.causal_resolution_service import (
@@ -74,6 +78,13 @@ from expedientes.services.opening_notification_service import (
     InvalidCaseStatusError,
     MissingSocioEmailError,
     OpeningNotificationService,
+)
+from expedientes.services.t03_valuation_service import (
+    T03ValuationForbidden,
+    T03ValuationNotFound,
+    T03ValuationService,
+    T03ValuationStateError,
+    T03ValuationValidationError,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
@@ -95,6 +106,8 @@ EXPEDIENTE_LIST_PREFETCH = (
     "cambios_estado",
     "descargos__socio",
     "descargos__decisiones_causal__autor",
+    "descargos__valoraciones_t03__autor",
+    "descargos__valoraciones_t03__antecedentes",
     "evidencias__socio",
 )
 
@@ -702,6 +715,72 @@ class DecisionCausalView(APIView):
         except CausalResolutionValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
+class ValoracionT03View(APIView):
+    """Valoraciones extraordinarias versionadas de un descargo T03 (S4-03).
+
+    - GET: historial de la más nueva a la más vieja (TD, CD y Administrador).
+    - POST: registra una nueva versión (sólo miembros del Tribunal que no sean parte interesada).
+    """
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "POST":
+            return [permissions.IsAuthenticated(), CanValueT03()]
+        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
+
+    def get(self, request: Request, pk: int, descargo_id: int) -> Response:
+        try:
+            descargo = T03ValuationService.get_descargo(pk, descargo_id)
+        except T03ValuationNotFound as exc:
+            raise NotFound(str(exc)) from exc
+        valoraciones = (
+            descargo.valoraciones_t03.select_related("autor")
+            .prefetch_related("antecedentes")
+            .order_by("-version")
+        )
+        return Response(ValoracionT03Serializer(valoraciones, many=True).data)
+
+    def post(self, request: Request, pk: int, descargo_id: int) -> Response:
+        serializer = RegistrarValoracionT03Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            valoracion = T03ValuationService.register(
+                expediente_id=pk,
+                descargo_id=descargo_id,
+                resultado=data["resultado"],
+                fundamento=data["fundamento"],
+                antecedente_ids=data["antecedente_ids"],
+                user=request.user,
+            )
+        except T03ValuationNotFound as exc:
+            raise NotFound(str(exc)) from exc
+        except T03ValuationForbidden as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except T03ValuationStateError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except T03ValuationValidationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ValoracionT03Serializer(valoracion).data, status=status.HTTP_201_CREATED)
+
+
+class AntecedenteT03View(APIView):
+    """Ficha mínima de un expediente emitido buscado por número (S4-03, RF-16 y RF-20).
+
+    Sólo para miembros del Tribunal: acepta `7/2026`, `007/2026` o `EXP-0007/2026`.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, CanValueT03]
+
+    def get(self, request: Request) -> Response:
+        try:
+            found = T03ValuationService.lookup_antecedent(request.query_params.get("numero", ""))
+        except T03ValuationValidationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except T03ValuationNotFound as exc:
+            raise NotFound(str(exc)) from exc
+        return Response(AntecedenteT03Serializer(found).data)
 
 
 # Backward-compatible alias for existing imports

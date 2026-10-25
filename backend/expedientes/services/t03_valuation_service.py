@@ -78,14 +78,14 @@ def is_interested_party(expediente: Expediente, user) -> bool:
 
 
 @dataclass(frozen=True)
-class AntecedentCard:
-    """Ficha mínima de un antecedente: nunca texto, causal ni evidencia del descargo (RF-20)."""
+class AntecedentLookup:
+    """Expediente emitido encontrado por número y su fecha de emisión (RF-16, D6).
 
-    id: int
-    numero: str
+    La presentación arma la ficha con una lista blanca de campos (RF-20).
+    """
+
+    expediente: Expediente
     fecha_emision: datetime
-    motivo: str
-    reglamento_invocado: str
 
 
 def _emission_date(expediente: Expediente) -> datetime:
@@ -121,9 +121,7 @@ def _default_condition_provider() -> TribunalConditionPort:
 
 class T03ValuationService:
     @staticmethod
-    def lookup_antecedent(numero: str) -> AntecedentCard:
-        from expedientes.serializers import _obtener_reglamento_asociado
-
+    def lookup_antecedent(numero: str) -> AntecedentLookup:
         try:
             normalized = normalize_case_number(numero)
         except T03ValuationError as exc:
@@ -135,13 +133,7 @@ class T03ValuationService:
         )
         if expediente is None:
             raise T03ValuationNotFound("No hay un expediente emitido con ese número.")
-        return AntecedentCard(
-            id=expediente.id,
-            numero=expediente.numero,
-            fecha_emision=_emission_date(expediente),
-            motivo=expediente.motivo,
-            reglamento_invocado=_obtener_reglamento_asociado(expediente),
-        )
+        return AntecedentLookup(expediente=expediente, fecha_emision=_emission_date(expediente))
 
     @staticmethod
     def get_descargo(expediente_id: int, descargo_id: int) -> DescargoExpediente:

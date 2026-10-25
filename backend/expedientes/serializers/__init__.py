@@ -29,6 +29,8 @@ from expedientes.models import (
     SolicitudT01,
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
+    ValoracionT03,
+    ValoracionT03Antecedente,
 )
 from expedientes.serializers.evento_serializers import (
     AsistenciaEventoBulkUpdateSerializer,
@@ -496,6 +498,11 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 item["decisiones_causal"] = DecisionCausalSerializer(
                     d.decisiones_causal.all(), many=True
                 ).data
+            # La valoración del T03 también es deliberación reservada (S4-03, RF-21 a RF-24).
+            if is_authority and d.tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
+                item["valoraciones_t03"] = ValoracionT03Serializer(
+                    d.valoraciones_t03.all(), many=True
+                ).data
             result.append(item)
         return result
 
@@ -614,6 +621,79 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     )
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, allow_empty=True
+    )
+
+
+class ValoracionT03AntecedenteSerializer(serializers.ModelSerializer):
+    """Referencia a un expediente emitido citado como antecedente: id y número (RF-20)."""
+
+    expediente_id = serializers.IntegerField(source="expediente_antecedente_id", read_only=True)
+    numero = serializers.CharField(source="numero_antecedente", read_only=True)
+
+    class Meta:
+        model = ValoracionT03Antecedente
+        fields = ["expediente_id", "numero"]
+        read_only_fields = fields
+
+
+class ValoracionT03Serializer(serializers.ModelSerializer):
+    """Valoración versionada de un descargo T03 (S4-03, RF-28)."""
+
+    resultado_display = serializers.CharField(source="get_resultado_display", read_only=True)
+    autor = serializers.CharField(source="autor.get_username", read_only=True)
+    autor_condicion_display = serializers.CharField(
+        source="get_autor_condicion_display", read_only=True
+    )
+    antecedentes = ValoracionT03AntecedenteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ValoracionT03
+        fields = [
+            "id",
+            "descargo",
+            "version",
+            "resultado",
+            "resultado_display",
+            "fundamento",
+            "antecedentes",
+            "autor",
+            "autor_legajo",
+            "autor_rol",
+            "autor_condicion",
+            "autor_condicion_display",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class AntecedenteT03Serializer(serializers.Serializer):
+    """Ficha mínima de un antecedente (RF-16) con lista blanca de campos (RF-20).
+
+    Recibe el `AntecedentLookup` del servicio; nunca expone descargos, causales ni evidencias.
+    """
+
+    id = serializers.IntegerField(source="expediente.id", read_only=True)
+    numero = serializers.CharField(source="expediente.numero", read_only=True)
+    fecha_emision = serializers.DateTimeField(read_only=True)
+    motivo = serializers.CharField(source="expediente.motivo", read_only=True)
+    reglamento_invocado = serializers.SerializerMethodField()
+
+    def get_reglamento_invocado(self, obj) -> str:
+        return _obtener_reglamento_asociado(obj.expediente)
+
+
+class RegistrarValoracionT03Serializer(serializers.Serializer):
+    """Payload de la valoración de un miembro del Tribunal sobre un descargo T03.
+
+    El resultado y el fundamento se validan en el dominio para responder un único `detail`.
+    """
+
+    resultado = serializers.CharField(required=False, allow_blank=True, default="")
+    fundamento = serializers.CharField(
+        required=False, allow_blank=True, default="", trim_whitespace=False
+    )
+    antecedente_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), required=False, allow_empty=True, default=list
     )
 
 
