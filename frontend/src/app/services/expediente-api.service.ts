@@ -213,6 +213,48 @@ export interface ExpedienteDetalleDTO {
   descargos: DescargoDetalleDTO[];
 }
 
+// --- Tribunal de la causa (S4-04, Spec 007) ---
+
+export type CondicionIntegrante = 'TITULAR' | 'SUPLENTE';
+
+export interface AsientoTribunalDTO {
+  anio_social: number;
+  socio_id: number | null;
+  nro_socio: number | null;
+  nombre: string;
+  grupo: string;
+  condicion: CondicionIntegrante | '';
+  firma: string;
+  reemplaza_a: string;
+}
+
+export interface IntegranteApartadoDTO {
+  socio_id: number;
+  nro_socio: number;
+  nombre: string;
+  anio_social: number;
+  condicion: CondicionIntegrante;
+}
+
+export interface ResolucionAsambleaDTO {
+  acta_nombre: string;
+  registrada_at: string;
+  registrada_por_legajo: string;
+}
+
+export interface ComposicionTribunalDTO {
+  estampada: boolean;
+  estampada_at: string | null;
+  asientos: AsientoTribunalDTO[];
+  apartados: IntegranteApartadoDTO[];
+  requiere_ad_hoc: boolean;
+  motivos_ad_hoc: string[];
+  observaciones: string[];
+  resolucion_asamblea: ResolucionAsambleaDTO | null;
+  puede_registrar_asamblea: boolean;
+  usuario: { esta_involucrado: boolean };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -349,6 +391,21 @@ export class ExpedienteApiService {
 
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
+  }
+
+  obtenerComposicionTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
+    return this.http.get<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/`);
+  }
+
+  /** CD o Administración suben el acta de la Asamblea Extraordinaria y la causa se emite (Art. 95). */
+  registrarResolucionAsamblea(expedienteId: number | string, acta: File): Observable<ComposicionTribunalDTO> {
+    const formData = new FormData();
+    formData.append('acta', acta);
+    return this.http.post<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/resolucion-asamblea/`, formData);
+  }
+
+  descargarActaAsamblea(expedienteId: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/resolucion-asamblea/`, { responseType: 'blob' });
   }
 }
 

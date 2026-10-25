@@ -29,6 +29,7 @@ from expedientes.models import (
     Expediente,
     Holiday,
     OperacionDescargoEnum,
+    ResolucionAsamblea,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
@@ -36,9 +37,11 @@ from expedientes.permissions import (
     CanCreateT01,
     CanManageCalendar,
     CanOpenExpedientes,
+    CanRegisterAssemblyResolution,
     CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
+    IsNotInvolvedInExpediente,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
@@ -60,6 +63,7 @@ from expedientes.serializers import (
     TransicionExpedienteSerializer,
     UpdateUrgenciaExpedienteSerializer,
 )
+from expedientes.services.assembly_resolution_service import AssemblyResolutionService
 from expedientes.services.board_service import build_board_payload
 from expedientes.services.causal_resolution_service import (
     CausalResolutionNotFound,
@@ -74,6 +78,12 @@ from expedientes.services.opening_notification_service import (
     InvalidCaseStatusError,
     MissingSocioEmailError,
     OpeningNotificationService,
+)
+from expedientes.services.tribunal_composition_service import (
+    TribunalCompositionError,
+    TribunalCompositionNotFound,
+    TribunalCompositionService,
+    TribunalCompositionStateError,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
@@ -156,7 +166,7 @@ class ExpedienteCollectionView(APIView):
 
 
 class TransicionExpedienteView(APIView):
-    permission_classes = [CanTransitionExpedientes]
+    permission_classes = [CanTransitionExpedientes, IsNotInvolvedInExpediente]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = TransicionExpedienteSerializer(data=request.data)
@@ -671,7 +681,11 @@ class DecisionCausalView(APIView):
 
     def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
-            return [permissions.IsAuthenticated(), CanResolveCausal()]
+            return [
+                permissions.IsAuthenticated(),
+                CanResolveCausal(),
+                IsNotInvolvedInExpediente(),
+            ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
     def get(self, request: Request, pk: int, descargo_id: int) -> Response:
@@ -702,6 +716,74 @@ class DecisionCausalView(APIView):
         except CausalResolutionValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
+def _composition_error_response(exc: TribunalCompositionError) -> Response:
+    if isinstance(exc, TribunalCompositionNotFound):
+        raise NotFound(str(exc)) from exc
+    if isinstance(exc, TribunalCompositionStateError):
+        return Response(
+            {"detail": str(exc), "observaciones": exc.observaciones},
+            status=status.HTTP_409_CONFLICT,
+        )
+    return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ComposicionTribunalView(APIView):
+    """Responsables del Tribunal que interviene en la causa (S4-04): TD, CD y Administrador."""
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def get(self, request: Request, pk: int) -> Response:
+        try:
+            return Response(TribunalCompositionService.describe(pk, request.user))
+        except TribunalCompositionError as exc:
+            return _composition_error_response(exc)
+
+
+class ResolucionAsambleaView(APIView):
+    """Resolución por Asamblea Extraordinaria cuando no interviene el TD (Art. 95).
+
+    - GET: descarga el acta en PDF (TD, CD y Administrador).
+    - POST: CD o Administración suben el acta y la causa se emite.
+    """
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "POST":
+            return [
+                permissions.IsAuthenticated(),
+                CanRegisterAssemblyResolution(),
+                IsNotInvolvedInExpediente(),
+            ]
+        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
+
+    def get(self, request: Request, pk: int) -> HttpResponse:
+        resolucion = ResolucionAsamblea.objects.filter(expediente_id=pk).first()
+        if resolucion is None:
+            raise NotFound("La causa no tiene Resolución por Asamblea registrada.")
+        response = HttpResponse(bytes(resolucion.acta_blob), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{resolucion.acta_nombre}"'
+        return response
+
+    def post(self, request: Request, pk: int) -> Response:
+        archivo = request.FILES.get("acta")
+        if archivo is None:
+            return Response(
+                {"detail": "Adjuntá el acta de la Asamblea en PDF."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            AssemblyResolutionService.register(
+                expediente_id=pk,
+                user=request.user,
+                content=archivo.read(),
+                filename=archivo.name,
+            )
+        except TribunalCompositionError as exc:
+            return _composition_error_response(exc)
+        return Response(
+            TribunalCompositionService.describe(pk, request.user), status=status.HTTP_201_CREATED
+        )
 
 
 # Backward-compatible alias for existing imports
@@ -895,7 +977,11 @@ class TransicionarExpedienteView(APIView):
     Delega estrictamente en ExpedienteWorkflowService.transition().
     """
 
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         # Aceptar tanto to_status/justificacion como estado/motivo

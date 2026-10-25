@@ -105,3 +105,67 @@ def multiactor(causal_descargo, make_socio, make_evidencia) -> dict:
         ),
         "ajena_huerfana": make_evidencia(expediente, otro, nombre="ajena-huerfana.pdf"),
     }
+
+
+# --- Nómina del Tribunal en el padrón legado (S4-04) ---
+
+CARGO_TITULAR_TD = 10
+CARGO_SUPLENTE_TD = 11
+CARGO_SOCIO_ORDINARIO = 12
+
+
+@pytest.fixture
+def make_legacy_socio(make_socio):
+    """Crea la cuenta local y su ficha en `socio_lista` vinculada por `user_id`."""
+    from datetime import datetime, timezone
+
+    from padron.models import Socio as LegacySocio
+    from padron.models import SocioEstadoHistorial
+    from tests.legacy_schema import create_legacy_record
+
+    def _make(
+        nro_socio: int,
+        social_year: int,
+        cargo: int = CARGO_SOCIO_ORDINARIO,
+        role: str = Role.SOCIO,
+        grupo: int | None = None,
+        is_enabled: bool = True,
+        linked: bool = True,
+    ) -> Socio:
+        socio = make_socio(
+            legajo=str(nro_socio), role=role, social_year=social_year, is_enabled=is_enabled
+        )
+        legacy = create_legacy_record(
+            LegacySocio,
+            nroSocio=nro_socio,
+            apellido=socio.last_name,
+            nombre=socio.first_name,
+            anoSocial=social_year,
+            idTipoSocio=cargo,
+            user_id=socio.user_id if linked else None,
+        )
+        if grupo is not None:
+            create_legacy_record(
+                SocioEstadoHistorial,
+                idGrupo=grupo,
+                socio=legacy,
+                fechaHora=datetime(2026, 3, 1, tzinfo=timezone.utc),
+                codEstadoSocio=1,
+                socio_motivoCambioEstado=1,
+            )
+        return socio
+
+    return _make
+
+
+@pytest.fixture
+def tribunal_nomina(make_legacy_socio) -> dict[str, Socio]:
+    """Nómina estatutaria completa: un titular y un suplente por 4.º, 5.º y 6.º año."""
+    return {
+        "t4": make_legacy_socio(81004, 4, CARGO_TITULAR_TD, Role.TD, grupo=59),
+        "s4": make_legacy_socio(82004, 4, CARGO_SUPLENTE_TD, Role.TD, grupo=59),
+        "t5": make_legacy_socio(81005, 5, CARGO_TITULAR_TD, Role.TD, grupo=58),
+        "s5": make_legacy_socio(82005, 5, CARGO_SUPLENTE_TD, Role.TD, grupo=58),
+        "t6": make_legacy_socio(81006, 6, CARGO_TITULAR_TD, Role.TD, grupo=57),
+        "s6": make_legacy_socio(82006, 6, CARGO_SUPLENTE_TD, Role.TD, grupo=57),
+    }

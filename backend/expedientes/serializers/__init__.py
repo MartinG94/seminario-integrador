@@ -925,6 +925,13 @@ class EmitirT01Serializer(serializers.Serializer):
                 logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
 
         solicitud.save()
+        if solicitud.expediente_id:
+            from expedientes.services.tribunal_composition_service import (
+                TribunalCompositionService,
+            )
+
+            # El solicitante también es parte interesada (Art. 24 RPD).
+            TribunalCompositionService.notify_if_ad_hoc(solicitud.expediente)
         return solicitud
 
 
