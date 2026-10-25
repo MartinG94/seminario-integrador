@@ -1,13 +1,20 @@
 """Pruebas del servicio de valoración extraordinaria T03 (S4-03)."""
 
+from dataclasses import asdict
+from datetime import UTC, datetime
+
 import pytest
 
 from expedientes.domain.t03_valuation import TribunalCondition
 from expedientes.models import (
+    CambioEstadoExpediente,
     DescargoExpediente,
     EstadoExpedienteEnum,
+    Expediente,
+    SolicitudT01,
     TipoDescargoEnum,
     ValoracionT03,
+    ValoracionT03Antecedente,
 )
 from expedientes.services.t03_valuation_service import (
     T03ValuationNotFound,
@@ -46,6 +53,22 @@ def register(descargo: DescargoExpediente, member, **overrides) -> ValoracionT03
     }
     params.update(overrides)
     return T03ValuationService.register(**params)
+
+
+@pytest.fixture
+def make_expediente(t03_descargo):
+    """Crea un expediente del mismo imputado en el estado indicado."""
+
+    def _make(numero: str, estado: str = EstadoExpedienteEnum.EMITIDO, **fields) -> Expediente:
+        return Expediente.objects.create(
+            numero=numero,
+            socio=t03_descargo.socio,
+            motivo=fields.pop("motivo", f"Causa {numero}"),
+            estado=estado,
+            **fields,
+        )
+
+    return _make
 
 
 class TestRegisterValuation:
@@ -195,3 +218,200 @@ class TestRegisterValuation:
         with pytest.raises(T03ValuationNotFound):
             register(t03_descargo, tribunal_member, descargo_id=causal_descargo.id)
         assert not ValoracionT03.objects.exists()
+
+
+class TestAntecedents:
+    """RF-11 a RF-14: vínculo a expedientes emitidos, revalidado en el servicio."""
+
+    def test_links_emitted_antecedents_with_number_copy(
+        self, t03_descargo, tribunal_member, make_expediente
+    ) -> None:
+        first = make_expediente("EXP-0702/2026")
+        second = make_expediente("EXP-0703/2026")
+
+        valuation = register(t03_descargo, tribunal_member, antecedente_ids=[second.id, first.id])
+
+        links = list(
+            ValoracionT03Antecedente.objects.filter(valoracion=valuation).values_list(
+                "expediente_antecedente_id", "numero_antecedente"
+            )
+        )
+        assert links == [(second.id, "EXP-0703/2026"), (first.id, "EXP-0702/2026")]
+
+    def test_antecedent_of_same_socio_in_another_case_is_valid(
+        self, t03_descargo, tribunal_member, make_expediente
+    ) -> None:
+        own_history = make_expediente("EXP-0704/2026")
+
+        valuation = register(t03_descargo, tribunal_member, antecedente_ids=[own_history.id])
+
+        assert valuation.antecedentes.get().expediente_antecedente_id == own_history.id
+
+    def test_rejects_unknown_antecedent_without_recording(
+        self, t03_descargo, tribunal_member, make_expediente
+    ) -> None:
+        valid = make_expediente("EXP-0702/2026")
+
+        with pytest.raises(T03ValuationValidationError, match="emitido"):
+            register(t03_descargo, tribunal_member, antecedente_ids=[valid.id, 999999])
+        assert not ValoracionT03.objects.exists()
+        assert not ValoracionT03Antecedente.objects.exists()
+
+    @pytest.mark.parametrize(
+        "estado",
+        [
+            EstadoExpedienteEnum.CREADO,
+            EstadoExpedienteEnum.JUSTIFICANDO,
+            EstadoExpedienteEnum.REVISION_RESOLUCION,
+            EstadoExpedienteEnum.ESPERA_RESOLUCION,
+            EstadoExpedienteEnum.PENDIENTE_CORREOS,
+        ],
+    )
+    def test_rejects_antecedent_not_emitted_without_recording(
+        self, t03_descargo, tribunal_member, make_expediente, estado
+    ) -> None:
+        not_emitted = make_expediente("EXP-0705/2026", estado=estado)
+
+        with pytest.raises(T03ValuationValidationError, match="emitido"):
+            register(t03_descargo, tribunal_member, antecedente_ids=[not_emitted.id])
+        assert not ValoracionT03.objects.exists()
+        assert not ValoracionT03Antecedente.objects.exists()
+
+    def test_rejects_repeated_antecedent_without_recording(
+        self, t03_descargo, tribunal_member, make_expediente
+    ) -> None:
+        emitted = make_expediente("EXP-0702/2026")
+
+        with pytest.raises(T03ValuationValidationError, match="repetido"):
+            register(t03_descargo, tribunal_member, antecedente_ids=[emitted.id, emitted.id])
+        assert not ValoracionT03.objects.exists()
+
+    def test_rejects_own_expediente_without_recording(self, t03_descargo, tribunal_member) -> None:
+        with pytest.raises(T03ValuationValidationError, match="mismo expediente"):
+            register(t03_descargo, tribunal_member, antecedente_ids=[t03_descargo.expediente_id])
+        assert not ValoracionT03.objects.exists()
+
+    def test_link_keeps_only_reference_never_content(
+        self, t03_descargo, tribunal_member, make_expediente
+    ) -> None:
+        emitted = make_expediente("EXP-0702/2026")
+
+        valuation = register(t03_descargo, tribunal_member, antecedente_ids=[emitted.id])
+
+        link = ValoracionT03Antecedente.objects.filter(valoracion=valuation).values().get()
+        assert set(link) == {
+            "id",
+            "valoracion_id",
+            "expediente_antecedente_id",
+            "numero_antecedente",
+        }
+
+
+class TestLookupAntecedent:
+    """RF-16 y RF-20: ficha mínima del antecedente, sin datos del descargo ni evidencia."""
+
+    @pytest.mark.parametrize("text", ["904/2026", "0904/2026", "EXP-0904/2026", " exp-904/2026 "])
+    def test_finds_emitted_case_by_any_accepted_number(self, make_expediente, text) -> None:
+        emitted = make_expediente("EXP-0904/2026", motivo="Inasistencia a la reunión plenaria")
+
+        card = T03ValuationService.lookup_antecedent(text)
+
+        assert card.id == emitted.id
+        assert card.numero == "EXP-0904/2026"
+        assert card.motivo == "Inasistencia a la reunión plenaria"
+
+    def test_emission_date_is_last_transition_to_emitido(self, make_expediente) -> None:
+        emitted = make_expediente("EXP-0904/2026")
+        first = CambioEstadoExpediente.objects.create(
+            expediente=emitted,
+            estado_anterior=EstadoExpedienteEnum.PENDIENTE_CORREOS,
+            estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+        )
+        last = CambioEstadoExpediente.objects.create(
+            expediente=emitted,
+            estado_anterior=EstadoExpedienteEnum.PENDIENTE_CORREOS,
+            estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+        )
+        other = CambioEstadoExpediente.objects.create(
+            expediente=emitted,
+            estado_anterior=EstadoExpedienteEnum.CREADO,
+            estado_nuevo=EstadoExpedienteEnum.JUSTIFICANDO,
+        )
+        CambioEstadoExpediente.objects.filter(pk=first.pk).update(
+            fecha_hora=datetime(2026, 9, 1, 12, tzinfo=UTC)
+        )
+        CambioEstadoExpediente.objects.filter(pk=last.pk).update(
+            fecha_hora=datetime(2026, 9, 15, 12, tzinfo=UTC)
+        )
+        CambioEstadoExpediente.objects.filter(pk=other.pk).update(
+            fecha_hora=datetime(2026, 10, 1, 12, tzinfo=UTC)
+        )
+
+        card = T03ValuationService.lookup_antecedent("904/2026")
+
+        assert card.fecha_emision == datetime(2026, 9, 15, 12, tzinfo=UTC)
+
+    def test_emission_date_falls_back_to_updated_at(self, make_expediente) -> None:
+        emitted = make_expediente("EXP-0904/2026")
+
+        card = T03ValuationService.lookup_antecedent("904/2026")
+
+        assert card.fecha_emision == Expediente.objects.get(pk=emitted.pk).updated_at
+
+    def test_regulation_comes_from_t01_request(self, make_expediente, make_socio) -> None:
+        emitted = make_expediente("EXP-0904/2026")
+        SolicitudT01.objects.create(
+            solicitante=make_socio(legajo="77010"),
+            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+            causal="Art. 86 del Reglamento Interno",
+            puntos=-1,
+            destinatarios_socios_ids=[emitted.socio_id],
+            estado=SolicitudT01.Estado.ISSUED,
+            expediente=emitted,
+        )
+
+        card = T03ValuationService.lookup_antecedent("904/2026")
+
+        assert card.reglamento_invocado == "Art. 86 del Reglamento Interno"
+
+    def test_not_emitted_case_is_not_found(self, make_expediente) -> None:
+        make_expediente("EXP-0904/2026", estado=EstadoExpedienteEnum.PENDIENTE_CORREOS)
+
+        with pytest.raises(T03ValuationNotFound, match="No hay un expediente emitido"):
+            T03ValuationService.lookup_antecedent("904/2026")
+
+    def test_unknown_case_is_not_found(self) -> None:
+        with pytest.raises(T03ValuationNotFound, match="No hay un expediente emitido"):
+            T03ValuationService.lookup_antecedent("904/2026")
+
+    @pytest.mark.parametrize("text", ["", "   ", "904", "abc/2026"])
+    def test_malformed_number_is_rejected(self, text) -> None:
+        with pytest.raises(T03ValuationValidationError, match="número de expediente"):
+            T03ValuationService.lookup_antecedent(text)
+
+    def test_card_of_medical_case_has_no_descargo_text_causal_or_evidence(
+        self, make_expediente, make_evidencia
+    ) -> None:
+        emitted = make_expediente("EXP-0904/2026", motivo="Inasistencia a la reunión plenaria")
+        socio = emitted.socio
+        descargo = DescargoExpediente.objects.create(
+            expediente=emitted,
+            socio=socio,
+            tipo=TipoDescargoEnum.T02_CERTIFICADO,
+            causal="Enfermedad certificada: gastroenteritis aguda",
+            texto="Adjunto certificado médico con diagnóstico y reposo.",
+        )
+        make_evidencia(emitted, socio, descargo=descargo, nombre="certificado-medico.pdf")
+
+        card = T03ValuationService.lookup_antecedent("904/2026")
+
+        assert set(asdict(card)) == {
+            "id",
+            "numero",
+            "fecha_emision",
+            "motivo",
+            "reglamento_invocado",
+        }
+        rendered = repr(asdict(card)).lower()
+        for sensitive in ("gastroenteritis", "certificado", "diagnóstico", "reposo"):
+            assert sensitive not in rendered
