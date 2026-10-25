@@ -59,9 +59,25 @@ INTERESTED_PARTY_MESSAGE = (
 )
 
 
+IMPUTADO_RESERVE_MESSAGE = (
+    "Acceso restringido: sos imputado en este expediente y no podés consultar la "
+    "valoración del Tribunal."
+)
+
+
+def imputado_socio_ids(expediente: Expediente) -> set[int]:
+    """Imputados de la causa: socio principal y coimputados (RF-24)."""
+    return {expediente.socio_id, *(socio.pk for socio in expediente.socios.all())}
+
+
+def is_imputado(expediente: Expediente, user) -> bool:
+    socio = getattr(user, "socio", None)
+    return socio is not None and socio.id in imputado_socio_ids(expediente)
+
+
 def interested_socio_ids(expediente: Expediente) -> set[int]:
     """Partes interesadas: imputados y solicitante del T01 (mismo criterio que el PR #63)."""
-    ids = {expediente.socio_id, *expediente.socios.values_list("pk", flat=True)}
+    ids = imputado_socio_ids(expediente)
     solicitante_id = (
         SolicitudT01.objects.filter(expediente=expediente)
         .values_list("solicitante_id", flat=True)

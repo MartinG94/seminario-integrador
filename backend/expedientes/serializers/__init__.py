@@ -42,6 +42,7 @@ from expedientes.serializers.evento_serializers import (
     ReportarAsistenciaSerializer,
 )
 from expedientes.services.causal_resolution_service import current_evidence_for
+from expedientes.services.t03_valuation_service import imputado_socio_ids
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
 
@@ -472,6 +473,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
         # Mismo criterio que el servicio de decisión, sobre las evidencias ya prefetcheadas.
         evidencias = list(obj.evidencias.all())
+        es_imputado = bool(socio) and socio.pk in imputado_socio_ids(obj)
 
         result = []
         for d in descargos_list:
@@ -498,8 +500,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 item["decisiones_causal"] = DecisionCausalSerializer(
                     d.decisiones_causal.all(), many=True
                 ).data
-            # La valoración del T03 también es deliberación reservada (S4-03, RF-21 a RF-24).
-            if is_authority and d.tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
+            # La valoración del T03 también es deliberación reservada (S4-03, RF-21 a RF-24):
+            # ni siquiera una autoridad la ve si es imputada en la causa.
+            if is_authority and not es_imputado and d.tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
                 item["valoraciones_t03"] = ValoracionT03Serializer(
                     d.valoraciones_t03.all(), many=True
                 ).data

@@ -11,6 +11,7 @@ from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    SolicitudT01,
     TipoDescargoEnum,
     ValoracionT03,
     ValoracionT03Antecedente,
@@ -396,3 +397,85 @@ class TestCaseDetailValuations:
         with django_assert_num_queries(baseline):
             response = client.get("/api/v1/expedientes/gestion/")
         assert all(e["descargos"][0]["valoraciones_t03"] for e in response.data)
+
+
+class TestValuationsHiddenFromImputados:
+    """RF-24: un imputado de la causa no ve la valoración, tenga el rol que tenga."""
+
+    @pytest.fixture
+    def valued(self, t03_descargo, tribunal_member) -> None:
+        assert _post(tribunal_member.user, t03_descargo).status_code == 201
+
+    @staticmethod
+    def _co_imputado(t03_descargo, make_socio, role: str, legajo: str):
+        member = make_socio(legajo=legajo, role=role)
+        t03_descargo.expediente.socios.add(member)
+        return member
+
+    @pytest.mark.parametrize("role", [Role.TD, Role.CD, Role.ADMIN])
+    def test_co_imputado_authority_does_not_see_valuations_in_detail(
+        self, t03_descargo, valued, make_socio, role
+    ) -> None:
+        member = self._co_imputado(t03_descargo, make_socio, role, "77070")
+
+        response = _client(member.user).get(f"/api/v1/expedientes/{t03_descargo.expediente_id}/")
+
+        assert response.status_code == status.HTTP_200_OK
+        item = {d["id"]: d for d in response.data["descargos"]}[t03_descargo.id]
+        assert "valoraciones_t03" not in item
+        assert GROUNDS not in repr(response.data)
+
+    def test_main_imputado_authority_does_not_see_valuations(self, t03_descargo, valued) -> None:
+        imputado = t03_descargo.socio
+        imputado.role = Role.TD
+        imputado.save(update_fields=["role"])
+
+        detail = _client(imputado.user).get(f"/api/v1/expedientes/{t03_descargo.expediente_id}/")
+        listed = _client(imputado.user).get(_url(t03_descargo))
+
+        assert GROUNDS not in repr(detail.data)
+        assert listed.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_co_imputado_member_does_not_see_valuations_in_listing(
+        self, t03_descargo, valued, make_socio
+    ) -> None:
+        member = self._co_imputado(t03_descargo, make_socio, Role.TD, "77071")
+
+        response = _client(member.user).get("/api/v1/expedientes/gestion/")
+
+        assert response.status_code == status.HTTP_200_OK
+        case = next(e for e in response.data if e["id"] == t03_descargo.expediente_id)
+        assert all("valoraciones_t03" not in d for d in case["descargos"])
+        assert GROUNDS not in repr(response.data)
+
+    @pytest.mark.parametrize("role", [Role.TD, Role.CD, Role.ADMIN])
+    def test_co_imputado_authority_gets_403_on_history(
+        self, t03_descargo, valued, make_socio, role
+    ) -> None:
+        member = self._co_imputado(t03_descargo, make_socio, role, "77072")
+
+        response = _client(member.user).get(_url(t03_descargo))
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "imputado" in response.data["detail"]
+
+    def test_t01_requester_member_still_sees_valuations(
+        self, t03_descargo, valued, make_socio
+    ) -> None:
+        requester = make_socio(legajo="77073", role=Role.TD)
+        SolicitudT01.objects.create(
+            solicitante=requester,
+            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+            puntos=-1,
+            destinatarios_socios_ids=[t03_descargo.socio_id],
+            estado=SolicitudT01.Estado.ISSUED,
+            expediente=t03_descargo.expediente,
+        )
+
+        history = _client(requester.user).get(_url(t03_descargo))
+        detail = _client(requester.user).get(f"/api/v1/expedientes/{t03_descargo.expediente_id}/")
+
+        assert history.status_code == status.HTTP_200_OK
+        assert [v["version"] for v in history.data] == [1]
+        item = {d["id"]: d for d in detail.data["descargos"]}[t03_descargo.id]
+        assert [v["version"] for v in item["valoraciones_t03"]] == [1]

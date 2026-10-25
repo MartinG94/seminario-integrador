@@ -80,11 +80,13 @@ from expedientes.services.opening_notification_service import (
     OpeningNotificationService,
 )
 from expedientes.services.t03_valuation_service import (
+    IMPUTADO_RESERVE_MESSAGE,
     T03ValuationForbidden,
     T03ValuationNotFound,
     T03ValuationService,
     T03ValuationStateError,
     T03ValuationValidationError,
+    is_imputado,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
@@ -734,6 +736,8 @@ class ValoracionT03View(APIView):
             descargo = T03ValuationService.get_descargo(pk, descargo_id)
         except T03ValuationNotFound as exc:
             raise NotFound(str(exc)) from exc
+        if is_imputado(descargo.expediente, request.user):
+            return Response({"detail": IMPUTADO_RESERVE_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
         valoraciones = (
             descargo.valoraciones_t03.select_related("autor")
             .prefetch_related("antecedentes")
