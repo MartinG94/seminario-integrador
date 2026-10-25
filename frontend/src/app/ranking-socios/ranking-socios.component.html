@@ -4,37 +4,22 @@
     <!-- Tabla Principal de Ranking -->
     <div class="row">
       <div class="col-md-12">
-        <div class="card card-nav-tabs shadow-sm">
-          <!-- Cabecera de Pestañas estilo AVEIT (Teal) -->
-          <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
-            <div class="nav-tabs-wrapper">
-              <ul class="nav nav-tabs">
-                <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="tabActiva === 'general'" 
-                     (click)="setTab('general')" 
-                     href="javascript:void(0)"
-                     role="tab">
-                    <i class="material-icons">leaderboard</i> PADRÓN GENERAL
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="tabActiva === 'alertas'" 
-                     (click)="setTab('alertas')" 
-                     href="javascript:void(0)"
-                     role="tab">
-                    <i class="material-icons">warning</i> ALERTA DISCIPLINARIA
-                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="cantidadSociosEnAlerta > 0">
-                      {{ cantidadSociosEnAlerta }}
-                    </span>
-                  </a>
-                </li>
-              </ul>
+        <div class="card shadow-sm">
+          <!-- Cabecera Institucional estilo AVEIT (Teal) sin pestañas forzadas -->
+          <div class="card-header card-header-tabs-teal d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+              <h4 class="card-title text-white font-weight-bold mb-0">Ranking Disciplinario de Socios</h4>
+              <p class="card-category text-white-50 mb-0">Cómputo neto de méritos, apercibimientos y consulta de expedientes de socios.</p>
             </div>
-            <div class="text-white-50 d-none d-md-block small">
-              <span *ngIf="tabActiva === 'general'">Cómputo neto de méritos y consulta de expedientes de socios</span>
-              <span *ngIf="tabActiva === 'alertas'">Socios en alerta preventiva (-7 pts) o cese estatutario (-10 pts)</span>
+            <div class="d-flex align-items-center gap-2" *ngIf="cantidadSociosEnAlerta > 0">
+              <span class="badge badge-pill font-weight-bold px-3 py-2"
+                    [ngClass]="soloAlertas ? 'badge-warning text-dark' : 'badge-light text-dark'"
+                    style="cursor: pointer;"
+                    (click)="toggleFiltroAlerta()"
+                    title="Clic para filtrar socios en alerta disciplinaria (saldo <= -7 pts)">
+                <i class="material-icons align-middle mr-1" [ngClass]="soloAlertas ? 'text-dark' : 'text-warning'" style="font-size: 16px;">warning</i>
+                {{ cantidadSociosEnAlerta }} en alerta
+              </span>
             </div>
           </div>
 

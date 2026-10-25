@@ -39,7 +39,14 @@ export class RankingSociosComponent implements OnInit {
   tamanoPagina = 10;
   opcionesTamano = [10, 25, 50, 100, 0];
 
-  tabActiva: 'general' | 'alertas' = 'general';
+  soloAlertas = false;
+
+  get tabActiva(): 'general' | 'alertas' {
+    return this.soloAlertas ? 'alertas' : 'general';
+  }
+  set tabActiva(val: 'general' | 'alertas') {
+    this.soloAlertas = val === 'alertas';
+  }
 
   cargando = false;
   error: string | null = null;
@@ -244,8 +251,13 @@ export class RankingSociosComponent implements OnInit {
     return 'Habilitado Regular';
   }
 
+  toggleFiltroAlerta(): void {
+    this.soloAlertas = !this.soloAlertas;
+    this.paginaActual = 1;
+  }
+
   setTab(tab: 'general' | 'alertas'): void {
-    this.tabActiva = tab;
+    this.soloAlertas = tab === 'alertas';
     this.paginaActual = 1;
   }
 
@@ -256,7 +268,7 @@ export class RankingSociosComponent implements OnInit {
   get sociosOrdenados(): RankingSocio[] {
     let list = [...this.socios];
 
-    if (this.tabActiva === 'alertas') {
+    if (this.soloAlertas) {
       list = list.filter((s) => s.saldo <= RANKING_THRESHOLDS.alerta);
     }
 

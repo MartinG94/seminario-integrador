@@ -33,53 +33,15 @@
     <!-- Tabla Principal de Causas con Pestañas Teal AVEIT -->
     <div class="row">
       <div class="col-md-12">
-        <div class="card card-nav-tabs shadow-sm">
-          <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
-            <div class="nav-tabs-wrapper">
-              <ul class="nav nav-tabs">
-                <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="filtroTab === 'todos'" 
-                     (click)="setFiltroTab('todos')" 
-                     href="javascript:void(0)"
-                     role="tab">
-                    <i class="material-icons">folder_open</i> TODOS LOS EXPEDIENTES
-                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="misExpedientes.length > 0">
-                      {{ misExpedientes.length }}
-                    </span>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="filtroTab === 'en_tramite'" 
-                     (click)="setFiltroTab('en_tramite')" 
-                     href="javascript:void(0)"
-                     role="tab">
-                    <i class="material-icons">pending_actions</i> EN TRÁMITE
-                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="cantidadEnTramite > 0">
-                      {{ cantidadEnTramite }}
-                    </span>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="filtroTab === 'resueltos'" 
-                     (click)="setFiltroTab('resueltos')" 
-                     href="javascript:void(0)"
-                     role="tab">
-                    <i class="material-icons">task_alt</i> RESUELTOS
-                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="cantidadResueltos > 0">
-                      {{ cantidadResueltos }}
-                    </span>
-                  </a>
-                </li>
-              </ul>
+        <div class="card shadow-sm">
+          <div class="card-header card-header-tabs-teal d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+              <h4 class="card-title text-white font-weight-bold mb-0">Mis Expedientes y Descargos</h4>
+              <p class="card-category text-white-50 mb-0">Historial y estado de causas disciplinarias asociadas a tu legajo.</p>
             </div>
-            <div class="text-white-50 d-none d-md-block small">
-              <span *ngIf="filtroTab === 'todos'">Historial integral de causas disciplinarias y descargos</span>
-              <span *ngIf="filtroTab === 'en_tramite'">Expedientes activos con plazo o descargos pendientes</span>
-              <span *ngIf="filtroTab === 'resueltos'">Causas archivadas con resolución formal emitida</span>
-            </div>
+            <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="misExpedientes.length > 0">
+              {{ misExpedientes.length }} expedientes
+            </span>
           </div>
           <div class="card-body">
             <div *ngIf="misExpedientes.length === 0" class="text-center py-5">

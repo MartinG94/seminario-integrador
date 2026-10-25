@@ -498,6 +498,7 @@ describe('RankingSociosComponent', () => {
 
     const cabeceraTeal = fixture.nativeElement.querySelector('.card-header-tabs-teal');
     expect(cabeceraTeal).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.nav-tabs')).toBeNull();
 
     component.setTab('alertas');
     fixture.detectChanges();
