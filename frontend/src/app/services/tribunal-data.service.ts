@@ -254,7 +254,7 @@ export class TribunalDataService {
         aprobado: true
       },
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal)'],
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)'],
         hashCriptografico: '',
         timestamp: ''
       }
@@ -279,7 +279,7 @@ export class TribunalDataService {
         { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541', grupo: '60', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Presidente TD', 'Vocal 1', 'Vocal 2'],
+        juecesFirmantes: ['Presidente TD', 'Miembro Titular 1', 'Miembro Titular 2'],
         hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
         timestamp: '2026-02-22 18:30:12'
       }
@@ -349,7 +349,7 @@ export class TribunalDataService {
         { id: '5', nombre: 'Axel René Villegas', legajo: '403655', grupo: '59', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)', 'Ing. Rossi (Miembro Titular)'],
         hashCriptografico: 'sha256-abc123789fed456',
         timestamp: '2026-03-05 11:20:00'
       }

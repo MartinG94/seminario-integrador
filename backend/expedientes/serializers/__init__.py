@@ -602,7 +602,7 @@ class DecisionCausalSerializer(serializers.ModelSerializer):
 
 
 class RegistrarDecisionCausalSerializer(serializers.Serializer):
-    """Payload de la decisión del vocal sobre una causal T02."""
+    """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
     fundamento = serializers.CharField(

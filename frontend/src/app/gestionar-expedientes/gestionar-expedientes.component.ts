@@ -103,8 +103,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   // Votación
   votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {
     'Dr. Argañaraz (Presidente TD)': 'FAVORABLE',
-    'Dra. Bustos (Vocal 1)': 'FAVORABLE',
-    'Ing. Rossi (Vocal 2)': 'DESFAVORABLE'
+    'Dra. Bustos (Miembro Titular)': 'FAVORABLE',
+    'Ing. Rossi (Miembro Titular)': 'DESFAVORABLE'
   };
   considerandosTexto = 'Por cuanto las pruebas documentales aportadas y la constancia de asistencia demuestran la concurrencia de la causal invocada.';
 
@@ -112,8 +112,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   juezFirmando = 'Dr. Argañaraz (Presidente TD)';
   juecesDisponibles = [
     'Dr. Argañaraz (Presidente TD)',
-    'Dra. Bustos (Vocal 1)',
-    'Ing. Rossi (Vocal 2)'
+    'Dra. Bustos (Miembro Titular)',
+    'Ing. Rossi (Miembro Titular)'
   ];
 
   failedToLoadBoard = false;
@@ -580,7 +580,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteApi.registrarDecisionCausal(this.expedienteSeleccionado.id, descargo.id, {
       decision: borrador.decision,
       fundamento,
-      // Se valoran los comprobantes vigentes que el vocal puede inspeccionar en el panel.
+      // Se valoran los comprobantes vigentes que el miembro del TD puede inspeccionar en el panel.
       evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
     }).subscribe({
       next: decision => {

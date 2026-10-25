@@ -58,7 +58,7 @@ class CanTransitionExpedientes(HasAnyRole):
 
 
 class CanResolveCausal(HasAnyRole):
-    """Sólo los vocales del Tribunal resuelven causales T02 (S4-02)."""
+    """Sólo los miembros del Tribunal resuelven causales T02 (S4-02)."""
 
     allowed_roles = (Role.TD,)
 
