@@ -6,8 +6,8 @@ Garantizar que la causa la juzguen sólo miembros habilitados del Tribunal de Di
 
 - **Referencia Backlog:** S4-04 / SCRUM-54 (EP4, Sprint 4, 3 SP, prioridad Highest) — `docs/gestion-proyecto/jira_backlog_import_v2.csv`.
 - **Referencia Normativa:** Estatuto AVEIT Reforma 2026, arts. 92, 93, 95 y 96; Reglamento Procesal 2026, arts. 7, 12 y 24.
-- **Referencia Rectora:** [Notas del PO (27/09/2026 y 07/10/2026)](../../docs/gestion-proyecto/notasPO.md) — bloque "Responsables del Tribunal" y pie de firma `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]`.
-- **Revisión del PO sobre el PR #63 (23/10/2026):** simplificación KISS: inhibición estricta de involucrados, suplencia automática, aviso a CD y Resolución por Asamblea Extraordinaria; se suprimen el apartamiento voluntario, la designación ad hoc manual y la constitución manual.
+- **Referencia Rectora:** [Notas del PO (27/09/2026 y 07/10/2026)](../../docs/gestion-proyecto/notasPO.md) — pie de firma `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]` al emitir resolución.
+- **Revisión del PO sobre el PR #63 (23/10/2026 y 25/10/2026):** simplificación KISS: remoción total del panel visual 'Responsables del Tribunal' en el detalle del expediente; inhibición estricta de involucrados (imputado o solicitante) en backend (403) y UI; suplencia automática transparente; aviso por correo a CD (`cd@aveit.org`) por mayoría de TD o ambos miembros del año involucrados; y formalización de la relación Promociones vs. Años Sociales mediante $\text{Año Social} = (\text{Año Actual} - 1962) - \text{Número de Grupo}$ (fundación 1965, en 2026 G58 es 6.º año social Seniors y en 2027 viaja a Europa como exviajero).
 - **Dependencias:** padrón legado `socio_lista` (cargo en `idTipoSocio`, año social en `anoSocial`), [Spec 006](../006-resolver-causal-t02/spec.md) y Outbox de correos (`notifications`).
 - **Sistema de Diseño:** [DESIGN.md](../../DESIGN.md).
 
