@@ -42,49 +42,48 @@
         </div>
       </div>
       <div class="card-body p-3">
-
         <!-- Barra de Filtros en una Sola Línea (CA2 / S3-07) -->
-        <div class="filtros-bar d-flex flex-wrap flex-xl-nowrap align-items-center gap-2 py-2 w-100">
-          <!-- 1. Búsqueda sin etiqueta -->
-          <div class="filtro-item flex-grow-1" style="min-width: 220px;">
+        <div class="filtros-bar d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between py-2 w-100">
+          <!-- 1. Búsqueda compacta y dinámica -->
+          <div class="filtro-item filtro-busqueda">
             <input id="filtro-socio"
                    type="text"
                    class="form-control"
-                   placeholder="Buscar por socio, legajo, creador o título..."
+                   placeholder="Buscar por socio, legajo o título..."
                    [(ngModel)]="filtroSocio"
                    (keyup.enter)="cargarDatosTablero()"
                    aria-label="Buscar por socio, legajo, creador o título">
           </div>
 
           <!-- 2. Estado -->
-          <div class="filtro-item d-flex align-items-center" style="width: 155px; flex-shrink: 0;">
-            <label class="text-muted small font-weight-bold mr-2 mb-0" for="filtro-estado">Estado:</label>
+          <div class="filtro-item filtro-control-select">
+            <label class="filtro-label" for="filtro-estado">Estado:</label>
             <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado">
               <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
             </select>
           </div>
 
           <!-- 3. Urgencia -->
-          <div class="filtro-item d-flex align-items-center" style="width: 145px; flex-shrink: 0;">
-            <label class="text-muted small font-weight-bold mr-2 mb-0" for="filtro-urgencia">Urgencia:</label>
+          <div class="filtro-item filtro-control-select">
+            <label class="filtro-label" for="filtro-urgencia">Urgencia:</label>
             <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia">
               <option *ngFor="let urg of urgenciasDisponibles" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
 
           <!-- 4. Fecha Desde ("Desde:") -->
-          <div class="filtro-item d-flex align-items-center" style="width: 160px; flex-shrink: 0;">
-            <label class="text-muted small font-weight-bold mr-2 mb-0" for="filtro-desde">Desde:</label>
+          <div class="filtro-item filtro-control-date">
+            <label class="filtro-label" for="filtro-desde">Desde:</label>
             <input id="filtro-desde" type="date" class="form-control" [(ngModel)]="filtroFechaDesde">
           </div>
 
           <!-- 5. Fecha Hasta ("Hasta:") -->
-          <div class="filtro-item d-flex align-items-center" style="width: 160px; flex-shrink: 0;">
-            <label class="text-muted small font-weight-bold mr-2 mb-0" for="filtro-hasta">Hasta:</label>
+          <div class="filtro-item filtro-control-date">
+            <label class="filtro-label" for="filtro-hasta">Hasta:</label>
             <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta">
           </div>
 
-          <!-- 6. Botones de Filtrado y Limpieza (Anti-Desbordamiento) -->
+          <!-- 6. Botones de Filtrado y Limpieza -->
           <div class="filtro-acciones d-flex align-items-center flex-shrink-0">
             <button mat-raised-button
                     class="btn btn-primary btn-sm m-0 px-3"
@@ -102,7 +101,6 @@
             </button>
           </div>
         </div>
-    </div>
 
     <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (Ciclo de Vida Canónico S2-05) -->
     <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de estados">

@@ -324,17 +324,65 @@ body.dark-edition {
 // Barra de Filtros Compacta en una Sola Línea
 // ==========================================
 .filtros-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   overflow-x: auto;
   scrollbar-width: thin;
-  padding-bottom: 2px;
+  padding: 8px 4px;
 
-  .form-control {
-    height: 38px;
-    padding: 6px 10px;
-    font-size: 0.85rem;
+  .filtro-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 4px;
+    flex-shrink: 0;
+
+    .filtro-label {
+      margin-bottom: 0;
+      margin-right: 8px;
+      white-space: nowrap;
+      font-weight: 600;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .form-control {
+      height: 38px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+    }
+  }
+
+  // Buscador acotado dinámico (a la mitad o menos)
+  .filtro-busqueda {
+    flex: 1 1 auto;
+    min-width: 180px;
+    max-width: 260px;
+
+    .form-control {
+      width: 100%;
+    }
+  }
+
+  .filtro-control-select {
+    select.form-control {
+      width: 110px;
+    }
+  }
+
+  .filtro-control-date {
+    input.form-control {
+      width: 135px;
+    }
   }
 
   .filtro-acciones {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 6px;
+
     .btn {
       height: 38px;
       display: inline-flex;
