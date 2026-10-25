@@ -105,3 +105,32 @@ def multiactor(causal_descargo, make_socio, make_evidencia) -> dict:
         ),
         "ajena_huerfana": make_evidencia(expediente, otro, nombre="ajena-huerfana.pdf"),
     }
+
+
+# --- S4-03: valoración extraordinaria del T03 -----------------------------------
+
+
+@pytest.fixture
+def tribunal_member(make_socio) -> Socio:
+    """Miembro del Tribunal de Disciplina ajeno a la causa."""
+    return make_socio(legajo="77002", role=Role.TD, social_year=5)
+
+
+@pytest.fixture
+def t03_descargo(make_socio) -> DescargoExpediente:
+    """Descargo T03 vigente de un imputado, en un expediente en revisión."""
+    imputado = make_socio(legajo="77001", role=Role.SOCIO)
+    expediente = Expediente.objects.create(
+        numero="EXP-0701/2026",
+        socio=imputado,
+        motivo="Ausencia a la asamblea extraordinaria",
+        estado=EstadoExpedienteEnum.REVISION_RESOLUCION,
+    )
+    expediente.socios.add(imputado)
+    return DescargoExpediente.objects.create(
+        expediente=expediente,
+        socio=imputado,
+        tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
+        causal="Causa extraordinaria no contemplada",
+        texto="Un corte de ruta impidió llegar a la sede a tiempo.",
+    )
