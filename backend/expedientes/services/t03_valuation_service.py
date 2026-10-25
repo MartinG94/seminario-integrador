@@ -19,6 +19,7 @@ from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    SolicitudT01,
     TipoDescargoEnum,
     ValoracionT03,
     ValoracionT03Antecedente,
@@ -45,6 +46,35 @@ class T03ValuationStateError(T03ValuationServiceError):
 
 class T03ValuationValidationError(T03ValuationServiceError):
     pass
+
+
+class T03ValuationForbidden(T03ValuationServiceError):
+    pass
+
+
+INTERESTED_PARTY_MESSAGE = (
+    "Participación restringida: sos parte interesada en este expediente (imputado o "
+    "solicitante) y no podés valorar el descargo, conforme al Art. 95 del Estatuto y "
+    "al Art. 24 del Reglamento Procesal."
+)
+
+
+def interested_socio_ids(expediente: Expediente) -> set[int]:
+    """Partes interesadas: imputados y solicitante del T01 (mismo criterio que el PR #63)."""
+    ids = {expediente.socio_id, *expediente.socios.values_list("pk", flat=True)}
+    solicitante_id = (
+        SolicitudT01.objects.filter(expediente=expediente)
+        .values_list("solicitante_id", flat=True)
+        .first()
+    )
+    if solicitante_id is not None:
+        ids.add(solicitante_id)
+    return ids
+
+
+def is_interested_party(expediente: Expediente, user) -> bool:
+    socio = getattr(user, "socio", None)
+    return socio is not None and socio.id in interested_socio_ids(expediente)
 
 
 @dataclass(frozen=True)
@@ -139,6 +169,8 @@ class T03ValuationService:
         expediente = Expediente.objects.select_for_update().filter(pk=expediente_id).first()
         if expediente is None:
             raise T03ValuationNotFound("Expediente no encontrado.")
+        if is_interested_party(expediente, user):
+            raise T03ValuationForbidden(INTERESTED_PARTY_MESSAGE)
         if expediente.estado not in VALUABLE_STATES:
             raise T03ValuationStateError(
                 f"El expediente está en '{expediente.get_estado_display()}' "

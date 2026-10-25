@@ -17,6 +17,7 @@ from expedientes.models import (
     ValoracionT03Antecedente,
 )
 from expedientes.services.t03_valuation_service import (
+    T03ValuationForbidden,
     T03ValuationNotFound,
     T03ValuationService,
     T03ValuationStateError,
@@ -305,6 +306,43 @@ class TestAntecedents:
             "expediente_antecedente_id",
             "numero_antecedente",
         }
+
+
+class TestInterestedPartyInhibition:
+    """RF-26: imputados y solicitante del T01 no valoran (Estatuto Art. 95; RP 2026 Art. 24)."""
+
+    def test_main_imputado_cannot_value(self, t03_descargo) -> None:
+        imputado = t03_descargo.socio
+
+        with pytest.raises(T03ValuationForbidden, match="parte interesada"):
+            register(t03_descargo, imputado)
+        assert not ValoracionT03.objects.exists()
+
+    def test_co_imputado_member_cannot_value(self, t03_descargo, make_socio) -> None:
+        member = make_socio(legajo="77020", role=Role.TD)
+        t03_descargo.expediente.socios.add(member)
+
+        with pytest.raises(T03ValuationForbidden, match="parte interesada"):
+            register(t03_descargo, member)
+        assert not ValoracionT03.objects.exists()
+
+    def test_t01_requester_member_cannot_value(self, t03_descargo, make_socio) -> None:
+        member = make_socio(legajo="77021", role=Role.TD)
+        SolicitudT01.objects.create(
+            solicitante=member,
+            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+            puntos=-1,
+            destinatarios_socios_ids=[t03_descargo.socio_id],
+            estado=SolicitudT01.Estado.ISSUED,
+            expediente=t03_descargo.expediente,
+        )
+
+        with pytest.raises(T03ValuationForbidden, match="parte interesada"):
+            register(t03_descargo, member)
+        assert not ValoracionT03.objects.exists()
+
+    def test_unrelated_member_can_value(self, t03_descargo, tribunal_member) -> None:
+        assert register(t03_descargo, tribunal_member).version == 1
 
 
 class TestLookupAntecedent:
