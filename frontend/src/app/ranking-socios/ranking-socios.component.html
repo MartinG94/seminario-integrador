@@ -1,141 +1,267 @@
 <div class="main-content">
   <div class="container-fluid">
 
-    <!-- Leyenda de Semáforos de Alerta -->
-    <div class="row mb-3">
-      <div class="col-md-12">
-        <div class="card p-3 mb-0">
-          <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <span class="font-weight-bold text-dark">Pautas del Régimen Disciplinario:</span>
-            <div class="d-flex flex-wrap gap-4">
-              <span class="d-flex align-items-center gap-2 small">
-                <span class="badge-mat badge-mat-success">&check; Habilitado</span>
-                <span class="text-muted">Situación estatutaria en orden</span>
-              </span>
-              <span class="d-flex align-items-center gap-2 small">
-                <span class="badge-mat badge-mat-warning">&excl; Advertencia</span>
-                <span class="text-muted">Saldo menor o igual a -7.0 puntos (alerta preventiva)</span>
-              </span>
-              <span class="d-flex align-items-center gap-2 small">
-                <span class="badge-mat badge-mat-danger">&times; Cese Estatutario</span>
-                <span class="text-muted">Saldo menor o igual a -10.0 puntos (inhabilitación automática)</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Tabla Principal de Ranking -->
     <div class="row">
       <div class="col-md-12">
-        <div class="card">
-          <div class="card-header card-header-info d-flex flex-wrap justify-content-between align-items-center">
-            <div>
-              <h4 class="card-title text-white">Padrón General y Ranking de Puntos</h4>
-              <p class="card-category text-white-50">Cómputo neto de méritos, llamados de atención y estado reglamentario de los miembros.</p>
+        <div class="card card-nav-tabs shadow-sm">
+          <!-- Cabecera de Pestañas estilo AVEIT (Teal) -->
+          <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+            <div class="nav-tabs-wrapper">
+              <ul class="nav nav-tabs">
+                <li class="nav-item">
+                  <a class="nav-link" 
+                     [class.active]="tabActiva === 'general'" 
+                     (click)="setTab('general')" 
+                     href="javascript:void(0)"
+                     role="tab">
+                    <i class="material-icons">leaderboard</i> PADRÓN GENERAL
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" 
+                     [class.active]="tabActiva === 'alertas'" 
+                     (click)="setTab('alertas')" 
+                     href="javascript:void(0)"
+                     role="tab">
+                    <i class="material-icons">warning</i> ALERTA DISCIPLINARIA
+                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="cantidadSociosEnAlerta > 0">
+                      {{ cantidadSociosEnAlerta }}
+                    </span>
+                  </a>
+                </li>
+              </ul>
             </div>
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-<select class="form-control ml-2 filtro-categoria"
-                      [(ngModel)]="filtroCategoria" (ngModelChange)="paginaActual = 1">
+            <div class="text-white-50 d-none d-md-block small">
+              <span *ngIf="tabActiva === 'general'">Cómputo neto de méritos y consulta de expedientes de socios</span>
+              <span *ngIf="tabActiva === 'alertas'">Socios en alerta preventiva (-7 pts) o cese estatutario (-10 pts)</span>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <!-- Barra de Filtros -->
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+              <select class="form-control filtro-categoria"
+                      [(ngModel)]="filtroCategoria"
+                      (ngModelChange)="paginaActual = 1"
+                      aria-label="Filtrar por categoría">
                 <option value="">Todas las categorías</option>
                 <option value="ACTIVO">Activo</option>
                 <option value="PASIVO">Pasivo</option>
               </select>
 
-              <select class="form-control ml-2"
+              <select class="form-control filtro-subcomision"
                       style="width: 190px;"
-                      [(ngModel)]="filtroSubcomision" (ngModelChange)="paginaActual = 1">
+                      [(ngModel)]="filtroSubcomision"
+                      (ngModelChange)="paginaActual = 1"
+                      aria-label="Filtrar por subcomisión">
                 <option value="">Todas las subcomisiones</option>
-                <option *ngFor="let subcomision of subcomisiones"
-                        [value]="subcomision">
-                  {{subcomision}}
+                <option *ngFor="let subcomision of subcomisiones" [value]="subcomision">
+                  {{ subcomision }}
                 </option>
+                <option value="Sin Subcomisión">Sin Subcomisión</option>
               </select>
-              <div class="input-group no-border ml-2" style="width: 220px; margin: 0;">
-                <input type="text" class="form-control text-white" placeholder="Filtrar socio..." [(ngModel)]="filtroTexto" (ngModelChange)="onFiltroChange($event)" style="border-bottom-color: rgba(255,255,255,0.4);">
-              </div>
-            </div>
-          </div>
 
-          <div class="card-body">
+              <select class="form-control filtro-grupo"
+                      style="width: 150px;"
+                      [(ngModel)]="filtroGrupo"
+                      (ngModelChange)="paginaActual = 1"
+                      aria-label="Filtrar por grupo">
+                <option value="">Todos los grupos</option>
+                <option *ngFor="let grupo of grupos" [value]="grupo">
+                  {{ grupo }}
+                </option>
+                <option value="SIN_GRUPO">Sin grupo</option>
+              </select>
+
+              <select class="form-control filtro-tamano"
+                      style="width: 130px;"
+                      [(ngModel)]="tamanoPagina"
+                      (ngModelChange)="cambiarTamanoPagina($event)"
+                      aria-label="Filas por página">
+                <option [ngValue]="10">10 filas</option>
+                <option [ngValue]="25">25 filas</option>
+                <option [ngValue]="50">50 filas</option>
+                <option [ngValue]="100">100 filas</option>
+                <option [ngValue]="0">Todas</option>
+              </select>
+
+              <div class="input-group no-border" style="width: 220px; margin: 0;">
+                <input type="text"
+                       class="form-control"
+                       placeholder="Filtrar socio..."
+                       [(ngModel)]="filtroTexto"
+                       (ngModelChange)="onFiltroChange($event)"
+                       aria-label="Buscar socio por nombre, apellido o legajo">
+              </div>
+
+              <button type="button"
+                      class="btn btn-sm btn-outline-secondary ml-auto"
+                      (click)="limpiarFiltros()"
+                      title="Limpiar filtros"
+                      aria-label="Limpiar filtros">
+                Limpiar
+              </button>
+            </div>
             <div *ngIf="cargando" class="text-center text-muted py-4">
               Cargando ranking...
             </div>
 
             <div *ngIf="error && !cargando" class="text-center py-4">
-              <button type="button" class="btn btn-primary" (click)="ngOnInit()"
-                aria-label="Reintentar carga del ranking">
+              <button type="button"
+                      class="btn btn-primary"
+                      (click)="ngOnInit()"
+                      aria-label="Reintentar carga del ranking">
                 <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
               </button>
             </div>
 
-            <div *ngIf="!cargando && !error" class="table-responsive">
-              <table class="table table-hover table-mat">
+            <div *ngIf="!cargando && !error" class="table-responsive" [ngClass]="{ 'table-sticky-container': tamanoPagina === 0 }">
+              <table class="table table-hover table-mat" [ngClass]="{ 'table-sticky-header': tamanoPagina === 0 }">
                 <thead class="text-primary">
-                  <th>Posición</th>
-                  <th>Socio</th>
-                  <th>N° de Socio</th>
-                  <th>Categoría</th>
-                  <th>Subcomisión</th>
-                  <th>Grupo</th>
-                  <th class="text-center"
-                      role="button"
+                  <!-- 1. Posición -->
+                  <th role="button"
                       tabindex="0"
-                      (click)="alternarOrdenSaldo()"
-                      (keydown.enter)="alternarOrdenSaldo()"
-                      (keydown.space)="alternarOrdenSaldo(); $event.preventDefault()"
-                      title="Ordenar por saldo">
-                    Saldo
-                    <span *ngIf="ordenSaldo === 'desc'" aria-hidden="true">?</span>
-                    <span *ngIf="ordenSaldo === 'asc'" aria-hidden="true">?</span>
+                      class="sortable-th"
+                      (click)="alternarOrden('posicion')"
+                      (keydown.enter)="alternarOrden('posicion')"
+                      (keydown.space)="alternarOrden('posicion'); $event.preventDefault()"
+                      title="Ordenar por posición"
+                      [attr.aria-sort]="sortKey === 'posicion' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    Posición <i class="material-icons">{{getIconoOrden('posicion')}}</i>
                   </th>
-                  <th>Reconciliación</th>
-                  <th>Expedientes</th>
+
+                  <!-- 2. Socio -->
+                  <th role="button"
+                      tabindex="0"
+                      class="sortable-th"
+                      (click)="alternarOrden('socio')"
+                      (keydown.enter)="alternarOrden('socio')"
+                      (keydown.space)="alternarOrden('socio'); $event.preventDefault()"
+                      title="Ordenar por socio"
+                      [attr.aria-sort]="sortKey === 'socio' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    Socio <i class="material-icons">{{getIconoOrden('socio')}}</i>
+                  </th>
+
+                  <!-- 3. N° de Socio -->
+                  <th role="button"
+                      tabindex="0"
+                      class="sortable-th"
+                      (click)="alternarOrden('legajo')"
+                      (keydown.enter)="alternarOrden('legajo')"
+                      (keydown.space)="alternarOrden('legajo'); $event.preventDefault()"
+                      title="Ordenar por número de socio"
+                      [attr.aria-sort]="sortKey === 'legajo' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    N° de Socio <i class="material-icons">{{getIconoOrden('legajo')}}</i>
+                  </th>
+
+                  <!-- 4. Categoría -->
+                  <th role="button"
+                      tabindex="0"
+                      class="sortable-th"
+                      (click)="alternarOrden('categoria')"
+                      (keydown.enter)="alternarOrden('categoria')"
+                      (keydown.space)="alternarOrden('categoria'); $event.preventDefault()"
+                      title="Ordenar por categoría"
+                      [attr.aria-sort]="sortKey === 'categoria' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    Categoría <i class="material-icons">{{getIconoOrden('categoria')}}</i>
+                  </th>
+
+                  <!-- 5. Grupo -->
+                  <th role="button"
+                      tabindex="0"
+                      class="sortable-th"
+                      (click)="alternarOrden('grupo')"
+                      (keydown.enter)="alternarOrden('grupo')"
+                      (keydown.space)="alternarOrden('grupo'); $event.preventDefault()"
+                      title="Ordenar por grupo"
+                      [attr.aria-sort]="sortKey === 'grupo' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    Grupo <i class="material-icons">{{getIconoOrden('grupo')}}</i>
+                  </th>
+
+                  <!-- 6. Subcomisión -->
+                  <th role="button"
+                      tabindex="0"
+                      class="sortable-th"
+                      (click)="alternarOrden('subcomision')"
+                      (keydown.enter)="alternarOrden('subcomision')"
+                      (keydown.space)="alternarOrden('subcomision'); $event.preventDefault()"
+                      title="Ordenar por subcomisión"
+                      [attr.aria-sort]="sortKey === 'subcomision' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    Subcomisión <i class="material-icons">{{getIconoOrden('subcomision')}}</i>
+                  </th>
+
+                  <!-- 7. Saldo -->
+                  <th role="button"
+                      tabindex="0"
+                      class="text-right sortable-th"
+                      (click)="alternarOrden('saldo')"
+                      (keydown.enter)="alternarOrden('saldo')"
+                      (keydown.space)="alternarOrden('saldo'); $event.preventDefault()"
+                      title="Ordenar por saldo"
+                      [attr.aria-sort]="sortKey === 'saldo' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    Saldo <i class="material-icons">{{getIconoOrden('saldo')}}</i>
+                  </th>
+
+                  <!-- 8. Acciones -->
+                  <th class="text-center">
+                    Acciones
+                  </th>
                 </thead>
                 <tbody>
                   <tr *ngIf="sociosOrdenados.length === 0">
-                    <td colspan="9" class="text-center text-muted py-4">
+                    <td colspan="8" class="text-center text-muted py-4">
                       No se encontraron socios con los criterios seleccionados.
                     </td>
                   </tr>
-                  <tr *ngFor="let s of sociosPaginados; let i = index"
-                      (click)="abrirLegajoSocio(s)" 
+                  <tr *ngFor="let s of sociosPaginados"
+                      (click)="abrirExpedientesSocio(s)"
                       (keydown)="onRowKeyDown($event, s)"
                       tabindex="0"
                       role="button"
-                      [attr.aria-label]="'Consultar ficha de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + s.legajo"
-                      class="socio-row-clickable" 
-                      title="Clic o presione Enter/Espacio para ver ficha y antecedentes de {{s.nombre}} {{s.apellido}}">
-                    <td class="font-weight-bold text-muted">#{{((paginaActual - 1) * tamanoPagina) + i + 1}}</td>
+                      [attr.aria-label]="'Consultar expedientes de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + s.legajo"
+                      class="socio-row-clickable"
+                      [ngClass]="getRowClass(s)"
+                      title="Clic o presione Enter/Espacio para ver expedientes de {{s.nombre}} {{s.apellido}}">
+                    <!-- Posición (Fixed ranking across padrón) -->
+                    <td class="font-weight-bold text-muted tabular-nums">#{{ s.posicion }}</td>
+
+                    <!-- Socio -->
                     <td>
-                      <div class="font-weight-bold text-dark">{{s.nombre}} {{s.apellido}}</div>
+                      <div class="font-weight-bold text-dark">{{ s.nombre }} {{ s.apellido }}</div>
+                      <span class="sr-only" *ngIf="s.saldo <= -10">Límite de cese estatutario</span>
+                      <span class="sr-only" *ngIf="s.saldo > -10 && s.saldo <= -7">Alerta preventiva</span>
                     </td>
-                    <td>{{s.legajo}}</td>
-                    <td>{{s.categoria}}</td>
-                    <td>{{s.subcomision}}</td>
-                    <td>{{s.grupo || 'Sin grupo'}}</td>
-                    <td class="text-center font-weight-bold" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
-                      <div>{{s.saldo > 0 ? '+' : ''}}{{s.saldo | number:'1.2-2'}} pts</div>
-                      <span class="badge-mat mt-1" [ngClass]="getBadgeClase(s)">
-                        {{ getEstadoDescripcion(s) }}
+
+                    <!-- N° de Socio -->
+                    <td class="tabular-nums">{{ s.legajo }}</td>
+
+                    <!-- Categoría -->
+                    <td>
+                      <span class="badge-mat" [ngClass]="s.categoria === 'ACTIVO' ? 'badge-mat-active' : 'badge-mat-passive'">
+                        {{ s.categoria }}
                       </span>
                     </td>
-                    <td class="reconciliacion">
-                      <span *ngIf="s.reconciliado === true">Coincide</span>
-                      <ng-container *ngIf="s.reconciliado === false">
-                        <div>Diferencia: {{s.diferencia != null && s.diferencia > 0 ? '+' : ''}}{{s.diferencia | number:'1.2-2'}} pts</div>
-                        <small class="d-block text-muted">Histórico: {{s.saldoHistorico | number:'1.2-2'}} | General: {{s.saldoPuntajeGeneral | number:'1.2-2'}}</small>
-                      </ng-container>
+
+                    <!-- Grupo -->
+                    <td class="tabular-nums">{{ s.grupo || 'Sin grupo' }}</td>
+
+                    <!-- Subcomisión -->
+                    <td>{{ s.subcomision || 'Sin Subcomisión' }}</td>
+
+                    <!-- Saldo (Strictly signed numeric, 2 decimals, tabular-nums, no 'pts', no badge) -->
+                    <td class="text-right font-weight-bold tabular-nums" [ngClass]="s.saldo >= 0 ? 'text-success' : 'text-danger'">
+                      {{ s.saldo > 0 ? '+' : '' }}{{ s.saldo | number:'1.2-2' }}
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary"
-                        (click)="$event.stopPropagation(); abrirExpedientesSocio(s)"
-                        (keydown.enter)="$event.stopPropagation()"
-                        (keydown.space)="$event.stopPropagation()"
-                        [attr.aria-label]="'Ver expedientes de ' + s.nombre + ' ' + s.apellido">
+
+                    <!-- Acciones -->
+                    <td class="text-center">
+                      <button type="button"
+                              class="btn btn-sm btn-outline-primary"
+                              (click)="$event.stopPropagation(); abrirExpedientesSocio(s)"
+                              (keydown.enter)="$event.stopPropagation()"
+                              (keydown.space)="$event.stopPropagation()"
+                              [attr.aria-label]="'Ver expedientes de ' + s.nombre + ' ' + s.apellido">
                         <i class="material-icons" style="font-size: 16px;">folder_open</i>
                         Expedientes
                       </button>
@@ -145,24 +271,53 @@
               </table>
             </div>
 
-            <div *ngIf="sociosOrdenados.length > tamanoPagina" class="d-flex justify-content-between align-items-center mt-3">
-              <span class="text-muted">
-                Página {{paginaActual}} de {{totalPaginas}}
+            <!-- Footer & Pagination -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
+              <span class="text-muted font-weight-medium">
+                {{ textoContador }}
               </span>
 
-              <div>
+              <div *ngIf="tamanoPagina !== 0 && totalPaginas > 1" class="d-flex align-items-center">
                 <button mat-raised-button
-                        class="btn btn-sm btn-outline-primary mr-2"
+                        type="button"
+                        class="btn btn-sm btn-outline-primary mr-1"
                         [disabled]="paginaActual === 1"
-                        (click)="cambiarPagina(paginaActual - 1)">
-                  Anterior
+                        (click)="irAPrimera()"
+                        title="Primera página"
+                        aria-label="Primera página">
+                  &laquo;
                 </button>
 
                 <button mat-raised-button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary mr-2"
+                        [disabled]="paginaActual === 1"
+                        (click)="cambiarPagina(paginaActual - 1)"
+                        title="Página anterior">
+                  &lsaquo; Anterior
+                </button>
+
+                <span class="text-muted mx-2">
+                  Página {{ paginaActual }} de {{ totalPaginas }}
+                </span>
+
+                <button mat-raised-button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary mr-1"
+                        [disabled]="paginaActual === totalPaginas"
+                        (click)="cambiarPagina(paginaActual + 1)"
+                        title="Página siguiente">
+                  Siguiente &rsaquo;
+                </button>
+
+                <button mat-raised-button
+                        type="button"
                         class="btn btn-sm btn-outline-primary"
                         [disabled]="paginaActual === totalPaginas"
-                        (click)="cambiarPagina(paginaActual + 1)">
-                  Siguiente
+                        (click)="irAUltima()"
+                        title="Última página"
+                        aria-label="Última página">
+                  &raquo;
                 </button>
               </div>
             </div>

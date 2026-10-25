@@ -52,6 +52,7 @@ from expedientes.serializers import (
     EmitirT01Serializer,
     EvidenciaMetadataSerializer,
     ExpedienteListSerializer,
+    ExpedienteResumenSerializer,
     HolidaySerializer,
     MisSolicitudesT01Serializer,
     PresentarDescargoSerializer,
@@ -99,6 +100,23 @@ EXPEDIENTE_LIST_PREFETCH = (
 )
 
 
+def filter_expedientes_by_legajo(queryset, legajo: str):
+    """Filtra expedientes asociados a un legajo como titular o socio implicado."""
+    padron_user_ids = SocioEstudio.objects.filter(
+        nroLegajo=legajo,
+        socio__user_id__isnull=False,
+    ).values("socio__user_id")
+    local_socio_ids = Socio.objects.filter(
+        user_id__in=padron_user_ids,
+    ).values("pk")
+    return queryset.filter(
+        Q(socio__legajo=legajo)
+        | Q(socios__legajo=legajo)
+        | Q(socio_id__in=local_socio_ids)
+        | Q(socios__id__in=local_socio_ids)
+    ).distinct()
+
+
 class ExpedienteCollectionView(APIView):
     permission_classes = [CanOpenExpedientes]
 
@@ -114,20 +132,7 @@ class ExpedienteCollectionView(APIView):
         # de los socios involucrados/adicionales.
         legajo = request.query_params.get("legajo")
         if legajo is not None and legajo.strip():
-            legajo = legajo.strip()
-            padron_user_ids = SocioEstudio.objects.filter(
-                nroLegajo=legajo,
-                socio__user_id__isnull=False,
-            ).values("socio__user_id")
-            local_socio_ids = Socio.objects.filter(
-                user_id__in=padron_user_ids,
-            ).values("pk")
-            queryset = queryset.filter(
-                Q(socio__legajo=legajo)
-                | Q(socios__legajo=legajo)
-                | Q(socio_id__in=local_socio_ids)
-                | Q(socios__id__in=local_socio_ids)
-            ).distinct()
+            queryset = filter_expedientes_by_legajo(queryset, legajo.strip())
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -199,6 +204,29 @@ class MisExpedientesView(APIView):
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
         )
         serializer = ExpedienteListSerializer(queryset, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ExpedientesPorSocioView(APIView):
+    """
+    Endpoint GET /api/v1/expedientes/por-socio/?legajo=<legajo>
+    Consulta de solo lectura de expedientes de un socio para cualquier usuario autenticado.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        legajo = request.query_params.get("legajo")
+        if not legajo or not legajo.strip():
+            return Response(
+                {"error": "El parámetro 'legajo' es obligatorio."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        legajo = legajo.strip()
+        queryset = Expediente.objects.select_related("solicitud_t01").order_by("-created_at")
+        queryset = filter_expedientes_by_legajo(queryset, legajo)
+        serializer = ExpedienteResumenSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -1071,6 +1099,8 @@ class CalcularPlazoView(APIView):
 
 __all__ = [
     "EventoInstitucionalViewSet",
+    "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
     "SocioApercibimientosView",
+    "filter_expedientes_by_legajo",
 ]

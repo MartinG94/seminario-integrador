@@ -7,7 +7,8 @@ import { RankingSociosComponent } from './ranking-socios.component';
 import { RankingService } from '../services/ranking.service';
 import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
-import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
+import { RANKING_THRESHOLDS } from './ranking-thresholds';
+import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expedientes-socio-dialog.component';
 
 describe('RankingSociosComponent', () => {
   let component: RankingSociosComponent;
@@ -75,14 +76,18 @@ describe('RankingSociosComponent', () => {
   it('notifica un fallo sin repetirlo en la tabla y permite reintentar', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(throwError(() => ({ status: 500 })));
     fixture.detectChanges();
-    expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo cargar el ranking. Intentá nuevamente.');
+    expect(notifications.error).toHaveBeenCalledOnceWith(
+      'No se pudo cargar el ranking. Intentá nuevamente.'
+    );
     expect(fixture.nativeElement.textContent).not.toContain('No se pudo cargar el ranking');
-    const retry = fixture.nativeElement.querySelector('[aria-label="Reintentar carga del ranking"]') as HTMLButtonElement;
+    const retry = fixture.nativeElement.querySelector(
+      '[aria-label="Reintentar carga del ranking"]'
+    ) as HTMLButtonElement;
     expect(retry).toBeTruthy();
     rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
     retry.click();
     fixture.detectChanges();
-    expect(component.socios).toEqual(sociosMock);
+    expect(component.socios.length).toBe(2);
   });
 
   it('debería cargar socios desde RankingService', () => {
@@ -92,6 +97,7 @@ describe('RankingSociosComponent', () => {
     expect(component.cargando).toBeFalse();
     expect(component.error).toBeNull();
     expect(component.subcomisiones).toEqual(['Cómputos', 'Deportes']);
+    expect(component.grupos).toEqual(['G1', 'G2']);
   });
 
   it('debería mostrar la acción de Expedientes con su etiqueta accesible', () => {
@@ -107,6 +113,123 @@ describe('RankingSociosComponent', () => {
     expect(boton).toBeTruthy();
   });
 
+  it('debería renderizar exactamente las 8 columnas canónicas en orden', () => {
+    fixture.detectChanges();
+    const ths: NodeListOf<HTMLTableHeaderCellElement> =
+      fixture.nativeElement.querySelectorAll('thead th');
+
+    expect(ths.length).toBe(8);
+    const titulos = Array.from(ths).map((th) => th.textContent?.trim().replace(/[↑↓▲▼]/g, '').trim());
+    expect(titulos[0]).toContain('Posición');
+    expect(titulos[1]).toContain('Socio');
+    expect(titulos[2]).toContain('N° de Socio');
+    expect(titulos[3]).toContain('Categoría');
+    expect(titulos[4]).toContain('Grupo');
+    expect(titulos[5]).toContain('Subcomisión');
+    expect(titulos[6]).toContain('Saldo');
+    expect(titulos[7]).toContain('Acciones');
+  });
+
+  it('debería formatear saldo numéricamente con signo y 2 decimales sin texto pts ni badges', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([
+        { ...sociosMock[0], id: '1', apellido: 'Alonso', grupo: 'G1', saldo: 4.5 },
+        { ...sociosMock[0], id: '2', apellido: 'Bustos', grupo: 'G1', saldo: -7.25 },
+        { ...sociosMock[0], id: '3', apellido: 'Castro', grupo: 'G1', saldo: 0 }
+      ])
+    );
+    fixture.detectChanges();
+
+    const filas: NodeListOf<HTMLTableRowElement> =
+      fixture.nativeElement.querySelectorAll('tbody tr');
+    expect(filas.length).toBe(3);
+
+    // Celda 7 (índice 6) es Saldo
+    const celda1 = filas[0].cells[6].textContent?.trim();
+    const celda2 = filas[1].cells[6].textContent?.trim();
+    const celda3 = filas[2].cells[6].textContent?.trim();
+
+    expect(celda1).toContain('+4.50');
+    expect(celda1).not.toContain('pts');
+    expect(celda1).not.toContain('Habilitado Regular');
+
+    expect(celda2).toContain('-7.25');
+    expect(celda2).not.toContain('pts');
+
+    expect(celda3).toContain('0.00');
+    expect(celda3).not.toContain('+0.00');
+  });
+
+  it('debería asignar clases de alerta .row-cese (<= -10) y .row-alerta (-10 < saldo <= -7) según RANKING_THRESHOLDS', () => {
+    expect(RANKING_THRESHOLDS.cese).toBe(-10);
+    expect(RANKING_THRESHOLDS.alerta).toBe(-7);
+
+    const sCese1 = { ...sociosMock[0], saldo: -10 };
+    const sCese2 = { ...sociosMock[0], saldo: -14.5 };
+    const sAlerta1 = { ...sociosMock[0], saldo: -7 };
+    const sAlerta2 = { ...sociosMock[0], saldo: -9.99 };
+    const sNormal1 = { ...sociosMock[0], saldo: -6.99 };
+    const sNormal2 = { ...sociosMock[0], saldo: 3 };
+
+    expect(component.getRowClass(sCese1)).toBe('row-cese');
+    expect(component.getRowClass(sCese2)).toBe('row-cese');
+    expect(component.getRowClass(sAlerta1)).toBe('row-alerta');
+    expect(component.getRowClass(sAlerta2)).toBe('row-alerta');
+    expect(component.getRowClass(sNormal1)).toBe('');
+    expect(component.getRowClass(sNormal2)).toBe('');
+
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([sCese1, sAlerta1, sNormal2])
+    );
+    fixture.detectChanges();
+
+    const filas: NodeListOf<HTMLTableRowElement> =
+      fixture.nativeElement.querySelectorAll('tbody tr');
+    expect(filas[0].classList.contains('row-cese')).toBeTrue();
+    expect(filas[1].classList.contains('row-alerta')).toBeTrue();
+    expect(filas[2].classList.contains('row-cese')).toBeFalse();
+    expect(filas[2].classList.contains('row-alerta')).toBeFalse();
+  });
+
+  it('debería precalcular posición fija sobre el padrón completo y mantenerla inmutable al filtrar o reordenar', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([
+        { ...sociosMock[0], id: '1', nombre: 'Carlos', apellido: 'Zeta', saldo: 10 },
+        { ...sociosMock[0], id: '2', nombre: 'Ana', apellido: 'Gómez', saldo: 5 },
+        { ...sociosMock[0], id: '3', nombre: 'Beto', apellido: 'Alonso', saldo: 5 },
+        { ...sociosMock[0], id: '4', nombre: 'Damián', apellido: 'Díaz', saldo: -2 }
+      ])
+    );
+    fixture.detectChanges();
+
+    // Posiciones esperadas por saldo desc, desempate apellido asc, nombre asc:
+    // 1: Carlos Zeta (10) -> Posición 1
+    // 2: Beto Alonso (5)  -> Posición 2
+    // 3: Ana Gómez (5)    -> Posición 3
+    // 4: Damián Díaz (-2) -> Posición 4
+    const s1 = component.socios.find((s) => s.id === '1');
+    const s2 = component.socios.find((s) => s.id === '2');
+    const s3 = component.socios.find((s) => s.id === '3');
+    const s4 = component.socios.find((s) => s.id === '4');
+
+    expect(s1?.posicion).toBe(1);
+    expect(s3?.posicion).toBe(2);
+    expect(s2?.posicion).toBe(3);
+    expect(s4?.posicion).toBe(4);
+
+    // Reordenar por saldo ascendente no altera s.posicion
+    component.alternarOrden('saldo');
+    component.alternarOrden('saldo'); // 'asc'
+    expect(component.sortDir).toBe('asc');
+    expect(s1?.posicion).toBe(1);
+    expect(s4?.posicion).toBe(4);
+
+    // Filtrar tampoco altera la posición
+    component.filtroTexto = 'Damián';
+    expect(component.sociosOrdenados.length).toBe(1);
+    expect(component.sociosOrdenados[0].posicion).toBe(4);
+  });
+
   it('debería filtrar socios por categoría', () => {
     fixture.detectChanges();
 
@@ -114,6 +237,31 @@ describe('RankingSociosComponent', () => {
 
     expect(component.sociosOrdenados.length).toBe(1);
     expect(component.sociosOrdenados[0].nombre).toBe('Ana');
+  });
+
+  it('debería filtrar socios por grupo dinámico', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([
+        { ...sociosMock[0], id: '1', grupo: 'G58' },
+        { ...sociosMock[0], id: '2', grupo: 'G60' },
+        { ...sociosMock[0], id: '3', grupo: null }
+      ])
+    );
+    fixture.detectChanges();
+
+    expect(component.grupos).toEqual(['G58', 'G60']);
+
+    component.filtroGrupo = 'G58';
+    expect(component.sociosOrdenados.length).toBe(1);
+    expect(component.sociosOrdenados[0].id).toBe('1');
+
+    component.filtroGrupo = 'SIN_GRUPO';
+    expect(component.sociosOrdenados.length).toBe(1);
+    expect(component.sociosOrdenados[0].id).toBe('3');
+
+    component.limpiarFiltros();
+    expect(component.filtroGrupo).toBe('');
+    expect(component.sociosOrdenados.length).toBe(3);
   });
 
   it('debería filtrar socios por texto', () => {
@@ -132,20 +280,7 @@ describe('RankingSociosComponent', () => {
     expect(component.paginaActual).toBe(1);
   });
 
-  it('debería mostrar estado de error si falla la carga', () => {
-    rankingServiceSpy.obtenerRanking.and.returnValue(
-      throwError(() => new Error('Error de red'))
-    );
-
-    fixture.detectChanges();
-
-    expect(component.socios).toEqual([]);
-    expect(component.cargando).toBeFalse();
-    expect(component.error).toBe('No se pudo cargar el ranking. Intentá nuevamente.');
-  });
-
-
-  it('deber?a ordenar por grupo y desempatar por apellido y nombre', () => {
+  it('debería ordenar por defecto por grupo numérico y desempatar por apellido y nombre', () => {
     const crearSocio = (
       id: string,
       apellido: string,
@@ -153,81 +288,77 @@ describe('RankingSociosComponent', () => {
       saldo: number,
       grupo: string | null
     ): RankingSocio => ({
-      id, legajo: id, apellido, nombre, saldo, grupo,
-      categoria: 'ACTIVO', subcomision: 'C?mputos'
+      id,
+      legajo: id,
+      apellido,
+      nombre,
+      saldo,
+      grupo,
+      categoria: 'ACTIVO',
+      subcomision: 'Cómputos'
     });
 
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([
-      crearSocio('1', 'Zapata', 'Ana', 5, 'G2'),
-      crearSocio('2', 'Alonso', 'Bruno', 5, 'G1'),
-      crearSocio('3', 'Alonso', 'Ana', 5, 'G1'),
-      crearSocio('4', 'Zapata', 'Zoe', 10, 'G1'),
-      crearSocio('5', 'Abad', 'Ana', -2, null)
-    ]));
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([
+        crearSocio('1', 'Zapata', 'Ana', 5, 'G2'),
+        crearSocio('2', 'Alonso', 'Bruno', 5, 'G1'),
+        crearSocio('3', 'Alonso', 'Ana', 5, 'G1'),
+        crearSocio('4', 'Zapata', 'Zoe', 10, 'G1'),
+        crearSocio('5', 'Abad', 'Ana', -2, null)
+      ])
+    );
 
     fixture.detectChanges();
 
-    expect(component.sociosOrdenados.map(s => s.id)).toEqual([
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual([
       '3', '2', '4', '1', '5'
     ]);
   });
 
-  it('deber?a ordenar por saldo descendente', () => {
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([
-      { ...sociosMock[0], id: '1', saldo: 5 },
-      { ...sociosMock[1], id: '2', saldo: -1 },
-      { ...sociosMock[0], id: '3', saldo: -8 },
-      { ...sociosMock[1], id: '4', saldo: 0 }
-    ]));
-
-    fixture.detectChanges();
-    component.ordenSaldo = 'desc';
-
-    expect(component.sociosOrdenados.map(s => s.id)).toEqual([
-      '1', '4', '2', '3'
-    ]);
-  });
-
-  it('deber?a ordenar por saldo ascendente', () => {
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([
-      { ...sociosMock[0], id: '1', saldo: 5 },
-      { ...sociosMock[1], id: '2', saldo: -1 },
-      { ...sociosMock[0], id: '3', saldo: -8 },
-      { ...sociosMock[1], id: '4', saldo: 0 }
-    ]));
-
-    fixture.detectChanges();
-    component.ordenSaldo = 'asc';
-
-    expect(component.sociosOrdenados.map(s => s.id)).toEqual([
-      '3', '2', '4', '1'
-    ]);
-  });
-
-
-  it('debería paginar 13 socios en una primera página de 10 y una segunda de 3', () => {
-    const sociosPagina: RankingSocio[] = Array.from({ length: 13 }, (_, i) => ({
-      ...sociosMock[0], id: String(i + 1), legajo: String(2001 + i), saldo: 13 - i
-    }));
-    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosPagina));
+  it('debería soportar ordenamiento universal en todas las columnas', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([
+        { ...sociosMock[0], id: '1', legajo: '105', nombre: 'Zoe', apellido: 'Alonso', categoria: 'PASIVO', subcomision: 'Deportes', grupo: 'G2', saldo: 1 },
+        { ...sociosMock[0], id: '2', legajo: '98', nombre: 'Ana', apellido: 'Bustos', categoria: 'ACTIVO', subcomision: 'Buffet', grupo: 'G10', saldo: 10 },
+        { ...sociosMock[0], id: '3', legajo: '1002', nombre: 'Carlos', apellido: 'Castro', categoria: 'ACTIVO', subcomision: 'Cómputos', grupo: 'G1', saldo: -5 }
+      ])
+    );
     fixture.detectChanges();
 
-    expect(component.totalPaginas).toBe(2);
-    expect(component.sociosPaginados.length).toBe(10);
-    expect(component.sociosPaginados.map(s => s.id)).toEqual([
-      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'
-    ]);
+    // 1. Ordenar por legajo numérico (asc: 98, 105, 1002)
+    component.alternarOrden('legajo');
+    expect(component.sortKey).toBe('legajo');
+    expect(component.sortDir).toBe('asc');
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['2', '1', '3']);
 
-    component.cambiarPagina(2);
+    // Legajo desc
+    component.alternarOrden('legajo');
+    expect(component.sortDir).toBe('desc');
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['3', '1', '2']);
 
-    expect(component.paginaActual).toBe(2);
-    expect(component.sociosPaginados.length).toBe(3);
-    expect(component.sociosPaginados.map(s => s.id)).toEqual(['11', '12', '13']);
-    expect(component.totalPaginas).toBe(2);
+    // 2. Ordenar por socio (apellido asc)
+    component.alternarOrden('socio');
+    expect(component.sortKey).toBe('socio');
+    expect(component.sortDir).toBe('asc');
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['1', '2', '3']);
+
+    // 3. Ordenar por categoría (ACTIVO asc -> PASIVO)
+    component.alternarOrden('categoria');
+    expect(component.sortKey).toBe('categoria');
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['2', '3', '1']);
+
+    // 4. Ordenar por subcomisión
+    component.alternarOrden('subcomision');
+    expect(component.sortKey).toBe('subcomision');
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['2', '3', '1']);
+
+    // 5. Ordenar por grupo numérico (G1, G2, G10)
+    component.alternarOrden('grupo');
+    expect(component.sortKey).toBe('grupo');
+    expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['3', '1', '2']);
   });
 
-
-  it('deber?a alternar saldo descendente, ascendente y volver al orden por grupo', () => {
+  it('debería alternar saldo descendente, ascendente y volver al orden por grupo', () => {
     fixture.detectChanges();
     component.paginaActual = 2;
 
@@ -246,114 +377,70 @@ describe('RankingSociosComponent', () => {
     expect(component.paginaActual).toBe(1);
   });
 
-
-  it('debería mostrar Coincide sin detalle cuando está reconciliado', () => {
+  it('debería paginar correctamente y soportar ver todas las filas (tamanoPagina = 0)', () => {
+    const sociosPagina: RankingSocio[] = Array.from({ length: 13 }, (_, i) => ({
+      ...sociosMock[0],
+      id: String(i + 1),
+      legajo: String(2001 + i),
+      saldo: 13 - i
+    }));
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosPagina));
     fixture.detectChanges();
 
-    const celda: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion');
-    expect(celda.textContent.trim()).toBe('Coincide');
-    expect(celda.querySelector('small')).toBeNull();
+    expect(component.totalPaginas).toBe(2);
+    expect(component.sociosPaginados.length).toBe(10);
+    expect(component.textoContador).toBe('Mostrando 1–10 de 13 socios');
+
+    component.cambiarPagina(2);
+    expect(component.paginaActual).toBe(2);
+    expect(component.sociosPaginados.length).toBe(3);
+    expect(component.textoContador).toBe('Mostrando 11–13 de 13 socios');
+
+    // Cambiar a todas las filas
+    component.cambiarTamanoPagina(0);
+    expect(component.tamanoPagina).toBe(0);
+    expect(component.totalPaginas).toBe(1);
+    expect(component.sociosPaginados.length).toBe(13);
+    expect(component.textoContador).toBe('Mostrando 1–13 de 13 socios');
   });
 
-  [2.5, -2.5].forEach(diferencia => {
-    it(`debería mostrar la diferencia ${diferencia} con su signo`, () => {
-      rankingServiceSpy.obtenerRanking.and.returnValue(of([
-        { ...sociosMock[0], reconciliado: false, diferencia }
-      ]));
-      fixture.detectChanges();
-
-      const celda: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion');
-      const signo = diferencia > 0 ? '+' : '';
-      expect(celda.textContent).toContain(`Diferencia: ${signo}${diferencia.toFixed(2)} pts`);
-      expect(celda.textContent).not.toContain('Coincide');
-    });
-  });
-
-  it('debería mostrar los saldos histórico y general cuando hay diferencia', () => {
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([
-      { ...sociosMock[0], reconciliado: false, saldoHistorico: 8, saldoPuntajeGeneral: 5, diferencia: 3 }
-    ]));
-    fixture.detectChanges();
-
-    const detalle: HTMLElement = fixture.nativeElement.querySelector('.reconciliacion small');
-    expect(detalle.textContent.trim()).toBe('Histórico: 8.00 | General: 5.00');
-  });
-
-  it('debería respetar la diferencia del backend sin recalcular ni alterar saldo u orden', () => {
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([
-      { ...sociosMock[0], saldo: -4, saldoHistorico: 100, saldoPuntajeGeneral: 20,
-        diferencia: -0.25, reconciliado: false },
-      sociosMock[1]
-    ]));
-    fixture.detectChanges();
-
-    expect(component.sociosOrdenados.map(s => s.id)).toEqual(['2', '1']);
-    const filas: NodeListOf<HTMLTableRowElement> = fixture.nativeElement.querySelectorAll('tbody tr');
-    const celda = filas[1].querySelector('.reconciliacion');
-    expect(celda.textContent).toContain('Diferencia: -0.25 pts');
-    expect(celda.textContent).not.toContain('Diferencia: +80.00 pts');
-    expect(filas[1].cells[6].textContent).toContain('-4.00 pts');
-    expect(filas[1].cells[6].textContent).toContain('Habilitado Regular');
-    expect(component.socios.find(s => s.id === '1').diferencia).toBe(-0.25);
-  });
-
-  it('abrirLegajoSocio debe abrir el diálogo con socioId, nombre y saldo correspondiente', () => {
+  it('abrirExpedientesSocio debe abrir el diálogo con legajo, nombre y saldo correspondiente', () => {
     fixture.detectChanges();
     const socio = component.socios[0];
-    component.abrirLegajoSocio(socio);
+    component.abrirExpedientesSocio(socio);
 
-    expect(dialogSpy.open).toHaveBeenCalledWith(SocioLegajoDialogComponent, {
+    expect(dialogSpy.open).toHaveBeenCalledWith(ExpedientesSocioDialogComponent, {
       width: '100%',
-      maxWidth: '600px',
+      maxWidth: '700px',
       data: {
-        socioId: '1',
+        legajo: '1001',
         nombreSocio: 'Ana Gómez',
         saldo: 5
       }
     });
   });
 
-  it('onRowKeyDown debe abrir el legajo al presionar Enter', () => {
+  it('onRowKeyDown debe abrir expedientes al presionar Enter o Space', () => {
     fixture.detectChanges();
     const socio = component.socios[0];
-    const event = new KeyboardEvent('keydown', { key: 'Enter' });
-    spyOn(event, 'preventDefault');
 
-    component.onRowKeyDown(event, socio);
+    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+    spyOn(enterEvent, 'preventDefault');
+    component.onRowKeyDown(enterEvent, socio);
+    expect(enterEvent.preventDefault).toHaveBeenCalled();
+    expect(dialogSpy.open).toHaveBeenCalledWith(ExpedientesSocioDialogComponent, jasmine.any(Object));
 
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(dialogSpy.open).toHaveBeenCalledWith(SocioLegajoDialogComponent, {
-      width: '100%',
-      maxWidth: '600px',
-      data: {
-        socioId: '1',
-        nombreSocio: 'Ana Gómez',
-        saldo: 5
-      }
-    });
-  });
+    dialogSpy.open.calls.reset();
 
-  it('onRowKeyDown debe abrir el legajo al presionar Space', () => {
-    fixture.detectChanges();
-    const socio = component.socios[0];
-    const event = new KeyboardEvent('keydown', { key: ' ' });
-    spyOn(event, 'preventDefault');
-
-    component.onRowKeyDown(event, socio);
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(dialogSpy.open).toHaveBeenCalledWith(SocioLegajoDialogComponent, {
-      width: '100%',
-      maxWidth: '600px',
-      data: {
-        socioId: '1',
-        nombreSocio: 'Ana Gómez',
-        saldo: 5
-      }
-    });
+    const spaceEvent = new KeyboardEvent('keydown', { key: ' ' });
+    spyOn(spaceEvent, 'preventDefault');
+    component.onRowKeyDown(spaceEvent, socio);
+    expect(spaceEvent.preventDefault).toHaveBeenCalled();
+    expect(dialogSpy.open).toHaveBeenCalledWith(ExpedientesSocioDialogComponent, jasmine.any(Object));
   });
 
   it('onRowKeyDown con ArrowDown debe prevenir scroll y dar foco a la siguiente fila', () => {
+    fixture.detectChanges();
     const socio = component.socios[0];
     const nextTr = document.createElement('tr');
     spyOn(nextTr, 'focus');
@@ -374,6 +461,7 @@ describe('RankingSociosComponent', () => {
   });
 
   it('onRowKeyDown con ArrowUp debe prevenir scroll y dar foco a la fila anterior', () => {
+    fixture.detectChanges();
     const socio = component.socios[1];
     const prevTr = document.createElement('tr');
     spyOn(prevTr, 'focus');
@@ -391,5 +479,35 @@ describe('RankingSociosComponent', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(prevTr.focus).toHaveBeenCalled();
+  });
+
+  it('debería alternar entre pestaña general y alertas disciplinarias con cabecera teal', () => {
+    rankingServiceSpy.obtenerRanking.and.returnValue(
+      of([
+        { ...sociosMock[0], id: '1', apellido: 'Gómez', saldo: 5.0 },
+        { ...sociosMock[0], id: '2', apellido: 'Pérez', saldo: -8.0 },
+        { ...sociosMock[0], id: '3', apellido: 'López', saldo: -10.5 }
+      ])
+    );
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.tabActiva).toBe('general');
+    expect(component.cantidadSociosEnAlerta).toBe(2);
+    expect(component.sociosOrdenados.length).toBe(3);
+
+    const cabeceraTeal = fixture.nativeElement.querySelector('.card-header-tabs-teal');
+    expect(cabeceraTeal).toBeTruthy();
+
+    component.setTab('alertas');
+    fixture.detectChanges();
+
+    expect(component.tabActiva).toBe('alertas');
+    expect(component.sociosOrdenados.length).toBe(2);
+    expect(component.sociosOrdenados.every((s) => s.saldo <= -7)).toBeTrue();
+
+    component.setTab('general');
+    fixture.detectChanges();
+    expect(component.sociosOrdenados.length).toBe(3);
   });
 });

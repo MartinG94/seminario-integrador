@@ -20,6 +20,19 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   // Ordenamiento de tabla
   columnaOrden = 'numero';
   ordenAscendente = true;
+  filtroTab: 'todos' | 'en_tramite' | 'resueltos' = 'todos';
+
+  setFiltroTab(tab: 'todos' | 'en_tramite' | 'resueltos'): void {
+    this.filtroTab = tab;
+  }
+
+  get cantidadEnTramite(): number {
+    return this.misExpedientes.filter((e) => e.estado !== 'emitido').length;
+  }
+
+  get cantidadResueltos(): number {
+    return this.misExpedientes.filter((e) => e.estado === 'emitido').length;
+  }
 
   // Modal T02/T03
   modalAbierto = false;
@@ -850,7 +863,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get expedientesOrdenados(): Expediente[] {
-    const lista = [...this.misExpedientes];
+    let lista = [...this.misExpedientes];
+    if (this.filtroTab === 'en_tramite') {
+      lista = lista.filter((e) => e.estado !== 'emitido');
+    } else if (this.filtroTab === 'resueltos') {
+      lista = lista.filter((e) => e.estado === 'emitido');
+    }
     lista.sort((a, b) => {
       let valA: any = (a as any)[this.columnaOrden];
       let valB: any = (b as any)[this.columnaOrden];

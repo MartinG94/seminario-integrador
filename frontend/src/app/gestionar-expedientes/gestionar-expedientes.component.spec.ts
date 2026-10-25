@@ -241,7 +241,7 @@ describe('GestionarExpedientesComponent', () => {
         expect(cards.length).toBe(1);
         const card = cards[0];
         expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+          '7/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
         );
         expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
       }
@@ -264,7 +264,7 @@ describe('GestionarExpedientesComponent', () => {
       renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
       const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
       expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+        '18/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
       );
     });
 

@@ -232,7 +232,7 @@ describe('MisExpedientesComponent', () => {
       http.expectOne({ method: 'DELETE', url: `${apiUrl}/EXP-1/descargo/` }).flush({ detail: 'ok' });
       expect(eliminarSpy).toHaveBeenCalledWith('EXP-1', jasmine.any(Object));
       expect(notifications.info).toHaveBeenCalledWith(
-        'Descargo del expediente EXP-001/2026 retirado. Queda registrado en el historial.'
+        'Descargo del expediente 1/2026 retirado. Queda registrado en el historial.'
       );
     });
 

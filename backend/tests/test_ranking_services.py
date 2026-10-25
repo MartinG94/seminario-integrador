@@ -103,6 +103,35 @@ class TestSocioCategoryDerivation:
 
 
 @pytest.mark.unit
+class TestSocioSubcomisionDerivation:
+    """Pruebas de derivación de subcomisión para Juniors (1.° y 2.° año) vs Seniors."""
+
+    def test_subcomision_sin_subcomision_for_juniors_ano_1_and_2(self) -> None:
+        """Años sociales 1 y 2 deben exponer 'Sin Subcomisión' independientemente de la FK."""
+        sub = Subcomision(codSubcomision=1, nombre="Cómputos")
+
+        s1 = Socio(anoSocial=1, subcomision=sub, idTipoSocio=1)
+        s2 = Socio(anoSocial=2, subcomision=sub, idTipoSocio=1)
+
+        assert RankingSocioSerializer().get_subcomision(s1) == "Sin Subcomisión"
+        assert RankingSocioSerializer().get_subcomision(s2) == "Sin Subcomisión"
+
+    def test_subcomision_preserved_for_ano_3_and_above(self) -> None:
+        """Años sociales 3 en adelante deben conservar su subcomisión asignada."""
+        sub = Subcomision(codSubcomision=1, nombre="Cómputos")
+
+        s3 = Socio(anoSocial=3, subcomision=sub, idTipoSocio=1)
+        s4 = Socio(anoSocial=4, subcomision=sub, idTipoSocio=1)
+        s5 = Socio(anoSocial=5, subcomision=sub, idTipoSocio=1)
+        s6 = Socio(anoSocial=6, subcomision=sub, idTipoSocio=1)
+
+        assert RankingSocioSerializer().get_subcomision(s3) == "Cómputos"
+        assert RankingSocioSerializer().get_subcomision(s4) == "Cómputos"
+        assert RankingSocioSerializer().get_subcomision(s5) == "Cómputos"
+        assert RankingSocioSerializer().get_subcomision(s6) == "Cómputos"
+
+
+@pytest.mark.unit
 class TestAccentInsensitiveRegex:
     """Pruebas de construcción de expresiones regulares insensibles a tildes."""
 

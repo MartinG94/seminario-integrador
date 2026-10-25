@@ -15,6 +15,7 @@ export interface RankingSocio {
   subcomision: string;
   grupo: string | null;
   saldo: number;
+  posicion?: number;
 
   saldoHistorico?: number;
   saldoPuntajeGeneral?: number;
