@@ -728,20 +728,10 @@
 
         <!-- Sección de Evaluación de Puntaje Final y Fundamento -->
         <div class="p-3 bg-light rounded border mt-3 seccion-evaluacion-descargo">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="font-weight-bold text-dark mb-0">
-              <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
-              Evaluación y Puntaje Final
-            </h6>
-            <span *ngIf="!puedeModificarPuntaje" class="badge badge-warning">
-              <i class="material-icons mr-1" style="font-size: 12px; vertical-align: text-bottom;">lock</i>Solo Lectura
-            </span>
-          </div>
-
-          <div *ngIf="!puedeModificarPuntaje" class="alert alert-info py-2 px-3 mb-3 small d-flex align-items-center gap-2">
-            <i class="material-icons" style="font-size: 18px;">lock</i>
-            <span>El puntaje final solo puede ser modificado cuando el expediente se encuentre <strong>En Revisión</strong>.</span>
-          </div>
+          <h6 class="font-weight-bold text-dark mb-3">
+            <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
+            Evaluación y Puntaje Final
+          </h6>
 
           <div class="row align-items-center mb-3">
             <div class="col-md-3 col-sm-4">
@@ -812,7 +802,8 @@
 
       <!-- Footer Modal 6: Guardar y Volver, Volver -->
       <div class="card-footer d-flex justify-content-end align-items-center gap-2">
-        <button mat-raised-button 
+        <button *ngIf="puedeModificarPuntaje"
+                mat-raised-button 
                 type="button" 
                 class="btn btn-primary btn-guardar-volver d-inline-flex align-items-center" 
                 [disabled]="guardandoDescargo"

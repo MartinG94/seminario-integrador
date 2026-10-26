@@ -774,7 +774,8 @@ describe('GestionarExpedientesComponent', () => {
       expect(filaPrueba.descargo!.leido).toBeFalse();
     });
 
-    it('renderiza botones Guardar y Volver y Volver en el footer de Modal 6', () => {
+    it('renderiza botones Guardar y Volver y Volver en el footer de Modal 6 cuando está en revisión', () => {
+      component.expedienteSeleccionado = expBase; // estado: 'revision_resolucion'
       component.verDescargo(filaPrueba);
       fixture.detectChanges();
 
@@ -788,6 +789,21 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnVolver).toBeTruthy();
       expect(btnGuardar.textContent).toContain('Guardar y Volver');
       expect(btnVolver.textContent).toContain('Volver');
+    });
+
+    it('oculta el botón Guardar y Volver cuando no está en revisión', () => {
+      component.expedienteSeleccionado = { ...expBase, estado: 'justificando' } as any;
+      component.verDescargo(filaPrueba);
+      fixture.detectChanges();
+
+      const modalDescargo = fixture.nativeElement.querySelector('.modal-descargo-backdrop');
+      expect(modalDescargo).toBeTruthy();
+
+      const btnGuardar = modalDescargo.querySelector('.btn-guardar-volver');
+      const btnVolver = modalDescargo.querySelector('.btn-volver');
+
+      expect(btnGuardar).toBeNull();
+      expect(btnVolver).toBeTruthy();
     });
   });
 
