@@ -6,6 +6,7 @@ import { filter, takeUntil } from 'rxjs/operators';
 
 import { CalendarioApiService, CalcularPlazoResponse, HolidayDto } from '../services/calendario-api.service';
 import { AuthService } from '../services/auth.service';
+import { ExpedienteApiService, PlazoApelacionDTO } from '../services/expediente-api.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 
 @Component({
@@ -40,10 +41,18 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly cancelSimulation$ = new Subject<void>();
 
+  // Plazo de apelación del T01 en días hábiles (PB-02)
+  appealDeadline: PlazoApelacionDTO | null = null;
+  appealDeadlineDraft: number | null = null;
+  savingAppealDeadline = false;
+
   constructor(private calendarApi: CalendarioApiService, public auth: AuthService,
-    private notifications: NotificationService, private dialog: MatDialog, private router: Router) {}
+    private notifications: NotificationService, private dialog: MatDialog, private router: Router,
+    private expedienteApi: ExpedienteApiService) {}
 
   get canManage(): boolean { return this.auth.tieneRol('ADMIN', 'CD', 'TD'); }
+
+  get canEditAppealDeadline(): boolean { return this.auth.tieneRol('ADMIN', 'TD'); }
 
   get today(): string {
     return this.institutionalDateTime().slice(0, 10);
@@ -64,8 +73,40 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.simulationStart = this.institutionalDateTime();
     this.loadHolidays();
+    if (this.canManage) { this.loadAppealDeadline(); }
     this.router.events.pipe(takeUntil(this.destroy$)).subscribe(event => {
       if (event instanceof NavigationStart) { this.closeSimulation(); }
+    });
+  }
+
+  loadAppealDeadline(): void {
+    this.expedienteApi.obtenerPlazoApelacion().subscribe({
+      next: plazo => {
+        this.appealDeadline = plazo;
+        this.appealDeadlineDraft = plazo.dias_habiles;
+      },
+      error: err => this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el plazo de apelación.'))
+    });
+  }
+
+  saveAppealDeadline(): void {
+    const dias = Number(this.appealDeadlineDraft);
+    if (!Number.isInteger(dias) || dias < 1 || dias > 30) {
+      this.notifications.error('El plazo de apelación debe estar entre 1 y 30 días hábiles.');
+      return;
+    }
+    this.savingAppealDeadline = true;
+    this.expedienteApi.actualizarPlazoApelacion(dias).subscribe({
+      next: plazo => {
+        this.savingAppealDeadline = false;
+        this.appealDeadline = plazo;
+        this.appealDeadlineDraft = plazo.dias_habiles;
+        this.notifications.success('Plazo de apelación actualizado. Rige para los próximos períodos.');
+      },
+      error: err => {
+        this.savingAppealDeadline = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar el plazo de apelación.'));
+      }
     });
   }
 

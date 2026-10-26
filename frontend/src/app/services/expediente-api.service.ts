@@ -194,6 +194,8 @@ export interface DescargoDetalleDTO {
   evidencias: EvidenciaMetadata[];
   regla_sugerida?: DecisionCausal;
   decisiones_causal?: DecisionCausalDTO[];
+  leido?: boolean;
+  puntaje_ratificado?: number | null;
 }
 
 export interface SocioInvolucradoDetalleDTO {
@@ -212,6 +214,77 @@ export interface ExpedienteDetalleDTO {
   estado: string;
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
+  reglamentos_respaldantes?: string[];
+}
+
+// --- Apelación y adecuación del T01 (PB-02, Spec 008) ---
+
+export interface SocioT01DTO {
+  id: number;
+  legajo: string;
+  nombre: string;
+}
+
+export interface PeriodoApelacionDTO {
+  socio_id: number;
+  socio: string;
+  origen: 'APERTURA' | 'ADECUACION';
+  dias_habiles: number;
+  inicio_at: string;
+  limite_at: string;
+  abierto: boolean;
+}
+
+export interface ApelacionT01DTO {
+  socio_id: number;
+  socio: string;
+  numero: number;
+  texto: string;
+  created_at: string;
+}
+
+export interface AdecuacionT01DTO {
+  version: number;
+  puntos_anteriores: string;
+  puntos_nuevos: string;
+  socios_anteriores: SocioT01DTO[];
+  socios_nuevos: SocioT01DTO[];
+  motivos: string;
+  reabre_plazo: boolean;
+  socios_con_nuevo_plazo: number[];
+  autor_legajo: string;
+  created_at: string;
+}
+
+export interface HistorialT01DTO {
+  es_t01: boolean;
+  estado: string;
+  plazo_dias_vigente: number;
+  puntos_vigentes: string;
+  involucrados: SocioT01DTO[];
+  original: {
+    numero_t01: string;
+    tipo_accion: 'SANCTION' | 'MERIT';
+    emitido_at: string | null;
+    solicitante: string;
+    snapshot: { puntos?: string; titulo?: string } | null;
+  } | null;
+  periodos: PeriodoApelacionDTO[];
+  apelaciones: ApelacionT01DTO[];
+  adecuaciones: AdecuacionT01DTO[];
+}
+
+export interface AdecuarT01Payload {
+  puntos: number;
+  socios: number[];
+  motivos: string;
+  reabrir_plazo: boolean;
+}
+
+export interface PlazoApelacionDTO {
+  dias_habiles: number;
+  actualizado_at: string | null;
+  actualizado_por: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -355,6 +428,28 @@ export class ExpedienteApiService {
 
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
+  }
+
+  obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
+    return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);
+  }
+
+  apelarT01(expedienteId: number | string, texto: string): Observable<HistorialT01DTO> {
+    return this.http.post<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/apelacion/`, { texto });
+  }
+
+  adecuarT01(expedienteId: number | string, payload: AdecuarT01Payload): Observable<HistorialT01DTO> {
+    return this.http.post<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/adecuaciones/`, payload);
+  }
+
+  obtenerPlazoApelacion(): Observable<PlazoApelacionDTO> {
+    return this.http.get<PlazoApelacionDTO>(`${this.apiUrl}/parametros/plazo-apelacion/`);
+  }
+
+  actualizarPlazoApelacion(diasHabiles: number): Observable<PlazoApelacionDTO> {
+    return this.http.put<PlazoApelacionDTO>(`${this.apiUrl}/parametros/plazo-apelacion/`, {
+      dias_habiles: diasHabiles
+    });
   }
 }
 

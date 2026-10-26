@@ -172,6 +172,54 @@
           </table>
         </div>
 
+        <!-- Apelación del T01 (PB-02, art. 14): reemplaza al justificativo T02/T03 -->
+        <section *ngIf="expedienteDetalle?.esT01" class="mt-4 pt-3 border-top seccion-apelacion" aria-labelledby="titulo-apelacion">
+          <h5 id="titulo-apelacion" class="font-weight-bold text-dark d-flex align-items-center mb-2">
+            <i class="material-icons text-info mr-2" aria-hidden="true">gavel</i> Apelación
+          </h5>
+
+          <p *ngIf="!historialT01" class="text-muted small mb-0" role="status">Cargando apelación…</p>
+
+          <ng-container *ngIf="historialT01">
+            <p *ngIf="miPeriodoApelacion" class="small mb-2 plazo-apelacion">
+              Plazo para apelar: hasta el {{miPeriodoApelacion.limite_at | date:'dd/MM/yyyy HH:mm'}} hs
+              ({{miPeriodoApelacion.dias_habiles}} días hábiles)<span *ngIf="miPeriodoApelacion.origen === 'ADECUACION'"> · nuevo plazo por adecuación</span>.
+            </p>
+
+            <div *ngIf="ultimaApelacion && !apelacionAbierta" class="p-3 bg-light rounded border mb-2 ultima-apelacion">
+              <div class="small text-muted mb-1">
+                Versión {{ultimaApelacion.numero}} · {{ultimaApelacion.created_at | date:'dd/MM/yyyy HH:mm'}} hs
+              </div>
+              <div class="text-dark" style="white-space: pre-wrap;">{{ultimaApelacion.texto}}</div>
+            </div>
+            <p *ngIf="!ultimaApelacion && !apelacionAbierta" class="text-muted small mb-2">Todavía no presentaste una apelación.</p>
+
+            <div *ngIf="apelacionAbierta" class="form-group mb-2">
+              <label for="texto-apelacion" class="small font-weight-bold">Tu apelación</label>
+              <textarea id="texto-apelacion" class="form-control" rows="5"
+                        [attr.maxlength]="MAX_CARACTERES_JUSTIFICACION"
+                        aria-describedby="ayuda-apelacion"
+                        [(ngModel)]="textoApelacion"></textarea>
+              <small id="ayuda-apelacion" class="form-text text-muted">
+                Mínimo {{MIN_CARACTERES_APELACION}} caracteres · {{textoApelacion.length}} / {{MAX_CARACTERES_JUSTIFICACION}}.
+                Podés corregirla mientras el plazo esté abierto.
+              </small>
+            </div>
+
+            <div *ngIf="historialT01.adecuaciones.length" class="mt-3">
+              <h6 class="font-weight-bold text-dark mb-1">Adecuaciones del Tribunal</h6>
+              <ul class="list-unstyled small mb-0">
+                <li *ngFor="let a of historialT01.adecuaciones" class="mb-2 adecuacion-t01">
+                  <span class="font-weight-bold">Versión {{a.version}}</span> · {{a.created_at | date:'dd/MM/yyyy'}} ·
+                  Puntos {{a.puntos_anteriores}} → {{a.puntos_nuevos}}
+                  <div class="text-muted">{{a.motivos}}</div>
+                </li>
+              </ul>
+            </div>
+          </ng-container>
+        </section>
+
+        <ng-container *ngIf="!expedienteDetalle?.esT01">
         <!-- Sección: Justificativo Presentado -->
         <div *ngIf="expedienteDetalle?.descargo" class="mt-4 pt-3 border-top">
           <div class="d-flex justify-content-between align-items-center mb-2">
@@ -269,13 +317,33 @@
             </table>
           </div>
         </div>
+        </ng-container>
       </div>
       <div class="card-footer d-flex justify-content-between align-items-center">
         <button mat-button class="btn btn-default" (click)="cerrarModalDetalle()">Cerrar</button>
 
         <div class="d-flex align-items-center gap-2">
           <!-- Si la causa está en período de justificaciones -->
-          <ng-container *ngIf="expedienteDetalle?.estado === 'justificando'">
+          <!-- Apelación del T01 (PB-02) -->
+          <ng-container *ngIf="expedienteDetalle?.esT01 && expedienteDetalle?.estado === 'justificando' && historialT01">
+            <ng-container *ngIf="puedeApelar">
+              <button *ngIf="!apelacionAbierta" mat-raised-button class="btn btn-primary btn-apelar" (click)="abrirApelacion()">
+                <i class="material-icons" style="font-size: 16px;">{{ultimaApelacion ? 'edit' : 'gavel'}}</i>
+                {{ultimaApelacion ? 'Editar apelación' : 'Apelar'}}
+              </button>
+              <ng-container *ngIf="apelacionAbierta">
+                <button mat-button class="btn btn-link" (click)="apelacionAbierta = false">Cancelar</button>
+                <button mat-raised-button class="btn btn-primary btn-enviar-apelacion" [disabled]="enviandoApelacion" (click)="enviarApelacion()">
+                  <i class="material-icons" style="font-size: 16px;">send</i> Enviar apelación
+                </button>
+              </ng-container>
+            </ng-container>
+            <button *ngIf="!puedeApelar" mat-button class="btn btn-danger" disabled title="El plazo de apelación venció">
+              <i class="material-icons" style="font-size: 16px;">timer_off</i> Plazo Expirado
+            </button>
+          </ng-container>
+
+          <ng-container *ngIf="!expedienteDetalle?.esT01 && expedienteDetalle?.estado === 'justificando'">
             <!-- Si no tiene justificativo: botón Añadir -->
             <button *ngIf="!expedienteDetalle?.descargo && !esPlazoVencido(expedienteDetalle)" 
                     mat-raised-button 
