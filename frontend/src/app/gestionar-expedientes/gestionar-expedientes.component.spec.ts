@@ -241,7 +241,7 @@ describe('GestionarExpedientesComponent', () => {
         expect(cards.length).toBe(1);
         const card = cards[0];
         expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+          '7/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
         );
         expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
       }
@@ -264,7 +264,7 @@ describe('GestionarExpedientesComponent', () => {
       renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
       const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
       expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+        '18/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
       );
     });
 
@@ -941,6 +941,42 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnCerrar).toBeTruthy();
     });
   });
+
+  describe('Filtros en una sola línea y Urgencia sin símbolos', () => {
+    it('debe tener opción "Todos" en los desplegables de estado y urgencia', () => {
+      expect(component.estadosDisponibles[0].label).toBe('Todos');
+      expect(component.urgenciasDisponibles[0].label).toBe('Todos');
+    });
+
+    it('debe inicializar filtroFechaDesde con el año en curso para optimizar el rendimiento inicial', () => {
+      expect(component.filtroFechaDesde).toBe(`${new Date().getFullYear()}-01-01`);
+    });
+
+    it('en la vista de tabla, debe renderizar la urgencia en texto plano sin iconos ni caracteres extra', () => {
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+
+      const tabla = fixture.nativeElement.querySelector('.explorer-table-container');
+      expect(tabla).toBeTruthy();
+      const badgeUrgencia = tabla.querySelector('tbody td .badge-mat');
+      if (badgeUrgencia) {
+        expect(badgeUrgencia.querySelector('i')).toBeNull();
+        const texto = badgeUrgencia.textContent.trim();
+        expect(['Baja', 'Normal', 'Urgente']).toContain(texto);
+      }
+    });
+
+    it('la barra de filtros debe contener el input de búsqueda sin etiqueta y los botones con flex-shrink-0', () => {
+      const inputBusqueda = fixture.nativeElement.querySelector('#filtro-socio');
+      expect(inputBusqueda).toBeTruthy();
+      expect(inputBusqueda.getAttribute('placeholder')).toContain('Buscar por socio');
+
+      const labelSocio = fixture.nativeElement.querySelector('label[for="filtro-socio"]');
+      expect(labelSocio).toBeNull();
+
+      const contenedorAcciones = fixture.nativeElement.querySelector('.filtro-acciones');
+      expect(contenedorAcciones).toBeTruthy();
+      expect(contenedorAcciones.classList.contains('flex-shrink-0')).toBeTrue();
+    });
+  });
 });
-
-

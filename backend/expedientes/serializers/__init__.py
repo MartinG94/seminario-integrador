@@ -245,6 +245,30 @@ def _obtener_reglamento_asociado(obj: Expediente) -> str:
     return "Reglamento Procesal Disciplinario 2026"
 
 
+class ExpedienteResumenSerializer(serializers.ModelSerializer):
+    """Serializador acotado para consulta pública/autenticada de expedientes por socio."""
+
+    titulo = serializers.SerializerMethodField()
+    urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+
+    class Meta:
+        model = Expediente
+        fields = [
+            "id",
+            "numero",
+            "titulo",
+            "motivo",
+            "puntos",
+            "estado",
+            "urgencia",
+            "urgencia_display",
+            "created_at",
+        ]
+
+    def get_titulo(self, obj: Expediente) -> str:
+        return _obtener_titulo_expediente(obj)
+
+
 class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
@@ -1242,6 +1266,7 @@ __all__ = [
     "AsistenciaItemInputSerializer",
     "EventoInstitucionalCreateSerializer",
     "EventoInstitucionalSerializer",
+    "ExpedienteResumenSerializer",
     "RegistroApercibimientoSerializer",
     "ReportarAsistenciaSerializer",
 ]

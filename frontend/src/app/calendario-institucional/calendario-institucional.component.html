@@ -1,8 +1,24 @@
 <div class="main-content calendar-page">
   <div class="container-fluid">
-    <div class="card">
-      <div class="card-header card-header-primary calendar-heading">
-        <h3 class="card-title">Calendario institucional</h3>
+    <div class="card card-nav-tabs shadow-sm">
+      <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+        <div class="nav-tabs-wrapper">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link active" href="javascript:void(0)" role="tab">
+                <i class="material-icons">calendar_month</i> CALENDARIO Y FERIADOS
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" (click)="openSimulation()" href="javascript:void(0)" role="tab">
+                <i class="material-icons">calculate</i> SIMULAR PLAZO
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="text-white-50 d-none d-md-block small">
+          <span>Cómputo reglamentario de plazos procesales y feriados societarios</span>
+        </div>
       </div>
       <div class="card-body">
         <div class="calendar-toolbar">
