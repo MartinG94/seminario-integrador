@@ -392,3 +392,80 @@ class TestExpedienteDetailAPI:
         assert d["decisiones_causal"] == []
         assert d["leido"] is False
         assert d["puntaje_ratificado"] is None
+
+    def test_decision_causal_puntaje_final_regla_negocio(
+        self, vocal_td, socio_imputado, expediente_caso
+    ) -> None:
+        """Verifica la regla de negocio: si puntaje_final < pedido, fundamento obligatorio."""
+        from expedientes.models import DescargoExpediente, TipoDescargoEnum
+
+        expediente_caso.estado = EstadoExpedienteEnum.REVISION_RESOLUCION
+        expediente_caso.save()
+
+        descargo = DescargoExpediente.objects.create(
+            expediente=expediente_caso,
+            socio=socio_imputado,
+            tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
+            texto="Descargo extraordinario de prueba.",
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+        url = f"/api/v1/expedientes/{expediente_caso.id}/descargos/{descargo.id}/decisiones/"
+
+        # 1. Sanción Agravada (pedido: -1.0, final: -3.0): menor a pedido -> obligatorio
+        res_sin_fundamento = client.post(
+            url,
+            {"decision": "REJECTED", "puntaje_final": -3.0, "fundamento": ""},
+            format="json",
+        )
+        assert res_sin_fundamento.status_code == status.HTTP_400_BAD_REQUEST
+        assert "fundamentación" in res_sin_fundamento.json()["detail"].lower()
+
+        # 2. Con fundamento >= 10 chars: éxito
+        res_con_fundamento = client.post(
+            url,
+            {
+                "decision": "REJECTED",
+                "puntaje_final": -3.0,
+                "fundamento": "Se agrava la sanción por reincidencia acreditada.",
+            },
+            format="json",
+        )
+        assert res_con_fundamento.status_code == status.HTTP_201_CREATED
+
+        # 3. A favor del socio (pedido: -1.0, final: 0.0): mayor a pedido -> opcional
+        expediente2 = Expediente.objects.create(
+            socio=socio_imputado,
+            numero="EXP-2026-TEST-FAVOR",
+            motivo="Causa test a favor",
+            puntos=-1.0,
+            estado=EstadoExpedienteEnum.REVISION_RESOLUCION,
+        )
+        descargo2 = DescargoExpediente.objects.create(
+            expediente=expediente2,
+            socio=socio_imputado,
+            tipo=TipoDescargoEnum.T02_CERTIFICADO,
+            causal="Enfermedad",
+            texto="Descargo médico.",
+        )
+        # Crear evidencia para sugerir ACCEPTED
+        from expedientes.models import EvidenciaDescargo
+
+        EvidenciaDescargo.objects.create(
+            expediente=expediente2,
+            socio=socio_imputado,
+            descargo=descargo2,
+            nombre_original="certificado.pdf",
+            contenido_blob=b"pdf content",
+            sha256_hash="hash",
+            tamanio_bytes=100,
+            mime_type="application/pdf",
+        )
+        url2 = f"/api/v1/expedientes/{expediente2.id}/descargos/{descargo2.id}/decisiones/"
+        res_a_favor = client.post(
+            url2,
+            {"decision": "ACCEPTED", "puntaje_final": 0.0, "fundamento": ""},
+            format="json",
+        )
+        assert res_a_favor.status_code == status.HTTP_201_CREATED

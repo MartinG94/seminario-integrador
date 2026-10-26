@@ -747,6 +747,7 @@ class DecisionCausalView(APIView):
                 fundamento=data["fundamento"],
                 evidencia_ids=data.get("evidencia_ids"),
                 user=request.user,
+                puntaje_final=data.get("puntaje_final"),
             )
         except CausalResolutionNotFound as exc:
             raise NotFound(str(exc)) from exc

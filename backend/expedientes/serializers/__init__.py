@@ -536,7 +536,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             puntaje_ratificado = None
             if decisiones_qs:
                 primera = decisiones_qs[0]
-                if primera.decision == DecisionCausalEnum.ACCEPTED:
+                snapshot = primera.descargo_snapshot or {}
+                if "puntaje_final" in snapshot and snapshot["puntaje_final"] is not None:
+                    puntaje_ratificado = snapshot["puntaje_final"]
+                elif primera.decision == DecisionCausalEnum.ACCEPTED:
                     puntaje_ratificado = 0
                 elif primera.decision == DecisionCausalEnum.REJECTED:
                     puntaje_ratificado = float(obj.puntos) if obj.puntos is not None else 0.0
@@ -675,6 +678,9 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
+    puntaje_final = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
     fundamento = serializers.CharField(
         required=False,
         allow_blank=True,

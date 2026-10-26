@@ -178,6 +178,7 @@ export interface RegistrarDecisionCausalPayload {
   decision: DecisionCausal;
   fundamento?: string;
   evidencia_ids?: string[];
+  puntaje_final?: number | null;
 }
 
 export interface DescargoDetalleDTO {

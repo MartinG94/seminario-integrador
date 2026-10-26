@@ -4,7 +4,6 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -44,7 +43,7 @@ describe('GestionarExpedientesComponent', () => {
   };
 
   beforeEach(async () => {
-    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'warning', 'info']);
     await TestBed.configureTestingModule({
       imports: [
         CommonModule,
@@ -668,6 +667,130 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.modalDetalleAbierto).toBeTrue();
     });
   });
+
+  describe('Evaluación de Descargo y Fijación de Puntaje Final (Modal 6 - SCRUM-51)', () => {
+    let api: ExpedienteApiService;
+    let filaPrueba: InvolucradoJustificacion;
+    const expBase: Expediente = {
+      id: '888',
+      numero: 'EXP-0888/2026',
+      socio: 'Diego Gabriel Sánchez',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia a reunión obligatoria',
+      puntos: -3,
+      estado: 'revision_resolucion',
+      urgencia: 'normal',
+      fecha: '2026-03-10'
+    };
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      filaPrueba = {
+        socioId: 10,
+        legajo: '74907',
+        nombre: 'Diego Gabriel',
+        apellido: 'Sánchez',
+        grupo: '59',
+        descargo: {
+          id: 5,
+          tipo: 'T02_CERTIFICADO',
+          leido: false,
+          texto: 'Presento certificado médico...',
+          evidencias: [{ id: 'ev-1', nombre_original: 'certificado.pdf' }]
+        } as any
+      };
+      component.expedienteSeleccionado = { ...expBase, id: '888', numero: 'EXP-0888/2026', puntos: -3 };
+      component.involucradosJustificacion = [filaPrueba];
+    });
+
+    it('genera el encabezado correcto con id de expediente, legajo y nombre completo', () => {
+      component.involucradoSeleccionado = filaPrueba;
+      const encabezado = component.getEncabezadoModalDescargo();
+      expect(encabezado).toBe('Descargo exp 888 y 74907, Diego Gabriel Sánchez');
+    });
+
+    it('inicializa puntajeFinalInput con los puntos del expediente al abrir el descargo', () => {
+      component.verDescargo(filaPrueba);
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.involucradoSeleccionado).toBe(filaPrueba);
+      expect(component.puntajeFinalInput).toBe(-3);
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+    });
+
+    it('valida la regla de fundamentación: obligatoria cuando puntaje_final < puntos_pedido', () => {
+      component.verDescargo(filaPrueba);
+      // Pedido es -3 (sanción).
+      // Si puntajeFinalInput = -5 (agrava la sanción, < -3) -> obligatorio
+      component.puntajeFinalInput = -5;
+      expect(component.esFundamentoObligatorio()).toBeTrue();
+
+      // Si puntajeFinalInput = -1 o 0 (reduce o anula la sanción, >= -3) -> opcional
+      component.puntajeFinalInput = 0;
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+
+      component.puntajeFinalInput = -3;
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+    });
+
+    it('no permite guardar si el fundamento es obligatorio y tiene menos de 10 caracteres', () => {
+      component.verDescargo(filaPrueba);
+      component.puntajeFinalInput = -5; // Menor que -3
+      component.fundamentoPuntajeInput = 'corto';
+
+      spyOn(api, 'registrarDecisionCausal');
+      component.guardarYVolverDescargo();
+
+      expect(api.registrarDecisionCausal).not.toHaveBeenCalled();
+      expect(notifications.warning).toHaveBeenCalled();
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+    });
+
+    it('al presionar Guardar y Volver con datos válidos persiste, marca como Leído y regresa al detalle', () => {
+      component.verDescargo(filaPrueba);
+      component.puntajeFinalInput = 0; // A favor del socio, no exige fundamento
+      spyOn(api, 'registrarDecisionCausal').and.returnValue(of({ id: 99, version: 1 } as any));
+
+      component.guardarYVolverDescargo();
+
+      expect(api.registrarDecisionCausal).toHaveBeenCalledWith('888', 5, jasmine.objectContaining({
+        puntaje_final: 0
+      }));
+      expect(filaPrueba.descargo!.leido).toBeTrue();
+      expect(filaPrueba.descargo!.puntaje_ratificado).toBe(0);
+      expect(component.modalDescargoAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(notifications.success).toHaveBeenCalledWith('Evaluación del descargo guardada con éxito.');
+    });
+
+    it('al presionar Volver regresa al detalle sin marcar como Leído', () => {
+      component.verDescargo(filaPrueba);
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+
+      component.volverADetalleDesdeDescargo();
+
+      expect(component.modalDescargoAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+    });
+
+    it('renderiza botones Guardar y Volver y Volver en el footer de Modal 6', () => {
+      component.verDescargo(filaPrueba);
+      fixture.detectChanges();
+
+      const modalDescargo = fixture.nativeElement.querySelector('.modal-descargo-backdrop');
+      expect(modalDescargo).toBeTruthy();
+
+      const btnGuardar = modalDescargo.querySelector('.btn-guardar-volver');
+      const btnVolver = modalDescargo.querySelector('.btn-volver');
+
+      expect(btnGuardar).toBeTruthy();
+      expect(btnVolver).toBeTruthy();
+      expect(btnGuardar.textContent).toContain('Guardar y Volver');
+      expect(btnVolver.textContent).toContain('Volver');
+    });
+  });
+
 
   describe('S3-08: Visualización de socios involucrados', () => {
     const expUnicoSocio: Expediente = {
@@ -1349,6 +1472,11 @@ describe('GestionarExpedientesComponent', () => {
   });
 
   describe('Filtros en una sola línea y Urgencia sin símbolos', () => {
+    const expMock: Expediente = {
+      id: '1',
+      numero: 'EXP-001/2026',
+      socio: 'Lucas Gastiaburu'
+    } as any;
     it('debe tener opción "Todos" en los desplegables de estado y urgencia', () => {
       expect(component.estadosDisponibles[0].label).toBe('Todos');
       expect(component.urgenciasDisponibles[0].label).toBe('Todos');

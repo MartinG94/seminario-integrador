@@ -1,6 +1,8 @@
 """Servicio de aplicación para resolver causales T02 con fundamento trazable (S4-02)."""
 
 from collections.abc import Iterable, Sequence
+from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from django.db import transaction
@@ -113,6 +115,7 @@ class CausalResolutionService:
         fundamento: str,
         evidencia_ids: Sequence[UUID] | None,
         user,
+        puntaje_final: Any = None,
     ) -> DecisionCausalDescargo:
         expediente = Expediente.objects.select_for_update().filter(pk=expediente_id).first()
         if expediente is None:
@@ -124,11 +127,6 @@ class CausalResolutionService:
             )
 
         descargo = CausalResolutionService.get_descargo(expediente_id, descargo_id)
-        if descargo.tipo != TipoDescargoEnum.T02_CERTIFICADO:
-            raise CausalResolutionValidationError(
-                "Sólo se resuelven acá las causales tipificadas del Formulario T02."
-            )
-
         current = current_evidence_for(descargo)
         if evidencia_ids is None:
             valued = current
@@ -141,12 +139,29 @@ class CausalResolutionService:
                 )
             valued = [by_id[ev_id] for ev_id in dict.fromkeys(evidencia_ids)]
 
-        suggested = suggested_decision(has_current_evidence=bool(current))
+        if descargo.tipo == TipoDescargoEnum.T02_CERTIFICADO:
+            suggested = suggested_decision(has_current_evidence=bool(current))
+        else:
+            suggested = CausalDecision.REJECTED
+
         fundamento = fundamento.strip()
-        try:
-            validate_decision(decision, suggested, fundamento)
-        except CausalDecisionError as exc:
-            raise CausalResolutionValidationError(str(exc)) from exc
+        if descargo.tipo == TipoDescargoEnum.T02_CERTIFICADO:
+            try:
+                validate_decision(decision, suggested, fundamento)
+            except CausalDecisionError as exc:
+                raise CausalResolutionValidationError(str(exc)) from exc
+
+        # Regla de negocio de fundamentación obligatoria al modificar puntaje
+        puntos_pedido = expediente.puntos if expediente.puntos is not None else Decimal("0")
+        if puntaje_final is not None:
+            final_dec = Decimal(str(puntaje_final))
+            pedido_dec = Decimal(str(puntos_pedido))
+            if final_dec < pedido_dec:
+                if not fundamento or len(fundamento.strip()) < 10:
+                    raise CausalResolutionValidationError(
+                        "La fundamentación escrita es obligatoria cuando "
+                        "el puntaje final es menor al pedido original."
+                    )
 
         last_version = (
             DecisionCausalDescargo.objects.filter(descargo=descargo).aggregate(last=Max("version"))[
@@ -171,7 +186,11 @@ class CausalResolutionService:
                 }
                 for ev in valued
             ],
-            descargo_snapshot=_descargo_snapshot(descargo),
+            descargo_snapshot={
+                **_descargo_snapshot(descargo),
+                "puntaje_final": float(puntaje_final) if puntaje_final is not None else None,
+                "fundamento_cambio_puntaje": fundamento,
+            },
             autor=user,
             autor_legajo=socio.legajo if socio else user.get_username(),
             autor_rol=socio.role if socio else "",
