@@ -17,9 +17,11 @@ $shadow-success-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(76, 
 $shadow-warning-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(255, 152, 0, 0.4);
 $shadow-danger-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(244, 67, 54, 0.4);
 $shadow-rose-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(233, 30, 99, 0.4);
+$shadow-teal-mat: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(0, 151, 167, 0.4);
 
 // Gradientes Oficiales a 60 grados
 $grad-primary-aveit: linear-gradient(60deg, #151846, #252B6B);
+$grad-teal-aveit: linear-gradient(60deg, #0097a7, #00838f);
 $grad-info-mat: linear-gradient(60deg, #26C6DA, #00ACC1);
 $grad-success-mat: linear-gradient(60deg, #66BB6A, #43A047);
 $grad-warning-mat: linear-gradient(60deg, #FFA726, #FB8C00);
@@ -260,6 +262,136 @@ body.dark-edition {
 }
 
 // ==========================================
+// Cabecera superior estilo AVEIT con gradiente Teal / Info (DESIGN.md)
+.card-header-tabs-teal {
+  background: $grad-teal-aveit !important;
+  box-shadow: $shadow-teal-mat !important;
+  border-radius: 6px 6px 0 0;
+  padding: 12px 20px;
+  margin: -20px 15px 0;
+  position: relative;
+  z-index: 3;
+  color: #FFFFFF;
+
+  .nav-tabs-wrapper {
+    display: inline-block;
+  }
+
+  .nav-tabs {
+    border-bottom: none;
+
+    .nav-item {
+      margin-bottom: 0;
+
+      .nav-link {
+        color: rgba(255, 255, 255, 0.82);
+        font-weight: 600;
+        font-size: 0.88rem;
+        letter-spacing: 0.5px;
+        padding: 10px 22px;
+        border: none;
+        border-radius: 4px;
+        margin-right: 8px;
+        background: transparent;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.2s ease;
+        cursor: pointer;
+
+        i.material-icons {
+          font-size: 20px;
+          margin-right: 8px;
+          line-height: 1;
+        }
+
+        &:hover {
+          color: #FFFFFF;
+          background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        &.active {
+          color: #FFFFFF !important;
+          background-color: rgba(255, 255, 255, 0.25) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+      }
+    }
+  }
+}
+
+
+// ==========================================
+// Barra de Filtros Compacta en una Sola Línea
+// ==========================================
+.filtros-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 8px 4px;
+
+  .filtro-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 4px;
+    flex-shrink: 0;
+
+    .filtro-label {
+      margin-bottom: 0;
+      margin-right: 8px;
+      white-space: nowrap;
+      font-weight: 600;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .form-control {
+      height: 38px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+    }
+  }
+
+  // Buscador acotado dinámico (a la mitad o menos)
+  .filtro-busqueda {
+    flex: 1 1 auto;
+    min-width: 180px;
+    max-width: 260px;
+
+    .form-control {
+      width: 100%;
+    }
+  }
+
+  .filtro-control-select {
+    select.form-control {
+      width: 110px;
+    }
+  }
+
+  .filtro-control-date {
+    input.form-control {
+      width: 135px;
+    }
+  }
+
+  .filtro-acciones {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 6px;
+
+    .btn {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
 // 3. Stat Cards de Alto Impacto
 // ==========================================
 .card-stats {

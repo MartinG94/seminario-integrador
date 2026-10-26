@@ -254,3 +254,141 @@ class TestExpedienteDetailAPI:
         assert d["socio_legajo"] == "74301"
         assert d["socio_nombre"] == "Martín Guillén"
         assert d["tipo"] == "T02_CERTIFICADO"
+
+    def test_api_detail_includes_reglamentos_respaldantes(
+        self, vocal_td, socio_imputado, expediente_caso
+    ) -> None:
+        """El detalle expone reglamentos_respaldantes del expediente y de la solicitud T01."""
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+
+        # Caso 1: Sin solicitud T01 (fallback)
+        response = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "reglamentos_respaldantes" in data
+        assert data["reglamentos_respaldantes"] == ["Reglamento Procesal Disciplinario 2026"]
+
+        # Caso 2: Con solicitud T01 y reglamentos respaldantes explícitos
+        from expedientes.models import SolicitudT01
+
+        solicitud = SolicitudT01.objects.create(
+            solicitante=socio_imputado,
+            destinatario_socio_id=socio_imputado.id,
+            tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+            puntos=-5,
+            motivo="Incumplimiento de tareas",
+            causal="Falta a guardia",
+            reglamentos_respaldantes=[
+                "Estatuto Social Art. 14 Inc. b",
+                "Reglamento Interno Art. 22",
+            ],
+            expediente=expediente_caso,
+        )
+
+        response = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["reglamentos_respaldantes"] == [
+            "Estatuto Social Art. 14 Inc. b",
+            "Reglamento Interno Art. 22",
+        ]
+
+        # Caso 3: Con causal pero sin reglamentos_respaldantes
+        solicitud.reglamentos_respaldantes = []
+        solicitud.save()
+        response = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["reglamentos_respaldantes"] == ["Falta a guardia"]
+
+    def test_api_detail_descargo_leido_and_puntaje_ratificado(
+        self, vocal_td, socio_imputado, expediente_caso
+    ) -> None:
+        """Verifica leido, puntaje_ratificado y decisiones_causal para descargos T02 y T03."""
+        from expedientes.models import (
+            DecisionCausalDescargo,
+            DecisionCausalEnum,
+            DescargoExpediente,
+            TipoDescargoEnum,
+        )
+
+        expediente_caso.puntos = -10
+        expediente_caso.save()
+
+        # 1. Descargo T02 sin decisiones: leido False, puntaje_ratificado None
+        descargo_t02 = DescargoExpediente.objects.create(
+            expediente=expediente_caso,
+            socio=socio_imputado,
+            tipo=TipoDescargoEnum.T02_CERTIFICADO,
+            causal="Examen Universitario",
+            archivo="constancia.pdf",
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+
+        response = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        assert response.status_code == status.HTTP_200_OK
+        d = response.json()["descargos"][0]
+        assert d["leido"] is False
+        assert d["puntaje_ratificado"] is None
+        assert d["decisiones_causal"] == []
+
+        # 2. Registrar decisión ACCEPTED: leido True, puntaje_ratificado 0
+        DecisionCausalDescargo.objects.create(
+            expediente=expediente_caso,
+            descargo=descargo_t02,
+            version=1,
+            decision=DecisionCausalEnum.ACCEPTED,
+            regla_sugerida=DecisionCausalEnum.ACCEPTED,
+            autor=vocal_td.user,
+            autor_legajo=vocal_td.legajo,
+            autor_rol=vocal_td.role,
+        )
+
+        response = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        d = response.json()["descargos"][0]
+        assert d["leido"] is True
+        assert d["puntaje_ratificado"] == 0
+        assert len(d["decisiones_causal"]) == 1
+
+        # 3. Nueva versión REJECTED: leido True, puntaje_ratificado -10
+        DecisionCausalDescargo.objects.create(
+            expediente=expediente_caso,
+            descargo=descargo_t02,
+            version=2,
+            decision=DecisionCausalEnum.REJECTED,
+            regla_sugerida=DecisionCausalEnum.ACCEPTED,
+            fundamento="El certificado no tiene sello institucional.",
+            autor=vocal_td.user,
+            autor_legajo=vocal_td.legajo,
+            autor_rol=vocal_td.role,
+        )
+
+        response = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        d = response.json()["descargos"][0]
+        assert d["leido"] is True
+        assert d["puntaje_ratificado"] == -10.0
+        assert len(d["decisiones_causal"]) == 2
+
+        # 4. Descargo T03: autoridad también ve decisiones_causal
+        expediente_t03 = Expediente.objects.create(
+            socio=socio_imputado,
+            numero="EXP-2026-TEST-T03",
+            motivo="Causa T03",
+            puntos=-5,
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+        )
+        DescargoExpediente.objects.create(
+            expediente=expediente_t03,
+            socio=socio_imputado,
+            tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
+            texto="Hechos de fuerza mayor...",
+        )
+        response = client.get(f"/api/v1/expedientes/{expediente_t03.id}/")
+        d = response.json()["descargos"][0]
+        assert "decisiones_causal" in d
+        assert d["decisiones_causal"] == []
+        assert d["leido"] is False
+        assert d["puntaje_ratificado"] is None

@@ -36,20 +36,15 @@ export class ExpedientesSocioDialogComponent implements OnInit {
     this.cargando = true;
     this.error = null;
 
-    this.expedienteApiService.listarPorLegajo(this.data.legajo).subscribe({
+    this.expedienteApiService.listarPorSocio(this.data.legajo).subscribe({
       next: (expedientes) => {
         this.expedientes = expedientes;
         this.cargando = false;
       },
-      error: (err) => {
+      error: () => {
         this.expedientes = [];
         this.cargando = false;
-
-        if (err.status === 403) {
-          this.error = 'No posee autorizaci?n para consultar los expedientes de este socio.';
-        } else {
-          this.error = 'No se pudieron cargar los expedientes del socio.';
-        }
+        this.error = 'No se pudieron cargar los expedientes del socio.';
       }
     });
   }

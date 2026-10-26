@@ -306,7 +306,12 @@ class Expediente(models.Model):
             return self.plazo_limite_at
         provider = holiday_provider if holiday_provider is not None else DbHolidayProvider()
 
-        limite = compute_business_deadline(
+        from expedientes.services.t01_appeal_service import T01AppealService
+
+        # En los T01 el plazo de apelación es el parámetro vigente, por socio (PB-02).
+        limite = T01AppealService.open_initial_periods(
+            self, fecha_hora_inicio
+        ) or compute_business_deadline(
             start_at=fecha_hora_inicio,
             business_days=dias_habiles,
             holiday_provider=provider,
@@ -566,7 +571,7 @@ class DecisionCausalEnum(models.TextChoices):
 
 
 class DecisionCausalDescargo(models.Model):
-    """Decisión inmutable y versionada de un vocal sobre la causal de un descargo T02.
+    """Decisión inmutable y versionada de un miembro del TD sobre la causal de un descargo T02.
 
     Cada nueva valoración crea una versión; las anteriores se conservan (CA3).
     Guarda una copia del descargo valorado sin modificar el original (CA4).
@@ -709,6 +714,128 @@ class SolicitudT01(models.Model):
             self.snapshots_destinatarios = [self.snapshot_destinatario]
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+# --- Apelación y adecuación del T01 (PB-02, Reglamento Procesal 2026, art. 14) ---
+
+
+class T01HistoryRecord(models.Model):
+    """Registro del historial del T01: sólo inserción, sin modificación ni eliminación (CA4)."""
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("El historial del T01 es inmutable.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("El historial del T01 no puede eliminarse.")
+
+
+class ParametroPlazoApelacion(T01HistoryRecord):
+    """Plazo de apelación del T01 en días hábiles; el vigente es el último registrado."""
+
+    DEFAULT_DIAS_HABILES = 5
+
+    dias_habiles = models.PositiveSmallIntegerField()
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_parametro_plazo_apelacion"
+        ordering = ["-created_at", "-id"]
+
+    @classmethod
+    def vigente(cls) -> int:
+        ultimo = cls.objects.order_by("-created_at", "-id").first()
+        return ultimo.dias_habiles if ultimo else cls.DEFAULT_DIAS_HABILES
+
+
+class OrigenPeriodoApelacionEnum(models.TextChoices):
+    APERTURA = "APERTURA", "Apertura del expediente"
+    ADECUACION = "ADECUACION", "Nuevo período por adecuación"
+
+
+class AdecuacionT01(T01HistoryRecord):
+    """Versión de la adecuación de puntos e involucrados decidida en el debate (OP 30)."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="adecuaciones_t01"
+    )
+    version = models.PositiveIntegerField()
+    puntos_anteriores = models.DecimalField(max_digits=10, decimal_places=2)
+    puntos_nuevos = models.DecimalField(max_digits=10, decimal_places=2)
+    socios_anteriores = models.JSONField(default=list)
+    socios_nuevos = models.JSONField(default=list)
+    motivos = models.TextField()
+    reabre_plazo = models.BooleanField(default=False)
+    socios_con_nuevo_plazo = models.JSONField(default=list, blank=True)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    autor_legajo = models.CharField(max_length=20)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_adecuacion_t01"
+        ordering = ["version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "version"], name="unique_adecuacion_t01_version"
+            )
+        ]
+
+
+class PeriodoApelacion(T01HistoryRecord):
+    """Período de apelación de un socio, con el plazo congelado al abrirse (CA1/CA5)."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="periodos_apelacion"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="periodos_apelacion"
+    )
+    origen = models.CharField(max_length=12, choices=OrigenPeriodoApelacionEnum.choices)
+    adecuacion = models.ForeignKey(
+        AdecuacionT01,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="periodos_abiertos",
+    )
+    dias_habiles = models.PositiveSmallIntegerField()
+    inicio_at = models.DateTimeField()
+    limite_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_periodo_apelacion"
+        ordering = ["created_at", "id"]
+
+
+class ApelacionT01(T01HistoryRecord):
+    """Versión de la apelación de un socio involucrado en un T01 (OP 20)."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="apelaciones_t01"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="apelaciones_t01"
+    )
+    numero = models.PositiveIntegerField()
+    texto = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_apelacion_t01"
+        ordering = ["socio_id", "numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "socio", "numero"], name="unique_apelacion_t01_version"
+            )
+        ]
 
 
 class CategoriaEventoEnum(models.TextChoices):

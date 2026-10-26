@@ -15,7 +15,9 @@ from accounts.permissions import HasAnyRole, IsTribunalOrDirectiva
 from socios.models import Role
 
 __all__ = [
+    "CanAdjustT01",
     "CanCreateT01",
+    "CanManageAppealDeadline",
     "CanManageCalendar",
     "CanManageEventos",
     "CanOpenExpedientes",
@@ -58,9 +60,21 @@ class CanTransitionExpedientes(HasAnyRole):
 
 
 class CanResolveCausal(HasAnyRole):
-    """Sólo los vocales del Tribunal resuelven causales T02 (S4-02)."""
+    """Sólo los miembros del Tribunal resuelven causales T02 (S4-02)."""
 
     allowed_roles = (Role.TD,)
+
+
+class CanAdjustT01(HasAnyRole):
+    """Sólo el Tribunal debate y adecúa el T01 (PB-02)."""
+
+    allowed_roles = (Role.TD,)
+
+
+class CanManageAppealDeadline(HasAnyRole):
+    """TD y Administración parametrizan el plazo de apelación del T01 (PB-02)."""
+
+    allowed_roles = (Role.TD, Role.ADMIN)
 
 
 class CanCreateT01(HasAnyRole):

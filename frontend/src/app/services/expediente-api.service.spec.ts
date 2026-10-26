@@ -155,4 +155,43 @@ describe('ExpedienteApiService', () => {
     expect(versiones.length).toBe(1);
     expect(versiones[0].numero).toBe(1);
   });
+
+  describe('apelación y adecuación del T01 (PB-02)', () => {
+    const base = `${environment.apiUrl}/expedientes`;
+
+    it('consulta el historial del T01', () => {
+      service.obtenerHistorialT01(7).subscribe(h => expect(h.es_t01).toBeTrue());
+      const req = http.expectOne(`${base}/7/t01/historial/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ es_t01: true });
+    });
+
+    it('presenta la apelación del socio', () => {
+      service.apelarT01(7, 'No estuve presente en el lugar del hecho.').subscribe();
+      const req = http.expectOne(`${base}/7/apelacion/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ texto: 'No estuve presente en el lugar del hecho.' });
+      req.flush({});
+    });
+
+    it('registra la adecuación del TD', () => {
+      const payload = { puntos: -1.5, socios: [3, 4], motivos: 'Motivos del debate del Tribunal.', reabrir_plazo: true };
+      service.adecuarT01(7, payload).subscribe();
+      const req = http.expectOne(`${base}/7/adecuaciones/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(payload);
+      req.flush({});
+    });
+
+    it('consulta y actualiza el plazo de apelación', () => {
+      service.obtenerPlazoApelacion().subscribe(p => expect(p.dias_habiles).toBe(5));
+      http.expectOne(`${base}/parametros/plazo-apelacion/`).flush({ dias_habiles: 5 });
+
+      service.actualizarPlazoApelacion(7).subscribe(p => expect(p.dias_habiles).toBe(7));
+      const req = http.expectOne(`${base}/parametros/plazo-apelacion/`);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ dias_habiles: 7 });
+      req.flush({ dias_habiles: 7 });
+    });
+  });
 });

@@ -226,6 +226,57 @@ class TestRankingFilteringAndOrdering:
         for item in data:
             assert item["subcomision"] == "Cómputos"
 
+    def test_junior_subcomision_serialized_as_sin_subcomision_in_api(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Socio junior (anoSocial 1 o 2) expone 'Sin Subcomisión' en el endpoint de ranking."""
+        response = api_client.get("/api/v1/ranking/")
+        assert response.status_code == status.HTTP_200_OK
+        items_by_id = {item["id"]: item for item in response.json()}
+        assert items_by_id["102"]["subcomision"] == "Sin Subcomisión"
+        assert items_by_id["103"]["subcomision"] == "Sin Subcomisión"
+
+    def test_senior_subcomision_preserved_in_api(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Socio senior (anoSocial >= 3) conserva su subcomisión asignada."""
+        response = api_client.get("/api/v1/ranking/")
+        assert response.status_code == status.HTTP_200_OK
+        items_by_id = {item["id"]: item for item in response.json()}
+        assert items_by_id["101"]["subcomision"] == "Cómputos"
+        assert items_by_id["104"]["subcomision"] == "Cómputos"
+
+    def test_filter_subcomision_sin_subcomision_includes_juniors(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """El filtro 'sin subcomision' devuelve socios juniors con 'Sin Subcomisión'."""
+        response = api_client.get("/api/v1/ranking/?subcomision=sin subcomision")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        ids = [item["id"] for item in data]
+        assert "102" in ids
+        assert "103" in ids
+        for item in data:
+            assert item["subcomision"] == "Sin Subcomisión"
+
+    def test_filter_subcomision_specific_excludes_juniors(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        """Filtrar por subcomisión específica excluye a juniors aunque tengan FK asignada."""
+        # s2 tiene subcomision=sub_eventos (codSubcomision=7) pero anoSocial=2
+        r_eventos = api_client.get("/api/v1/ranking/?subcomision=Eventos")
+        assert r_eventos.status_code == status.HTTP_200_OK
+        assert len(r_eventos.json()) == 0
+
+        r_id = api_client.get("/api/v1/ranking/?subcomision=7")
+        assert r_id.status_code == status.HTTP_200_OK
+        assert len(r_id.json()) == 0
+
+        # s3 tiene subcomision=sub_td pero anoSocial=1
+        r_td = api_client.get("/api/v1/ranking/?subcomision=Tribunal de Disciplina")
+        assert r_td.status_code == status.HTTP_200_OK
+        assert len(r_td.json()) == 0
+
     def test_search_by_text(self, api_client: APIClient, seed_ranking_data) -> None:
         # Búsqueda por apellido
         r_ape = api_client.get("/api/v1/ranking/?q=alonso")
@@ -513,14 +564,20 @@ class TestRankingFilteringAndOrdering:
         # Filtrar por "Sin Subcomisión"
         r_filter = api_client.get("/api/v1/ranking/?subcomision=Sin Subcomisión")
         assert r_filter.status_code == status.HTTP_200_OK
-        assert len(r_filter.json()) == 1
-        assert r_filter.json()[0]["id"] == str(s_orphan.nroSocio)
+        ids_filter = [item["id"] for item in r_filter.json()]
+        assert len(ids_filter) == 3
+        assert str(s_orphan.nroSocio) in ids_filter
+        assert "102" in ids_filter
+        assert "103" in ids_filter
 
         # Filtrar por alias "null"
         r_null = api_client.get("/api/v1/ranking/?subcomision=null")
         assert r_null.status_code == status.HTTP_200_OK
-        assert len(r_null.json()) == 1
-        assert r_null.json()[0]["id"] == str(s_orphan.nroSocio)
+        ids_null = [item["id"] for item in r_null.json()]
+        assert len(ids_null) == 3
+        assert str(s_orphan.nroSocio) in ids_null
+        assert "102" in ids_null
+        assert "103" in ids_null
 
     def test_search_by_subcomision_name_aligned_with_frontend(
         self, api_client: APIClient, seed_ranking_data

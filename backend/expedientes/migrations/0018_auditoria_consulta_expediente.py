@@ -8,7 +8,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('expedientes', '0016_merge_20261021_0916'),
+        ('expedientes', '0017_apelacion_adecuacion_t01'),
     ]
 
     operations = [

@@ -1,8 +1,15 @@
 import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
 import { TribunalDataService, Expediente, LogJustificativo } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
-import { NotificationService } from '../services/notification.service';
-import { ExpedienteApiService, EvidenciaMetadata, DescargoVersionDto, OperacionDescargo } from '../services/expediente-api.service';
+import { NotificationService, httpErrorMessage } from '../services/notification.service';
+import {
+  ExpedienteApiService,
+  EvidenciaMetadata,
+  DescargoVersionDto,
+  HistorialT01DTO,
+  OperacionDescargo,
+  PeriodoApelacionDTO
+} from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
 import { formatCaseNumber, humanizeEstado } from '../utils/case-number.util';
 
@@ -20,6 +27,19 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   // Ordenamiento de tabla
   columnaOrden = 'numero';
   ordenAscendente = true;
+  filtroTab: 'todos' | 'en_tramite' | 'resueltos' = 'todos';
+
+  setFiltroTab(tab: 'todos' | 'en_tramite' | 'resueltos'): void {
+    this.filtroTab = tab;
+  }
+
+  get cantidadEnTramite(): number {
+    return this.misExpedientes.filter((e) => e.estado !== 'emitido').length;
+  }
+
+  get cantidadResueltos(): number {
+    return this.misExpedientes.filter((e) => e.estado === 'emitido').length;
+  }
 
   // Modal T02/T03
   modalAbierto = false;
@@ -151,6 +171,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       puntos: raw.puntos || 0,
       plazoInicioAt: raw.plazo_inicio_at,
       plazoLimiteAt: raw.plazo_limite_at,
+      esT01: !!raw.es_t01,
       descargoPresentado: raw.descargo_presentado,
       descargo: descargoObj,
       evidencias: raw.evidencias || [],
@@ -244,7 +265,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteDetalle = exp;
     this.modalDetalleAbierto = true;
     this.actualizarScrollBloqueo();
-    this.cargarHistorialDescargo(exp.id);
+    this.limpiarApelacion();
+    if (exp.esT01) {
+      this.cargarHistorialT01(exp.id);
+    } else {
+      this.cargarHistorialDescargo(exp.id);
+    }
     this.expedienteApi.obtenerDetalleExpediente(exp.id).subscribe({
       next: (detalle) => {
         if (this.modalDetalleAbierto && this.expedienteDetalle?.id === String(detalle.id)) {
@@ -259,7 +285,82 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.expedienteDetalle = null;
     this.historialDescargo = [];
+    this.limpiarApelacion();
     this.actualizarScrollBloqueo();
+  }
+
+  // --- Apelación del T01 (PB-02): reemplaza al descargo T02/T03 ---
+
+  readonly MIN_CARACTERES_APELACION = 20;
+  historialT01: HistorialT01DTO | null = null;
+  apelacionAbierta = false;
+  textoApelacion = '';
+  enviandoApelacion = false;
+
+  /** Período de apelación vigente del socio en sesión (el backend devuelve sólo los propios). */
+  get miPeriodoApelacion(): PeriodoApelacionDTO | null {
+    const periodos = this.historialT01?.periodos || [];
+    return periodos.length ? periodos[periodos.length - 1] : null;
+  }
+
+  get ultimaApelacion() {
+    const apelaciones = this.historialT01?.apelaciones || [];
+    return apelaciones.length ? apelaciones[apelaciones.length - 1] : null;
+  }
+
+  get puedeApelar(): boolean {
+    const periodo = this.miPeriodoApelacion;
+    return !!periodo && periodo.abierto && this.ahoraMs <= new Date(periodo.limite_at).getTime();
+  }
+
+  private limpiarApelacion(): void {
+    this.historialT01 = null;
+    this.apelacionAbierta = false;
+    this.textoApelacion = '';
+    this.enviandoApelacion = false;
+  }
+
+  private cargarHistorialT01(expedienteId: string): void {
+    this.expedienteApi.obtenerHistorialT01(expedienteId).subscribe({
+      next: historial => {
+        if (this.expedienteDetalle?.id === expedienteId) {
+          this.historialT01 = historial;
+        }
+      },
+      error: err => this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la apelación.'))
+    });
+  }
+
+  abrirApelacion(): void {
+    this.textoApelacion = this.ultimaApelacion?.texto || '';
+    this.apelacionAbierta = true;
+  }
+
+  enviarApelacion(): void {
+    const exp = this.expedienteDetalle;
+    if (!exp || this.enviandoApelacion) return;
+    const texto = this.textoApelacion.trim();
+    if (texto.length < this.MIN_CARACTERES_APELACION) {
+      this.notifications.error(`Escribí tu apelación con al menos ${this.MIN_CARACTERES_APELACION} caracteres.`);
+      return;
+    }
+    if (texto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+      this.notifications.error(`La apelación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`);
+      return;
+    }
+    this.enviandoApelacion = true;
+    this.expedienteApi.apelarT01(exp.id, texto).subscribe({
+      next: historial => {
+        this.enviandoApelacion = false;
+        this.apelacionAbierta = false;
+        this.historialT01 = historial;
+        this.notifications.success('Apelación registrada. Te enviamos la constancia por mail.');
+      },
+      error: err => {
+        this.enviandoApelacion = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la apelación.'));
+      }
+    });
   }
 
   /** Consulta las versiones del descargo y las mapea a las filas de la tabla de auditoría. */
@@ -850,7 +951,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get expedientesOrdenados(): Expediente[] {
-    const lista = [...this.misExpedientes];
+    let lista = [...this.misExpedientes];
+    if (this.filtroTab === 'en_tramite') {
+      lista = lista.filter((e) => e.estado !== 'emitido');
+    } else if (this.filtroTab === 'resueltos') {
+      lista = lista.filter((e) => e.estado === 'emitido');
+    }
     lista.sort((a, b) => {
       let valA: any = (a as any)[this.columnaOrden];
       let valB: any = (b as any)[this.columnaOrden];

@@ -8,91 +8,99 @@
       </button>
     </div>
 
-    <!-- Barra de Herramientas y Filtros Explícitos (CA2) -->
-    <div class="card mb-4">
-      <div class="card-body p-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom">
-          <div class="d-flex align-items-center gap-3">
-            <div class="btn-group" role="group" aria-label="Selector de Vista">
-              <button mat-raised-button 
-                      [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
-                      class="btn btn-sm" 
-                      [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
-                      (click)="vistaActual = 'kanban'"
-                      aria-label="Ver tablero de estados Kanban">
-                <i class="material-icons" style="font-size: 16px;">view_kanban</i> Tablero de Estados
-              </button>
-              <button mat-raised-button 
-                      [color]="vistaActual === 'tabla' ? 'primary' : 'default'" 
-                      class="btn btn-sm" 
-                      [ngClass]="vistaActual === 'tabla' ? 'btn-primary' : 'btn-white'"
-                      (click)="vistaActual = 'tabla'"
-                      aria-label="Ver listado en tabla de expedientes">
-                <i class="material-icons" style="font-size: 16px;">view_list</i> Lista en Tabla
-              </button>
-            </div>
-            <span class="text-muted small ml-2">Total expedientes: <strong>{{expedientes.length}}</strong></span>
-            <span *ngIf="cargando" class="badge badge-info ml-2">Actualizando datos...</span>
-          </div>
+    <!-- Barra Principal con Cabecera de Pestañas Teal AVEIT -->
+    <div class="card card-nav-tabs shadow-sm mb-4">
+      <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+        <div class="nav-tabs-wrapper">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link" 
+                 [class.active]="vistaActual === 'kanban'" 
+                 (click)="vistaActual = 'kanban'" 
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">view_kanban</i> TABLERO DE ESTADOS
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" 
+                 [class.active]="vistaActual === 'tabla'" 
+                 (click)="vistaActual = 'tabla'" 
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">view_list</i> LISTA EN TABLA
+                <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="expedientes.length > 0">
+                  {{ expedientes.length }}
+                </span>
+              </a>
+            </li>
+          </ul>
         </div>
-
-        <!-- Fila de Filtros Explícitos (CA2 / S3-07): Socio, Estado, Urgencia, Fecha Desde, Fecha Hasta -->
-        <div class="row pt-3 align-items-end">
-          <div class="col-lg-3 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-socio">Búsqueda (Socio, Legajo, Creador o Título):</label>
-            <div class="input-group no-border m-0">
-              <input id="filtro-socio" 
-                     type="text" 
-                     class="form-control" 
-                     placeholder="Buscar por socio, legajo, creador o título..." 
-                     [(ngModel)]="filtroSocio" 
-                     (keyup.enter)="cargarDatosTablero()">
-            </div>
+        <div class="text-white-50 d-none d-md-block small">
+          <span *ngIf="vistaActual === 'kanban'">Sala del Tribunal: Juzgamiento colegiado y seguimiento de causas</span>
+          <span *ngIf="vistaActual === 'tabla'">Explorador integral y detallado de expedientes disciplinarios</span>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <!-- Barra de Filtros en una Sola Línea (CA2 / S3-07) -->
+        <div class="filtros-bar d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between py-2 w-100">
+          <!-- 1. Búsqueda compacta y dinámica -->
+          <div class="filtro-item filtro-busqueda">
+            <input id="filtro-socio"
+                   type="text"
+                   class="form-control"
+                   placeholder="Buscar por socio, legajo o título..."
+                   [(ngModel)]="filtroSocio"
+                   (keyup.enter)="cargarDatosTablero()"
+                   aria-label="Buscar por socio, legajo, creador o título">
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-estado">Estado:</label>
-            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado" (change)="cargarDatosTablero()">
+          <!-- 2. Estado -->
+          <div class="filtro-item filtro-control-select">
+            <label class="filtro-label" for="filtro-estado">Estado:</label>
+            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado">
               <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
             </select>
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-urgencia">Urgencia:</label>
-            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia" (change)="cargarDatosTablero()">
+          <!-- 3. Urgencia -->
+          <div class="filtro-item filtro-control-select">
+            <label class="filtro-label" for="filtro-urgencia">Urgencia:</label>
+            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia">
               <option *ngFor="let urg of urgenciasDisponibles" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-desde">Fecha Desde:</label>
-            <input id="filtro-desde" type="date" class="form-control" [(ngModel)]="filtroFechaDesde" (change)="cargarDatosTablero()">
+          <!-- 4. Fecha Desde ("Desde:") -->
+          <div class="filtro-item filtro-control-date">
+            <label class="filtro-label" for="filtro-desde">Desde:</label>
+            <input id="filtro-desde" type="date" class="form-control" [(ngModel)]="filtroFechaDesde">
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-hasta">Fecha Hasta:</label>
-            <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta" (change)="cargarDatosTablero()">
+          <!-- 5. Fecha Hasta ("Hasta:") -->
+          <div class="filtro-item filtro-control-date">
+            <label class="filtro-label" for="filtro-hasta">Hasta:</label>
+            <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta">
           </div>
 
-          <div class="col-lg-1 col-md-12 col-12 mb-2 d-flex gap-2">
-            <button mat-raised-button 
-                    class="btn btn-primary btn-sm flex-fill m-0" 
+          <!-- 6. Botones de Filtrado y Limpieza -->
+          <div class="filtro-acciones d-flex align-items-center flex-shrink-0">
+            <button mat-raised-button
+                    class="btn btn-primary btn-sm m-0 px-3"
                     (click)="cargarDatosTablero()"
                     aria-label="Aplicar filtros de búsqueda"
                     title="Filtrar">
-              <i class="material-icons" style="font-size: 14px;">filter_list</i>
+              <i class="material-icons" style="font-size: 16px;">filter_list</i>
             </button>
-            <button mat-button 
-                    class="btn btn-white btn-sm m-0" 
+            <button mat-button
+                    class="btn btn-outline-secondary btn-sm m-0 ml-1 px-2"
                     (click)="limpiarFiltros()"
                     title="Limpiar filtros"
                     aria-label="Limpiar filtros">
-              <i class="material-icons" style="font-size: 14px;">clear</i>
+              <i class="material-icons" style="font-size: 16px;">clear</i>
             </button>
           </div>
         </div>
-      </div>
-    </div>
 
     <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (Ciclo de Vida Canónico S2-05) -->
     <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de estados">
@@ -185,8 +193,8 @@
 
     <!-- VISTA 2: EXPLORADOR DENSO DE DATOS -->
     <div *ngIf="vistaActual === 'tabla'" class="card">
-      <div class="card-header card-header-primary">
-        <h4 class="card-title">Detalle de Expedientes</h4>
+      <div class="card-header card-header-tabs-teal">
+        <h4 class="card-title text-white mb-0">Detalle de Expedientes</h4>
       </div>
       <div class="card-body">
         <div class="table-responsive explorer-table-container">
@@ -226,7 +234,7 @@
                 </td>
                 <td>
                   <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)">
-                    <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(exp.urgencia)}}</i> {{getUrgenciaLabel(exp.urgencia)}}
+                    {{getUrgenciaLabel(exp.urgencia)}}
                   </span>
                 </td>
                 <td>
@@ -286,10 +294,16 @@
 <!-- Modal 1: Detalle Completo del Expediente -->
 <div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom">
   <div class="modal-dialog-custom modal-dialog-tribunal">
-    <div class="card" *ngIf="expedienteSeleccionado">
+    <div class="card modal-detalle-card" *ngIf="expedienteSeleccionado">
+      <!-- Cabecera del Modal 1 -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
-        <div>
-          <h4 class="card-title mb-0">Expediente {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
+        <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
+          Exp: {{formatCaseNumber(expedienteSeleccionado.numero)}}
+        </span>
+        <div class="modal-titulo-central flex-grow-1 text-center px-3">
+          <h4 class="card-title mb-0 font-weight-bold text-white">
+            {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}
+          </h4>
         </div>
         <button type="button" 
                 class="btn btn-link text-white p-1 m-0 btn-close-modal" 
@@ -298,62 +312,23 @@
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="card-body">
-        <div class="row">
-          <!-- Fila 1: Estado (col-md-2), Fecha de Solicitud (col-md-2), Título (col-md-3), Motivo (col-md-5) -->
-          <div class="col-12 col-sm-6 col-md-2 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Estado de expediente:</label>
-            <div>
+
+      <div class="card-body modal-detalle-body">
+        <div class="row metadatos-row">
+          <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
+          <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Estado:</span>
               <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteSeleccionado.estado)">
                 {{getEstadoLabel(expedienteSeleccionado.estado)}}
               </span>
             </div>
-          </div>
-          <div class="col-12 col-sm-6 col-md-2 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Fecha de Solicitud:</label>
-            <div class="font-weight-bold">
-              {{expedienteSeleccionado.fechaCreacion | date:'dd/MM/yyyy'}}
-            </div>
-          </div>
-          <div class="col-12 col-md-3 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Título:</label>
-            <div class="p-2 bg-light rounded border font-weight-bold text-break" style="white-space: pre-wrap;">
-              {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}
-            </div>
-          </div>
-          <div class="col-12 col-md-5 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Motivo:</label>
-            <div class="p-2 bg-light rounded border text-break" style="white-space: pre-wrap;">
-              {{expedienteSeleccionado.razon || expedienteSeleccionado.motivo}}
-            </div>
-          </div>
 
-          <!-- Fila 2: Sanción solicitada (col-md-2), Reglamento (col-md-5), Solicitante (col-md-5) -->
-          <div class="col-12 col-sm-6 col-md-2 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Sanción solicitada:</label>
-            <div class="font-weight-bold" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
-              {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts
-            </div>
-          </div>
-          <div class="col-12 col-sm-6 col-md-5 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Reglamento:</label>
-            <div class="p-2 bg-light rounded border font-weight-bold text-break text-primary">
-              {{getReglamentoAsociado(expedienteSeleccionado)}}
-            </div>
-          </div>
-          <div class="col-12 col-md-5 mb-3">
-            <label class="text-muted small font-weight-bold d-block mb-1">Solicitante:</label>
-            <div class="p-2 bg-light rounded border font-weight-bold text-break">
-              {{formatSolicitante(expedienteSeleccionado)}}
-            </div>
-          </div>
-
-          <!-- Control de Urgencia debajo de los metadatos separado sutilmente -->
-          <div class="col-12 mt-2 pt-2 border-top d-flex align-items-center flex-wrap gap-2">
-            <label class="text-muted small font-weight-bold mb-0 mr-2">Nivel de Urgencia:</label>
-            <div class="d-flex align-items-center">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Urgencia:</span>
               <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(expedienteSeleccionado.urgencia)">
-                <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i> {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
+                <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i>
+                {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
               </span>
               <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2" role="group" aria-label="Cambiar Urgencia">
                 <button type="button" 
@@ -370,24 +345,64 @@
                         (click)="cambiarUrgenciaExpediente('urgente')">Urgente</button>
               </div>
             </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje Solicitado:</span>
+              <span class="font-weight-bold puntaje-solicitado-val" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
+                {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}}
+              </span>
+            </div>
+          </div>
+
+          <!-- Fila 2: Fecha de Solicitud y Solicitante en una sola línea -->
+          <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Fecha de Solicitud:</span>
+              <span class="font-weight-bold">{{expedienteSeleccionado.fechaCreacion | date:'dd/MM/yyyy'}}</span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Solicitante:</span>
+              <span class="font-weight-bold text-break solicitante-val">{{formatSolicitante(expedienteSeleccionado)}}</span>
+            </div>
+          </div>
+
+          <!-- Fila 3: Sección Reglamentación -->
+          <div class="col-12 mb-3">
+            <span class="text-muted small font-weight-bold d-block mb-1">Reglamentación:</span>
+            <div class="reglamentacion-box p-2 rounded border">
+              <ng-container *ngIf="getReglamentosSustento(expedienteSeleccionado) as reglamentos">
+                <div *ngIf="reglamentos.length === 1">
+                  <span class="font-weight-bold text-primary">{{reglamentos[0]}}</span>
+                </div>
+                <div *ngIf="reglamentos.length > 1">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span class="font-weight-bold text-primary">{{reglamentos[0]}} ({{reglamentos.length}} reglamentos)</span>
+                    <button type="button" class="btn btn-sm btn-link p-0 text-primary toggle-reglamento-btn" (click)="toggleReglamentacion()">
+                      {{reglamentacionExpandida ? 'Ocultar detalle' : 'Ver detalle reglamentario'}}
+                    </button>
+                  </div>
+                  <ul *ngIf="reglamentacionExpandida" class="list-unstyled mt-2 mb-0 pl-2 border-top pt-2">
+                    <li *ngFor="let reg of reglamentos" class="text-dark small py-1">
+                      &bull; {{reg}}
+                    </li>
+                  </ul>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- Bloque Motivo -->
+          <div class="col-12 mb-3">
+            <span class="text-muted small font-weight-bold d-block mb-1">Motivo:</span>
+            <div class="motivo-box p-3 rounded-xl border text-break">
+              {{expedienteSeleccionado.razon || expedienteSeleccionado.motivo}}
+            </div>
           </div>
         </div>
 
-
-        <!-- Descargo si existe -->
-        <div *ngIf="expedienteSeleccionado.descargo" class="mt-3 p-3 bg-light rounded border">
-          <h5 class="font-weight-bold text-dark mb-2">
-            <i class="material-icons text-info" style="vertical-align: middle;">description</i> Descargo del Socio Presentado:
-          </h5>
-          <p class="mb-1"><strong>Modalidad:</strong> {{expedienteSeleccionado.descargo.tipo}}</p>
-          <p *ngIf="expedienteSeleccionado.descargo.causal" class="mb-1"><strong>Causal:</strong> {{expedienteSeleccionado.descargo.causal}}</p>
-          <p *ngIf="expedienteSeleccionado.descargo.archivo" class="mb-1 text-success"><strong>Comprobante:</strong> {{expedienteSeleccionado.descargo.archivo}}</p>
-          <p class="mt-2 mb-0"><strong>Exposición:</strong> {{expedienteSeleccionado.descargo.texto}}</p>
-        </div>
-
-        <!-- Evaluación de justificaciones T02 (S4-02): paso 1, Tabla de Involucrados (notasPO §4) -->
-        <section *ngIf="(cargandoJustificaciones || involucradosJustificacion.length) && !involucradoSeleccionado"
-                 class="mt-3 p-3 bg-light rounded border" aria-labelledby="titulo-involucrados-justificacion">
+        <!-- Sección Involucrados y justificaciones (siempre visible) -->
+        <section class="mt-3 p-3 bg-light rounded border seccion-involucrados" aria-labelledby="titulo-involucrados-justificacion">
           <h5 id="titulo-involucrados-justificacion" class="font-weight-bold text-dark mb-2">
             <i class="material-icons text-info" aria-hidden="true" style="vertical-align: middle;">groups</i> Involucrados y justificaciones
           </h5>
@@ -398,196 +413,85 @@
               <thead>
                 <tr>
                   <th scope="col">N° de Socio</th>
+                  <th scope="col">Nombre Completo</th>
                   <th scope="col">Grupo</th>
-                  <th scope="col">Nombre</th>
-                  <th scope="col">Apellido</th>
-                  <th scope="col">Estado de Justificación</th>
+                  <th scope="col">Estado de Descargo</th>
+                  <th scope="col">Puntaje Final</th>
                   <th scope="col"><span class="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let fila of involucradosJustificacion">
-                  <td>{{fila.legajo}}</td>
-                  <td>{{fila.grupo ? 'G' + fila.grupo : '—'}}</td>
-                  <td>{{fila.nombre}}</td>
-                  <td>{{fila.apellido}}</td>
-                  <td>
-                    <span class="estado-justificacion" [ngClass]="{
-                            'text-success': estadoJustificacion(fila) === 'Aprobada',
-                            'text-danger': estadoJustificacion(fila) === 'Desaprobada'
-                          }">{{estadoJustificacion(fila)}}</span>
-                    <div *ngIf="fila.descargo?.causal" class="small text-muted">{{fila.descargo?.causal}}</div>
+                  <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
+                  <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
+                  <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
+                  <td class="estado-descargo-cell">
+                    <span class="estado-descargo-badge" [ngClass]="{
+                            'text-success font-weight-bold': getEstadoDescargo(fila) === 'Leído',
+                            'text-warning font-weight-bold': getEstadoDescargo(fila) === 'No Leído',
+                            'text-muted': getEstadoDescargo(fila) === 'Sin descargo'
+                          }">{{getEstadoDescargo(fila)}}</span>
                   </td>
-                  <td class="text-right text-nowrap">
-                    <button *ngIf="esEvaluable(fila)" type="button" class="btn btn-sm btn-primary btn-evaluar-justificacion"
-                            [attr.aria-label]="(puedeEvaluarJustificaciones ? 'Evaluar justificación de ' : 'Ver justificativo de ') + fila.nombre + ' ' + fila.apellido"
-                            (click)="seleccionarInvolucrado(fila)">
-                      <i class="material-icons" aria-hidden="true">{{puedeEvaluarJustificaciones ? 'gavel' : 'visibility'}}</i>
-                      {{puedeEvaluarJustificaciones ? 'Evaluar justificación' : 'Ver justificativo'}}
+                  <td class="font-weight-bold puntaje-final-cell">
+                    {{getPuntajeFinalInvolucrado(fila)}}
+                  </td>
+                  <td class="text-right text-nowrap acciones-cell">
+                    <button *ngIf="fila.descargo" 
+                            type="button" 
+                            class="btn btn-sm btn-info btn-ver-descargo"
+                            [attr.aria-label]="'Ver Descargo de ' + getNombreCompletoInvolucrado(fila)"
+                            (click)="verDescargo(fila)">
+                      <i class="material-icons" aria-hidden="true" style="font-size: 14px;">visibility</i> Ver Descargo
                     </button>
                   </td>
+                </tr>
+                <tr *ngIf="involucradosJustificacion.length === 0">
+                  <td colspan="6" class="text-center text-muted py-2">No hay involucrados registrados en el expediente.</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </section>
 
-        <!-- Paso 2: Evaluar justificación del involucrado seleccionado -->
-        <section *ngIf="involucradoSeleccionado?.descargo as d" class="mt-3 p-3 bg-light rounded border panel-evaluar-justificacion"
-                 aria-labelledby="titulo-evaluar-justificacion">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 id="titulo-evaluar-justificacion" class="font-weight-bold text-dark mb-0">
-              <i class="material-icons text-info" aria-hidden="true" style="vertical-align: middle;">gavel</i>
-              {{puedeEvaluarJustificaciones ? 'Evaluar justificación' : 'Justificativo'}}
-            </h5>
-            <button type="button" class="btn btn-sm btn-link btn-volver-involucrados" (click)="volverAListadoInvolucrados()">
-              <i class="material-icons" aria-hidden="true">arrow_back</i> Volver a involucrados
-            </button>
-          </div>
-
-          <h6 class="seccion-titulo">Involucrado</h6>
-          <div class="row text-center">
-            <div class="col-4"><div class="small text-muted">N° de Socio</div><div class="font-weight-bold">{{involucradoSeleccionado?.legajo}}</div></div>
-            <div class="col-4"><div class="small text-muted">Nombre</div><div class="font-weight-bold">{{involucradoSeleccionado?.nombre}}</div></div>
-            <div class="col-4"><div class="small text-muted">Apellido</div><div class="font-weight-bold">{{involucradoSeleccionado?.apellido}}</div></div>
-          </div>
-          <hr>
-
-          <h6 class="seccion-titulo">Justificativo</h6>
-          <p class="mb-1"><strong>Causal:</strong> {{d.causal}}</p>
-          <p class="mb-2"><strong>Exposición:</strong> {{d.texto || 'Sin exposición escrita.'}}</p>
-          <div class="text-center my-3">
-            <p *ngIf="!d.evidencias.length" class="text-muted small mb-0">El socio no presentó comprobante.</p>
-            <div *ngFor="let ev of d.evidencias" class="mb-2">
-              <button type="button" class="btn btn-info btn-ver-comprobante"
-                      [attr.aria-label]="'Ver comprobante ' + ev.nombre_original"
-                      (click)="verComprobante(ev)">
-                <i class="material-icons" aria-hidden="true">description</i> VER COMPROBANTE
-              </button>
-              <div class="small text-muted">{{ev.nombre_original}}</div>
-            </div>
-          </div>
-          <p class="small text-muted mb-0">Sugerencia del sistema: {{sugerenciaSistema(d)}}</p>
-          <hr>
-
-          <ng-container *ngIf="puedeEvaluarJustificaciones">
-            <h6 class="seccion-titulo">Resolución de justificativo</h6>
-            <div class="d-flex justify-content-center mb-3" role="group"
-                 [attr.aria-label]="'Decisión sobre la justificación de ' + involucradoSeleccionado?.nombre + ' ' + involucradoSeleccionado?.apellido">
-              <button type="button" class="btn mx-1 btn-aprobar-causal"
-                      [ngClass]="borradorCausal.decision === 'ACCEPTED' ? 'btn-success' : 'btn-outline-success'"
-                      [attr.aria-pressed]="borradorCausal.decision === 'ACCEPTED'"
-                      (click)="elegirDecision('ACCEPTED')">
-                <i class="material-icons" aria-hidden="true">check_circle</i> APROBAR
-              </button>
-              <button type="button" class="btn mx-1 btn-desaprobar-causal"
-                      [ngClass]="borradorCausal.decision === 'REJECTED' ? 'btn-danger' : 'btn-outline-danger'"
-                      [attr.aria-pressed]="borradorCausal.decision === 'REJECTED'"
-                      (click)="elegirDecision('REJECTED')">
-                <i class="material-icons" aria-hidden="true">cancel</i> DESAPROBAR
-              </button>
-            </div>
-
-            <div class="form-group mb-2">
-              <label class="small font-weight-bold" [attr.for]="'fundamento-causal-' + d.id">
-                Fundamento<span *ngIf="requiereFundamento()"> (obligatorio)</span>
-              </label>
-              <textarea class="form-control" rows="3" [attr.maxlength]="maxFundamento"
-                        [id]="'fundamento-causal-' + d.id"
-                        [attr.aria-required]="requiereFundamento()"
-                        [attr.aria-describedby]="'ayuda-fundamento-' + d.id + ' contador-fundamento-' + d.id"
-                        [(ngModel)]="borradorCausal.fundamento"></textarea>
-              <div class="d-flex justify-content-between">
-                <small [id]="'ayuda-fundamento-' + d.id" class="form-text text-muted">
-                  Requerido al desaprobar o al apartarse de la sugerencia del sistema (mínimo 20 caracteres).
-                </small>
-                <small [id]="'contador-fundamento-' + d.id" class="form-text text-muted text-nowrap ml-2 contador-fundamento" aria-live="polite">
-                  {{borradorCausal.fundamento.length}} / {{maxFundamento}} caracteres
-                </small>
-              </div>
-            </div>
-
-            <div class="text-right">
-              <button type="button" mat-raised-button class="btn btn-primary btn-sm btn-registrar-causal"
-                      [disabled]="registrandoCausal"
-                      (click)="registrarDecisionCausal()">Registrar decisión</button>
-            </div>
-            <hr>
-          </ng-container>
-
-          <h6 class="seccion-titulo">Historial de versiones</h6>
-          <p *ngIf="!d.decisiones_causal?.length" class="text-muted small mb-0">Todavía no hay decisiones registradas.</p>
-          <ul *ngIf="d.decisiones_causal?.length" class="list-unstyled small mb-0">
-            <li *ngFor="let h of d.decisiones_causal" class="mb-2 historial-causal">
-              v{{h.version}} &bull;
-              <span class="font-weight-bold" [ngClass]="h.decision === 'ACCEPTED' ? 'text-success' : 'text-danger'">{{etiquetaDecision(h.decision)}}</span>
-              &bull; {{h.autor_legajo}} &bull; {{h.created_at | date:'dd/MM/yyyy HH:mm'}}
-              <span *ngIf="h.se_aparta_de_regla"> &bull; Se apartó de la sugerencia</span>
-              <div *ngIf="h.evidencias_valoradas?.length" class="text-muted">
-                Comprobantes valorados: <span *ngFor="let ev of h.evidencias_valoradas; let ultimo = last">{{ev.nombre_original}}{{ultimo ? '' : ', '}}</span>
-              </div>
-              <div *ngIf="h.fundamento" class="text-muted">{{h.fundamento}}</div>
-            </li>
-          </ul>
-        </section>
-
-        <!-- Votación si existe -->
-        <div *ngIf="expedienteSeleccionado.votacion" class="mt-3 p-3 bg-light rounded border">
-          <h5 class="font-weight-bold text-dark mb-2">
-            <i class="material-icons text-warning" style="vertical-align: middle;">how_to_vote</i> Registro de Votación Nominal:
-          </h5>
-          <div *ngFor="let item of expedienteSeleccionado.votacion.votos | keyvalue" class="d-flex justify-content-between border-bottom py-1">
-            <span>{{item.key}}</span>
-            <span class="font-weight-bold" [ngClass]="item.value === 'FAVORABLE' ? 'text-success' : 'text-danger'">{{item.value}}</span>
-          </div>
-          <p class="mt-2 mb-0 small text-muted"><strong>Considerandos:</strong> {{expedienteSeleccionado.votacion.considerandos}}</p>
-        </div>
-
-        <!-- Firmas si existen -->
-        <div *ngIf="expedienteSeleccionado.firmas && expedienteSeleccionado.firmas.juecesFirmantes.length > 0" class="mt-3 p-3 bg-light rounded border">
-          <h5 class="font-weight-bold text-dark mb-2">
-            <i class="material-icons text-success" style="vertical-align: middle;">verified</i> Firmas Digitales Registradas:
-          </h5>
-          <ul class="list-unstyled mb-2">
-            <li *ngFor="let firmante of expedienteSeleccionado.firmas.juecesFirmantes" class="text-success font-weight-bold">
-              &check; {{firmante}}
-            </li>
-          </ul>
-          <div *ngIf="expedienteSeleccionado.firmas.hashCriptografico" class="small text-muted">
-            <div><strong>Hash SHA-256:</strong> <code>{{expedienteSeleccionado.firmas.hashCriptografico}}</code></div>
-            <div><strong>Sellado Temporal:</strong> {{expedienteSeleccionado.firmas.timestamp}}</div>
-          </div>
-        </div>
-
       </div>
-      <div class="card-footer d-flex justify-content-end gap-2">
+      <!-- Pie del Modal 1 -->
+      <div class="card-footer d-flex justify-content-end align-items-center gap-2">
         <button mat-button 
-                class="btn btn-primary" 
+                type="button"
+                class="btn btn-primary btn-abrir-visor mr-auto" 
                 (click)="abrirVisor(expedienteSeleccionado)" 
                 title="Sustanciar / Visor">
           <i class="material-icons" style="font-size: 16px;">menu_book</i> Sustanciar / Visor
         </button>
-        <button mat-button 
-                class="btn btn-info" 
-                (click)="abrirModalSocios(expedienteSeleccionado, $event)" 
-                title="Ver Involucrados">
-          <i class="material-icons" style="font-size: 16px;">group</i> Ver Involucrados
-        </button>
-        <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'revision_resolucion'" 
+
+        <button *ngIf="puedeGenerarResolucion"
                 mat-raised-button 
-                class="btn btn-warning" 
-                (click)="abrirVotacion(expedienteSeleccionado)" 
-                title="Emitir Resolución">
-          <i class="material-icons" style="font-size: 16px;">gavel</i> Emitir Resolución
+                type="button"
+                class="btn btn-warning btn-generar-resolucion" 
+                (click)="abrirVotacion(expedienteSeleccionado)">
+          <i class="material-icons" style="font-size: 16px;">gavel</i> Generar Resolución
         </button>
-        <button *ngIf="puedeVotarOFirmar && expedienteSeleccionado.estado === 'pendiente_correos'" 
+
+        <button *ngIf="puedeFirmarResolucion" 
                 mat-raised-button 
-                class="btn btn-success" 
-                (click)="abrirFirma(expedienteSeleccionado)" 
-                title="Firmar Resolución">
+                type="button"
+                class="btn btn-success btn-firmar-resolucion" 
+                (click)="abrirFirma(expedienteSeleccionado)">
           <i class="material-icons" style="font-size: 16px;">draw</i> Firmar Resolución
         </button>
-        <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
+
+        <button *ngIf="puedeVerResolucion" 
+                mat-raised-button 
+                type="button"
+                class="btn btn-info btn-ver-resolucion" 
+                (click)="abrirResolucion(expedienteSeleccionado)">
+          <i class="material-icons" style="font-size: 16px;">description</i> Ver Resolución
+        </button>
+
+        <button mat-button 
+                type="button" 
+                class="btn btn-default btn-cerrar-modal" 
+                (click)="cerrarModales()">CERRAR</button>
       </div>
     </div>
   </div>
@@ -709,6 +613,133 @@
       <div class="card-footer d-flex justify-content-end gap-2">
         <button mat-button class="btn btn-info" (click)="volverADetalle()" aria-label="Volver al detalle">Volver</button>
         <button mat-button class="btn btn-default" (click)="cerrarModales()" aria-label="Cerrar modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 5: Ver Resolución Oficial (Lectura) -->
+<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom modal-resolucion-backdrop">
+  <div class="modal-dialog-custom modal-dialog-tribunal">
+    <div class="card" *ngIf="expedienteSeleccionado">
+      <div class="card-header card-header-info d-flex justify-content-between align-items-center">
+        <h4 class="card-title mb-0">Resolución Oficial — {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
+        <button type="button" class="btn btn-link text-white p-1 m-0" (click)="cerrarModales()" aria-label="Cerrar modal">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info py-2">
+          <i class="material-icons" style="vertical-align: middle;">verified</i>
+          <span>Resolución firme debidamente emitida y registrada por el Tribunal de Disciplina.</span>
+        </div>
+        <div class="mb-3">
+          <strong>Título / Motivo:</strong> {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}
+        </div>
+        <div class="mb-3" *ngIf="expedienteSeleccionado.votacion">
+          <h6 class="font-weight-bold">Considerandos:</h6>
+          <p class="p-2 bg-light rounded border text-muted">{{expedienteSeleccionado.votacion.considerandos}}</p>
+        </div>
+        <div *ngIf="expedienteSeleccionado.firmas && expedienteSeleccionado.firmas.juecesFirmantes.length > 0" class="p-3 bg-light rounded border">
+          <h6 class="font-weight-bold text-dark mb-2">Firmas Digitales Registradas:</h6>
+          <ul class="list-unstyled mb-0">
+            <li *ngFor="let firmante of expedienteSeleccionado.firmas.juecesFirmantes" class="text-success font-weight-bold">
+              &check; {{firmante}}
+            </li>
+          </ul>
+          <div *ngIf="expedienteSeleccionado.firmas.hashCriptografico" class="small text-muted mt-2">
+            <div><strong>Hash SHA-256:</strong> <code>{{expedienteSeleccionado.firmas.hashCriptografico}}</code></div>
+            <div><strong>Sellado Temporal:</strong> {{expedienteSeleccionado.firmas.timestamp}}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-end">
+        <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 6: Ver Descargo Individual -->
+<div *ngIf="modalDescargoAbierto" class="modal-backdrop-custom modal-descargo-backdrop">
+  <div class="modal-dialog-custom modal-dialog-tribunal">
+    <div class="card" *ngIf="involucradoSeleccionado && involucradoSeleccionado.descargo as desc">
+      <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+        <h4 class="card-title mb-0 font-weight-bold text-white">
+          Descargo — {{getNombreCompletoInvolucrado(involucradoSeleccionado)}}
+        </h4>
+        <button type="button" 
+                class="btn btn-link text-white p-1 m-0 btn-close-modal" 
+                (click)="cerrarModales()" 
+                aria-label="Cerrar modal">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      <div class="card-body">
+        <!-- Metadatos del descargo -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
+          <div>
+            <span class="text-muted small font-weight-bold">Tipo:</span>
+            <span class="badge badge-info ml-1">{{desc.tipo === 'T02_CERTIFICADO' ? 'T02 — Con Certificado' : 'T03 — Extraordinario'}}</span>
+          </div>
+          <div *ngIf="desc.causal">
+            <span class="text-muted small font-weight-bold">Causal:</span>
+            <span class="font-weight-bold ml-1 text-dark">{{desc.causal}}</span>
+          </div>
+          <div *ngIf="desc.presentado_at">
+            <span class="text-muted small font-weight-bold">Presentado el:</span>
+            <span class="ml-1 text-dark">{{desc.presentado_at | date:'dd/MM/yyyy HH:mm'}}</span>
+          </div>
+        </div>
+
+        <!-- Exposición / Fundamento del socio -->
+        <div class="mb-3">
+          <label class="text-muted small font-weight-bold d-block mb-1">Exposición y Fundamentos:</label>
+          <div class="p-3 bg-light rounded border text-break">
+            {{desc.texto || 'Sin exposición registrada.'}}
+          </div>
+        </div>
+
+        <!-- Comprobantes / Evidencias adjuntas -->
+        <div class="mb-3">
+          <label class="text-muted small font-weight-bold d-block mb-1">
+            Comprobantes y Evidencias Adjuntas ({{desc.evidencias?.length || 0}}):
+          </label>
+          <div *ngIf="!desc.evidencias || desc.evidencias.length === 0" class="text-muted small italic p-2 bg-light rounded border">
+            No se adjuntaron comprobantes o evidencias.
+          </div>
+          <ul *ngIf="desc.evidencias && desc.evidencias.length > 0" class="list-group">
+            <li *ngFor="let ev of desc.evidencias" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+              <div class="text-truncate mr-2">
+                <i class="material-icons mr-1 text-secondary" style="vertical-align: middle; font-size: 18px;">attachment</i>
+                <span class="font-weight-bold text-dark">{{ev.nombre_original}}</span>
+              </div>
+              <button type="button" 
+                      class="btn btn-sm btn-outline-info py-1 px-2 m-0 d-inline-flex align-items-center gap-1 btn-ver-comprobante"
+                      (click)="verComprobante(ev)">
+                <i class="material-icons" style="font-size: 14px;">open_in_new</i> Ver comprobante
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card-footer d-flex justify-content-end align-items-center gap-2">
+        <button mat-button 
+                type="button" 
+                class="btn btn-info btn-volver-detalle" 
+                (click)="volverADetalleDesdeDescargo()" 
+                aria-label="Volver al detalle">
+          <i class="material-icons" style="font-size: 16px;">arrow_back</i> Volver al detalle
+        </button>
+        <button mat-button 
+                type="button" 
+                class="btn btn-default" 
+                (click)="cerrarModales()" 
+                aria-label="Cerrar modal">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>

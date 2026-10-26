@@ -352,7 +352,27 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 13. Instrucciones para la Actualización de este Archivo
+## 13. Sprint 4 — Desglose Atómico: PB-02 (Tramitar Apelación y Adecuación del T01)
+
+> **Spec de Referencia:** [`specs/008-apelacion-adecuacion-t01/spec.md`](specs/008-apelacion-adecuacion-t01/spec.md)  
+> **Plan Técnico:** [`specs/008-apelacion-adecuacion-t01/plan.md`](specs/008-apelacion-adecuacion-t01/plan.md)  
+> **Tareas:** [`specs/008-apelacion-adecuacion-t01/tasks.md`](specs/008-apelacion-adecuacion-t01/tasks.md)
+
+- [x] **TPB-02.1 Dominio de apelación y adecuación [TDD]:** Plazo de 1 a 30 días hábiles, texto de apelación, cambios de puntos e involucrados, agravamiento y socios afectados.
+- [x] **TPB-02.2 Modelos inmutables y migración [TDD]:** `ParametroPlazoApelacion`, `PeriodoApelacion`, `ApelacionT01` y `AdecuacionT01` sólo-inserción (migración `0017`).
+- [x] **TPB-02.3 Plazo parametrizado y períodos por socio [TDD]:** Apertura con el parámetro vigente al entrar a `justificando` y vencimiento según el último período abierto.
+- [x] **TPB-02.4 Servicio de apelación y adecuación [TDD]:** Apelación versionada con constancia por mail, rechazo de T02/T03 en T01, adecuación con mail de motivos y nuevo período aprobado por el TD.
+- [x] **TPB-02.5 Endpoints REST y permisos [TDD]:** Parámetro del plazo, apelación, adecuación e historial del T01.
+- [x] **TPB-02.6 Servicio frontend y DTOs [TDD]:** Métodos en `ExpedienteApiService`.
+- [x] **TPB-02.7 Apelación en "Mis Expedientes":** "Apelar"/"Editar apelación" en lugar del justificativo T02/T03, plazo propio y adecuaciones comunicadas.
+- [x] **TPB-02.8 Debate y adecuación en el detalle del TD:** Apelaciones por socio, formulario con autocompletado de socios, nuevo plazo opcional e historial.
+- [x] **TPB-02.9 Parámetro del plazo en "Calendario Institucional":** Consulta para TD, CD y Administración; edición para TD y Administración.
+- [x] **TPB-02.10 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build y control contra `notasPO.md`.
+- [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:** Cabecera Exp: <n>/<YYYY> + título, metadatos, sección Reglamentación, caja Motivo, tabla Involucrados y justificaciones (6 columnas con Leído/No Leído/Sin descargo, Puntaje Final y acción Ver Descargo) y validación de botones (Generar Resolución, Firmar Resolución, Ver Resolución).
+
+---
+
+## 14. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.
