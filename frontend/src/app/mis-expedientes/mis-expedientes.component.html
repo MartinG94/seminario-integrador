@@ -30,12 +30,18 @@
       </div>
     </div>
 
-    <!-- Tabla Principal de Causas -->
+    <!-- Tabla Principal de Causas con Pestañas Teal AVEIT -->
     <div class="row">
       <div class="col-md-12">
-        <div class="card">
-          <div class="card-header card-header-primary">
-            <h4 class="card-title mb-0">Mis Expedientes y Descargos</h4>
+        <div class="card shadow-sm">
+          <div class="card-header card-header-tabs-teal d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+              <h4 class="card-title text-white font-weight-bold mb-0">Mis Expedientes y Descargos</h4>
+              <p class="card-category text-white-50 mb-0">Historial y estado de causas disciplinarias asociadas a tu legajo.</p>
+            </div>
+            <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="misExpedientes.length > 0">
+              {{ misExpedientes.length }} expedientes
+            </span>
           </div>
           <div class="card-body">
             <div *ngIf="misExpedientes.length === 0" class="text-center py-5">

@@ -69,7 +69,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   filtroSocio: string = '';
   filtroEstado: string = '';
   filtroUrgencia: string = '';
-  filtroFechaDesde: string = '';
+  filtroFechaDesde: string = `${new Date().getFullYear()}-01-01`;
   filtroFechaHasta: string = '';
 
   // Ordenamiento de tabla
@@ -87,7 +87,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ];
 
   estadosDisponibles: { key: string; label: string }[] = [
-    { key: '', label: 'Todos los estados' },
+    { key: '', label: 'Todos' },
     { key: 'creado', label: 'Creados' },
     { key: 'justificando', label: 'Justificando' },
     { key: 'revision_resolucion', label: 'En Revisión' },
@@ -97,7 +97,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ];
 
   urgenciasDisponibles: { key: string; label: string }[] = [
-    { key: '', label: 'Todas las urgencias' },
+    { key: '', label: 'Todos' },
     { key: 'baja', label: 'Baja' },
     { key: 'normal', label: 'Normal' },
     { key: 'urgente', label: 'Urgente' }

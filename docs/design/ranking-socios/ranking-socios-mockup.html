@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SGD-AVEIT | Padrón General y Ranking de Puntos</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-tint": "#575a8b",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed": "#001c39",
+            "surface-container-highest": "#dae2fd",
+            "primary-fixed": "#e0e0ff",
+            "on-error-container": "#93000a",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-tertiary-fixed-variant": "#005236",
+            "on-tertiary-container": "#009869",
+            "on-secondary-fixed-variant": "#064881",
+            "surface-container-high": "#e2e7ff",
+            "inverse-surface": "#283044",
+            "background": "#faf8ff",
+            "tertiary-container": "#002315",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#6ffbbe",
+            "inverse-primary": "#c0c2fa",
+            "surface-variant": "#dae2fd",
+            "primary-fixed-dim": "#c0c2fa",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f2f3ff",
+            "primary": "#000020",
+            "on-surface": "#131b2e",
+            "surface-container": "#eaedff",
+            "error": "#ba1a1a",
+            "inverse-on-surface": "#eef0ff",
+            "on-secondary-container": "#104c86",
+            "secondary-fixed-dim": "#a4c9ff",
+            "secondary-fixed": "#d4e3ff",
+            "secondary-container": "#8fbeff",
+            "on-primary-container": "#7e81b5",
+            "error-container": "#ffdad6",
+            "on-primary-fixed-variant": "#3f4272",
+            "on-surface-variant": "#46464f",
+            "on-primary": "#ffffff",
+            "tertiary": "#000502",
+            "on-error": "#ffffff",
+            "outline-variant": "#c7c5d0",
+            "surface": "#faf8ff",
+            "surface-dim": "#d2d9f4",
+            "surface-bright": "#faf8ff",
+            "on-tertiary-fixed": "#002113",
+            "on-primary-fixed": "#131644",
+            "secondary": "#2c609b",
+            "primary-container": "#151846",
+            "outline": "#777680",
+            "on-background": "#131b2e"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "0.75rem",
+            "space-xs": "0.25rem",
+            "margin": "1.5rem",
+            "gutter-compact": "0.75rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "margin-mobile": "1rem",
+            "space-lg": "1.25rem",
+            "gutter": "1rem"
+          },
+          "fontFamily": {
+            "headline-xl-mobile": ["Plus Jakarta Sans"],
+            "body-md": ["Plus Jakarta Sans"],
+            "headline-md": ["Plus Jakarta Sans"],
+            "headline-lg": ["Plus Jakarta Sans"],
+            "body-lg": ["Plus Jakarta Sans"],
+            "label-md": ["Plus Jakarta Sans"],
+            "label-lg": ["Plus Jakarta Sans"],
+            "label-sm": ["Plus Jakarta Sans"],
+            "body-sm": ["Plus Jakarta Sans"],
+            "headline-xl": ["Plus Jakarta Sans"],
+            "headline-sm": ["Plus Jakarta Sans"],
+            "mono": ["JetBrains Mono", "monospace"]
+          },
+          "fontSize": {
+            "headline-xl-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "body-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "body-lg": ["15px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "body-sm": ["12px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "headline-xl": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .material-card-shadow {
+      box-shadow: 0 10px 30px -12px rgba(21, 24, 70, 0.42), 0 4px 25px 0px rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(21, 24, 70, 0.2);
+    }
+    .row-alerta {
+      background-color: #fffbeb !important;
+      border-left: 4px solid #f59e0b !important;
+    }
+    .row-cese {
+      background-color: #fef2f2 !important;
+      border-left: 4px solid #ef4444 !important;
+    }
+  </style>
+</head>
+<body class="h-full flex overflow-hidden font-body-md text-on-surface antialiased bg-background">
+<!-- ==================== SIDE NAVIGATION BAR ==================== -->
+<aside class="h-screen w-64 flex flex-col justify-between py-margin px-space-md shrink-0 sticky top-0 z-40 bg-primary-container text-on-primary border-r border-outline-variant/10 shadow-lg">
+<div class="flex flex-col gap-space-lg">
+<!-- Brand Header -->
+<div class="flex items-center gap-space-sm px-space-xs pb-space-sm border-b border-outline-variant/15">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest/10 p-1 flex items-center justify-center ring-1 ring-white/20">
+<img class="w-full h-full object-contain" data-alt="Official embroidered gold and deep blue crest of AVEIT Asociacion Vocacional de Estudiantes de Ingenieria Tecnologica set against rich institutional navy velvet with crisp vector insignia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBX86gppJI1hNQ2VwMyKwaU9AfA0gbIDZDc5w8ACWh4Q2SFl3YfMN6VTGOV-R31uAKVwzoTR8AzXFHAdlv2VXNAwlPBw9OyXbBXRN4T564wJk6bT_MVgvh0x0ZS8ctxxzXk03RpdF9LYO4AOR5euclj89D-o35dPtXvl5MiScWKdvrhfLtNrYVzCZ0tN2dQhyi1HLWADhYKZSeJeVrhdov1jdY_9LFQ7ttQqZjR4WrbLWz3wu7yqVu-X9fKGr21Bii-Ub1hl_dJjk9P"/>
+</div>
+<div>
+<h1 class="text-headline-sm font-headline-sm text-on-primary font-bold leading-tight">AVEIT Disciplina</h1>
+<p class="text-label-sm font-label-sm text-on-primary-container">Período Ordinario 2025</p>
+</div>
+</div>
+<!-- Navigation Tabs List -->
+<nav class="flex flex-col gap-1">
+<!-- Docket Activos -->
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+<span>Dockets Activos</span>
+</a>
+<!-- Libro de Actas -->
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+<span>Libro de Actas</span>
+</a>
+<!-- Padrón de Socios (Active Screen) -->
+<a class="bg-primary text-on-primary font-label-md text-label-md rounded-lg px-space-md py-space-sm flex items-center gap-space-sm border-l-4 border-secondary-container shadow-sm" href="#">
+<span class="material-symbols-outlined text-[18px] text-secondary-container">group</span>
+<span class="text-white font-bold">Padrón de Socios</span>
+</a>
+<!-- Audiencias -->
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">event_seat</span>
+<span>Audiencias</span>
+</a>
+<!-- Jurisprudencia -->
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">balance</span>
+<span>Jurisprudencia</span>
+</a>
+<!-- Sanciones y Registro -->
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">history_edu</span>
+<span>Sanciones y Registro</span>
+</a>
+<!-- Configuración Procesal -->
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+<span>Configuración Procesal</span>
+</a>
+</nav>
+<!-- CTA Resolució Institucional -->
+<div class="pt-2">
+<button class="w-full bg-secondary-container hover:bg-secondary-fixed text-primary font-label-lg text-label-lg py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 font-bold shadow transition-all duration-150 active:scale-98">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Emitir Resolución</span>
+</button>
+</div>
+</div>
+<!-- SideNav Footer Actions -->
+<div class="flex flex-col gap-1 pt-space-sm border-t border-outline-variant/15">
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span>Auditoría</span>
+</a>
+<a class="text-on-primary-container hover:text-on-primary hover:bg-primary-container/40 rounded-lg px-space-md py-space-sm flex items-center gap-space-sm font-label-md text-label-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+<span>Cerrar Sesión</span>
+</a>
+</div>
+</aside>
+<!-- ==================== MAIN SHELL WRAPPER ==================== -->
+<div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+<!-- ==================== TOP NAVIGATION BAR ==================== -->
+<header class="w-full h-14 px-margin flex items-center justify-between sticky top-0 z-30 bg-primary-container text-on-primary border-b border-outline-variant/20 shadow-md shrink-0">
+<div class="flex items-center gap-space-lg">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-container text-[22px]">balance</span>
+<span class="text-headline-sm font-headline-sm text-on-primary font-bold tracking-tight">Tribunal de Disciplina - AVEIT</span>
+</div>
+<!-- Institutional Header Statistics -->
+<nav class="hidden md:flex items-center gap-space-md pl-4 border-l border-outline-variant/25">
+<span class="text-secondary-container border-b-2 border-secondary-container pb-0.5 font-label-lg text-label-lg cursor-pointer">
+            Causas: 24
+          </span>
+<span class="text-on-primary-container hover:text-on-primary font-label-md text-label-md transition-colors cursor-pointer">
+            Prescripción: 3
+          </span>
+<span class="text-on-primary-container hover:text-on-primary font-label-md text-label-md transition-colors cursor-pointer">
+            Sanciones: 12
+          </span>
+</nav>
+</div>
+<!-- Action Cluster: New Cause, Notification, Settings, Profile -->
+<div class="flex items-center gap-space-sm">
+<button class="bg-secondary-container text-primary hover:bg-secondary-fixed px-3 py-1.5 rounded font-label-lg text-label-lg font-bold flex items-center gap-1.5 shadow-sm transition-all duration-150 active:scale-98">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>+ Nueva Causa</span>
+</button>
+<div class="h-6 w-px bg-outline-variant/25 mx-1 hidden sm:block"></div>
+<button class="p-1.5 rounded text-on-primary-container hover:text-on-primary hover:bg-white/10 transition-colors" title="Notificaciones disciplinarias">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="p-1.5 rounded text-on-primary-container hover:text-on-primary hover:bg-white/10 transition-colors" title="Calendario de sesiones">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+</button>
+<button class="p-1.5 rounded text-on-primary-container hover:text-on-primary hover:bg-white/10 transition-colors" title="Ajustes de visualización">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+<!-- User Profile Pill -->
+<div class="flex items-center gap-2 pl-2 border-l border-outline-variant/25 ml-1">
+<div class="w-8 h-8 rounded-full overflow-hidden ring-1 ring-secondary-container bg-surface-container-high shrink-0">
+<img class="w-full h-full object-cover" data-alt="Formal portrait badge photo of Vocal Secretario actuante of AVEIT wearing dark academic suit with institutional student union brass insignia against neutral studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUfXxyjPQv9HDE1nf-AL0ZUV0OWLkYMgbObHG-IC-bRRIvH7MMUVKTKZRTLuNOl3fpDYkpJwKxVYWgylcqLBmoQQYAEDT9k2kQxkzDwydQ4px8ssLR3usJsxeyCPQkhpa8ZVPI36Zf3wLjBgzBiwlluG00_hJhbUy8OU1onjdfpL3lCT25_i6qv9T4o08OTZPVdl2YlO0OJQEIsf45hUxS_gMzUi6uHdOtVwQiTIpjS_nXDrpYqZbZhb0FxYpNXRLF0pBerisMNRE9"/>
+</div>
+<div class="hidden xl:flex flex-col text-left">
+<span class="text-label-md font-label-lg font-semibold text-on-primary leading-tight">Secretario General</span>
+<span class="text-[10px] font-mono text-secondary-container leading-none">Leg. 1042</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ==================== MAIN CONTENT CANVAS ==================== -->
+<main class="flex-1 p-margin max-w-7xl w-full mx-auto pb-12">
+<!-- Breadcrumbs & Statutory Context -->
+<div class="flex items-center justify-between mb-8">
+<div class="flex items-center gap-2 text-label-md font-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">home</span>
+<span>Gestión Disciplinaria</span>
+<span>/</span>
+<span class="text-primary-container font-semibold">Padrón General</span>
+<span>/</span>
+<span class="text-secondary font-bold">Ranking de Puntos</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-high/60 px-2.5 py-1 rounded text-label-sm font-label-sm text-on-surface-variant border border-outline-variant/30">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Tribunal en Funciones Ordinarias • Quórum Reglamentario</span>
+</div>
+</div>
+<!-- ==================== MATERIAL DASHBOARD PRO FLOATING CARD ==================== -->
+<div class="relative bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-md">
+<!-- Floating Elevated Header (Navy #151846 with negative top displacement) -->
+<div class="relative -mt-6 mx-5 p-5 bg-primary-container rounded-xl material-card-shadow flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-outline-variant/20">
+<div>
+<div class="flex items-center gap-2 text-secondary-container">
+<span class="material-symbols-outlined text-[22px]">format_list_numbered</span>
+<span class="text-label-sm font-label-sm uppercase tracking-wider font-bold">Registro Estatutario de Membresía</span>
+</div>
+<h2 class="text-headline-md font-headline-md text-on-primary font-bold tracking-tight mt-0.5">
+              Padrón General y Ranking de Puntos
+            </h2>
+<p class="text-body-sm font-body-sm text-on-primary-container">
+              Estado disciplinario y balance de puntos de socios
+            </p>
+</div>
+<!-- Quick Metrics & Institutional Exports -->
+<div class="flex flex-wrap items-center gap-2">
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/40 rounded-lg border border-white/10 text-label-sm font-label-sm text-on-primary-container">
+<span class="material-symbols-outlined text-[15px] text-secondary-container">sync</span>
+<span>Sincronizado: Hoy 11:45 hs</span>
+</div>
+<div class="flex items-center gap-1 bg-white/10 p-1 rounded-lg border border-white/10">
+<button class="px-2.5 py-1 text-label-sm font-label-sm text-on-primary hover:bg-white/15 rounded transition-colors flex items-center gap-1" title="Exportar reporte a Excel">
+<span class="material-symbols-outlined text-[15px]">table_view</span>
+<span>Excel</span>
+</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm text-on-primary hover:bg-white/15 rounded transition-colors flex items-center gap-1" title="Generar acta en formato PDF">
+<span class="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+<span>PDF</span>
+</button>
+<button class="px-2 py-1 text-label-sm font-label-sm text-on-primary hover:bg-white/15 rounded transition-colors" title="Imprimir padrón oficial">
+<span class="material-symbols-outlined text-[15px]">print</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ==================== FILTER TOOLBAR ==================== -->
+<div class="p-5 border-b border-outline-variant/20 bg-surface-container-low/40">
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+<!-- 1. Search input -->
+<div class="lg:col-span-2">
+<label class="block text-label-sm font-label-sm text-on-surface-variant font-semibold mb-1">
+                Búsqueda Rápida
+              </label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="w-full pl-8 pr-3 py-1.5 text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded focus:ring-2 focus:ring-secondary focus:border-secondary transition-all" placeholder="Buscar socio por nombre, apellido o legajo..." type="text"/>
+</div>
+</div>
+<!-- 2. Dropdown Categoría -->
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant font-semibold mb-1">
+                Categoría
+              </label>
+<select class="w-full py-1.5 px-2.5 text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded focus:ring-2 focus:ring-secondary focus:border-secondary">
+<option selected="">Todas</option>
+<option>Activo</option>
+<option>Pasivo</option>
+</select>
+</div>
+<!-- 3. Dropdown Subcomisión -->
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant font-semibold mb-1">
+                Subcomisión
+              </label>
+<select class="w-full py-1.5 px-2.5 text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded focus:ring-2 focus:ring-secondary focus:border-secondary">
+<option selected="">Todas</option>
+<option>Cómputos</option>
+<option>Deportes</option>
+<option>Buffet</option>
+<option>Sin Subcomisión</option>
+</select>
+</div>
+<!-- 4. Dropdown Grupo -->
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant font-semibold mb-1">
+                Grupo
+              </label>
+<select class="w-full py-1.5 px-2.5 text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded focus:ring-2 focus:ring-secondary focus:border-secondary">
+<option selected="">Todos</option>
+<option>G34</option>
+<option>G57</option>
+<option>G58</option>
+<option>G60</option>
+<option>G62</option>
+<option>G63</option>
+</select>
+</div>
+<!-- 5. Dropdown Filas & Reset -->
+<div class="flex items-center gap-2">
+<div class="flex-1">
+<label class="block text-label-sm font-label-sm text-on-surface-variant font-semibold mb-1">
+                  Filas
+                </label>
+<select class="w-full py-1.5 px-2 text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded focus:ring-2 focus:ring-secondary focus:border-secondary">
+<option selected="">10</option>
+<option>25</option>
+<option>50</option>
+<option>100</option>
+<option>Todas</option>
+</select>
+</div>
+<!-- Reset Button -->
+<div class="shrink-0 self-end">
+<button class="px-2.5 py-1.5 bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-primary-container border border-outline-variant rounded transition-all flex items-center justify-center gap-1 font-label-sm text-label-sm" title="Limpiar todos los filtros">
+<span class="material-symbols-outlined text-[16px]">filter_alt_off</span>
+<span class="hidden sm:inline">Limpiar</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Active filters badge summary strip -->
+<div class="flex items-center justify-between pt-3 mt-3 border-t border-outline-variant/15 text-body-sm font-body-sm">
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Censo Actual:</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm font-semibold bg-surface-container-high text-primary-container border border-secondary-container/30">
+                515 socios registrados
+              </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                14 en Alerta (-7.00 a -9.99)
+              </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm font-semibold bg-red-50 text-red-800 border border-red-200">
+<span class="w-1.5 h-1.5 rounded-full bg-red-600 mr-1.5"></span>
+                6 Pasibles de Cese (≤ -10.00)
+              </span>
+</div>
+<div class="text-label-sm font-label-sm text-outline hidden md:block">
+              Art. 48 Estatuto: Sanción de Cese Automático a los -10.00 puntos
+            </div>
+</div>
+</div>
+<!-- ==================== HIGH-DENSITY RESPONSIVE DATA TABLE ==================== -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant border-b border-outline-variant/30 text-label-md font-label-md select-none">
+<!-- Col 1: Posición -->
+<th class="py-3 px-4 font-bold text-center w-14 hover:bg-surface-container-high/50 cursor-pointer" scope="col">
+<div class="flex items-center justify-center gap-1">
+<span>Pos.</span>
+<span class="text-[12px] text-secondary">▲</span>
+</div>
+</th>
+<!-- Col 2: Socio -->
+<th class="py-3 px-4 font-bold hover:bg-surface-container-high/50 cursor-pointer" scope="col">
+<div class="flex items-center gap-1">
+<span>Socio</span>
+<span class="text-[12px] text-outline">▲▼</span>
+</div>
+</th>
+<!-- Col 3: N° de Socio -->
+<th class="py-3 px-4 font-bold hover:bg-surface-container-high/50 cursor-pointer" scope="col">
+<div class="flex items-center gap-1">
+<span>N° Socio</span>
+<span class="text-[12px] text-outline">▲▼</span>
+</div>
+</th>
+<!-- Col 4: Categoría -->
+<th class="py-3 px-4 font-bold text-center hover:bg-surface-container-high/50 cursor-pointer" scope="col">
+<div class="flex items-center justify-center gap-1">
+<span>Categoría</span>
+<span class="text-[12px] text-outline">▲▼</span>
+</div>
+</th>
+<!-- Col 5: Grupo -->
+<th class="py-3 px-4 font-bold text-center hover:bg-surface-container-high/50 cursor-pointer" scope="col">
+<div class="flex items-center justify-center gap-1">
+<span>Grupo</span>
+<span class="text-[12px] text-outline">▲▼</span>
+</div>
+</th>
+<!-- Col 6: Subcomisión -->
+<th class="py-3 px-4 font-bold hover:bg-surface-container-high/50 cursor-pointer" scope="col">
+<div class="flex items-center gap-1">
+<span>Subcomisión</span>
+<span class="text-[12px] text-outline">▲▼</span>
+</div>
+</th>
+<!-- Col 7: Saldo (Strict Right-Aligned) -->
+<th class="py-3 px-6 font-bold text-right hover:bg-surface-container-high/50 cursor-pointer w-32" scope="col">
+<div class="flex items-center justify-end gap-1">
+<span>Saldo</span>
+<span class="text-[12px] text-secondary">▼</span>
+</div>
+</th>
+<!-- Col 8: Acciones -->
+<th class="py-3 px-4 font-bold text-center w-28" scope="col">
+<span>Acciones</span>
+</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/15 text-body-sm font-body-sm">
+<!-- Row 1: Pos 1 (+4.50) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">1</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-secondary-container/40 text-secondary font-bold text-[11px] flex items-center justify-center ring-1 ring-secondary/20">
+                      NR
+                    </div>
+<span class="font-semibold text-on-surface">Nicolás Rosales</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">1042</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G58</td>
+<td class="py-2.5 px-4 text-on-surface">Cómputos</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-emerald-700">+4.50</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Pos 2 (+3.00) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">2</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-secondary-container/40 text-secondary font-bold text-[11px] flex items-center justify-center ring-1 ring-secondary/20">
+                      AG
+                    </div>
+<span class="font-semibold text-on-surface">Agustín Gómez</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">1089</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G60</td>
+<td class="py-2.5 px-4 text-on-surface">Deportes</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-emerald-700">+3.00</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Pos 3 (+1.50) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">3</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-secondary-container/40 text-secondary font-bold text-[11px] flex items-center justify-center ring-1 ring-secondary/20">
+                      MF
+                    </div>
+<span class="font-semibold text-on-surface">Mateo Fernández</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">1120</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G63</td>
+<td class="py-2.5 px-4 text-on-surface">Buffet</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-emerald-700">+1.50</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Pos 4 (0.00) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">4</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-surface-container text-outline font-bold text-[11px] flex items-center justify-center ring-1 ring-outline/20">
+                      VR
+                    </div>
+<span class="font-semibold text-on-surface">Valentina Rossi</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">1154</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G57</td>
+<td class="py-2.5 px-4 text-on-surface">Cómputos</td>
+<td class="py-2.5 px-6 text-right font-mono font-semibold text-slate-600">0.00</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: Pos 5 (-2.00) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">5</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-surface-container text-outline font-bold text-[11px] flex items-center justify-center ring-1 ring-outline/20">
+                      LC
+                    </div>
+<span class="font-semibold text-on-surface">Lucía Castro</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">982</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">PASIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G34</td>
+<td class="py-2.5 px-4 text-outline-variant font-normal">Sin Subcomisión</td>
+<td class="py-2.5 px-6 text-right font-mono font-semibold text-slate-600">-2.00</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 6: Pos 6 (-4.50) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">6</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-surface-container text-outline font-bold text-[11px] flex items-center justify-center ring-1 ring-outline/20">
+                      EM
+                    </div>
+<span class="font-semibold text-on-surface">Esteban Martínez</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">1063</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G62</td>
+<td class="py-2.5 px-4 text-on-surface">Deportes</td>
+<td class="py-2.5 px-6 text-right font-mono font-semibold text-slate-600">-4.50</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 7: Pos 7 (-5.50) Normal Row -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-primary-container">7</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-surface-container text-outline font-bold text-[11px] flex items-center justify-center ring-1 ring-outline/20">
+                      SL
+                    </div>
+<span class="font-semibold text-on-surface">Santiago López</span>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-on-surface-variant font-medium">1138</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-outline font-semibold">G58</td>
+<td class="py-2.5 px-4 text-on-surface">Buffet</td>
+<td class="py-2.5 px-6 text-right font-mono font-semibold text-slate-600">-5.50</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-primary hover:text-on-primary bg-surface-container-high hover:bg-primary-container rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 8: Pos 8 (-8.50) ALERT WARNING ROW (.row-alerta) -->
+<tr class="row-alerta transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-amber-900">8</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-amber-200 text-amber-900 font-bold text-[11px] flex items-center justify-center ring-1 ring-amber-400">
+                      JV
+                    </div>
+<div>
+<span class="font-bold text-amber-950">Joaquín Vega</span>
+<span class="ml-1.5 px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[10px] font-bold rounded ring-1 ring-amber-300">ALERTA</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-amber-900 font-medium">1104</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-amber-800 font-semibold">G60</td>
+<td class="py-2.5 px-4 text-amber-900">Cómputos</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-amber-600">-8.50</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-amber-900 hover:text-white bg-amber-200 hover:bg-amber-600 rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 9: Pos 9 (-7.00) ALERT WARNING ROW (.row-alerta) -->
+<tr class="row-alerta transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-amber-900">9</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-amber-200 text-amber-900 font-bold text-[11px] flex items-center justify-center ring-1 ring-amber-400">
+                      TM
+                    </div>
+<div>
+<span class="font-bold text-amber-950">Tomás Morales</span>
+<span class="ml-1.5 px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[10px] font-bold rounded ring-1 ring-amber-300">ALERTA</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-amber-900 font-medium">1076</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-amber-800 font-semibold">G57</td>
+<td class="py-2.5 px-4 text-amber-900">Deportes</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-amber-600">-7.00</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-amber-900 hover:text-white bg-amber-200 hover:bg-amber-600 rounded transition-all">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 10: Pos 10 (-10.50) CRITICAL CESE ROW (.row-cese) -->
+<tr class="row-cese transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-red-950">10</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-red-200 text-red-900 font-bold text-[11px] flex items-center justify-center ring-1 ring-red-400">
+                      FN
+                    </div>
+<div>
+<span class="font-bold text-red-950">Facundo Navarro</span>
+<span class="ml-1.5 px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-bold rounded ring-1 ring-red-300">CESE INMINENTE</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-red-900 font-medium">1018</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed border border-secondary/20">ACTIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-red-800 font-semibold">G63</td>
+<td class="py-2.5 px-4 text-red-950">Buffet</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-red-600">-10.50</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-red-900 hover:text-white bg-red-200 hover:bg-red-600 rounded transition-all font-bold">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+<!-- Row 11: Pos 11 (-14.00) CRITICAL CESE ROW (.row-cese) -->
+<tr class="row-cese transition-colors">
+<td class="py-2.5 px-4 text-center font-mono font-bold text-red-950">11</td>
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-red-200 text-red-900 font-bold text-[11px] flex items-center justify-center ring-1 ring-red-400">
+                      RB
+                    </div>
+<div>
+<span class="font-bold text-red-950">Rodrigo Benítez</span>
+<span class="ml-1.5 px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-bold rounded ring-1 ring-red-300">CESE INMINENTE</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-4 font-mono text-red-900 font-medium">984</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">PASIVO</span>
+</td>
+<td class="py-2.5 px-4 text-center font-mono text-red-800 font-semibold">G34</td>
+<td class="py-2.5 px-4 text-red-900 font-normal">Sin Subcomisión</td>
+<td class="py-2.5 px-6 text-right font-mono font-bold text-red-700">-14.00</td>
+<td class="py-2.5 px-4 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-red-900 hover:text-white bg-red-200 hover:bg-red-600 rounded transition-all font-bold">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span>Ver detalle</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- ==================== CARD FOOTER & PAGINATION ==================== -->
+<div class="p-4 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container-low/30">
+<!-- Left Status Indicator -->
+<div class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-2">
+<span class="font-semibold text-primary">Mostrando 1–10 de 515 socios</span>
+<span class="text-outline-variant">|</span>
+<span class="text-label-sm font-label-sm text-outline">Total 52 páginas foliadas</span>
+</div>
+<!-- Pagination Controls -->
+<div class="flex items-center gap-1 select-none">
+<!-- First -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Primera página">
+              «
+            </button>
+<!-- Previous -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Página anterior">
+              ‹
+            </button>
+<!-- Page 1 (Active Institutional Navy) -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md bg-primary-container text-on-primary font-bold shadow-sm ring-1 ring-primary-container">
+              1
+            </button>
+<!-- Page 2 -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+              2
+            </button>
+<!-- Page 3 -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+              3
+            </button>
+<!-- Page 4 -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+              4
+            </button>
+<!-- Ellipsis -->
+<span class="w-8 h-8 flex items-center justify-center text-label-md font-label-md text-outline">
+              ...
+            </span>
+<!-- Page 52 (Last numbered) -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+              52
+            </button>
+<!-- Next -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors" title="Página siguiente">
+              ›
+            </button>
+<!-- Last -->
+<button class="w-8 h-8 rounded flex items-center justify-center text-label-md font-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors" title="Última página">
+              »
+            </button>
+</div>
+</div>
+</div>
+<!-- Institutional Statutory Footnote -->
+<div class="mt-6 p-4 rounded-lg bg-surface-container-low border border-outline-variant/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-body-sm font-body-sm text-on-surface-variant">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">policy</span>
+<div>
+<span class="font-bold text-primary">Régimen Disciplinario AVEIT 2025:</span>
+<p class="text-label-sm font-label-sm text-outline mt-0.5">
+              Los socios con balance inferior a <strong>-7.00 puntos</strong> reciben citación preventiva del Tribunal. La acumulación de <strong>-10.00 puntos o inferior</strong> activa la suspensión inmediata de derechos asociativos e inicio de sumario de cese obligatorio según Art. 48 bis del Estatuto General.
+            </p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<button class="px-3 py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm font-bold border border-outline-variant rounded transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+<span>Ver Estatuto</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+</body></html>

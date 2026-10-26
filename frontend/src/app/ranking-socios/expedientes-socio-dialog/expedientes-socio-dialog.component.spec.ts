@@ -41,7 +41,7 @@ describe('ExpedientesSocioDialogComponent', () => {
   beforeEach(async () => {
     expedienteApiSpy = jasmine.createSpyObj(
       'ExpedienteApiService',
-      ['listarPorLegajo']
+      ['listarPorSocio']
     );
 
     dialogRefSpy = jasmine.createSpyObj(
@@ -49,7 +49,7 @@ describe('ExpedientesSocioDialogComponent', () => {
       ['close']
     );
 
-    expedienteApiSpy.listarPorLegajo.and.returnValue(of(expedientesMock));
+    expedienteApiSpy.listarPorSocio.and.returnValue(of(expedientesMock));
 
     await TestBed.configureTestingModule({
       imports: [CommonModule],
@@ -79,7 +79,7 @@ describe('ExpedientesSocioDialogComponent', () => {
   });
 
   it('debe consultar los expedientes usando el legajo recibido', () => {
-    expect(expedienteApiSpy.listarPorLegajo).toHaveBeenCalledWith('74907');
+    expect(expedienteApiSpy.listarPorSocio).toHaveBeenCalledWith('74907');
     expect(component.expedientes).toEqual(expedientesMock);
     expect(component.cargando).toBeFalse();
     expect(component.error).toBeNull();
@@ -89,14 +89,14 @@ describe('ExpedientesSocioDialogComponent', () => {
     const contenido = fixture.nativeElement.textContent as string;
 
     expect(contenido).toContain('Detalle de expedientes');
-    expect(contenido).toContain('EXP-0001/2026');
+    expect(contenido).toContain('1/2026');
     expect(contenido).toContain('Falta reglamentaria');
-    expect(contenido).toContain('EXP-0002/2026');
+    expect(contenido).toContain('2/2026');
     expect(contenido).toContain('Reconocimiento institucional');
   });
 
   it('debe mostrar el estado vacío y los mensajes de carga con la terminología de expedientes', () => {
-    expedienteApiSpy.listarPorLegajo.and.returnValue(of([]));
+    expedienteApiSpy.listarPorSocio.and.returnValue(of([]));
 
     component.cargarExpedientes();
     fixture.detectChanges();
@@ -108,7 +108,7 @@ describe('ExpedientesSocioDialogComponent', () => {
   });
 
   it('debe informar cuando el socio no posee expedientes', () => {
-    expedienteApiSpy.listarPorLegajo.and.returnValue(of([]));
+    expedienteApiSpy.listarPorSocio.and.returnValue(of([]));
 
     component.cargarExpedientes();
     fixture.detectChanges();
@@ -119,24 +119,24 @@ describe('ExpedientesSocioDialogComponent', () => {
     );
   });
 
-  it('debe manejar un error 403', () => {
-    expedienteApiSpy.listarPorLegajo.and.returnValue(
-      throwError(() => ({ status: 403 }))
+  it('debe manejar un error al cargar los expedientes', () => {
+    expedienteApiSpy.listarPorSocio.and.returnValue(
+      throwError(() => new Error('Error al cargar'))
     );
 
     component.cargarExpedientes();
     fixture.detectChanges();
 
     expect(component.error).toBe(
-      'No posee autorizaci?n para consultar los expedientes de este socio.'
+      'No se pudieron cargar los expedientes del socio.'
     );
 
     expect(fixture.nativeElement.textContent).toContain(
-      'No posee autorizaci?n para consultar los expedientes de este socio.'
+      'No se pudieron cargar los expedientes del socio.'
     );
   });
 
-  it('debe convertir los puntos recibidos a n?mero', () => {
+  it('debe convertir los puntos recibidos a número', () => {
     expect(component.puntosNumero(expedientesMock[0])).toBe(-2);
     expect(component.puntosNumero(expedientesMock[1])).toBe(3);
   });

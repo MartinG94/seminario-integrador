@@ -8,91 +8,99 @@
       </button>
     </div>
 
-    <!-- Barra de Herramientas y Filtros Explícitos (CA2) -->
-    <div class="card mb-4">
-      <div class="card-body p-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom">
-          <div class="d-flex align-items-center gap-3">
-            <div class="btn-group" role="group" aria-label="Selector de Vista">
-              <button mat-raised-button 
-                      [color]="vistaActual === 'kanban' ? 'primary' : 'default'" 
-                      class="btn btn-sm" 
-                      [ngClass]="vistaActual === 'kanban' ? 'btn-primary' : 'btn-white'"
-                      (click)="vistaActual = 'kanban'"
-                      aria-label="Ver tablero de estados Kanban">
-                <i class="material-icons" style="font-size: 16px;">view_kanban</i> Tablero de Estados
-              </button>
-              <button mat-raised-button 
-                      [color]="vistaActual === 'tabla' ? 'primary' : 'default'" 
-                      class="btn btn-sm" 
-                      [ngClass]="vistaActual === 'tabla' ? 'btn-primary' : 'btn-white'"
-                      (click)="vistaActual = 'tabla'"
-                      aria-label="Ver listado en tabla de expedientes">
-                <i class="material-icons" style="font-size: 16px;">view_list</i> Lista en Tabla
-              </button>
-            </div>
-            <span class="text-muted small ml-2">Total expedientes: <strong>{{expedientes.length}}</strong></span>
-            <span *ngIf="cargando" class="badge badge-info ml-2">Actualizando datos...</span>
-          </div>
+    <!-- Barra Principal con Cabecera de Pestañas Teal AVEIT -->
+    <div class="card card-nav-tabs shadow-sm mb-4">
+      <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+        <div class="nav-tabs-wrapper">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link" 
+                 [class.active]="vistaActual === 'kanban'" 
+                 (click)="vistaActual = 'kanban'" 
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">view_kanban</i> TABLERO DE ESTADOS
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" 
+                 [class.active]="vistaActual === 'tabla'" 
+                 (click)="vistaActual = 'tabla'" 
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">view_list</i> LISTA EN TABLA
+                <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="expedientes.length > 0">
+                  {{ expedientes.length }}
+                </span>
+              </a>
+            </li>
+          </ul>
         </div>
-
-        <!-- Fila de Filtros Explícitos (CA2 / S3-07): Socio, Estado, Urgencia, Fecha Desde, Fecha Hasta -->
-        <div class="row pt-3 align-items-end">
-          <div class="col-lg-3 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-socio">Búsqueda (Socio, Legajo, Creador o Título):</label>
-            <div class="input-group no-border m-0">
-              <input id="filtro-socio" 
-                     type="text" 
-                     class="form-control" 
-                     placeholder="Buscar por socio, legajo, creador o título..." 
-                     [(ngModel)]="filtroSocio" 
-                     (keyup.enter)="cargarDatosTablero()">
-            </div>
+        <div class="text-white-50 d-none d-md-block small">
+          <span *ngIf="vistaActual === 'kanban'">Sala del Tribunal: Juzgamiento colegiado y seguimiento de causas</span>
+          <span *ngIf="vistaActual === 'tabla'">Explorador integral y detallado de expedientes disciplinarios</span>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <!-- Barra de Filtros en una Sola Línea (CA2 / S3-07) -->
+        <div class="filtros-bar d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between py-2 w-100">
+          <!-- 1. Búsqueda compacta y dinámica -->
+          <div class="filtro-item filtro-busqueda">
+            <input id="filtro-socio"
+                   type="text"
+                   class="form-control"
+                   placeholder="Buscar por socio, legajo o título..."
+                   [(ngModel)]="filtroSocio"
+                   (keyup.enter)="cargarDatosTablero()"
+                   aria-label="Buscar por socio, legajo, creador o título">
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-estado">Estado:</label>
-            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado" (change)="cargarDatosTablero()">
+          <!-- 2. Estado -->
+          <div class="filtro-item filtro-control-select">
+            <label class="filtro-label" for="filtro-estado">Estado:</label>
+            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado">
               <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
             </select>
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-urgencia">Urgencia:</label>
-            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia" (change)="cargarDatosTablero()">
+          <!-- 3. Urgencia -->
+          <div class="filtro-item filtro-control-select">
+            <label class="filtro-label" for="filtro-urgencia">Urgencia:</label>
+            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia">
               <option *ngFor="let urg of urgenciasDisponibles" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-desde">Fecha Desde:</label>
-            <input id="filtro-desde" type="date" class="form-control" [(ngModel)]="filtroFechaDesde" (change)="cargarDatosTablero()">
+          <!-- 4. Fecha Desde ("Desde:") -->
+          <div class="filtro-item filtro-control-date">
+            <label class="filtro-label" for="filtro-desde">Desde:</label>
+            <input id="filtro-desde" type="date" class="form-control" [(ngModel)]="filtroFechaDesde">
           </div>
 
-          <div class="col-lg-2 col-md-6 col-12 mb-2">
-            <label class="text-muted small font-weight-bold mb-1" for="filtro-hasta">Fecha Hasta:</label>
-            <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta" (change)="cargarDatosTablero()">
+          <!-- 5. Fecha Hasta ("Hasta:") -->
+          <div class="filtro-item filtro-control-date">
+            <label class="filtro-label" for="filtro-hasta">Hasta:</label>
+            <input id="filtro-hasta" type="date" class="form-control" [(ngModel)]="filtroFechaHasta">
           </div>
 
-          <div class="col-lg-1 col-md-12 col-12 mb-2 d-flex gap-2">
-            <button mat-raised-button 
-                    class="btn btn-primary btn-sm flex-fill m-0" 
+          <!-- 6. Botones de Filtrado y Limpieza -->
+          <div class="filtro-acciones d-flex align-items-center flex-shrink-0">
+            <button mat-raised-button
+                    class="btn btn-primary btn-sm m-0 px-3"
                     (click)="cargarDatosTablero()"
                     aria-label="Aplicar filtros de búsqueda"
                     title="Filtrar">
-              <i class="material-icons" style="font-size: 14px;">filter_list</i>
+              <i class="material-icons" style="font-size: 16px;">filter_list</i>
             </button>
-            <button mat-button 
-                    class="btn btn-white btn-sm m-0" 
+            <button mat-button
+                    class="btn btn-outline-secondary btn-sm m-0 ml-1 px-2"
                     (click)="limpiarFiltros()"
                     title="Limpiar filtros"
                     aria-label="Limpiar filtros">
-              <i class="material-icons" style="font-size: 14px;">clear</i>
+              <i class="material-icons" style="font-size: 16px;">clear</i>
             </button>
           </div>
         </div>
-      </div>
-    </div>
 
     <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (Ciclo de Vida Canónico S2-05) -->
     <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de estados">
@@ -175,8 +183,8 @@
 
     <!-- VISTA 2: EXPLORADOR DENSO DE DATOS -->
     <div *ngIf="vistaActual === 'tabla'" class="card">
-      <div class="card-header card-header-primary">
-        <h4 class="card-title">Detalle de Expedientes</h4>
+      <div class="card-header card-header-tabs-teal">
+        <h4 class="card-title text-white mb-0">Detalle de Expedientes</h4>
       </div>
       <div class="card-body">
         <div class="table-responsive explorer-table-container">
@@ -216,7 +224,7 @@
                 </td>
                 <td>
                   <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)">
-                    <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(exp.urgencia)}}</i> {{getUrgenciaLabel(exp.urgencia)}}
+                    {{getUrgenciaLabel(exp.urgencia)}}
                   </span>
                 </td>
                 <td>
