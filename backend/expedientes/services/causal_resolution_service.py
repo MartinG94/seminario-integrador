@@ -22,6 +22,7 @@ from expedientes.models import (
     Expediente,
     TipoDescargoEnum,
 )
+from expedientes.services.warning_accumulation_service import WarningAccumulationService
 
 DECIDABLE_STATES = (
     EstadoExpedienteEnum.REVISION_RESOLUCION,
@@ -147,12 +148,45 @@ class CausalResolutionService:
         suggested = suggested_decision(has_current_evidence=bool(current))
         fundamento = fundamento.strip()
 
-        # Regla de negocio de fundamentación obligatoria al modificar puntaje
+        # Regla de negocio y cálculo de puntaje final / llamado de atención / felicitación
         puntos_pedido = expediente.puntos if expediente.puntos is not None else Decimal("0")
-        if puntaje_final is not None:
-            final_dec = Decimal(str(puntaje_final))
-            pedido_dec = Decimal(str(puntos_pedido))
-            if final_dec < pedido_dec:
+        pedido_dec = Decimal(str(puntos_pedido))
+        final_snapshot_val = None
+
+        if puntaje_final is not None and str(puntaje_final).strip():
+            str_puntaje = str(puntaje_final).strip().upper()
+            if str_puntaje in ("LLAMADO_ATENCION", "LLAMADO DE ATENCIÓN", "LLAMADO DE ATENCION"):
+                final_rank = Decimal("-0.25")
+                final_snapshot_val = "LLAMADO_ATENCION"
+                if fundamento:
+                    motivo_llamado = f"Llamado de atención en exp {expediente.numero}: {fundamento}"
+                else:
+                    motivo_llamado = f"Llamado de atención en exp {expediente.numero} (Tribunal)"
+                WarningAccumulationService.register_warning(
+                    socio_id=descargo.socio_id,
+                    origen_tipo="EXPEDIENTE_TRIBUNAL",
+                    motivo=motivo_llamado,
+                    expediente_origen_id=expediente.id,
+                    actor=user.get_username() if user else "TRIBUNAL",
+                )
+            elif str_puntaje in ("FELICITACION", "FELICITACIÓN"):
+                final_rank = Decimal("0.25")
+                final_snapshot_val = "FELICITACION"
+                motivo_felic = (
+                    f"Felicitación en expediente {expediente.numero}: {fundamento}"
+                    if fundamento
+                    else f"Felicitación en expediente {expediente.numero} (Tribunal de Disciplina)"
+                )
+                WarningAccumulationService.register_felicitacion(
+                    socio_id=descargo.socio_id,
+                    motivo=motivo_felic,
+                    actor=user.get_username() if user else "TRIBUNAL",
+                )
+            else:
+                final_rank = Decimal(str_puntaje)
+                final_snapshot_val = float(final_rank)
+
+            if final_rank < pedido_dec:
                 if not fundamento or len(fundamento.strip()) < 10:
                     raise CausalResolutionValidationError(
                         "La fundamentación escrita es obligatoria cuando "
@@ -189,7 +223,7 @@ class CausalResolutionService:
             ],
             descargo_snapshot={
                 **_descargo_snapshot(descargo),
-                "puntaje_final": float(puntaje_final) if puntaje_final is not None else None,
+                "puntaje_final": final_snapshot_val,
                 "fundamento_cambio_puntaje": fundamento,
             },
             autor=user,

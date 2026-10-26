@@ -178,7 +178,7 @@ export interface RegistrarDecisionCausalPayload {
   decision: DecisionCausal;
   fundamento?: string;
   evidencia_ids?: string[];
-  puntaje_final?: number | null;
+  puntaje_final?: number | string | null;
 }
 
 export interface DescargoDetalleDTO {
@@ -196,7 +196,7 @@ export interface DescargoDetalleDTO {
   regla_sugerida?: DecisionCausal;
   decisiones_causal?: DecisionCausalDTO[];
   leido?: boolean;
-  puntaje_ratificado?: number | null;
+  puntaje_ratificado?: number | string | null;
 }
 
 export interface SocioInvolucradoDetalleDTO {

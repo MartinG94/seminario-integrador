@@ -530,3 +530,93 @@ body.dark-edition,
     outline-offset: 2px;
   }
 }
+
+
+// Estilos del stepper de escala discreta de puntaje
+.input-group-stepper {
+  display: flex;
+  align-items: stretch;
+  max-width: 220px;
+
+  .btn-stepper-dec,
+  .btn-stepper-inc {
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--color-border-main, #CBD5E1);
+    background-color: #FFFFFF;
+    color: var(--color-text-main, #334155);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-surface, #F1F5F9);
+      color: var(--color-primary, #0284C7);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .select-puntaje-escala {
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-color: var(--color-border-main, #CBD5E1);
+    background-color: #FFFFFF;
+
+    &:disabled {
+      background-color: var(--color-surface, #F8FAFC);
+      color: var(--color-text-muted, #64748B);
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Badges semánticos para escala de puntajes
+.badge-sancion {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-advertencia {
+  background-color: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FCD34D;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-neutro {
+  background-color: #E2E8F0;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-felicitacion {
+  background-color: #E0E7FF;
+  color: #4338CA;
+  border: 1px solid #A5B4FC;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-premio {
+  background-color: #DCFCE7;
+  color: #16A34A;
+  border: 1px solid #86EFAC;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}

@@ -56,6 +56,31 @@ export interface InvolucradoJustificacion {
   descargo: DescargoDetalleDTO | null;
 }
 
+export interface OpcionPuntajeEscala {
+  valor: string;
+  label: string;
+  rank: number;
+  badgeClass: string;
+}
+
+export const ESCALA_PUNTAJES: OpcionPuntajeEscala[] = [
+  { valor: '-3.0', label: '-3.0 pts', rank: -3.0, badgeClass: 'badge-sancion' },
+  { valor: '-2.5', label: '-2.5 pts', rank: -2.5, badgeClass: 'badge-sancion' },
+  { valor: '-2.0', label: '-2.0 pts', rank: -2.0, badgeClass: 'badge-sancion' },
+  { valor: '-1.5', label: '-1.5 pts', rank: -1.5, badgeClass: 'badge-sancion' },
+  { valor: '-1.0', label: '-1.0 pt', rank: -1.0, badgeClass: 'badge-sancion' },
+  { valor: '-0.5', label: '-0.5 pt', rank: -0.5, badgeClass: 'badge-sancion' },
+  { valor: 'LLAMADO_ATENCION', label: 'Llamado de Atención', rank: -0.25, badgeClass: 'badge-advertencia' },
+  { valor: '0.0', label: '0.0 pts (Eximición)', rank: 0.0, badgeClass: 'badge-neutro' },
+  { valor: 'FELICITACION', label: 'Felicitación', rank: 0.25, badgeClass: 'badge-felicitacion' },
+  { valor: '0.5', label: '+0.5 pt', rank: 0.5, badgeClass: 'badge-premio' },
+  { valor: '1.0', label: '+1.0 pt', rank: 1.0, badgeClass: 'badge-premio' },
+  { valor: '1.5', label: '+1.5 pts', rank: 1.5, badgeClass: 'badge-premio' },
+  { valor: '2.0', label: '+2.0 pts', rank: 2.0, badgeClass: 'badge-premio' },
+  { valor: '2.5', label: '+2.5 pts', rank: 2.5, badgeClass: 'badge-premio' },
+  { valor: '3.0', label: '+3.0 pts', rank: 3.0, badgeClass: 'badge-premio' }
+];
+
 @Component({
   selector: 'app-gestionar-expedientes',
   templateUrl: './gestionar-expedientes.component.html',
@@ -146,6 +171,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   registrandoCausal = false;
 
   // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
+  readonly escalaPuntajes = ESCALA_PUNTAJES;
+  opcionPuntajeFinal: string = '0.0';
   puntajeFinalInput: number | null = null;
   fundamentoPuntajeInput = '';
   guardandoDescargo = false;
@@ -1035,9 +1062,69 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return 'No Leído';
   }
 
+  get puedeModificarPuntaje(): boolean {
+    if (!this.expedienteSeleccionado) return false;
+    const estado = this.expedienteSeleccionado.estado;
+    return estado === 'revision_resolucion' || estado === 'espera_resolucion';
+  }
+
+  getOpcionPuntajeActual(): OpcionPuntajeEscala {
+    return this.escalaPuntajes.find(op => op.valor === this.opcionPuntajeFinal) || {
+      valor: this.opcionPuntajeFinal,
+      label: this.opcionPuntajeFinal,
+      rank: 0,
+      badgeClass: 'badge-neutro'
+    };
+  }
+
+  decrementarPuntaje(): void {
+    if (!this.puedeModificarPuntaje) return;
+    const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
+    if (idx > 0) {
+      this.opcionPuntajeFinal = this.escalaPuntajes[idx - 1].valor;
+    }
+  }
+
+  incrementarPuntaje(): void {
+    if (!this.puedeModificarPuntaje) return;
+    const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
+    if (idx !== -1 && idx < this.escalaPuntajes.length - 1) {
+      this.opcionPuntajeFinal = this.escalaPuntajes[idx + 1].valor;
+    }
+  }
+
+  getTipoDescargoDisplay(desc: DescargoDetalleDTO | null | undefined): string {
+    if (!desc) return '—';
+    if (desc.causal && desc.causal.trim()) {
+      return desc.causal.trim();
+    }
+    if (desc.tipo === 'T02_CERTIFICADO') return 'Certificado de Examen (T02)';
+    if (desc.tipo === 'T03_EXTRAORDINARIO') return 'Descargo Extraordinario (T03)';
+    return desc.tipo || '—';
+  }
+
+  getPuntajeFinalInvolucradoDisplay(fila: InvolucradoJustificacion): string {
+    const val = fila.descargo?.puntaje_ratificado;
+    if (val != null) {
+      if (val === 'LLAMADO_ATENCION') return 'Llamado de Atención';
+      if (val === 'FELICITACION') return 'Felicitación';
+      const num = Number(val);
+      if (!isNaN(num)) {
+        return num > 0 ? `+${num}` : `${num}`;
+      }
+      return String(val);
+    }
+    const pts = this.getPuntajeFinalInvolucrado(fila);
+    return pts > 0 ? `+${pts}` : `${pts}`;
+  }
+
   getPuntajeFinalInvolucrado(fila: InvolucradoJustificacion): number {
     if (fila.descargo?.puntaje_ratificado != null) {
-      return fila.descargo.puntaje_ratificado;
+      const val = fila.descargo.puntaje_ratificado;
+      if (val === 'LLAMADO_ATENCION') return 0;
+      if (val === 'FELICITACION') return 0;
+      const num = Number(val);
+      if (!isNaN(num)) return num;
     }
     if (fila.descargo?.decisiones_causal && fila.descargo.decisiones_causal.length > 0) {
       const ultima = fila.descargo.decisiones_causal[0];
@@ -1057,9 +1144,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     // Inicializar puntaje final y fundamento del descargo
     const pedido = this.expedienteSeleccionado.puntos ?? 0;
-    this.puntajeFinalInput = fila.descargo.puntaje_ratificado != null
-      ? fila.descargo.puntaje_ratificado
-      : (fila.descargo.decisiones_causal?.[0] ? this.getPuntajeFinalInvolucrado(fila) : pedido);
+    let valorInicial = '0.0';
+    if (fila.descargo.puntaje_ratificado != null) {
+      valorInicial = String(fila.descargo.puntaje_ratificado);
+    } else if (fila.descargo.decisiones_causal?.[0]) {
+      valorInicial = String(this.getPuntajeFinalInvolucrado(fila));
+    } else {
+      valorInicial = Number(pedido).toFixed(1);
+    }
+
+    const match = this.escalaPuntajes.find(
+      op => op.valor === valorInicial || Number(op.valor) === Number(valorInicial)
+    );
+    this.opcionPuntajeFinal = match ? match.valor : valorInicial;
+    const num = Number(this.opcionPuntajeFinal);
+    this.puntajeFinalInput = isNaN(num) ? 0 : num;
 
     const ultimaDecision = fila.descargo.decisiones_causal?.[0];
     this.fundamentoPuntajeInput = ultimaDecision?.fundamento || '';
@@ -1080,8 +1179,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   esFundamentoObligatorio(): boolean {
     const pedido = Number(this.expedienteSeleccionado?.puntos || 0);
-    const finalPts = Number(this.puntajeFinalInput != null ? this.puntajeFinalInput : pedido);
-    return finalPts < pedido;
+    const actual = this.getOpcionPuntajeActual();
+    if (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank &&
+        actual.valor !== 'LLAMADO_ATENCION' && actual.valor !== 'FELICITACION') {
+      return Number(this.puntajeFinalInput) < pedido;
+    }
+    return actual.rank < pedido;
   }
 
   puedeGuardarDescargo(): boolean {
@@ -1098,7 +1201,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!exp || !descargo || this.guardandoDescargo) return;
 
     const pedido = Number(exp.puntos ?? 0);
-    const puntajeFinal = Number(this.puntajeFinalInput != null ? this.puntajeFinalInput : pedido);
+    let actual = this.getOpcionPuntajeActual();
+    if (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank &&
+        actual.valor !== 'LLAMADO_ATENCION' && actual.valor !== 'FELICITACION') {
+      const match = this.escalaPuntajes.find(op => Number(op.valor) === Number(this.puntajeFinalInput));
+      if (match) {
+        this.opcionPuntajeFinal = match.valor;
+        actual = match;
+      }
+    }
+    const puntajeFinalPayload: string | number =
+      actual.valor === 'LLAMADO_ATENCION' || actual.valor === 'FELICITACION'
+        ? actual.valor
+        : (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank ? Number(this.puntajeFinalInput) : Number(actual.valor));
+
     const fundamento = (this.fundamentoPuntajeInput || '').trim();
 
     if (this.esFundamentoObligatorio() && fundamento.length < 10) {
@@ -1109,18 +1225,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
 
     this.guardandoDescargo = true;
-    const decision: DecisionCausal = (puntajeFinal >= pedido && puntajeFinal >= 0) ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
+    const decision: DecisionCausal =
+      actual.rank >= pedido && actual.rank >= 0 ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
 
     this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
       decision,
       fundamento,
-      puntaje_final: puntajeFinal,
+      puntaje_final: puntajeFinalPayload,
       evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
     }).subscribe({
       next: (resp) => {
         this.guardandoDescargo = false;
         descargo.leido = true;
-        descargo.puntaje_ratificado = puntajeFinal;
+        descargo.puntaje_ratificado = puntajeFinalPayload;
         if (resp) {
           descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
         }
@@ -1135,7 +1252,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         }
         // Fallback local en entornos mock / dev
         descargo.leido = true;
-        descargo.puntaje_ratificado = puntajeFinal;
+        descargo.puntaje_ratificado = puntajeFinalPayload;
         this.notifications.success('Evaluación del descargo guardada.');
         this.volverADetalleDesdeDescargo();
       }

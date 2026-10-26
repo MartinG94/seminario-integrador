@@ -678,8 +678,8 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
-    puntaje_final = serializers.DecimalField(
-        max_digits=5, decimal_places=2, required=False, allow_null=True
+    puntaje_final = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
     )
     fundamento = serializers.CharField(
         required=False,

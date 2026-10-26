@@ -176,7 +176,9 @@
                   <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
                   <span>{{ getCantidadInvolucrados(exp) }}</span>
                 </span>
-                <button mat-button 
+                <!-- Botón visor ocultado temporalmente por requerimiento -->
+                <button *ngIf="false" 
+                        mat-button 
                         class="btn btn-primary btn-link btn-just-icon p-0 m-0 btn-abrir-visor"
                         style="min-width: 24px; width: 24px; height: 24px;"
                         (click)="abrirVisor(exp, $event)" 
@@ -250,7 +252,9 @@
                           aria-label="Ver Detalle">
                     <i class="material-icons">visibility</i>
                   </button>
-                  <button mat-button 
+                  <!-- Botón visor ocultado temporalmente por requerimiento -->
+                  <button *ngIf="false" 
+                          mat-button 
                           class="btn btn-primary btn-link btn-just-icon btn-abrir-visor-tabla" 
                           (click)="abrirVisor(exp, $event)" 
                           title="Sustanciar / Visor de Expediente" 
@@ -433,7 +437,7 @@
                           }">{{getEstadoDescargo(fila)}}</span>
                   </td>
                   <td class="font-weight-bold puntaje-final-cell">
-                    {{getPuntajeFinalInvolucrado(fila)}}
+                    {{getPuntajeFinalInvolucradoDisplay(fila)}}
                   </td>
                   <td class="text-right text-nowrap acciones-cell">
                     <button *ngIf="fila.descargo" 
@@ -456,7 +460,9 @@
       </div>
       <!-- Pie del Modal 1 -->
       <div class="card-footer d-flex justify-content-end align-items-center gap-2">
-        <button mat-button 
+        <!-- Botón visor ocultado temporalmente por requerimiento -->
+        <button *ngIf="false" 
+                mat-button 
                 type="button"
                 class="btn btn-primary btn-abrir-visor mr-auto" 
                 (click)="abrirVisor(expedienteSeleccionado)" 
@@ -681,11 +687,7 @@
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
           <div>
             <span class="text-muted small font-weight-bold">Tipo:</span>
-            <span class="badge badge-info ml-1">{{desc.tipo === 'T02_CERTIFICADO' ? 'T02 — Con Certificado' : 'T03 — Extraordinario'}}</span>
-          </div>
-          <div *ngIf="desc.causal">
-            <span class="text-muted small font-weight-bold">Causal:</span>
-            <span class="font-weight-bold ml-1 text-dark">{{desc.causal}}</span>
+            <span class="badge badge-info ml-1">{{getTipoDescargoDisplay(desc)}}</span>
           </div>
           <div *ngIf="desc.presentado_at">
             <span class="text-muted small font-weight-bold">Presentado el:</span>
@@ -726,26 +728,64 @@
 
         <!-- Sección de Evaluación de Puntaje Final y Fundamento -->
         <div class="p-3 bg-light rounded border mt-3 seccion-evaluacion-descargo">
-          <h6 class="font-weight-bold text-dark mb-3">
-            <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
-            Evaluación y Puntaje Final
-          </h6>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="font-weight-bold text-dark mb-0">
+              <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
+              Evaluación y Puntaje Final
+            </h6>
+            <span *ngIf="!puedeModificarPuntaje" class="badge badge-warning">
+              <i class="material-icons mr-1" style="font-size: 12px; vertical-align: text-bottom;">lock</i>Solo Lectura
+            </span>
+          </div>
+
+          <div *ngIf="!puedeModificarPuntaje" class="alert alert-info py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+            <i class="material-icons" style="font-size: 18px;">lock</i>
+            <span>El puntaje final solo puede ser modificado cuando el expediente se encuentre <strong>En Revisión</strong>.</span>
+          </div>
+
           <div class="row align-items-center mb-3">
             <div class="col-md-3 col-sm-4">
-              <label class="font-weight-bold text-dark mb-0" for="puntajeFinalInput">Puntaje Final:</label>
+              <label class="font-weight-bold text-dark mb-0" for="opcionPuntajeFinal">Puntaje Final:</label>
             </div>
-            <div class="col-md-4 col-sm-4">
-              <input type="number" 
-                     id="puntajeFinalInput" 
-                     class="form-control text-center font-weight-bold input-puntaje-final" 
-                     [(ngModel)]="puntajeFinalInput"
-                     step="1" />
+            <div class="col-md-5 col-sm-5">
+              <div class="input-group input-group-stepper">
+                <div class="input-group-prepend">
+                  <button type="button" 
+                          class="btn btn-sm btn-outline-secondary btn-stepper-dec m-0" 
+                          (click)="decrementarPuntaje()" 
+                          [disabled]="!puedeModificarPuntaje"
+                          title="Disminuir puntaje">
+                    <i class="material-icons" style="font-size: 14px;">remove</i>
+                  </button>
+                </div>
+                <select id="opcionPuntajeFinal" 
+                        class="form-control text-center font-weight-bold select-puntaje-escala" 
+                        [(ngModel)]="opcionPuntajeFinal"
+                        [disabled]="!puedeModificarPuntaje">
+                  <option *ngFor="let op of escalaPuntajes" [value]="op.valor">
+                    {{op.label}}
+                  </option>
+                </select>
+                <div class="input-group-append">
+                  <button type="button" 
+                          class="btn btn-sm btn-outline-secondary btn-stepper-inc m-0" 
+                          (click)="incrementarPuntaje()" 
+                          [disabled]="!puedeModificarPuntaje"
+                          title="Aumentar puntaje">
+                    <i class="material-icons" style="font-size: 14px;">add</i>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="col-md-5 col-sm-4">
-              <span class="text-muted small">
-                Puntaje solicitado: <strong class="text-dark">{{expedienteSeleccionado?.puntos || 0}} pts</strong>
+            <div class="col-md-4 col-sm-3 d-flex align-items-center">
+              <span class="badge" [ngClass]="getOpcionPuntajeActual().badgeClass">
+                {{getOpcionPuntajeActual().label}}
               </span>
             </div>
+          </div>
+
+          <div class="mb-3 text-muted small">
+            Puntaje solicitado: <strong class="text-dark">{{expedienteSeleccionado?.puntos || 0}} pts</strong>
           </div>
 
           <div class="form-group mb-0">
@@ -761,6 +801,7 @@
                       class="form-control" 
                       rows="3" 
                       [(ngModel)]="fundamentoPuntajeInput" 
+                      [disabled]="!puedeModificarPuntaje"
                       placeholder="Ingrese los motivos y considerandos del Tribunal para el puntaje final..."></textarea>
             <small *ngIf="esFundamentoObligatorio()" class="text-danger d-block mt-1 font-weight-bold">
               * Debe fundamentar el cambio debido a que el puntaje fijado perjudica al socio respecto al pedido original.

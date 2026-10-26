@@ -681,8 +681,8 @@ describe('GestionarExpedientesComponent', () => {
       puntos: -3,
       estado: 'revision_resolucion',
       urgencia: 'normal',
-      fecha: '2026-03-10'
-    };
+      fechaCreacion: '2026-03-10'
+    } as any;
 
     beforeEach(() => {
       api = TestBed.inject(ExpedienteApiService);
@@ -1520,15 +1520,127 @@ describe('GestionarExpedientesComponent', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/gestionar-expedientes', expMock.id, 'visor']);
     });
 
-    it('debe renderizar el botón Sustanciar / Visor en el modal de detalle', () => {
+    it('debe mantener oculto el botón Sustanciar / Visor en el modal de detalle según requerimiento', () => {
       component.abrirDetalle(expMock);
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
       const btnVisor = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Sustanciar / Visor"]');
-      expect(btnVisor).toBeTruthy();
+      expect(btnVisor).toBeNull();
     });
 
   });
-});
 
+  describe('Escala discreta de puntajes, llamados, felicitaciones y bloqueo de edición', () => {
+    const expEnRevision: Expediente = {
+      id: '12',
+      numero: 'EXP-012/2026',
+      estado: 'revision_resolucion',
+      puntos: -1.0,
+      titulo: 'Falta disciplinaria'
+    } as any;
+
+    const expEnTramite: Expediente = {
+      id: '13',
+      numero: 'EXP-013/2026',
+      estado: 'justificando',
+      puntos: -1.0,
+      titulo: 'En etapa probatoria'
+    } as any;
+
+    it('solo permite modificar puntaje si el expediente está En Revisión (revision_resolucion o espera_resolucion)', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      expect(component.puedeModificarPuntaje).toBeTrue();
+
+      component.expedienteSeleccionado = { ...expEnRevision, estado: 'espera_resolucion' } as any;
+      expect(component.puedeModificarPuntaje).toBeTrue();
+
+      component.expedienteSeleccionado = expEnTramite;
+      expect(component.puedeModificarPuntaje).toBeFalse();
+    });
+
+    it('recorre la escala discreta con incremento y decremento de puntaje', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      component.opcionPuntajeFinal = '0.0';
+
+      component.incrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('FELICITACION');
+
+      component.incrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.5');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('FELICITACION');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('LLAMADO_ATENCION');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('-0.5');
+    });
+
+    it('no permite incrementar o decrementar si el expediente no está En Revisión', () => {
+      component.expedienteSeleccionado = expEnTramite;
+      component.opcionPuntajeFinal = '0.0';
+
+      component.incrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+    });
+
+    it('getTipoDescargoDisplay muestra la causal tipificada como tipo principal', () => {
+      const descT02 = {
+        id: 1,
+        tipo: 'T02_CERTIFICADO',
+        causal: 'Examen Académico Universitario en UTN FRC'
+      } as any;
+      expect(component.getTipoDescargoDisplay(descT02)).toBe('Examen Académico Universitario en UTN FRC');
+
+      const descSinCausal = {
+        id: 2,
+        tipo: 'T02_CERTIFICADO',
+        causal: ''
+      } as any;
+      expect(component.getTipoDescargoDisplay(descSinCausal)).toBe('Certificado de Examen (T02)');
+    });
+
+    it('exige fundamentación obligatoria solo cuando el puntaje final perjudica al socio respecto al pedido', () => {
+      // Sanción original de -1.0
+      component.expedienteSeleccionado = expEnRevision;
+
+      // Si se fija -0.5 o 0.0 o Felicitación (a favor del socio), NO es obligatoria
+      component.opcionPuntajeFinal = '0.0';
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+
+      component.opcionPuntajeFinal = 'LLAMADO_ATENCION'; // rank -0.25 > -1.0
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+
+      // Si se agrava la sanción a -1.5 (perjudicial), SÍ es obligatoria
+      component.opcionPuntajeFinal = '-1.5'; // rank -1.5 < -1.0
+      expect(component.esFundamentoObligatorio()).toBeTrue();
+    });
+
+    it('formatea correctamente los puntajes y llamados/felicitaciones en getPuntajeFinalInvolucradoDisplay', () => {
+      const filaLlamado = {
+        descargo: { puntaje_ratificado: 'LLAMADO_ATENCION' }
+      } as any;
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaLlamado)).toBe('Llamado de Atención');
+
+      const filaFelic = {
+        descargo: { puntaje_ratificado: 'FELICITACION' }
+      } as any;
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaFelic)).toBe('Felicitación');
+
+      const filaNumPos = {
+        descargo: { puntaje_ratificado: 1.5 }
+      } as any;
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaNumPos)).toBe('+1.5');
+    });
+  });
+
+});
