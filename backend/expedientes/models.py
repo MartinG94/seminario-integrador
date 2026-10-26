@@ -538,7 +538,7 @@ class DecisionCausalEnum(models.TextChoices):
 
 
 class DecisionCausalDescargo(models.Model):
-    """Decisión inmutable y versionada de un vocal sobre la causal de un descargo T02.
+    """Decisión inmutable y versionada de un miembro del TD sobre la causal de un descargo T02.
 
     Cada nueva valoración crea una versión; las anteriores se conservan (CA3).
     Guarda una copia del descargo valorado sin modificar el original (CA4).

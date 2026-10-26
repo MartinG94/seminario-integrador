@@ -685,7 +685,7 @@ class DispatchCaseOpeningView(APIView):
 
 
 class DecisionCausalView(APIView):
-    """Decisiones versionadas de un vocal sobre la causal T02 de un descargo (S4-02).
+    """Decisiones versionadas de un miembro del TD sobre la causal T02 de un descargo (S4-02).
 
     - GET: historial de versiones (TD, CD y Administrador).
     - POST: registra una nueva versión (sólo TD) sin modificar el descargo (CA4).
