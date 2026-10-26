@@ -3,6 +3,8 @@ import { Routes } from '@angular/router';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
+import { VisorExpedienteComponent } from '../../gestionar-expedientes/visor-expediente/visor-expediente.component';
+
 import { ReportesComponent } from '../../reportes/reportes.component';
 import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.component';
 import { SolicitarPuntosComponent } from '../../solicitar-puntos/solicitar-puntos.component';
@@ -30,6 +32,7 @@ export const AdminLayoutRoutes: Routes = [
       }
     },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
+    { path: 'gestionar-expedientes/:id/visor', component: VisorExpedienteComponent, canActivate: [TribunalGuard] },
     {
       path: 'gestionar-expedientes/:id/descargo/:socioId',
       component: EnDesarrolloComponent,

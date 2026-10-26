@@ -171,10 +171,20 @@
             
             <div class="card-bottom d-flex justify-content-between align-items-center">
               <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
-              <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
-                <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
-                <span>{{ getCantidadInvolucrados(exp) }}</span>
-              </span>
+              <div class="d-inline-flex align-items-center gap-2">
+                <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
+                  <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
+                  <span>{{ getCantidadInvolucrados(exp) }}</span>
+                </span>
+                <button mat-button 
+                        class="btn btn-primary btn-link btn-just-icon p-0 m-0 btn-abrir-visor"
+                        style="min-width: 24px; width: 24px; height: 24px;"
+                        (click)="abrirVisor(exp, $event)" 
+                        title="Sustanciar / Visor de Expediente" 
+                        aria-label="Sustanciar / Visor">
+                  <i class="material-icons" style="font-size: 16px;">menu_book</i>
+                </button>
+              </div>
             </div>
           </div>
         </ng-container>
@@ -239,6 +249,13 @@
                           title="Ver Detalle de Expediente" 
                           aria-label="Ver Detalle">
                     <i class="material-icons">visibility</i>
+                  </button>
+                  <button mat-button 
+                          class="btn btn-primary btn-link btn-just-icon btn-abrir-visor-tabla" 
+                          (click)="abrirVisor(exp, $event)" 
+                          title="Sustanciar / Visor de Expediente" 
+                          aria-label="Sustanciar / Visor">
+                    <i class="material-icons">menu_book</i>
                   </button>
                   <button mat-button 
                           class="btn btn-info btn-link btn-just-icon" 
@@ -437,9 +454,16 @@
         </section>
 
       </div>
-
       <!-- Pie del Modal 1 -->
       <div class="card-footer d-flex justify-content-end align-items-center gap-2">
+        <button mat-button 
+                type="button"
+                class="btn btn-primary btn-abrir-visor mr-auto" 
+                (click)="abrirVisor(expedienteSeleccionado)" 
+                title="Sustanciar / Visor">
+          <i class="material-icons" style="font-size: 16px;">menu_book</i> Sustanciar / Visor
+        </button>
+
         <button *ngIf="puedeGenerarResolucion"
                 mat-raised-button 
                 type="button"
@@ -642,11 +666,11 @@
     <div class="card" *ngIf="involucradoSeleccionado && involucradoSeleccionado.descargo as desc">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <h4 class="card-title mb-0 font-weight-bold text-white">
-          Descargo — {{getNombreCompletoInvolucrado(involucradoSeleccionado)}}
+          {{getEncabezadoModalDescargo()}}
         </h4>
         <button type="button" 
                 class="btn btn-link text-white p-1 m-0 btn-close-modal" 
-                (click)="cerrarModales()" 
+                (click)="volverADetalleDesdeDescargo()" 
                 aria-label="Cerrar modal">
           <i class="material-icons">close</i>
         </button>
@@ -699,22 +723,68 @@
             </li>
           </ul>
         </div>
+
+        <!-- Sección de Evaluación de Puntaje Final y Fundamento -->
+        <div class="p-3 bg-light rounded border mt-3 seccion-evaluacion-descargo">
+          <h6 class="font-weight-bold text-dark mb-3">
+            <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
+            Evaluación y Puntaje Final
+          </h6>
+          <div class="row align-items-center mb-3">
+            <div class="col-md-3 col-sm-4">
+              <label class="font-weight-bold text-dark mb-0" for="puntajeFinalInput">Puntaje Final:</label>
+            </div>
+            <div class="col-md-4 col-sm-4">
+              <input type="number" 
+                     id="puntajeFinalInput" 
+                     class="form-control text-center font-weight-bold input-puntaje-final" 
+                     [(ngModel)]="puntajeFinalInput"
+                     step="1" />
+            </div>
+            <div class="col-md-5 col-sm-4">
+              <span class="text-muted small">
+                Puntaje solicitado: <strong class="text-dark">{{expedienteSeleccionado?.puntos || 0}} pts</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="font-weight-bold text-dark mb-0" for="fundamentoPuntajeInput">
+                Fundamento del cambio de Puntaje:
+              </label>
+              <span class="badge" [ngClass]="esFundamentoObligatorio() ? 'badge-danger' : 'badge-secondary'">
+                {{esFundamentoObligatorio() ? 'Obligatorio (mín. 10 car.)' : 'Opcional'}}
+              </span>
+            </div>
+            <textarea id="fundamentoPuntajeInput"
+                      class="form-control" 
+                      rows="3" 
+                      [(ngModel)]="fundamentoPuntajeInput" 
+                      placeholder="Ingrese los motivos y considerandos del Tribunal para el puntaje final..."></textarea>
+            <small *ngIf="esFundamentoObligatorio()" class="text-danger d-block mt-1 font-weight-bold">
+              * Debe fundamentar el cambio debido a que el puntaje fijado perjudica al socio respecto al pedido original.
+            </small>
+          </div>
+        </div>
       </div>
 
+      <!-- Footer Modal 6: Guardar y Volver, Volver -->
       <div class="card-footer d-flex justify-content-end align-items-center gap-2">
-        <button mat-button 
+        <button mat-raised-button 
                 type="button" 
-                class="btn btn-info btn-volver-detalle" 
-                (click)="volverADetalleDesdeDescargo()" 
-                aria-label="Volver al detalle">
-          <i class="material-icons" style="font-size: 16px;">arrow_back</i> Volver al detalle
+                class="btn btn-primary btn-guardar-volver d-inline-flex align-items-center" 
+                [disabled]="guardandoDescargo"
+                (click)="guardarYVolverDescargo()">
+          <i class="material-icons" style="font-size: 16px;">save</i>
+          <span class="ml-1">{{guardandoDescargo ? 'Guardando...' : 'Guardar y Volver'}}</span>
         </button>
         <button mat-button 
                 type="button" 
-                class="btn btn-default" 
-                (click)="cerrarModales()" 
-                aria-label="Cerrar modal">
-          Cerrar
+                class="btn btn-default btn-volver" 
+                (click)="volverADetalleDesdeDescargo()" 
+                aria-label="Volver">
+          Volver
         </button>
       </div>
     </div>

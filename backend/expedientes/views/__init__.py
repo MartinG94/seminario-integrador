@@ -95,6 +95,7 @@ from expedientes.views.evento_views import (
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
 
@@ -647,12 +648,14 @@ class EvidenciaDownloadView(APIView):
         else:
             ip_address = request.META.get("REMOTE_ADDR")
         user_agent = request.META.get("HTTP_USER_AGENT", "")
+        accion = request.query_params.get("accion", "descarga")
 
         EvidenceService.record_download_audit(
             evidencia=evidencia,
             user=request.user,
             ip_address=ip_address,
             user_agent=user_agent,
+            accion=accion,
         )
 
         response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
@@ -744,6 +747,7 @@ class DecisionCausalView(APIView):
                 fundamento=data["fundamento"],
                 evidencia_ids=data.get("evidencia_ids"),
                 user=request.user,
+                puntaje_final=data.get("puntaje_final"),
             )
         except CausalResolutionNotFound as exc:
             raise NotFound(str(exc)) from exc
@@ -1231,5 +1235,6 @@ __all__ = [
     "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
     "SocioApercibimientosView",
+    "ExpedienteVisorView",
     "filter_expedientes_by_legajo",
 ]

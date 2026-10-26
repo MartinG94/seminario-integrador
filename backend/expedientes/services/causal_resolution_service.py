@@ -1,6 +1,8 @@
 """Servicio de aplicación para resolver causales T02 con fundamento trazable (S4-02)."""
 
 from collections.abc import Iterable, Sequence
+from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from django.db import transaction
@@ -113,6 +115,7 @@ class CausalResolutionService:
         fundamento: str,
         evidencia_ids: Sequence[UUID] | None,
         user,
+        puntaje_final: Any = None,
     ) -> DecisionCausalDescargo:
         expediente = Expediente.objects.select_for_update().filter(pk=expediente_id).first()
         if expediente is None:
@@ -143,6 +146,19 @@ class CausalResolutionService:
 
         suggested = suggested_decision(has_current_evidence=bool(current))
         fundamento = fundamento.strip()
+
+        # Regla de negocio de fundamentación obligatoria al modificar puntaje
+        puntos_pedido = expediente.puntos if expediente.puntos is not None else Decimal("0")
+        if puntaje_final is not None:
+            final_dec = Decimal(str(puntaje_final))
+            pedido_dec = Decimal(str(puntos_pedido))
+            if final_dec < pedido_dec:
+                if not fundamento or len(fundamento.strip()) < 10:
+                    raise CausalResolutionValidationError(
+                        "La fundamentación escrita es obligatoria cuando "
+                        "el puntaje final es menor al pedido original."
+                    )
+
         try:
             validate_decision(decision, suggested, fundamento)
         except CausalDecisionError as exc:
@@ -171,7 +187,11 @@ class CausalResolutionService:
                 }
                 for ev in valued
             ],
-            descargo_snapshot=_descargo_snapshot(descargo),
+            descargo_snapshot={
+                **_descargo_snapshot(descargo),
+                "puntaje_final": float(puntaje_final) if puntaje_final is not None else None,
+                "fundamento_cambio_puntaje": fundamento,
+            },
             autor=user,
             autor_legajo=socio.legajo if socio else user.get_username(),
             autor_rol=socio.role if socio else "",

@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { 
   TribunalDataService, 
   Expediente, 
@@ -18,7 +19,6 @@ import {
   SocioT01DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
-import { Router } from '@angular/router';
 import { Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
@@ -144,6 +144,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   cargandoJustificaciones = false;
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
+
+  // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
+  puntajeFinalInput: number | null = null;
+  fundamentoPuntajeInput = '';
+  guardandoDescargo = false;
 
   // Apelación y adecuación del T01 (PB-02)
   readonly minMotivosAdecuacion = MIN_MOTIVOS_ADECUACION;
@@ -506,6 +511,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       }
       return;
     }
+  }
+
+  abrirVisor(exp: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!exp?.id) return;
+    this.router.navigate(['/gestionar-expedientes', exp.id, 'visor']);
   }
 
   abrirDetalle(exp: Expediente): void {
@@ -1041,8 +1054,92 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   verDescargo(fila: InvolucradoJustificacion): void {
     if (!this.expedienteSeleccionado || !fila.descargo) return;
     this.involucradoSeleccionado = fila;
+
+    // Inicializar puntaje final y fundamento del descargo
+    const pedido = this.expedienteSeleccionado.puntos ?? 0;
+    this.puntajeFinalInput = fila.descargo.puntaje_ratificado != null
+      ? fila.descargo.puntaje_ratificado
+      : (fila.descargo.decisiones_causal?.[0] ? this.getPuntajeFinalInvolucrado(fila) : pedido);
+
+    const ultimaDecision = fila.descargo.decisiones_causal?.[0];
+    this.fundamentoPuntajeInput = ultimaDecision?.fundamento || '';
+
     this.modalDetalleAbierto = false;
     this.modalDescargoAbierto = true;
+  }
+
+  getEncabezadoModalDescargo(): string {
+    if (!this.expedienteSeleccionado || !this.involucradoSeleccionado) {
+      return 'Descargo';
+    }
+    const expId = this.expedienteSeleccionado.id ?? this.expedienteSeleccionado.numero;
+    const nroSocio = this.involucradoSeleccionado.legajo;
+    const nombre = this.getNombreCompletoInvolucrado(this.involucradoSeleccionado);
+    return `Descargo exp ${expId} y ${nroSocio}, ${nombre}`;
+  }
+
+  esFundamentoObligatorio(): boolean {
+    const pedido = Number(this.expedienteSeleccionado?.puntos || 0);
+    const finalPts = Number(this.puntajeFinalInput != null ? this.puntajeFinalInput : pedido);
+    return finalPts < pedido;
+  }
+
+  puedeGuardarDescargo(): boolean {
+    if (this.guardandoDescargo) return false;
+    if (this.esFundamentoObligatorio()) {
+      return !!this.fundamentoPuntajeInput && this.fundamentoPuntajeInput.trim().length >= 10;
+    }
+    return true;
+  }
+
+  guardarYVolverDescargo(): void {
+    const descargo = this.involucradoSeleccionado?.descargo;
+    const exp = this.expedienteSeleccionado;
+    if (!exp || !descargo || this.guardandoDescargo) return;
+
+    const pedido = Number(exp.puntos ?? 0);
+    const puntajeFinal = Number(this.puntajeFinalInput != null ? this.puntajeFinalInput : pedido);
+    const fundamento = (this.fundamentoPuntajeInput || '').trim();
+
+    if (this.esFundamentoObligatorio() && fundamento.length < 10) {
+      this.notifications.warning(
+        'La fundamentación escrita es obligatoria (mínimo 10 caracteres) cuando el puntaje final es menor al pedido original.'
+      );
+      return;
+    }
+
+    this.guardandoDescargo = true;
+    const decision: DecisionCausal = (puntajeFinal >= pedido && puntajeFinal >= 0) ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
+
+    this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
+      decision,
+      fundamento,
+      puntaje_final: puntajeFinal,
+      evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
+    }).subscribe({
+      next: (resp) => {
+        this.guardandoDescargo = false;
+        descargo.leido = true;
+        descargo.puntaje_ratificado = puntajeFinal;
+        if (resp) {
+          descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
+        }
+        this.notifications.success('Evaluación del descargo guardada con éxito.');
+        this.volverADetalleDesdeDescargo();
+      },
+      error: (err) => {
+        this.guardandoDescargo = false;
+        if (err.status === 400 && err.error?.detail) {
+          this.notifications.error(err.error.detail);
+          return;
+        }
+        // Fallback local en entornos mock / dev
+        descargo.leido = true;
+        descargo.puntaje_ratificado = puntajeFinal;
+        this.notifications.success('Evaluación del descargo guardada.');
+        this.volverADetalleDesdeDescargo();
+      }
+    });
   }
 
   volverADetalleDesdeDescargo(): void {

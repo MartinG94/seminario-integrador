@@ -509,3 +509,24 @@ body.dark-edition,
     outline-offset: 2px;
   }
 }
+
+
+// Evaluación y ratificación de puntaje en descargo individual (Modal 6)
+.seccion-evaluacion-descargo {
+  background-color: var(--color-surface, #F8FAFC);
+  border: 1px solid var(--color-border-main, #E2E8F0);
+
+  .input-puntaje-final {
+    max-width: 120px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
+.btn-guardar-volver,
+.btn-volver {
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
