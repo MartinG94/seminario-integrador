@@ -405,8 +405,9 @@ class TestExpedienteDetailAPI:
         descargo = DescargoExpediente.objects.create(
             expediente=expediente_caso,
             socio=socio_imputado,
-            tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
-            texto="Descargo extraordinario de prueba.",
+            tipo=TipoDescargoEnum.T02_CERTIFICADO,
+            causal="Enfermedad",
+            texto="Descargo médico de prueba.",
         )
 
         client = APIClient()

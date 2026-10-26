@@ -127,6 +127,11 @@ class CausalResolutionService:
             )
 
         descargo = CausalResolutionService.get_descargo(expediente_id, descargo_id)
+        if descargo.tipo != TipoDescargoEnum.T02_CERTIFICADO:
+            raise CausalResolutionValidationError(
+                "Sólo se resuelven acá las causales tipificadas del Formulario T02."
+            )
+
         current = current_evidence_for(descargo)
         if evidencia_ids is None:
             valued = current
@@ -139,17 +144,8 @@ class CausalResolutionService:
                 )
             valued = [by_id[ev_id] for ev_id in dict.fromkeys(evidencia_ids)]
 
-        if descargo.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-            suggested = suggested_decision(has_current_evidence=bool(current))
-        else:
-            suggested = CausalDecision.REJECTED
-
+        suggested = suggested_decision(has_current_evidence=bool(current))
         fundamento = fundamento.strip()
-        if descargo.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-            try:
-                validate_decision(decision, suggested, fundamento)
-            except CausalDecisionError as exc:
-                raise CausalResolutionValidationError(str(exc)) from exc
 
         # Regla de negocio de fundamentación obligatoria al modificar puntaje
         puntos_pedido = expediente.puntos if expediente.puntos is not None else Decimal("0")
@@ -162,6 +158,11 @@ class CausalResolutionService:
                         "La fundamentación escrita es obligatoria cuando "
                         "el puntaje final es menor al pedido original."
                     )
+
+        try:
+            validate_decision(decision, suggested, fundamento)
+        except CausalDecisionError as exc:
+            raise CausalResolutionValidationError(str(exc)) from exc
 
         last_version = (
             DecisionCausalDescargo.objects.filter(descargo=descargo).aggregate(last=Max("version"))[
