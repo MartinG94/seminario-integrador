@@ -30,6 +30,16 @@ export const AdminLayoutRoutes: Routes = [
       }
     },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
+    {
+      path: 'gestionar-expedientes/:id/descargo/:socioId',
+      component: EnDesarrolloComponent,
+      canActivate: [TribunalGuard],
+      data: {
+        titulo: 'Ver Descargo',
+        descripcion: 'Visualización y resolución individual del descargo.',
+        icono: 'description'
+      }
+    },
     { path: 'calendario-institucional', component: CalendarioInstitucionalComponent },
     { 
       path: 'reportes',               

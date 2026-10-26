@@ -193,6 +193,8 @@ export interface DescargoDetalleDTO {
   evidencias: EvidenciaMetadata[];
   regla_sugerida?: DecisionCausal;
   decisiones_causal?: DecisionCausalDTO[];
+  leido?: boolean;
+  puntaje_ratificado?: number | null;
 }
 
 export interface SocioInvolucradoDetalleDTO {
@@ -211,6 +213,7 @@ export interface ExpedienteDetalleDTO {
   estado: string;
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
+  reglamentos_respaldantes?: string[];
 }
 
 // --- Apelación y adecuación del T01 (PB-02, Spec 008) ---

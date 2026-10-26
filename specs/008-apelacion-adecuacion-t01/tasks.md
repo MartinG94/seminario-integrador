@@ -1,3 +1,7 @@
+
+- [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:**
+  Cabecera con Exp: <n>/<YYYY> y título centrado, metadatos, sección de Reglamentación, recuadro de Motivo, tabla de 6 columnas (Involucrados y justificaciones con Estado de Descargo Leído/No Leído/Sin descargo, Puntaje Final y navegación Ver Descargo) y validación de botones en el pie (Generar Resolución, Firmar Resolución, Ver Resolución).
+  *Hecho cuando:* 63 tests Karma y 11 tests Pytest de detalle en verde.
 # Tareas Técnicas — Spec 008: Tramitar Apelación y Adecuación del T01 (PB-02)
 
 Desglose de tareas atómicas (<30 min) conforme a SDD y TDD.

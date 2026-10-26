@@ -350,6 +350,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TPB-02.8 Debate y adecuación en el detalle del TD:** Apelaciones por socio, formulario con autocompletado de socios, nuevo plazo opcional e historial.
 - [x] **TPB-02.9 Parámetro del plazo en "Calendario Institucional":** Consulta para TD, CD y Administración; edición para TD y Administración.
 - [x] **TPB-02.10 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build y control contra `notasPO.md`.
+- [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:** Cabecera Exp: <n>/<YYYY> + título, metadatos, sección Reglamentación, caja Motivo, tabla Involucrados y justificaciones (6 columnas con Leído/No Leído/Sin descargo, Puntaje Final y acción Ver Descargo) y validación de botones (Generar Resolución, Firmar Resolución, Ver Resolución).
 
 ---
 

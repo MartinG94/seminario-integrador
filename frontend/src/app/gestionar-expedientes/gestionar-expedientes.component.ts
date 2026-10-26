@@ -18,6 +18,7 @@ import {
   SocioT01DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
+import { Router } from '@angular/router';
 import { Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
@@ -112,6 +113,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalVotacionAbierto = false;
   modalFirmaAbierto = false;
   modalSociosAbierto = false;
+  modalResolucionAbierto = false;
+  modalDescargoAbierto = false;
+  reglamentacionExpandida = false;
   expedienteSeleccionado: Expediente | null = null;
 
   // Votación
@@ -158,7 +162,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService,
-    private socioApi: SocioApiService
+    private socioApi: SocioApiService,
+    private router: Router
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -173,6 +178,36 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get puedeEvaluarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
     return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
+  }
+
+  get puedeGenerarResolucion(): boolean {
+    if (!this.puedeVotarOFirmar || !this.expedienteSeleccionado) return false;
+    const enRevision =
+      this.expedienteSeleccionado.estado === 'revision_resolucion' ||
+      this.expedienteSeleccionado.estado === 'espera_resolucion';
+    if (!enRevision || this.cargandoJustificaciones) return false;
+    return this.todosLosDescargosVistos;
+  }
+
+  get todosLosDescargosVistos(): boolean {
+    if (!this.involucradosJustificacion || this.involucradosJustificacion.length === 0) {
+      return false;
+    }
+    return this.involucradosJustificacion.every(
+      fila => !fila.descargo || this.getEstadoDescargo(fila) === 'Leído'
+    );
+  }
+
+  get puedeFirmarResolucion(): boolean {
+    return (
+      this.puedeVotarOFirmar &&
+      this.expedienteSeleccionado?.estado === 'pendiente_firma'
+    );
+  }
+
+  get puedeVerResolucion(): boolean {
+    const estado = this.expedienteSeleccionado?.estado;
+    return estado === 'emitido' || estado === 'pendiente_correos';
   }
 
   ngOnInit(): void {
@@ -478,12 +513,35 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalResolucionAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalDetalleAbierto = true;
+    this.reglamentacionExpandida = false;
     this.limpiarJustificaciones();
     this.limpiarT01();
-    if (this.puedeConsultarJustificaciones) {
-      this.cargarJustificaciones(exp.id);
+
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      this.involucradosJustificacion = exp.sociosInvolucrados.map(s => ({
+        socioId: Number(s.id),
+        legajo: s.legajo,
+        grupo: s.grupo || '',
+        nombre: s.nombre,
+        apellido: '',
+        descargo: null
+      }));
+    } else if (exp.socio) {
+      this.involucradosJustificacion = [{
+        socioId: 0,
+        legajo: exp.legajo || '',
+        grupo: '',
+        nombre: exp.socio,
+        apellido: '',
+        descargo: null
+      }];
     }
+
+    this.cargarJustificaciones(exp.id);
+
     if (this.puedeConsultarT01) {
       this.cargarHistorialT01(exp.id);
     }
@@ -611,6 +669,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
       next: detalle => {
         this.involucradosJustificacion = this.construirInvolucrados(detalle);
+        if (detalle.reglamentos_respaldantes && this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
+          this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+        }
         this.cargandoJustificaciones = false;
       },
       error: err => {
@@ -761,6 +823,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
@@ -769,6 +832,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalFirmaAbierto = true;
   }
 
@@ -780,6 +844,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalSociosAbierto = true;
   }
 
@@ -795,6 +860,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalResolucionAbierto = false;
+    this.modalDescargoAbierto = false;
+    this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
     this.limpiarJustificaciones();
     this.limpiarT01();
@@ -915,6 +983,78 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!exp) return 'Reglamento Procesal Disciplinario 2026';
     const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
     return reg || 'Reglamento Procesal Disciplinario 2026';
+  }
+
+  getReglamentosSustento(exp: Expediente | null): string[] {
+    if (!exp) return ['Reglamento Procesal Disciplinario 2026'];
+    if (exp.reglamentosRespaldantes && exp.reglamentosRespaldantes.length > 0) {
+      return exp.reglamentosRespaldantes;
+    }
+    if (exp.reglamentos_respaldantes && exp.reglamentos_respaldantes.length > 0) {
+      return exp.reglamentos_respaldantes;
+    }
+    const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
+    return reg ? [reg] : ['Reglamento Procesal Disciplinario 2026'];
+  }
+
+  toggleReglamentacion(): void {
+    this.reglamentacionExpandida = !this.reglamentacionExpandida;
+  }
+
+  getNombreCompletoInvolucrado(fila: InvolucradoJustificacion): string {
+    const parts = [fila.nombre, fila.apellido].filter(Boolean).map(p => p.trim());
+    return parts.join(' ').trim() || fila.nombre || '—';
+  }
+
+  formatGrupoInvolucrado(grupo: string | undefined): string {
+    if (!grupo || !grupo.trim()) return '—';
+    return grupo.trim().replace(/^[Gg]/, '');
+  }
+
+  getEstadoDescargo(fila: InvolucradoJustificacion): 'Leído' | 'No Leído' | 'Sin descargo' {
+    if (!fila.descargo) return 'Sin descargo';
+    if (
+      fila.descargo.leido === true ||
+      (fila.descargo.decisiones_causal && fila.descargo.decisiones_causal.length > 0)
+    ) {
+      return 'Leído';
+    }
+    return 'No Leído';
+  }
+
+  getPuntajeFinalInvolucrado(fila: InvolucradoJustificacion): number {
+    if (fila.descargo?.puntaje_ratificado != null) {
+      return fila.descargo.puntaje_ratificado;
+    }
+    if (fila.descargo?.decisiones_causal && fila.descargo.decisiones_causal.length > 0) {
+      const ultima = fila.descargo.decisiones_causal[0];
+      if (ultima.decision === 'ACCEPTED') {
+        return 0;
+      }
+      if (ultima.decision === 'REJECTED') {
+        return this.expedienteSeleccionado?.puntos ?? 0;
+      }
+    }
+    return this.expedienteSeleccionado?.puntos ?? 0;
+  }
+
+  verDescargo(fila: InvolucradoJustificacion): void {
+    if (!this.expedienteSeleccionado || !fila.descargo) return;
+    this.involucradoSeleccionado = fila;
+    this.modalDetalleAbierto = false;
+    this.modalDescargoAbierto = true;
+  }
+
+  volverADetalleDesdeDescargo(): void {
+    this.modalDescargoAbierto = false;
+    this.involucradoSeleccionado = null;
+    this.modalDetalleAbierto = true;
+  }
+
+  abrirResolucion(exp: Expediente): void {
+    this.expedienteSeleccionado = exp;
+    this.modalDescargoAbierto = false;
+    this.modalResolucionAbierto = true;
   }
 
   formatSolicitante(exp: Expediente | null): string {
