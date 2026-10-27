@@ -646,6 +646,8 @@ body.dark-edition {
     background: #F8FAFC;
     cursor: pointer;
     user-select: none;
+    white-space: nowrap !important;
+    vertical-align: middle;
 
     &:hover {
       background: #F1F5F9;

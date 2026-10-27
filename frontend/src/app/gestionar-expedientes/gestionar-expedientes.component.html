@@ -194,22 +194,44 @@
     </div>
 
     <!-- VISTA 2: EXPLORADOR DENSO DE DATOS -->
-    <div *ngIf="vistaActual === 'tabla'" class="card">
-      <div class="card-header card-header-tabs-teal">
-        <h4 class="card-title text-white mb-0">Detalle de Expedientes</h4>
+    <div *ngIf="vistaActual === 'tabla'" class="card shadow-sm">
+      <div class="card-header card-header-tabs-teal d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+          <h4 class="card-title text-white font-weight-bold mb-0">Detalle de Expedientes</h4>
+          <p class="card-category text-white-50 mb-0">Explorador integral y detallado de expedientes disciplinarios.</p>
+        </div>
+        <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="expedientesFiltrados.length > 0">
+          {{ expedientesFiltrados.length }} expedientes
+        </span>
       </div>
       <div class="card-body">
         <div class="table-responsive explorer-table-container">
           <table class="table table-hover table-mat">
-            <thead>
-              <th (click)="cambiarOrden('numero')" style="cursor: pointer;">N° Expediente <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('titulo')" style="cursor: pointer;">Título <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('creador')" style="cursor: pointer;">Creador <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('cantidadSocios')" style="cursor: pointer;">Involucrados <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('fechaCreacion')" style="cursor: pointer;">Fecha <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('puntos')" style="cursor: pointer;">Puntos <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('urgencia')" style="cursor: pointer;">Urgencia <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
-              <th (click)="cambiarOrden('estado')" style="cursor: pointer;">Estado <i class="material-icons" style="font-size: 14px;">swap_vert</i></th>
+            <thead class="text-primary">
+              <th class="sortable-th" (click)="cambiarOrden('numero')" title="Ordenar por N° Expediente">
+                Exp. <i class="material-icons">{{getIconoOrden('numero')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('titulo')" title="Ordenar por Título">
+                Título <i class="material-icons">{{getIconoOrden('titulo')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('creador')" title="Ordenar por Creador">
+                Creador <i class="material-icons">{{getIconoOrden('creador')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('cantidadSocios')" title="Ordenar por Involucrados">
+                Involucrados <i class="material-icons">{{getIconoOrden('cantidadSocios')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('fechaCreacion')" title="Ordenar por Fecha">
+                Fecha <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('puntos')" title="Ordenar por Puntos">
+                Puntos <i class="material-icons">{{getIconoOrden('puntos')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('urgencia')" title="Ordenar por Urgencia">
+                Urgencia <i class="material-icons">{{getIconoOrden('urgencia')}}</i>
+              </th>
+              <th class="sortable-th" (click)="cambiarOrden('estado')" title="Ordenar por Estado">
+                Estado <i class="material-icons">{{getIconoOrden('estado')}}</i>
+              </th>
               <th class="text-right">Acciones</th>
             </thead>
             <tbody>

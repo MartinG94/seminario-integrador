@@ -60,6 +60,31 @@
   outline-offset: 2px;
 }
 
+.table thead th,
+.table-mat thead th {
+  white-space: nowrap !important;
+  vertical-align: middle;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap !important;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  i.material-icons {
+    display: inline-block;
+    vertical-align: text-bottom;
+    font-size: 16px;
+    margin-left: 4px;
+    line-height: 1;
+  }
+}
+
 table.table-mat tbody tr:focus {
   outline: 2px solid var(--color-border-focus, #{$aveit-cyan});
   outline-offset: -2px;
