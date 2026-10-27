@@ -62,9 +62,8 @@ classDiagram
         +consultarRankingGeneral()
         +buscarLegajoSocio()
         +revisarJustificacionesT02_T03()
-        +emitirVotoNominal()
-        +redactarResolucion()
-        +firmarColegiadamente()
+        +redactarResolucionConPuntajePorSocio()
+        +firmarColegiadamenteConGrupoSocial()
         +iniciarDeOficioRectificacion()
         +generarBalanceCuatrimestral()
     }
@@ -139,20 +138,19 @@ classDiagram
 ### ACT-02: Miembro de TD (Tribunal de Disciplina)
 * **Tipo de Actor:** Actor Humano Principal (Operador y Juzgador Central del Sistema).
 * **Alcance y Agrupación:** Agrupa a los **Miembros Titulares**, **Miembros Suplentes** (en ejercicio de funciones por suplencia o recusación) y a la **Presidencia del Tribunal de Disciplina** de AVEIT.
-* **Propósito con el Sistema:** Gestionar integralmente el flujo de expedientes en sus seis (6) estados oficiales, sustanciar descargos con criterios jurisprudenciales homogéneos, deliberar en sesiones ordinarias (virtuales o presenciales), emitir votos nominales fundados, formalizar resoluciones con firma colegiada digital y generar los balances cuatrimestrales de auditoría.
+* **Propósito con el Sistema:** Gestionar integralmente el flujo de expedientes en sus seis (6) estados oficiales, sustanciar descargos con criterios jurisprudenciales homogéneos, deliberar en sesiones ordinarias (virtuales o presenciales), redactar resoluciones en el editor unificado (`VISTO / CONSIDERANDO / SE RESUELVE`) fijando directamente el puntaje final por socio, formalizar resoluciones con firma colegiada digital (identificando Grupo Social `Gxx` y condición `Titular`/`Suplente`) y generar los balances cuatrimestrales de auditoría.
 * **Responsabilidades y Casos de Uso Clave:**
   1. Gestionar el **Tablero de Control de Estados** (*Expediente Creado, En período de subida de justificaciones, Las justificaciones están siendo revisadas, En espera de resolución, Pendiente de firma y envío, Expedientes ya emitidos*).
   2. Utilizar el **Buscador Integral de Legajos por Socio** para rastrear expedientes históricos, antecedentes y descargos previos de cualquier socio.
   3. Consultar, filtrar y ordenar el **Ranking Consolidado de Puntos** de la masa societaria (por categoría Pasivo/Activo y por subcomisión).
   4. Revisar justificaciones T02 y descargos T03 en el módulo *"Justificaciones"*, aprobando o desaprobando formalmente las solicitudes y analizando los archivos probatorios adjuntos.
   5. Iniciar expedientes disciplinarios de oficio o en concepto de "rectificación" (Art. 24 del Reglamento Procesal 2026).
-  6. Emitir su **voto nominal fundado** durante las sesiones del Tribunal.
-  7. Redactar el texto de la **Resolución Oficial** con su estructura reglamentaria de VISTOS, CONSIDERANDOS y RESOLUCIÓN.
-  8. Suscribir resoluciones mediante **Firma Colegiada Digital**.
-  9. Parametrizar y actualizar el catálogo de tipificaciones, causales y normativas respaldantes (Circular 001/2026).
-  10. Generar y exportar automáticamente los **Informes y Balances Cuatrimestrales de Auditoría Interna** (Art. 137 del Reglamento Interno de Disciplina).
+  6. Redactar el texto de la **Resolución Oficial** en el editor unificado (`VISTO`, `CONSIDERANDO` y `SE RESUELVE`) e ingresar de forma directa el **puntaje final resuelto para cada socio involucrado** (sin paso intermedio de votación nominal en interfaz, conforme directiva del PO del `07/10/2026`).
+  7. Suscribir resoluciones mediante **Firma Colegiada Digital** (mínimo 3 integrantes habilitados, consignando el **Grupo Social `Gxx`** representado y si firma como **Titular** o **Suplente**).
+  8. Parametrizar y actualizar el catálogo de tipificaciones, causales y normativas respaldantes (Circular 001/2026).
+  9. Generar y exportar automáticamente los **Informes y Balances Cuatrimestrales de Auditoría Interna** (Art. 137 del Reglamento Interno de Disciplina).
 * **Restricciones y Reglas de Negocio:**
-  - **Incompatibilidad por Conflicto de Intereses:** Si un miembro del TD inicia una solicitud de sanción/premio o se encuentra imputado en una causa, el sistema bloquea su participación en el juzgamiento y votación de dicha causa (Art. 24 del Reglamento Procesal y Art. 95 del Estatuto), activándose la sustitución por un Miembro Suplente.
+  - **Incompatibilidad por Conflicto de Intereses:** Si un miembro del TD inicia una solicitud de sanción/premio o se encuentra imputado en una causa, el sistema bloquea su participación en la redacción resolutiva y firma colegiada de dicha causa (Art. 24 del Reglamento Procesal y Art. 95 del Estatuto), activándose la sustitución por el Miembro Suplente de su Grupo Social.
   - Inalterabilidad de datos: Prohibición absoluta de alterar saldos mediante sentencias manuales directas (`UPDATE` en base de datos MySQL); todo ajuste requiere un expediente formal de rectificación.
 
 ---
@@ -234,7 +232,7 @@ classDiagram
 | # | Actor Consolidado | Naturaleza | Módulos del Sistema | Formularios / Documentos | Competencia T01 | Voto y Firma |
 | :---: | :--- | :---: | :--- | :---: | :---: | :---: |
 | **1** | **Socio Ordinario** | Humano (Base) | Mis Expedientes, Mi Saldo, Resoluciones Públicas | Presenta **T02** y **T03** | No habilitado | No |
-| **2** | **Miembro de TD** | Humano (Operador) | Tablero 6 Estados, Justificaciones, Ranking, Buscador Legajos, Balances | Revisa T01/T02/T03, emite **Resolución** y **Balance (Art. 137)** | De oficio o Rectificación (Art. 24) | **Sí (Voto nominal y Firma Colegiada)** |
+| **2** | **Miembro de TD** | Humano (Operador) | Tablero 6 Estados, Justificaciones, Ranking, Buscador Legajos, Balances | Revisa T01/T02/T03, emite **Resolución (`VISTO/CONSIDERANDO/SE RESUELVE`)** y **Balance (Art. 137)** | De oficio o Rectificación (Art. 24) | **Sí (Puntaje directo en Resolución y Firma Colegiada con Grupo Social)** |
 | **3** | **Comisión Directiva** | Humano (Gobierno) | Reporte Ejecutivo, Ranking Consolidado, Alertas 7/10 pts, Cierres de Asambleas | Inicia **T01 (+ Anexo)**, recibe Balances Cuatrimestrales | General sobre cualquier socio/área (Art. 21) | No en TD (Aprueba en CD) |
 | **4** | **Autoridad de SC / Líder de Equipo** | Humano (Operativo) | Carga T01, Reporte de Tareas, Evaluación de Desempeño | Inicia **T01 (+ Anexo)** | Socios de su subcomisión / equipo (Arts. 25 y 26) | No |
 | **5** | **Admin (cómputos)** | Humano (Soporte) | Panel RBAC, Logs de Seguridad, Backups MySQL, Configuración | Perfiles técnicos y configuración | No habilitado | No |

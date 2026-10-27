@@ -22,7 +22,7 @@ El modelo ha sido diseñado bajo las reglas del paradigma orientado a objetos co
 | Patrón ASI Canónico | Clases Participantes | Justificación y Regla de Negocio Soportada |
 | :--- | :--- | :--- |
 | **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioT02`<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, categorías Pasivos vs Activos con sus prerrogativas estatutarias) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
-| **2. Encabezado - Detalle**<br>*(Master - Detail)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `DetalleImputacion` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `DetalleResolucionSocio` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `FirmaColegiada` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `ExpedienteDisciplinario` (1) *-- (0..*) `VotoNominal` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `FormularioJustificacion` (1) *-- (0..*) `ComprobanteAdjunto` | Modela la composición atómica de transacciones complejas: un expediente puede imputar a múltiples socios por un mismo hecho; la resolución dictamina los puntos definitivos individuales de cada socio involucrado; y se registra la deliberación nominal individual y la firma colegiada indelegable exigida por estatuto (`RN-04`, `RN-06`, `RN-08`). |
+| **2. Encabezado - Detalle**<br>*(Master - Detail)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `DetalleImputacion` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `DetalleResolucionSocio` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (3..*) `FirmaColegiada` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `FormularioJustificacion` (1) *-- (0..*) `ComprobanteAdjunto` | Modela la composición atómica de transacciones complejas: un expediente puede imputar a múltiples socios por un mismo hecho; la resolución redactada en el editor unificado (`VISTO / CONSIDERANDO / SE RESUELVE`) dictamina directamente los puntos definitivos individuales de cada socio involucrado (prescindiendo por directiva del PO del `07/10/2026` de la votación nominal individual paso a paso); y se registra la firma colegiada indelegable de al menos 3 integrantes habilitados consignando Grupo Social (`Gxx`) y condición (`Titular`/`Suplente`) (`RN-04`, `RN-06`, `RN-08`). |
 | **3. Historial de Estados con Vigencia Temporal**<br>*(`[fechaHoraDesde, fechaHoraHasta]`)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `CambioEstadoExpediente` (*) $\rightarrow$ (1) `EstadoExpediente`<br>• `Socio` (1) *-- (1..*) `CambioEstadoSocio` (*) $\rightarrow$ (1) `EstadoSocio` | Otorga auditoría cronológica absoluta y trazabilidad inalterable con intervalos de vigencia temporal (`fechaHoraDesde` y `fechaHoraHasta = null` para el estado actual vigente). Soporta los seis (6) estados oficiales del expediente (Art. 12 del Reglamento 2026) y el ciclo de vida del socio (Activo, Alerta Amarilla 7 pts, Pérdida Automática de Condición 10 pts) (`RN-01`, `RN-02`, `RN-03`, `RN-06`, `RN-11`). |
 | **4. Rol / Tipo de Rol**<br>*(Party - Role)* | • `Socio` (1) *-- (1..*) `RolInstitucional`<br>$\ll$abstract$\gg$ `RolInstitucional` $\leftarrow$ `MiembroTribunal`, `MiembroComisionDirectiva`, `MiembroComisionFiscalizadora`, `MiembroComisionRevisora`, `JefeEquipo` | Permite que un mismo socio físico desempeñe diferentes roles institucionales simultáneamente o en diferentes mandatos sin duplicar su identidad ni generar herencia múltiple. Facilita la validación estricta de competencias para solicitar expedientes (Arts. 21 a 26) y la detección de incompatibilidades/inhibiciones (`RN-05`, `RN-07`, `RN-10`). |
 | **5. Clase de Asociación / Reificación** | • `Socio` (1) $\leftarrow$ (*) `MembresiaSubcomision` (*) $\rightarrow$ (1) `Subcomision`<br>• `ResolucionDisciplinaria` (1) $\leftarrow$ (*) `MovimientoPuntos` (*) $\rightarrow$ (1) `Socio` | Captura los atributos propios de la relación entre un socio y una subcomisión (cargo, período de vigencia) y reifica la transacción del libro mayor de puntos inmutable entre la resolución emitida y el socio afectado (`RN-07`, `RN-11`). |
@@ -194,8 +194,7 @@ classDiagram
         +cambiarEstado(nuevoEstado, motivo, usuario)
         +calcularPlazoPreclusivo(fechaHoraInicio, diasHabiles) DateTime
         +estaEnPlazoDescargo() Boolean
-        +tieneQuorumVotacion() Boolean
-        +calcularMayoriaVotacion() Boolean
+        +puedeEmitirResolucion() Boolean
     }
 
     class DetalleImputacion {
@@ -292,17 +291,8 @@ classDiagram
     FormularioJustificacion "1" *-- "0..*" ComprobanteAdjunto : respalda con
 
     %% ========================================================
-    %% PAQUETE: DELIBERACIÓN, RESOLUCIÓN, FIRMA Y LIBRO MAYOR
+    %% PAQUETE: RESOLUCIÓN OFICIAL, FIRMA COLEGIADA Y LIBRO MAYOR
     %% ========================================================
-    class VotoNominal {
-        -DateTime fechaHoraVoto
-        -String sentidoVoto
-        -String fundamentacionJuridica
-        -Float puntosDictaminados
-        +esAfirmativo() Boolean
-        +esInhibicion() Boolean
-    }
-
     class ResolucionDisciplinaria {
         -String numeroResolucion
         -DateTime fechaHoraEmision
@@ -317,6 +307,7 @@ classDiagram
 
     class DetalleResolucionSocio {
         -Float puntosDefinitivos
+        -Boolean aplicaApercibimiento
         -String sancionAplicada
         -String consideracionIndividual
         +esPuntajeValido() Boolean
@@ -325,7 +316,8 @@ classDiagram
     class FirmaColegiada {
         -DateTime fechaHoraFirma
         -String selloDigital
-        -String rolFirmante
+        -String grupoSocialRepresentado
+        -String condicionFirmante
         +esFirmaValida() Boolean
     }
 
@@ -340,12 +332,10 @@ classDiagram
         +esInalterable() Boolean
     }
 
-    ExpedienteDisciplinario "1" *-- "0..*" VotoNominal : registra deliberacion
-    VotoNominal "0..*" --> "1" MiembroTribunal : emitido por
     ExpedienteDisciplinario "1" --> "0..1" ResolucionDisciplinaria : culmina en
     ResolucionDisciplinaria "1" *-- "1..*" DetalleResolucionSocio : resuelve sobre
     DetalleResolucionSocio "0..*" --> "1" Socio : sanciona o premia a
-    ResolucionDisciplinaria "1" *-- "1..*" FirmaColegiada : avalada por
+    ResolucionDisciplinaria "1" *-- "3..*" FirmaColegiada : avalada por
     FirmaColegiada "0..*" --> "1" MiembroTribunal : suscripta por
     ResolucionDisciplinaria "1" --> "1..*" MovimientoPuntos : genera impacto
     MovimientoPuntos "0..*" --> "1" Socio : imputado en libro mayor
@@ -547,8 +537,7 @@ package "Gestión de Expedientes y 6 Estados Oficiales (Master - Detail)" {
         + cambiarEstado(nuevoEstado: EstadoExpediente, motivo: String, usuario: String): void
         + calcularPlazoPreclusivo(fechaHoraInicio: DateTime, diasHabiles: Integer): DateTime
         + estaEnPlazoDescargo(): Boolean
-        + tieneQuorumVotacion(): Boolean
-        + calcularMayoriaVotacion(): Boolean
+        + puedeEmitirResolucion(): Boolean
     }
 
     class DetalleImputacion {
@@ -643,16 +632,7 @@ package "Descargos, Notificaciones y Comprobantes (T02 / T03)" {
     FormularioJustificacion "1" *-- "0..*" ComprobanteAdjunto : adjunta
 }
 
-package "Deliberación, Resolución, Firma Colegiada y Libro Mayor" {
-    class VotoNominal {
-        - fechaHoraVoto: DateTime
-        - sentidoVoto: String
-        - fundamentacionJuridica: String
-        - puntosDictaminados: Float
-        + esAfirmativo(): Boolean
-        + esInhibicion(): Boolean
-    }
-
+package "Resolución Oficial, Firma Colegiada y Libro Mayor" {
     class ResolucionDisciplinaria {
         - numeroResolucion: String
         - fechaHoraEmision: DateTime
@@ -667,6 +647,7 @@ package "Deliberación, Resolución, Firma Colegiada y Libro Mayor" {
 
     class DetalleResolucionSocio {
         - puntosDefinitivos: Float
+        - aplicaApercibimiento: Boolean
         - sancionAplicada: String
         - consideracionIndividual: String
         + esPuntajeValido(): Boolean
@@ -675,7 +656,8 @@ package "Deliberación, Resolución, Firma Colegiada y Libro Mayor" {
     class FirmaColegiada {
         - fechaHoraFirma: DateTime
         - selloDigital: String
-        - rolFirmante: String
+        - grupoSocialRepresentado: String
+        - condicionFirmante: String
         + esFirmaValida(): Boolean
     }
 
@@ -690,12 +672,10 @@ package "Deliberación, Resolución, Firma Colegiada y Libro Mayor" {
         + esInalterable(): Boolean
     }
 
-    ExpedienteDisciplinario "1" *-- "0..*" VotoNominal : delibera con
-    VotoNominal "0..*" --> "1" MiembroTribunal : registrado por
     ExpedienteDisciplinario "1" --> "0..1" ResolucionDisciplinaria : concluye en
     ResolucionDisciplinaria "1" *-- "1..*" DetalleResolucionSocio : dispone sobre
     DetalleResolucionSocio "0..*" --> "1" Socio : aplica a
-    ResolucionDisciplinaria "1" *-- "1..*" FirmaColegiada : respaldada por
+    ResolucionDisciplinaria "1" *-- "3..*" FirmaColegiada : respaldada por
     FirmaColegiada "0..*" --> "1" MiembroTribunal : firmada por
     ResolucionDisciplinaria "1" --> "1..*" MovimientoPuntos : genera asiento
     MovimientoPuntos "0..*" --> "1" Socio : asienta en
@@ -934,15 +914,13 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   - `conocerEstadoActual(): EstadoExpediente`: Devuelve el estado vigente en su colección `CambioEstadoExpediente`.
   - `calcularPlazoPreclusivo(fechaHoraInicio, diasHabiles)`: Computa 5 días hábiles excluyendo sábados, domingos y feriados (`RN-03`).
   - `estaEnPlazoDescargo(): Boolean`: Evalúa si `fechaActual` $\le$ `fechaHoraVencimientoDescargo`.
-  - `tieneQuorumVotacion(): Boolean`: Verifica que hayan votado al menos 2 miembros habilitados del TD (`RN-04`).
-  - `calcularMayoriaVotacion(): Boolean`: Determina si existe mayoría absoluta de votos afirmativos ($\ge 2$) (`RN-04`).
+  - `puedeEmitirResolucion(): Boolean`: Verifica que la `ResolucionDisciplinaria` asociada tenga texto completo (`VISTO / CONSIDERANDO / SE RESUELVE`), puntaje definido por socio y al menos tres (3) instancias válidas de `FirmaColegiada` de miembros no inhibidos (`RN-04`, `RN-06`).
 * **Relaciones:**
   - `formaliza en` $\leftarrow$ `SolicitudT01` (1 a 0..1).
   - `desglosa` *-- `DetalleImputacion` (1 a 1..* - Composición).
   - `audita avance` *-- `CambioEstadoExpediente` (1 a 1..* - Composición).
   - `notifica` *-- `NotificacionAcuseSancion` (1 a 0..* - Composición).
   - `recepciona` *-- `FormularioJustificacion` (1 a 0..* - Composición).
-  - `delibera con` *-- `VotoNominal` (1 a 0..* - Composición).
   - `concluye en` $\rightarrow$ `ResolucionDisciplinaria` (1 a 0..1).
 
 ---
@@ -1071,28 +1049,14 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ---
 
-### 4.18. Ficha Técnica: `VotoNominal`
-* **Patrón ASI:** Detalle de Deliberación / Acto Colegiado.
-* **Propósito:** Modela el voto individual y fundado emitido por cada integrante habilitado del Tribunal de Disciplina durante las sesiones de juzgamiento.
-* **Atributos:**
-  | Atributo | Tipo | Descripción | Restricciones / Reglas |
-  | :--- | :--- | :--- | :--- |
-  | `fechaHoraVoto` | `DateTime` | Momento de emisión del voto en sesión. | Sellado de tiempo no nulo. |
-  | `sentidoVoto` | `String` | Posición del miembro del TD ("Afirmativo", "Rechazo", "Disidencia", "Inhibido"). | Valor de catálogo (`RN-04`, `RN-05`). |
-  | `fundamentacionJuridica` | `String` | Argumentos reglamentarios que respaldan la postura. | No Nulo. |
-  | `puntosDictaminados` | `Float` | Cuantía de puntos que propone el miembro del TD. | Múltiplo de 0.5 (`RN-08`). |
-* **Métodos Conceptuales:**
-  - `esAfirmativo(): Boolean`: Retorna `true` si `sentidoVoto == "Afirmativo"`.
-  - `esInhibicion(): Boolean`: Retorna `true` si el miembro del TD se inhibió por conflicto de interés (`RN-05`).
-* **Relaciones:**
-  - `delibera con` $\leftarrow$ `ExpedienteDisciplinario` (0..* a 1 - Composición).
-  - `registrado por` $\rightarrow$ `MiembroTribunal` (0..* a 1).
+### 4.18. Evolución de Modelo (`07/10/2026`): Sustitución de `VotoNominal` por Editor Unificado en `ResolucionDisciplinaria` y `DetalleResolucionSocio`
+* **Decisión de Diseño del Dominio (Directiva PO y TD - Sprint 3):** Conforme al hito de alineación del `07/10/2026` documentado en `notasPO.md`, se prescinde de la entidad intermedia `VotoNominal` (votación nominal paso a paso en pantalla). La determinación colegiada del Tribunal se consolida directamente en `ResolucionDisciplinaria` (`vistos`, `considerandos`, `parteDispositiva`), fijando en `DetalleResolucionSocio` el puntaje final resuelto para cada socio involucrado y respaldando el acto mediante al menos tres (3) instancias de `FirmaColegiada` con identificación de Grupo Social (`Gxx`) y carácter (`Titular` o `Suplente`).
 
 ---
 
 ### 4.19. Ficha Técnica: `ResolucionDisciplinaria`
 * **Patrón ASI:** Encabezado Transaccional Definitivo / Acto Jurídico Formal.
-* **Propósito:** Documento jurídico resolutivo emitido por el Tribunal de Disciplina con estructura formal preceptiva (VISTOS, CONSIDERANDOS y RESOLUCIÓN).
+* **Propósito:** Documento jurídico resolutivo emitido por el Tribunal de Disciplina con estructura formal preceptiva (`VISTO`, `CONSIDERANDO` y `SE RESUELVE`).
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
@@ -1100,27 +1064,28 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   | `fechaHoraEmision` | `DateTime` | Momento formal de emisión y promulgación. | Sellado de tiempo no nulo. |
   | `vistos` | `String` | Sección de antecedentes fácticos y actuaciones cumplidas. | No Nulo. |
   | `considerandos` | `String` | Fundamentación doctrinaria, reglamentaria y valoración probatoria. | No Nulo. |
-  | `parteDispositiva` | `String` | Texto resolutivo vinculante (Artículos de la resolución). | No Nulo. |
+  | `parteDispositiva` | `String` | Texto resolutivo vinculante (Artículos de la resolución / `SE RESUELVE`). | No Nulo. |
   | `esPublica` | `Boolean` | Indicador de publicación en el panel de transparencia. | `true` por defecto. |
-  | `hashFirmaDigital` | `String` | Firma criptográfica consolidada de los miembros activos. | Inalterable (`RN-06`). |
+  | `hashFirmaDigital` | `String` | Firma criptográfica consolidada de los miembros firmantes. | Inalterable (`RN-06`). |
 * **Métodos Conceptuales:**
-  - `estaCompletamenteFirmada(): Boolean`: Verifica que existan las firmas colegiadas reglamentarias de los miembros activos (`RN-06`).
+  - `estaCompletamenteFirmada(): Boolean`: Verifica que existan al menos tres (3) firmas colegiadas reglamentarias de miembros habilitados del TD (`RN-06`).
   - `publicarResolucion()`: Habilita la visibilidad en el módulo público y de transparencia.
 * **Relaciones:**
   - `concluye en` $\leftarrow$ `ExpedienteDisciplinario` (0..1 a 1).
   - `dispone sobre` *-- `DetalleResolucionSocio` (1 a 1..* - Composición).
-  - `respaldada por` *-- `FirmaColegiada` (1 a 1..* - Composición).
+  - `respaldada por` *-- `FirmaColegiada` (1 a 3..* - Composición).
   - `genera asiento` $\rightarrow$ `MovimientoPuntos` (1 a 1..*).
 
 ---
 
 ### 4.20. Ficha Técnica: `DetalleResolucionSocio`
 * **Patrón ASI:** Detalle de Transacción (Transaction Line Item).
-* **Propósito:** Dictamen particularizado y puntos definitivos fijados para cada socio individual comprendido en la resolución.
+* **Propósito:** Dictamen particularizado y puntaje final resuelto fijado directamente en el editor de resolución para cada socio individual comprendido en el expediente.
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
-  | `puntosDefinitivos` | `Float` | Cuantía neta definitiva de puntos adjudicados (+/-). | Fracciones de 0.5 (`RN-08`). |
+  | `puntosDefinitivos` | `Float` | Cuantía neta definitiva de puntos adjudicados (+/-) en la resolución. | Fracciones de 0.5 (`RN-08`). |
+  | `aplicaApercibimiento` | `Boolean` | Indica si la resolución impone un apercibimiento formal (computable para regla 3:1). | Booleano (`RN-08`). |
   | `sancionAplicada` | `String` | Tipificación final de la medida o reconocimiento. | No Nulo. |
   | `consideracionIndividual` | `String` | Ponderación particular de agravantes, atenuantes o descargos. | Opcional / No Nulo. |
 * **Relaciones:**
@@ -1131,15 +1096,16 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ### 4.21. Ficha Técnica: `FirmaColegiada`
 * **Patrón ASI:** Detalle de Transacción / Aval Institucional.
-* **Propósito:** Registra la suscripción formal y digital de cada integrante habilitado del TD en representación de los grupos sociales activos para conferir eficacia jurídica al fallo.
+* **Propósito:** Registra la suscripción formal y digital de cada integrante habilitado del TD en representación de su Grupo Social para conferir eficacia jurídica al fallo (mínimo 3 firmas).
 * **Atributos:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
   | `fechaHoraFirma` | `DateTime` | Momento exacto de suscripción digital. | Sellado de tiempo no nulo. |
   | `selloDigital` | `String` | Firma digital / hash criptográfico del firmante. | Inalterable (`RN-06`). |
-  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Miembro Titular Activo"). | No Nulo (`RN-06`, `RN-10`). |
+  | `grupoSocialRepresentado` | `String` | Grupo Social al que representa el miembro firmante (ej. `G04`, `G05`, `G06`). | No Nulo (`RN-06`, Directiva PO `07/10/2026`). |
+  | `condicionFirmante` | `String` | Condición institucional en la que suscribe (`Titular` o `Suplente`). | No Nulo (`RN-06`, Directiva PO `07/10/2026`). |
 * **Relaciones:**
-  - `respaldada por` $\leftarrow$ `ResolucionDisciplinaria` (1..* a 1 - Composición).
+  - `respaldada por` $\leftarrow$ `ResolucionDisciplinaria` (3..* a 1 - Composición).
   - `firmada por` $\rightarrow$ `MiembroTribunal` (0..* a 1).
 
 ---
@@ -1213,9 +1179,9 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 | **`RN-01` (Art. 93 Reglamento Interno)** | Pérdida Automática de Condición de Socio al acumular $\ge 10$ puntos negativos. | • `Socio.tieneAlertaRoja()`<br>• `Socio.cambiarEstado(EstadoSocio='Perdida Automatica Condicion de Socio')`<br>• `BalanceCuatrimestral.cantidadSociosAlertaRoja` |
 | **`RN-02` (Reglamento Interno)** | Alerta Preventiva Temprana al acumular $\ge 7$ y $< 10$ puntos negativos. | • `Socio.tieneAlertaAmarilla()`<br>• `CambioEstadoSocio` / `EstadoSocio`<br>• `BalanceCuatrimestral.cantidadSociosAlertaAmarilla` |
 | **`RN-03` (Art. 12 Inc. 2 Reglamento 2026)** | Plazo Preclusivo fatal de 5 días hábiles para presentar descargos (T02/T03). | • `ExpedienteDisciplinario.calcularPlazoPreclusivo()`<br>• `ExpedienteDisciplinario.estaEnPlazoDescargo()`<br>• `NotificacionAcuseSancion.fechaHoraLimiteDescargo`<br>• `FormularioJustificacion.esPresentadoEnTermino()` |
-| **`RN-04` (Art. 96 Estatuto Social)** | Mayoría absoluta reglamentaria ($\ge 2$ votos) e irrecurribilidad en fallos del TD. | • `ExpedienteDisciplinario.tieneQuorumVotacion()`<br>• `ExpedienteDisciplinario.calcularMayoriaVotacion()`<br>• `VotoNominal.esAfirmativo()` |
-| **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de miembro del TD con conflicto de interés o promotor de la acción. | • `VotoNominal.esInhibicion()`<br>• `MiembroTribunal`<br>• `RolInstitucional.validarCompetenciaAccion()` |
-| **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma Colegiada digital de Socios Activos previa a la emisión del fallo. | • `FirmaColegiada`<br>• `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
+| **`RN-04` (Art. 96 Estatuto Social / PO `07/10`)** | Resolución colegiada directa (`VISTO / CONSIDERANDO / SE RESUELVE`) con puntaje por socio e irrecurribilidad en fallos del TD. | • `ExpedienteDisciplinario.puedeEmitirResolucion()`<br>• `ResolucionDisciplinaria`<br>• `DetalleResolucionSocio.puntosDefinitivos` |
+| **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de miembro del TD con conflicto de interés o promotor de la acción. | • `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `RolInstitucional.validarCompetenciaAccion()` |
+| **`RN-06` (Art. 12 Inc. 5 Reglamento 2026 / PO `07/10`)** | Firma Colegiada digital de al menos 3 integrantes habilitados consignando Grupo Social (`Gxx`) y condición (`Titular`/`Suplente`). | • `FirmaColegiada.grupoSocialRepresentado` / `condicionFirmante`<br>• `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
 | **`RN-07` (Arts. 21 a 26 Reglamento 2026)** | Delimitación estricta de competencias funcionales para solicitar apertura de causas. | • `RolInstitucional.validarCompetenciaAccion()`<br>• `SolicitudT01.validarCompetenciaSolicitante()`<br>• `MembresiaSubcomision.esAutoridadHabilitada()` |
 | **`RN-08` (Circular 001/2026)** | Escalas tarifadas y fraccionamiento obligatorio en múltiplos de 0.5 puntos. | • `TipificacionFaltaMerito.esPuntajeValido()`<br>• `DetalleImputacion.puntosPropuestos`<br>• `DetalleResolucionSocio.esPuntajeValido()`<br>• `MovimientoPuntos.puntosVariacion` |
 | **`RN-09` (Art. 137 Reglamento Interno)** | Emisión de 2 Balances Cuatrimestrales de Auditoría Interna por año social. | • `BalanceCuatrimestral.calcularMetricasGenerales()`<br>• `BalanceCuatrimestral.exportarInformePDF()`<br>• `DetalleBalanceSubcomision` |
@@ -1231,8 +1197,8 @@ El presente Modelo de Dominio Conceptual ha sido sometido a la lista de verifica
 * [x] **Cero Claves Foráneas como Atributos:** Se verificó que ninguna clase incluya atributos como `idSocio`, `fk_subcomision`, `codTipificacion` o `idEstado`. Todas las relaciones se modelan exclusivamente mediante asociaciones, agregaciones o composiciones orientadas a objetos.
 * [x] **Multiplicidades Bidireccionales Explícitas:** Cada extremo de asociación cuenta con multiplicidad explícita (`1`, `0..1`, `1..*`, `0..*`), sin extremos huérfanos.
 * [x] **Historiales de Estado Rigurosos:** Tanto en `ExpedienteDisciplinario` como en `Socio`, el ciclo de vida se modela con el patrón ASI `CambioEstado` (`fechaHoraDesde`, `fechaHoraHasta` con semántica de `null` para vigencia actual) y referencia `* --> 1` a su respectivo `Estado`.
-* [x] **Composición Fuerte en Transacciones:** Las líneas de detalle (`DetalleImputacion`, `DetalleResolucionSocio`, `FirmaColegiada`, `VotoNominal`, `ComprobanteAdjunto`, `DetalleBalanceSubcomision`) están subordinadas por composición (`*--`) a sus respectivos encabezados.
-* [x] **Ausencia de Clases Dios (God Classes):** Las responsabilidades están distribuidas coherentemente entre 24 clases cohesivas y desacopladas.
+* [x] **Composición Fuerte en Transacciones:** Las líneas de detalle (`DetalleImputacion`, `DetalleResolucionSocio`, `FirmaColegiada`, `ComprobanteAdjunto`, `DetalleBalanceSubcomision`) están subordinadas por composición (`*--`) a sus respectivos encabezados.
+* [x] **Ausencia de Clases Dios (God Classes):** Las responsabilidades están distribuidas coherentemente entre 23 clases cohesivas y desacopladas.
 * [x] **Purga de Elementos de Infraestructura y UI:** No se incluyen controladores, DTOs, vistas ni conexiones a bases de datos; se trata de un modelo conceptual puro del dominio del negocio.
 
 ---
