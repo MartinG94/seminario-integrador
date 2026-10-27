@@ -123,7 +123,7 @@ Aplicando el marco analítico de la skill `systemClassifier`, el sistema SGD-AVE
 * **Sistema:** Plataforma Integral de Gestión del Tribunal de Disciplina y Premiaciones (SGD-AVEIT).
 * **Subsistemas Nucleares:**
   1. *Subsistema de Entrada y Trámite Procesal (TPS):* Captura de solicitudes T01, notificaciones y carga digital de formularios T02/T03 con comprobantes.
-  2. *Subsistema de Jurisprudencia y Deliberación Colegiada (KMS/DSS):* Consulta de antecedentes disciplinarios, emisión nominal de votos y suscripción de resoluciones.
+  2. *Subsistema de Jurisprudencia y Resolución Colegiada (KMS/DSS):* Consulta de antecedentes disciplinarios, redacción estructurada de resoluciones (`VISTO / CONSIDERANDO / SE RESUELVE`) con fijación directa de puntaje final por socio y suscripción colegiada con trazabilidad de Grupo Social (`Gxx`) y titularidad.
   3. *Subsistema de Integridad Transaccional y Saldos (TPS):* Sumatoria de puntos auditada mediante ledger histórico y disparador de alarmas preventivas y críticas.
   4. *Subsistema de Transparencia y Rendición Cuatrimestral (MIS/EIS):* Portal público de consulta societaria y motor de compilación de Balances Cuatrimestrales (Art. 137).
 * **Frontera del Sistema:** Comprende desde la detección de la infracción/mérito y solicitud formal hasta la consolidación del balance cuatrimestral y la publicación transparente del fallo. Excluye el cobro de cuotas societarias (Tesorería) y la gestión de la Gran Rifa.
@@ -207,7 +207,7 @@ classDiagram
         +consultarRankingGeneral()
         +buscarLegajoSocio()
         +revisarJustificacionesT02_T03()
-        +emitirVotoNominal()
+        +redactarResolucionColegiada()
         +firmarColegiadamente()
         +generarBalanceCuatrimestral()
     }
@@ -247,8 +247,8 @@ classDiagram
 | Consultar Ranking General de Socios (filtros Jr/Sr) | ❌ | ❌ | **R** | **R** | **R** |
 | Buscar Legajo Integral e Histórico por Socio | ❌ | ❌ | **R** | **R** | **R** |
 | Sustanciar Descargos y Aprobar/Rechazar T02/T03 | ❌ | ❌ | ❌ | **C/U** | ❌ |
-| Votar nominalmente y redactar Resoluciones | ❌ | ❌ | ❌ | **C/U** | ❌ |
-| Firma Electrónica Colegiada de Resoluciones | ❌ | ❌ | ❌ | **C/U** *(Activos)* | ❌ |
+| Redactar Resolución Oficial (`VISTO / CONSIDERANDO / SE RESUELVE`) y fijar puntaje por socio | ❌ | ❌ | ❌ | **C/U** | ❌ |
+| Firma Electrónica Colegiada de Resoluciones (mín. 3 integrantes con Grupo Social y titularidad) | ❌ | ❌ | ❌ | **C/U** *(Habilitados)* | ❌ |
 | Recibir Alertas Preventivas (-7 pts) y Críticas (-10 pts) | **R** *(Propia)* | ❌ | **R** *(Global)* | **R** *(Global)* | ❌ |
 | Generar y Exportar Balances Cuatrimestrales (Art. 137)| ❌ | ❌ | **R** | **C/R/E** | ❌ |
 | Gestión de Usuarios, Roles y Pistas de Auditoría DB | ❌ | ❌ | ❌ | ❌ | **C/R/U/D** |
@@ -271,9 +271,9 @@ Aplicando el pipeline de `/requirementsExtractor`, se desglosan los alcances fun
 | **RF-06** | **Carga Digital de Descargo Extraordinario (Formulario T03)** | El sistema proveerá una interfaz web responsive para que el socio imputado complete el Formulario T03 ante situaciones excepcionales no tipificadas, redactando los hechos y adjuntando pruebas documentales. | **Must Have** | Socio Ordinario |
 | **RF-07** | **Tablero de Control y Seguimiento de los 6 Estados Procesales** | El sistema dispondrá de un panel de control interactivo para los miembros del TD que visualizará y gestionará los expedientes clasificados en sus 6 estados oficiales según el Art. 12 del Reglamento Procesal 2026. | **Must Have** | Miembro TD |
 | **RF-08** | **Evaluación y Sustanciación de Descargos** | El sistema permitirá a las miembros del TD visualizar los comprobantes adjuntos, emitir dictamen de aprobación o rechazo fundado sobre los Formularios T02/T03 y registrar el resultado en el expediente. | **Must Have** | Miembro TD |
-| **RF-09** | **Registro Nominal de Votación del Tribunal** | El sistema registrará el voto individual y nominal de cada miembro del Tribunal de Disciplina habilitado, computando la mayoría absoluta estatutaria para habilitar la confección del fallo. | **Must Have** | Miembro TD |
-| **RF-10** | **Redacción Estructurada y Generación de Resoluciones** | El sistema guiará la redacción de la Resolución final respetando la estructura legal obligatoria (*Vistos, Considerandos y Resolución*) y consolidando los puntos definitivos asignados (+/-). | **Must Have** | Miembro TD |
-| **RF-11** | **Aprobación Colegiada Autenticada (Firma Electrónica)** | El sistema permitirá a los miembros del TD de categoría Activo suscribir colegiadamente la resolución mediante su sesión autenticada, registrando de forma inalterable ID de usuario, rol institucional, categoría, fecha/hora y hash de auditoría. | **Must Have** | Miembro TD |
+| **RF-09** | **Determinación Directa de Puntaje Final por Socio en Resolución** | El sistema permitirá al Tribunal de Disciplina determinar e ingresar directamente en el editor de resolución el puntaje final resuelto (+/-) o apercibimiento para cada socio involucrado (reemplazando por directiva del PO y del TD del `07/10/2026` el flujo previo de votación nominal paso a paso). | **Must Have** | Miembro TD |
+| **RF-10** | **Redacción Estructurada y Generación de Resoluciones** | El sistema guiará la redacción de la Resolución Oficial respetando la estructura legal obligatoria (*VISTO, CONSIDERANDO y SE RESUELVE*) en un editor unificado junto con los puntos definitivos asignados por socio. | **Must Have** | Miembro TD |
+| **RF-11** | **Aprobación Colegiada Autenticada (Firma Electrónica y Grupo Social)** | El sistema permitirá a al menos tres (3) miembros habilitados del TD suscribir colegiadamente la resolución mediante su sesión autenticada, registrando de forma inalterable ID de usuario, Grupo Social representado (`Gxx`), carácter (`Titular` o `Suplente`), fecha/hora y hash de auditoría. | **Must Have** | Miembro TD |
 | **RF-12** | **Sumatoria Transaccional e Inmutable del Saldo de Puntos** | El sistema actualizará el saldo de puntos del socio sumando algebraicamente las transacciones dictaminadas con fracciones mínimas de 0.5 puntos, mediante lógica de backend y triggers en base de datos. | **Must Have** | Sistema (Motor de Reglas) |
 | **RF-13** | **Disparo Automático de Alertas Escalonadas (-7 y -10 pts)** | El sistema evaluará el saldo tras cada impacto: si el saldo acumulado es <= -7 pts despachará alerta amarilla preventiva; si es <= -10 pts despachará alerta roja de pérdida de condición de socio a CD y al socio. | **Must Have** | Sistema (Daemon / Reglas) |
 | **RF-14** | **Generación de Balances Cuatrimestrales de Auditoría (Art. 137)** | El sistema compilará con un solo clic los Balances Cuatrimestrales de Auditoría Interna de Premiaciones y Sanciones desglosados por Subcomisión y categoría (Pasivos/Activos), exportables a PDF formal. | **Must Have** | Miembro TD |
@@ -285,19 +285,19 @@ Aplicando el pipeline de `/requirementsExtractor`, se desglosan los alcances fun
 
 Cada requerimiento funcional del sistema está estrictamente justificado y delimitado por el marco normativo vigente de A.V.E.I.T.:
 
-| ID Requerimiento | Artículo Normativo de Respaldo | Cuerpo Normativo | Regla de Negocio Asociada |
-| :--- | :--- | :--- | :--- |
-| **RF-01, RF-02** | Arts. 16 y 16 BIS, Arts. 21 a 26 | Reglamento Procesal Disciplinario 2026 | `RN-01` (Competencia para Inicio de Acciones) |
-| **RF-03, RF-04** | Art. 12 inc. 2, Art. 17 | Reglamento Procesal Disciplinario 2026 | `RN-02` (Plazo Preclusivo Improrrogable de 5 Días Hábiles) |
-| **RF-05** | Art. 17 | Reglamento Procesal Disciplinario 2026 | `RN-03` (Causales Tipificadas de Justificación T02) |
-| **RF-06** | Art. 18 | Reglamento Procesal Disciplinario 2026 | `RN-04` (Sustanciación de Descargo Extraordinario T03) |
-| **RF-07, RF-08** | Art. 12 (Estados 1 al 4) | Reglamento Procesal Disciplinario 2026 | `RN-05` (Ciclo de Vida de 6 Estados del Expediente) |
-| **RF-09, RF-10** | Art. 96 | Estatuto Social de A.V.E.I.T. 2026 | `RN-06` (Quórum y Mayoría Absoluta del Tribunal) |
-| **RF-11** | Arts. 12 inc. 5, Art. 13 | Reglamento Procesal Disciplinario 2026 | `RN-07` (Validez de la Firma Colegiada Autenticada) |
-| **RF-12** | Arts. 20 y 20 BIS; Circular 001/2026 | Reg. Procesal 2026 / Circular TD 2026 | `RN-08` (Cálculo de Saldos y Fracciones Mínimas de 0.5) |
-| **RF-13** | Art. 93 | Reglamento Interno de Disciplina de AVEIT | `RN-09` (Cláusula de Pérdida de Condición de Socio a -10 Pts) |
-| **RF-14** | Art. 137 | Reglamento Interno de Disciplina de AVEIT | `RN-10` (Obligatoriedad de Balances Cuatrimestrales de Auditoría) |
-| **RF-15** | Art. 96 | Estatuto Social de A.V.E.I.T. 2026 | `RN-05` (Publicidad y Transparencia de Fallos Firmes) |
+| ID Requerimiento | Artículo Normativo de Respaldo | Cuerpo Normativo | Regla de Negocio | Caso de Uso | Historia (Jira / Código) | Suite de Pruebas Automatizadas y Resultado |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **RF-01, RF-02** | Arts. 16 y 16 BIS, Arts. 21 a 26 | Reglamento Procesal 2026 | `RN-01` | `CU-03` | `SCRUM-40`, `SCRUM-42`, `SCRUM-80` | `tests/expedientes/test_solicitud_t01.py`, `test_expediente_creation.py` (**PASSED 100%**) |
+| **RF-03, RF-04** | Art. 12 inc. 2, Art. 14 y 17 | Reglamento Procesal 2026 | `RN-02` | `CU-06` | `SCRUM-45`, `SCRUM-50` (`US-S3-02`) | `tests/expedientes/test_deadline_calculation.py`, `test_deadline_enforcement.py` (**PASSED 100%**) |
+| **RF-05** | Art. 13, 14 y 17 | Reglamento Procesal 2026 | `RN-03` | `CU-01` | `SCRUM-51` (`US-S3-03`), `SCRUM-52` (`US-S3-04`) | `tests/expedientes/test_descargo_api.py`, `test_evidence_api.py` (**PASSED 100%**) |
+| **RF-06** | Art. 13, 14 y 18 | Reglamento Procesal 2026 | `RN-04` | `CU-01` | `SCRUM-51` (`US-S3-03`), `SCRUM-53` (`US-S3-05`) | `tests/expedientes/test_descargo_api.py`, `test_descargo_versions.py` (**PASSED 100%**) |
+| **RF-07, RF-08** | Art. 12 (6 Estados) y Art. 27 RG | Reg. Procesal 2026 / Reg. General | `RN-05` | `CU-02`, `CU-14` | `SCRUM-43`, `SCRUM-44`, `SCRUM-53` (`US-S3-05`) | `tests/expedientes/test_workflow_transitions.py`, `test_visor_expediente.py` (**PASSED 100%**) |
+| **RF-09, RF-10** | Art. 96 Estatuto / Directiva PO `07/10` | Estatuto Social 2026 / Notas PO | `RN-06` | `CU-02` | `SCRUM-54`, `SCRUM-56` (`S4-06` unificada) | Planificado S4 (Editor unificado `VISTO/CONSIDERANDO/SE RESUELVE` y puntaje por socio) |
+| **RF-11** | Arts. 12 inc. 5, Art. 13 / PO `07/10` | Reglamento Procesal 2026 | `RN-07` | `CU-02` | `SCRUM-56`, `SCRUM-57` | Planificado S4 (Firma colegiada mín. 3 miembros con Grupo Social `Gxx` y titularidad) |
+| **RF-12** | Arts. 20 y 20 BIS; Art. 24 RG | Reg. Procesal 2026 / Reg. General | `RN-08` | `CU-02`, `CU-05` | `SCRUM-49` (`US-S3-01`), `SCRUM-58` | `tests/expedientes/test_warning_service.py`, `test_apercibimientos_consolidation.py` (**PASSED 100%**) |
+| **RF-13** | Art. 93 | Reglamento Interno de Disciplina | `RN-09` | `CU-04` | `SCRUM-28`, `SCRUM-60` | `tests/socios/test_ranking_api.py` (**PASSED 100%** / Motor alertas S4) |
+| **RF-14** | Art. 137 | Reglamento Interno de Disciplina | `RN-10` | `CU-05` | `SCRUM-61` | Planificado Sprint 5 (Balances Cuatrimestrales Art. 137) |
+| **RF-15** | Art. 96 | Estatuto Social de A.V.E.I.T. 2026 | `RN-05` | `CU-04` | `SCRUM-28`, `SCRUM-82`, `SCRUM-64` | `tests/socios/test_ranking_api.py`, `test_member_history.py` (**PASSED 100%**) |
 
 ---
 
@@ -315,10 +315,10 @@ En respuesta a la observación de la cátedra de reemplazar expresiones vagas co
   El Formulario T03 habilita descargos por causas atípicas. No admite aprobación automática; requiere dictamen fundado del TD basado en antecedentes y jurisprudencia interna.
 * **`RN-05` — Transición Unidireccional de los 6 Estados Procesales:**  
   Un expediente transiciona de forma secuencial y sin retrocesos: E1(Creado) -> E2(En Justificación) -> E3(En Revisión) -> E4(En Espera Resolución) -> E5(Pendiente Firma) -> E6(Emitido).
-* **`RN-06` — Quórum y Mayoría Absoluta del TD (Art. 96 Estatuto 2026):**  
-  Las resoluciones requieren la deliberación de al menos tres (3) miembros habilitados y el voto favorable de al menos dos (2) miembros (mayoría absoluta). Si un miembro es recusado por parentesco o conflicto de interés (Art. 95 Estatuto), asume automáticamente un miembro suplente.
-* **`RN-07` — Suscripción Colegiada por Socios Activos:**
-  La resolución definitiva solo adquiere estado firme y validez cuando ha sido suscripta de manera colegiada por al menos dos integrantes habilitados del TD pertenecientes a la categoría estatutaria de Socios Activos (4º a 6º año social).
+* **`RN-06` — Resolución Colegiada Directa y Recusación / Excusación (Art. 95-96 Estatuto 2026 y Directiva PO `07/10/2026`):**  
+  Por definición institucional del Product Owner y del Tribunal de Disciplina, se prescinde de la votación nominal individual paso a paso en la interfaz. El Tribunal delibera y plasma directamente en el Editor de Resolución (`VISTO / CONSIDERANDO / SE RESUELVE`) el puntaje final resuelto para cada socio involucrado. Si un miembro del Tribunal es el socio imputado, denunciante o registra excusación por conflicto de interés (Art. 95 Estatuto), queda automáticamente inhabilitado para intervenir en la redacción resolutiva y en la firma colegiada, habilitándose al suplente del Grupo Social correspondiente.
+* **`RN-07` — Validez de Firma Colegiada Mínima y Representación de Grupo Social:**
+  La resolución definitiva solo adquiere estado firme (`RESUELTO`) y dispara asientos en el libro mayor cuando ha sido suscripta digitalmente de manera colegiada por al menos **tres (3) integrantes habilitados del TD**, dejando constancia explícita del **Grupo Social representado (`Gxx`)** y del carácter en que firma cada miembro (**Titular** o **Suplente**).
 * **`RN-08` — Fórmula de Sumatoria de Saldo y Cuantificación de Puntos:**
   El saldo neto individual de un socio se calcula estrictamente mediante la suma algebraica:
   $$\text{SaldoNeto} = \sum \text{PuntosPositivos} - \sum \text{PuntosNegativos}$$
@@ -554,11 +554,11 @@ gantt
     Arquitectura, Triggers MySQL y Core API :done, 2026-08-21, 2026-09-10
     Hito LCA (Lifecycle Architecture)       :milestone, 2026-09-10, 0d
     section Fase 3: Construcción
-    Sprint 1: Formularios Web T01/T02/T03    :active, 2026-09-11, 14d
-    Sprint 2: Tablero 6 Estados y Votación   :2026-09-25, 14d
-    Sprint 3: Cómputo Saldos y Alertas       :2026-10-09, 14d
-    Sprint 4: Balances Cuatrimestrales (137) :2026-10-23, 14d
-    Hito IOC (Initial Operational Capability):milestone, 2026-11-06, 0d
+    Sprint 1: Gobernanza, Padrón y RBAC      :done, 2026-09-09, 14d
+    Sprint 2: Apertura T01 y Máquina Estados :done, 2026-09-23, 14d
+    Sprint 3: Plazos, Descargos T02/T03 y 3:1:done, 2026-10-07, 14d
+    Sprint 4: Resolución Directa, Firma y Mayor:active, 2026-10-21, 14d
+    Hito IOC (Initial Operational Capability):milestone, 2026-11-04, 0d
     section Fase 4: Transición
     Pruebas Piloto con Tribunal y QA UAT     :2026-11-07, 14d
     Capacitación y Entrega Final             :2026-11-21, 14d
