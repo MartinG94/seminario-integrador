@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 from expedientes.views import (
     AdecuacionT01View,
     ApelacionT01View,
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
@@ -43,6 +45,16 @@ urlpatterns = [
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
+    ),
+    path(
+        "reglamentos/articulos/",
+        ArticuloReglamentoListCreateView.as_view(),
+        name="articulos-reglamento-list-create",
+    ),
+    path(
+        "reglamentos/articulos/<int:pk>/",
+        ArticuloReglamentoDetailView.as_view(),
+        name="articulos-reglamento-detail",
     ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
     path(

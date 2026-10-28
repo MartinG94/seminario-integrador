@@ -40,6 +40,7 @@ from expedientes.serializers.evento_serializers import (
     RegistroApercibimientoSerializer,
     ReportarAsistenciaSerializer,
 )
+from expedientes.serializers.reglamento_serializers import ArticuloReglamentoSerializer
 from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
@@ -678,9 +679,7 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
-    puntaje_final = serializers.CharField(
-        required=False, allow_null=True, allow_blank=True
-    )
+    puntaje_final = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     fundamento = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -1339,6 +1338,7 @@ class CalcularPlazoSerializer(serializers.Serializer):
 
 
 __all__ = [
+    "ArticuloReglamentoSerializer",
     "AsistenciaEventoBulkUpdateSerializer",
     "AsistenciaEventoSerializer",
     "AsistenciaItemInputSerializer",

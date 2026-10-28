@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import {
+  ArticuloReglamentoDTO,
   ExpedienteApiService,
   SolicitudMonitoreo,
   SolicitudT01,
@@ -35,7 +36,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   titulo = '';
   razon = '';
   reglamentosDisponibles: string[] = [];
+  articulosDisponibles: ArticuloReglamentoDTO[] = [];
   reglamentosSeleccionados: string[] = [];
+  filtroReglamentos = '';
   anexoFecha = '';
   anexoLugar = '';
   anexoTestigos = '';
@@ -86,7 +89,10 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     });
     this.socioBusqueda.valueChanges.subscribe(value => this.filtrarSocios(value || ''));
     this.expedienteApi.listarReglamentos().subscribe({
-      next: response => this.reglamentosDisponibles = response.reglamentos,
+      next: response => {
+        this.reglamentosDisponibles = response.reglamentos || [];
+        this.articulosDisponibles = (response as any).articulos || [];
+      },
       error: error => this.mostrarError(error)
     });
 
@@ -279,6 +285,36 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     });
   }
 
+  get reglamentosFiltrados(): string[] {
+    const busqueda = (this.filtroReglamentos || '').trim().toLowerCase();
+    if (!busqueda) {
+      return this.reglamentosDisponibles;
+    }
+    return this.reglamentosDisponibles.filter(reg =>
+      reg.toLowerCase().includes(busqueda) || this.reglamentosSeleccionados.includes(reg)
+    );
+  }
+
+  toggleReglamento(reglamento: string): void {
+    if (this.estado === 'ISSUED') return;
+    const idx = this.reglamentosSeleccionados.indexOf(reglamento);
+    if (idx >= 0) {
+      this.reglamentosSeleccionados.splice(idx, 1);
+    } else {
+      this.reglamentosSeleccionados.push(reglamento);
+    }
+  }
+
+  removerReglamento(reglamento: string): void {
+    if (this.estado === 'ISSUED') return;
+    this.reglamentosSeleccionados = this.reglamentosSeleccionados.filter(r => r !== reglamento);
+  }
+
+  limpiarReglamentos(): void {
+    if (this.estado === 'ISSUED') return;
+    this.reglamentosSeleccionados = [];
+  }
+
   resetearFormulario(): void {
     this.borradorId = null;
     this.estado = null;
@@ -289,6 +325,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.urgency = 'normal';
     this.puntosSeleccionados = -1;
     this.razon = '';
+    this.filtroReglamentos = '';
     this.reglamentosSeleccionados = [];
     this.anexoFecha = '';
     this.anexoLugar = '';
