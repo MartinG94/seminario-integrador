@@ -1,5 +1,709 @@
-<app-en-desarrollo
-  titulo="Reportes & Balance"
-  descripcion="Emisión de balances cuatrimestrales, métricas de sanciones y reconocimientos por subcomisión."
-  icono="bar_chart">
-</app-en-desarrollo>
+<div class="main-content">
+  <div class="container-fluid">
+
+    <!-- Encabezado Canónico con Pestañas Teal AVEIT (SCRUM-63) -->
+    <div class="card card-nav-tabs shadow-sm mb-4">
+      <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+        <div class="nav-tabs-wrapper">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link"
+                 [class.active]="tabActiva === 't01'"
+                 (click)="cambiarTab('t01')"
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">assignment</i> GESTIÓN POR T01
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 [class.active]="tabActiva === 'reuniones'"
+                 (click)="cambiarTab('reuniones')"
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">groups</i> GESTIÓN POR REUNIONES
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 [class.active]="tabActiva === 'subcomision'"
+                 (click)="cambiarTab('subcomision')"
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">domain</i> POR SUBCOMISIÓN
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 [class.active]="tabActiva === 'historico'"
+                 (click)="cambiarTab('historico')"
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">emoji_events</i> RÉCORDS E HISTÓRICO
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="text-white-50 d-none d-lg-block small pr-3">
+          <span *ngIf="tabActiva === 't01'">Tablero Analítico de Solicitudes y Conceptos T01</span>
+          <span *ngIf="tabActiva === 'reuniones'">Gestión de Inasistencias y Asambleas</span>
+          <span *ngIf="tabActiva === 'subcomision'">Balance y Desglose Intra/Inter de Subcomisión</span>
+          <span *ngIf="tabActiva === 'historico'">Cuadro de Honor y Evolución Histórica 2013-2026</span>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros y Acciones -->
+      <div class="card-body p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between actions-bar">
+        <div class="d-flex align-items-center flex-wrap my-1">
+          <!-- Filtro para T01 y Reuniones -->
+          <div *ngIf="tabActiva === 't01' || tabActiva === 'reuniones'" class="d-flex align-items-center mr-3 my-1">
+            <label for="filtro-subcomision" class="font-weight-bold text-muted small mr-2 mb-0">Subcomisión Socio:</label>
+            <select id="filtro-subcomision"
+                    class="form-control form-control-sm custom-select-aveit"
+                    [ngModel]="filtroSubcomisionId"
+                    (ngModelChange)="onFiltroSubcomisionChange($event)">
+              <option [ngValue]="null">Todas las Subcomisiones</option>
+              <option *ngFor="let s of subcomisiones" [ngValue]="s.id">{{ s.nombre }}</option>
+            </select>
+          </div>
+
+          <!-- Selector específico para Pestaña Por Subcomisión -->
+          <div *ngIf="tabActiva === 'subcomision'" class="d-flex align-items-center mr-3 my-1">
+            <label for="select-subcomision" class="font-weight-bold text-muted small mr-2 mb-0">Seleccionar Subcomisión:</label>
+            <select id="select-subcomision"
+                    class="form-control form-control-sm custom-select-aveit"
+                    [ngModel]="selectedSubcomisionId"
+                    (ngModelChange)="onSubcomisionSelect($event)">
+              <option *ngFor="let s of subcomisiones" [ngValue]="s.id">{{ s.nombre }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center my-1">
+          <button type="button"
+                  class="btn btn-sm btn-outline-secondary btn-round mr-2"
+                  (click)="limpiarFiltros()"
+                  title="Restablecer filtros">
+            <i class="material-icons">clear_all</i> Limpiar
+          </button>
+          <button type="button"
+                  class="btn btn-sm btn-outline-primary btn-round mr-2"
+                  (click)="exportarCSV()"
+                  title="Descargar datos en formato CSV para Excel">
+            <i class="material-icons">file_download</i> Exportar CSV
+          </button>
+          <button type="button"
+                  class="btn btn-sm btn-primary btn-round"
+                  (click)="imprimir()"
+                  title="Imprimir informe en formato A4 apaisado">
+            <i class="material-icons">print</i> Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicador de Carga -->
+    <div *ngIf="cargando" class="text-center py-5">
+      <div class="spinner-border text-teal" role="status">
+        <span class="sr-only">Cargando métricas analíticas...</span>
+      </div>
+      <p class="text-muted mt-2">Cargando datos institucionales...</p>
+    </div>
+
+    <!-- Mensaje de Error -->
+    <div *ngIf="errorMensaje && !cargando" class="alert alert-danger" role="alert">
+      <i class="material-icons mr-2">error</i> {{ errorMensaje }}
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- PESTAÑA 1: GESTIÓN DE EXPEDIENTES POR T01                     -->
+    <!-- ============================================================== -->
+    <div *ngIf="tabActiva === 't01' && metricasT01 && !cargando" class="tab-pane-content print-section">
+      <!-- Tarjetas KPI Principales -->
+      <div class="row mb-4">
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Expedientes Generados</span>
+            <h2 class="kpi-value text-dark mb-0">{{ metricasT01.kpis.expedientes_generados }}</h2>
+          </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Socios Alcanzados</span>
+            <h2 class="kpi-value text-dark mb-0">{{ metricasT01.kpis.socios_alcanzados }}</h2>
+          </div>
+        </div>
+        <div class="col-xl-3 col-md-4 col-sm-6 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Puntos Aprobados Positivos</span>
+            <h2 class="kpi-value text-success mb-0">+{{ metricasT01.kpis.puntos_aprobados_positivos }}</h2>
+          </div>
+        </div>
+        <div class="col-xl-2 col-md-6 col-sm-6 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Puntos Aprobados Negativos</span>
+            <h2 class="kpi-value text-danger mb-0">{{ metricasT01.kpis.puntos_aprobados_negativos }}</h2>
+          </div>
+        </div>
+        <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+          <div class="card card-kpi card-kpi-highlight shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Tiempo de Vida Promedio</span>
+            <h2 class="kpi-value text-teal mb-0">
+              {{ metricasT01.kpis.tiempo_vida_promedio_dias }} <small class="text-muted">días</small>
+            </h2>
+            <span class="badge badge-pill badge-light text-muted small mt-1">Días corridos entre inicio y emisión</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila Intermedia: Clasificación (Barras Horizontales) y Distribución por Grupo (Donut/Torta) -->
+      <div class="row">
+        <!-- Gráfico 1: Expedientes por Clasificación (antes Solicitados por Autoridad) -->
+        <div class="col-lg-7 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Expedientes por Clasificación</h4>
+              <p class="card-category text-muted small">Agrupación por concepto institucional asignado por el TD</p>
+            </div>
+            <div class="card-body">
+              <div class="horizontal-bars-container">
+                <div *ngFor="let item of metricasT01.expedientes_por_clasificacion" class="bar-row mb-2">
+                  <div class="bar-label text-truncate text-muted small" [title]="item.label">
+                    {{ item.label }}
+                  </div>
+                  <div class="bar-track flex-grow-1 mx-2">
+                    <div class="bar-fill bg-navy"
+                         [style.width.%]="(item.cantidad / getMaxClasificacion()) * 100">
+                    </div>
+                  </div>
+                  <div class="bar-value font-weight-bold small text-dark">
+                    {{ item.cantidad }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico 2: Distribución por Grupo Social -->
+        <div class="col-lg-5 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Distribución por Grupo Social</h4>
+              <p class="card-category text-muted small">Porcentaje de implicancia según cohorte institucional</p>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+              <div class="donut-chart-wrapper mb-3">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                  <path class="circle-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="circle-stroke stroke-58"
+                        stroke-dasharray="31.1, 100"
+                        stroke-dashoffset="0"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="circle-stroke stroke-59"
+                        stroke-dasharray="26.9, 100"
+                        stroke-dashoffset="-31.1"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="circle-stroke stroke-61"
+                        stroke-dasharray="22.4, 100"
+                        stroke-dashoffset="-58.0"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="circle-stroke stroke-60"
+                        stroke-dasharray="17.8, 100"
+                        stroke-dashoffset="-80.4"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="circle-stroke stroke-57"
+                        stroke-dasharray="1.8, 100"
+                        stroke-dashoffset="-98.2"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div class="donut-inner-text">
+                  <span class="font-weight-bold text-dark">5 Cohortes</span>
+                </div>
+              </div>
+
+              <!-- Leyenda interactiva -->
+              <div class="legend-grid w-100">
+                <div *ngFor="let g of metricasT01.distribucion_por_grupo" class="legend-item d-flex align-items-center justify-content-between p-1">
+                  <span class="d-flex align-items-center small">
+                    <span class="legend-dot dot-g{{ g.grupo }} mr-2"></span> Grupo {{ g.grupo }}
+                  </span>
+                  <span class="font-weight-bold small text-dark">{{ g.porcentaje }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila Inferior: Histograma de Asignación de Puntos -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Distribución de Asignación de Puntos</h4>
+              <p class="card-category text-muted small">Volumen de expedientes según la magnitud del puntaje aplicado</p>
+            </div>
+            <div class="card-body">
+              <div class="histogram-chart d-flex align-items-end justify-content-between pt-4 pb-2">
+                <div *ngFor="let p of metricasT01.distribucion_puntos" class="histogram-col text-center flex-grow-1 mx-1">
+                  <div class="histogram-value small font-weight-bold text-muted mb-1" *ngIf="p.cantidad > 0">
+                    {{ p.cantidad }}
+                  </div>
+                  <div class="histogram-bar"
+                       [class.bg-negative]="p.puntaje < 0"
+                       [class.bg-positive]="p.puntaje > 0"
+                       [class.bg-neutral]="p.puntaje === 0"
+                       [style.height.px]="p.cantidad === 0 ? 2 : Math.max(10, (p.cantidad / getMaxPuntosT01()) * 180)">
+                  </div>
+                  <div class="histogram-label small font-weight-bold text-dark mt-2">
+                    {{ p.puntaje }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- PESTAÑA 2: GESTIÓN DE EXPEDIENTES POR REUNIONES               -->
+    <!-- ============================================================== -->
+    <div *ngIf="tabActiva === 'reuniones' && metricasReuniones && !cargando" class="tab-pane-content print-section">
+      <!-- Tarjetas KPI -->
+      <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Expedientes Generados</span>
+            <h2 class="kpi-value text-dark mb-0">{{ metricasReuniones.kpis.expedientes_generados }}</h2>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Socios Alcanzados</span>
+            <h2 class="kpi-value text-dark mb-0">{{ metricasReuniones.kpis.socios_alcanzados }}</h2>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card card-kpi shadow-sm text-center p-3">
+            <span class="text-muted small text-uppercase font-weight-bold">Puntos por Inasistencias</span>
+            <h2 class="kpi-value text-danger mb-0">{{ metricasReuniones.kpis.puntos_por_inasistencias }}</h2>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila Intermedia: Categorías y Aprobación -->
+      <div class="row">
+        <!-- Expedientes por Categoría -->
+        <div class="col-lg-7 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Expedientes por Categoría</h4>
+              <p class="card-category text-muted small">Causales de convocatorias institucionales y asambleas</p>
+            </div>
+            <div class="card-body">
+              <div class="horizontal-bars-container">
+                <div *ngFor="let item of metricasReuniones.expedientes_por_categoria" class="bar-row mb-2">
+                  <div class="bar-label text-truncate text-muted small" [title]="item.categoria">
+                    {{ item.categoria }}
+                  </div>
+                  <div class="bar-track flex-grow-1 mx-2">
+                    <div class="bar-fill bg-navy"
+                         [style.width.%]="(item.cantidad / getMaxCategoriasReuniones()) * 100">
+                    </div>
+                  </div>
+                  <div class="bar-value font-weight-bold small text-dark">
+                    {{ item.cantidad }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proporción de Aprobación -->
+        <div class="col-lg-5 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Proporción de Aprobación</h4>
+              <p class="card-category text-muted small">Dictámenes de justificaciones y sanciones aplicadas</p>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+              <div class="donut-chart-wrapper mb-3">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                  <path class="circle-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <!-- Aprobado por TD 51.2% -->
+                  <path class="circle-stroke stroke-dark"
+                        stroke-dasharray="51.2, 100"
+                        stroke-dashoffset="0"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <!-- Desaprobado por Sistema 43.3% -->
+                  <path class="circle-stroke stroke-grey"
+                        stroke-dasharray="43.3, 100"
+                        stroke-dashoffset="-51.2"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <!-- Desaprobado por TD 5.5% -->
+                  <path class="circle-stroke stroke-lightgrey"
+                        stroke-dasharray="5.5, 100"
+                        stroke-dashoffset="-94.5"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div class="donut-inner-text">
+                  <span class="font-weight-bold text-dark">Resoluciones</span>
+                </div>
+              </div>
+
+              <!-- Leyenda -->
+              <div class="legend-grid w-100">
+                <div *ngFor="let p of metricasReuniones.proporcion_aprobacion" class="legend-item d-flex align-items-center justify-content-between p-1">
+                  <span class="d-flex align-items-center small">
+                    <span class="legend-dot mr-2"
+                          [class.bg-dark]="p.tipo.includes('Aprobado por TD')"
+                          [class.bg-secondary]="p.tipo.includes('Desaprobado por Sistema')"
+                          [class.bg-light-grey]="p.tipo.includes('Desaprobado por TD')"></span>
+                    {{ p.tipo }}
+                  </span>
+                  <span class="font-weight-bold small text-dark">{{ p.porcentaje }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila Inferior: Socios Únicos Alcanzados por Grupo -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Socios Únicos Alcanzados por Grupo</h4>
+              <p class="card-category text-muted small">Cantidad de socios notificados por inasistencias según su grupo social</p>
+            </div>
+            <div class="card-body">
+              <div class="histogram-chart d-flex align-items-end justify-content-around pt-4 pb-2">
+                <div *ngFor="let g of metricasReuniones.socios_por_grupo" class="histogram-col text-center flex-grow-1 mx-2">
+                  <div class="histogram-value small font-weight-bold text-muted mb-1">
+                    {{ g.cantidad }}
+                  </div>
+                  <div class="histogram-bar bg-cyan"
+                       [style.height.px]="Math.max(10, (g.cantidad / getMaxSociosGrupo()) * 180)">
+                  </div>
+                  <div class="histogram-label small font-weight-bold text-dark mt-2">
+                    Grupo {{ g.grupo }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- PESTAÑA 3: POR SUBCOMISIÓN                                    -->
+    <!-- ============================================================== -->
+    <div *ngIf="tabActiva === 'subcomision' && metricasSubcomision && !cargando" class="tab-pane-content print-section">
+      <!-- Encabezado de la Subcomisión y KPI -->
+      <div class="card shadow-sm mb-4 border-left-subcomision"
+           [style.border-left-color]="metricasSubcomision.subcomision.color_hex">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between p-3">
+          <div class="d-flex align-items-center">
+            <div class="subcom-badge mr-3" [style.background-color]="metricasSubcomision.subcomision.color_hex">
+              <i class="material-icons text-white">domain</i>
+            </div>
+            <div>
+              <h3 class="font-weight-bold text-dark mb-0">{{ metricasSubcomision.subcomision.nombre | uppercase }}</h3>
+              <span class="text-muted small">Balance oficial de participación e intervenciones disciplinarias</span>
+            </div>
+          </div>
+          <div class="text-right mt-2 mt-md-0">
+            <span class="text-muted small text-uppercase font-weight-bold d-block">Puntaje Ciclo 2026 T01</span>
+            <span class="kpi-value text-success font-weight-bold h2 mb-0">
+              {{ metricasSubcomision.kpis.puntaje_ciclo_t01 }} pts
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila de Gráficos: Distribución de Puntos y Análisis Intra vs Inter (Gráfico de Barras acordado) -->
+      <div class="row">
+        <!-- Gráfico 1: Distribución de Asignación de Puntos en la Subcomisión -->
+        <div class="col-lg-6 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Distribución de Asignación de Puntos</h4>
+              <p class="card-category text-muted small">Volumen de expedientes aplicados a miembros del área</p>
+            </div>
+            <div class="card-body">
+              <div class="histogram-chart d-flex align-items-end justify-content-around pt-4 pb-2">
+                <div *ngFor="let p of metricasSubcomision.distribucion_puntos" class="histogram-col text-center flex-grow-1 mx-1">
+                  <div class="histogram-value small font-weight-bold text-muted mb-1" *ngIf="p.cantidad > 0">
+                    {{ p.cantidad }}
+                  </div>
+                  <div class="histogram-bar"
+                       [class.bg-negative]="p.puntaje < 0"
+                       [class.bg-positive]="p.puntaje > 0"
+                       [class.bg-neutral]="p.puntaje === 0"
+                       [style.height.px]="p.cantidad === 0 ? 2 : Math.max(10, (p.cantidad / getMaxPuntosSubcom()) * 160)">
+                  </div>
+                  <div class="histogram-label small font-weight-bold text-dark mt-2">
+                    {{ p.puntaje }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico 2: Análisis Intra vs Inter Subcomisión (Gráfico de Barras) y Desglose Cruzado -->
+        <div class="col-lg-6 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Participación Intra vs Inter Subcomisión</h4>
+              <p class="card-category text-muted small">Comparativa de expedientes a socios propios frente a pedidos a otras áreas</p>
+            </div>
+            <div class="card-body">
+              <!-- Gráfico de Barras Intra vs Inter -->
+              <div class="mb-4">
+                <div *ngFor="let item of metricasSubcomision.intra_vs_inter" class="mb-3">
+                  <div class="d-flex justify-content-between small font-weight-bold mb-1">
+                    <span>{{ item.tipo }}</span>
+                    <span class="text-dark">{{ item.porcentaje }}% ({{ item.cantidad }} expedientes)</span>
+                  </div>
+                  <div class="progress" style="height: 18px;">
+                    <div class="progress-bar font-weight-bold"
+                         role="progressbar"
+                         [style.width.%]="item.porcentaje"
+                         [style.background-color]="item.color"
+                         [attr.aria-valuenow]="item.porcentaje"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                      {{ item.porcentaje }}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h6 class="font-weight-bold text-dark mb-2 small text-uppercase">Desglose de Áreas Involucradas:</h6>
+              <div class="d-flex flex-wrap">
+                <span *ngFor="let part of metricasSubcomision.participacion_otras_subcomisiones"
+                      class="badge badge-pill text-white mr-2 mb-2 p-2 small"
+                      [style.background-color]="part.color">
+                  {{ part.subcomision }}: {{ part.porcentaje }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Socios con Gradiente Semafórico -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header card-header-plain pb-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h4 class="card-title text-dark font-weight-bold mb-1">Nómina de Socios de la Subcomisión</h4>
+                <p class="card-category text-muted small">Puntos asignados en el ciclo y saldo total acumulado con escala de gradiente</p>
+              </div>
+              <span class="badge badge-pill badge-light text-dark font-weight-bold">
+                {{ metricasSubcomision.tabla_socios.length }} socios registrados
+              </span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                      <th class="text-center" style="width: 60px;">#</th>
+                      <th>Apellido y Nombre</th>
+                      <th>Legajo</th>
+                      <th class="text-center">Grupo</th>
+                      <th class="text-center">Puntajes Asignados Ciclo</th>
+                      <th class="text-right pr-4" style="width: 180px;">Puntos Totales</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let socio of metricasSubcomision.tabla_socios"
+                        [class.table-record-row]="socio.legajo === '87414'">
+                      <td class="text-center font-weight-bold text-muted">{{ socio.posicion }}.</td>
+                      <td>
+                        <div class="font-weight-bold text-dark">{{ socio.apellido }}, {{ socio.nombre }}</div>
+                        <span *ngIf="socio.legajo === '87414'" class="badge badge-warning text-dark small">
+                          <i class="material-icons font-size-12">star</i> Récord Institucional
+                        </span>
+                      </td>
+                      <td class="font-family-monospace text-muted">{{ socio.legajo }}</td>
+                      <td class="text-center text-muted">{{ socio.grupo }}</td>
+                      <td class="text-center font-weight-bold"
+                          [class.text-success]="socio.puntos_asignados_ciclo > 0"
+                          [class.text-danger]="socio.puntos_asignados_ciclo < 0">
+                        {{ socio.puntos_asignados_ciclo > 0 ? '+' : '' }}{{ socio.puntos_asignados_ciclo }}
+                      </td>
+                      <td class="text-right pr-4">
+                        <span class="badge-puntos-gradient font-weight-bold px-3 py-1 rounded"
+                              [style.background-color]="getGradientePuntos(socio.puntos_totales)">
+                          {{ socio.puntos_totales }} pts
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- PESTAÑA 4: RÉCORDS E HISTÓRICO                                -->
+    <!-- ============================================================== -->
+    <div *ngIf="tabActiva === 'historico' && historicoRecords && !cargando" class="tab-pane-content print-section">
+      <!-- Banner de Podio Récord Histórico Absoluto (Diego Sánchez #11779) -->
+      <div class="card card-record-banner shadow-sm mb-4">
+        <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between">
+          <div class="d-flex align-items-center mb-3 mb-md-0">
+            <div class="trophy-icon-wrapper mr-4">
+              <i class="material-icons trophy-icon text-warning">emoji_events</i>
+            </div>
+            <div>
+              <span class="badge badge-warning font-weight-bold text-dark px-3 py-1 mb-2">
+                RÉCORD HISTÓRICO ABSOLUTO DE PUNTOS
+              </span>
+              <h2 class="font-weight-bold text-white mb-1">
+                {{ historicoRecords.record_absoluto.nombre_completo }}
+              </h2>
+              <div class="text-white-50">
+                Socio #{{ historicoRecords.record_absoluto.socio_numero }} • Legajo {{ historicoRecords.record_absoluto.legajo }} • {{ historicoRecords.record_absoluto.subcomision }} (Grupo {{ historicoRecords.record_absoluto.grupo }})
+              </div>
+              <div class="text-warning small font-weight-bold mt-1">
+                {{ historicoRecords.record_absoluto.distincion }} ({{ historicoRecords.record_absoluto.periodo }})
+              </div>
+            </div>
+          </div>
+          <div class="record-score-box text-center p-3 rounded bg-dark border border-warning">
+            <span class="text-warning small text-uppercase font-weight-bold d-block">Puntaje Récord</span>
+            <span class="h1 font-weight-bold text-warning mb-0">
+              {{ historicoRecords.record_absoluto.puntaje_maximo }} pts
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila: Top 10 Histórico y Total de Expedientes -->
+      <div class="row">
+        <!-- Top 10 Histórico -->
+        <div class="col-lg-6 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Cuadro de Honor — Mayores Puntajes</h4>
+              <p class="card-category text-muted small">Top 10 histórico de socios con máximos saldos registrados en A.V.E.I.T.</p>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                      <th class="text-center" style="width: 50px;">#</th>
+                      <th>Socio / Subcomisión</th>
+                      <th class="text-right pr-4">Puntaje Máximo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let t of historicoRecords.top_historico"
+                        [class.table-warning]="t.record_destacado">
+                      <td class="text-center font-weight-bold">
+                        <span *ngIf="t.posicion === 1">🥇</span>
+                        <span *ngIf="t.posicion === 2">🥈</span>
+                        <span *ngIf="t.posicion === 3">🥉</span>
+                        <span *ngIf="t.posicion > 3" class="text-muted">{{ t.posicion }}.</span>
+                      </td>
+                      <td>
+                        <div class="font-weight-bold text-dark">{{ t.nombre_completo }}</div>
+                        <span class="text-muted small">Socio #{{ t.socio_numero }} • {{ t.subcomision }}</span>
+                      </td>
+                      <td class="text-right pr-4 font-weight-bold"
+                          [class.text-warning]="t.posicion === 1"
+                          [class.text-success]="t.posicion > 1">
+                        {{ t.puntaje_historico }} pts
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Serie Anual 2013-2026 -->
+        <div class="col-lg-6 col-md-12 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header card-header-plain pb-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h4 class="card-title text-dark font-weight-bold mb-1">Cantidad de Expedientes (2013 - 2026)</h4>
+                <p class="card-category text-muted small">Evolución interanual del volumen procesal</p>
+              </div>
+              <div class="text-right">
+                <span class="text-muted small text-uppercase font-weight-bold d-block">Total Histórico</span>
+                <span class="h4 font-weight-bold text-dark mb-0">{{ historicoRecords.kpis.total_expedientes_historicos }}</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Gráfico de Barras/Línea anual -->
+              <div class="histogram-chart d-flex align-items-end justify-content-between pt-4 pb-2" style="height: 220px;">
+                <div *ngFor="let anio of historicoRecords.serie_anual" class="histogram-col text-center flex-grow-1 mx-1">
+                  <div class="histogram-value small font-weight-bold text-muted mb-1" style="font-size: 10px;">
+                    {{ anio.cantidad }}
+                  </div>
+                  <div class="histogram-bar bg-teal"
+                       [style.height.px]="Math.max(8, (anio.cantidad / getMaxSerieAnual()) * 160)">
+                  </div>
+                  <div class="histogram-label small font-weight-bold text-dark mt-2" style="font-size: 10px;">
+                    {{ anio.anio }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila: Histograma Histórico de Distribución de Puntos 2013 - 2026 -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header card-header-plain pb-0">
+              <h4 class="card-title text-dark font-weight-bold mb-1">Distribución Histórica de Puntos (2013 - 2026)</h4>
+              <p class="card-category text-muted small">Frecuencia total de puntos sancionatorios y meritorios aplicados en la historia</p>
+            </div>
+            <div class="card-body">
+              <div class="horizontal-bars-container">
+                <div *ngFor="let p of historicoRecords.distribucion_historica_puntos" class="bar-row mb-1">
+                  <div class="bar-label text-right font-weight-bold small text-dark pr-2" style="width: 60px;">
+                    {{ p.puntaje }}
+                  </div>
+                  <div class="bar-track flex-grow-1 mx-2">
+                    <div class="bar-fill"
+                         [class.bg-negative]="p.puntaje < 0"
+                         [class.bg-positive]="p.puntaje > 0"
+                         [class.bg-neutral]="p.puntaje === 0"
+                         [style.width.%]="(p.cantidad / getMaxPuntosHistorico()) * 100">
+                    </div>
+                  </div>
+                  <div class="bar-value font-weight-bold small text-muted" style="width: 50px;">
+                    {{ p.cantidad }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
