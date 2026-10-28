@@ -175,13 +175,13 @@ describe('ReglamentosComponent', () => {
   });
 
   describe('Control de Acceso basado en Roles (RBAC)', () => {
-    it('muestra el botón + Agregar artículo y acciones de edición/baja cuando el rol es TD, CD o ADMIN', () => {
+    it('muestra el botón Agregar artículo y acciones de edición/baja cuando el rol es TD, CD o ADMIN', () => {
       authServiceSpy.tieneRol.and.returnValue(true);
       fixture.detectChanges();
 
       const addBtn = fixture.debugElement.query(By.css('.actions-box button'));
       expect(addBtn).not.toBeNull();
-      expect(addBtn.nativeElement.textContent).toContain('+ Agregar artículo');
+      expect(addBtn.nativeElement.textContent).toContain('Agregar artículo');
 
       const actionHeader = fixture.debugElement.query(By.css('thead th.col-acciones'));
       expect(actionHeader).not.toBeNull();
@@ -190,7 +190,7 @@ describe('ReglamentosComponent', () => {
       expect(actionButtons.length).toBeGreaterThan(0);
     });
 
-    it('oculta el botón + Agregar artículo y la columna de acciones cuando el rol es SOCIO', () => {
+    it('oculta el botón Agregar artículo y la columna de acciones cuando el rol es SOCIO', () => {
       authServiceSpy.tieneRol.and.returnValue(false);
       fixture.detectChanges();
 
