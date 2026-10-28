@@ -554,5 +554,69 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[0])).toBe('Prueba, Ana');
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[1])).toBe('Prueba, Ana (+1)');
   });
+
+  describe('selección y filtrado de reglamentos vigentes (Milestone 5)', () => {
+    it('carga articulos y reglamentos vigentes desde el backend en ngOnInit', () => {
+      expect(expediente.listarReglamentos).toHaveBeenCalled();
+      expect(component.reglamentosDisponibles).toEqual(['Estatuto AVEIT Reforma 2026']);
+    });
+
+    it('permite filtrar la lista de reglamentos por término de búsqueda', () => {
+      component.reglamentosDisponibles = [
+        'Reglamento Interno - Art. 10: Inconducta en reuniones',
+        'Reglamento Interno - Art. 12: Inasistencia a asambleas',
+        'Estatuto - Art. 25: Deberes societarios'
+      ];
+      component.filtroReglamentos = 'Art. 12';
+      expect(component.reglamentosFiltrados).toEqual([
+        'Reglamento Interno - Art. 12: Inasistencia a asambleas'
+      ]);
+
+      component.filtroReglamentos = 'Estatuto';
+      expect(component.reglamentosFiltrados).toEqual([
+        'Estatuto - Art. 25: Deberes societarios'
+      ]);
+    });
+
+    it('conserva los reglamentos ya seleccionados en la lista aunque no coincidan con la búsqueda activa', () => {
+      component.reglamentosDisponibles = [
+        'Reglamento Interno - Art. 10: Inconducta en reuniones',
+        'Reglamento Interno - Art. 12: Inasistencia a asambleas',
+        'Estatuto - Art. 25: Deberes societarios'
+      ];
+      component.reglamentosSeleccionados = ['Estatuto - Art. 25: Deberes societarios'];
+      component.filtroReglamentos = 'Art. 10';
+
+      const filtrados = component.reglamentosFiltrados;
+      expect(filtrados).toContain('Reglamento Interno - Art. 10: Inconducta en reuniones');
+      expect(filtrados).toContain('Estatuto - Art. 25: Deberes societarios');
+    });
+
+    it('permite alternar, remover y limpiar reglamentos seleccionados', () => {
+      const art1 = 'Reglamento Interno - Art. 10';
+      const art2 = 'Estatuto - Art. 25';
+
+      component.toggleReglamento(art1);
+      expect(component.reglamentosSeleccionados).toEqual([art1]);
+
+      component.toggleReglamento(art2);
+      expect(component.reglamentosSeleccionados).toEqual([art1, art2]);
+
+      component.removerReglamento(art1);
+      expect(component.reglamentosSeleccionados).toEqual([art2]);
+
+      component.limpiarReglamentos();
+      expect(component.reglamentosSeleccionados).toEqual([]);
+    });
+
+    it('limpia el filtro y la selección al resetear el formulario', () => {
+      component.filtroReglamentos = 'búsqueda';
+      component.reglamentosSeleccionados = ['Reglamento Interno - Art. 10'];
+      component.resetearFormulario();
+
+      expect(component.filtroReglamentos).toBe('');
+      expect(component.reglamentosSeleccionados).toEqual([]);
+    });
+  });
 });
 import { NotificationService } from '../services/notification.service';

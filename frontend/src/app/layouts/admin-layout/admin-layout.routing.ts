@@ -22,15 +22,7 @@ import { CalendarioInstitucionalComponent } from '../../calendario-institucional
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
-    { 
-      path: 'reglamentos',            
-      component: EnDesarrolloComponent,
-      data: {
-        titulo: 'Reglamentos',
-        descripcion: 'Consulta del Estatuto Social, el Reglamento Interno de Disciplina y el Reglamento Procesal Disciplinario 2026.',
-        icono: 'construction'
-      }
-    },
+    { path: 'reglamentos',            component: ReglamentosComponent },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
     { path: 'gestionar-expedientes/:id/visor', component: VisorExpedienteComponent, canActivate: [TribunalGuard] },
     {

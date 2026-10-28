@@ -1457,3 +1457,161 @@ class AtencionFelicitacion(models.Model):
 Reunion = EventoInstitucional
 AsistenciaReunion = AsistenciaEvento
 RegistroApercibimiento = AtencionFelicitacion
+
+
+class TipoReglamentoEnum(models.TextChoices):
+    """Tipos de reglamentos institucionales oficiales."""
+
+    REGLAMENTO_INTERNO = "Reglamento Interno", "Reglamento Interno"
+    ESTATUTO = "Estatuto", "Estatuto"
+
+
+class ArticuloReglamento(models.Model):
+    """Artículo o inciso de un cuerpo normativo institucional (Reglamento Interno o Estatuto).
+
+    Mapeado a la tabla preexistente 'tribunal_reglamento' del esquema legado,
+    extendida con soporte de baja lógica (activo) y campos de trazabilidad.
+    """
+
+    id = models.AutoField(primary_key=True, db_column="idReglamento")
+    titulo = models.CharField(
+        max_length=45,
+        choices=TipoReglamentoEnum.choices,
+        db_column="titulo",
+        db_index=True,
+    )
+    seccion = models.IntegerField(default=1, db_column="seccion")
+    articulo = models.IntegerField(db_column="articulo", db_index=True)
+    inciso = models.CharField(max_length=11, default="-", db_column="inciso")
+    descripcion = models.TextField(db_column="descripcion")
+    activo = models.BooleanField(default=True, db_column="activo", db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="articulos_reglamento_creados",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="articulos_reglamento_modificados",
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="articulos_reglamento_eliminados",
+    )
+
+    @property
+    def cita_corta(self) -> str:
+        """Cita reglamentaria corta normalizada."""
+        if self.inciso == "-":
+            return f"{self.titulo} - Art. {self.articulo}"
+        return f"{self.titulo} - Art. {self.articulo} Inc. {self.inciso}"
+
+    @property
+    def cita_completa(self) -> str:
+        """Cita reglamentaria con fragmento del cuerpo para selectores."""
+        desc = (self.descripcion or "").strip()
+        if len(desc) > 120:
+            preview = f"{desc[:120]}..."
+        else:
+            preview = desc
+        return f"{self.cita_corta}: {preview}" if preview else self.cita_corta
+
+    @property
+    def cuerpo(self) -> str:
+        """Alias de descripcion para ergonomía semántica."""
+        return self.descripcion
+
+    @cuerpo.setter
+    def cuerpo(self, value: str) -> None:
+        self.descripcion = value
+
+    def clean(self) -> None:
+        super().clean()
+        if self.activo:
+            qs = ArticuloReglamento.objects.filter(
+                titulo=self.titulo,
+                articulo=self.articulo,
+                inciso=self.inciso,
+                activo=True,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(f"Ya existe un artículo activo para {self.cita_corta}.")
+
+    class Meta:
+        db_table = "tribunal_reglamento"
+        ordering = ["articulo", "inciso"]
+        verbose_name = "Artículo de Reglamento"
+        verbose_name_plural = "Artículos de Reglamento"
+
+    def __str__(self) -> str:
+        return self.cita_corta
+
+
+class OperacionAuditoriaReglamentoEnum(models.TextChoices):
+    """Operaciones registradas en la auditoría inmutable de reglamentos."""
+
+    CREADO = "CREADO", "Creado"
+    MODIFICADO = "MODIFICADO", "Modificado"
+    ELIMINADO = "ELIMINADO", "Eliminado"
+
+
+class AuditoriaArticuloReglamento(models.Model):
+    """Registro inmutable de auditoría para creaciones, modificaciones y bajas de artículos."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    articulo_reglamento = models.ForeignKey(
+        ArticuloReglamento,
+        on_delete=models.PROTECT,
+        related_name="auditorias",
+    )
+    operacion = models.CharField(
+        max_length=15,
+        choices=OperacionAuditoriaReglamentoEnum.choices,
+        db_index=True,
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    usuario_username = models.CharField(max_length=150)
+    legajo = models.CharField(max_length=50, blank=True)
+    rol = models.CharField(max_length=50, blank=True)
+    datos_anteriores = models.JSONField(null=True, blank=True)
+    datos_nuevos = models.JSONField(null=True, blank=True)
+    fecha_hora = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_reglamento"
+        ordering = ["-fecha_hora"]
+        verbose_name = "Auditoría de Artículo de Reglamento"
+        verbose_name_plural = "Auditorías de Artículos de Reglamento"
+
+    def __str__(self) -> str:
+        return (
+            f"Auditoria {self.operacion} sobre {self.articulo_reglamento_id} "
+            f"por {self.usuario_username} ({self.fecha_hora})"
+        )
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Los registros de auditoría de reglamentos son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Los registros de auditoría de reglamentos no pueden eliminarse.")

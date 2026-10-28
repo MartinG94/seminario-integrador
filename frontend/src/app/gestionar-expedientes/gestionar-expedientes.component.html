@@ -552,6 +552,62 @@
           <label class="font-weight-bold text-dark">Vistos y Considerandos Institucionales:</label>
           <textarea class="form-control" rows="3" [(ngModel)]="considerandosTexto"></textarea>
         </div>
+
+        <!-- Reglamentos / Artículos respaldantes del dictamen -->
+        <div class="form-group mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="font-weight-bold text-dark mb-0">
+              Reglamentos / Artículos respaldantes del dictamen:
+            </label>
+            <span class="badge badge-info" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
+              {{ reglamentosSeleccionadosResolucion.length }} {{ reglamentosSeleccionadosResolucion.length === 1 ? 'artículo seleccionado' : 'artículos seleccionados' }}
+            </span>
+          </div>
+
+          <!-- Buscador reactivo para reglamentos del dictamen -->
+          <div class="input-group mb-2">
+            <div class="input-group-prepend">
+              <span class="input-group-text"><i class="material-icons">search</i></span>
+            </div>
+            <input type="text"
+                   class="form-control"
+                   placeholder="Buscar artículos o incisos vigentes para respaldar el dictamen..."
+                   [(ngModel)]="filtroReglamentosResolucion">
+            <div class="input-group-append" *ngIf="filtroReglamentosResolucion">
+              <button class="btn btn-outline-secondary" type="button" (click)="filtroReglamentosResolucion = ''" title="Limpiar filtro">
+                <i class="material-icons" style="font-size: 16px;">clear</i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Badges de artículos seleccionados con opción para remover -->
+          <div class="d-flex flex-wrap align-items-center mb-2" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
+            <span *ngFor="let reg of reglamentosSeleccionadosResolucion" 
+                  class="badge badge-info mr-1 mb-1 p-2 d-inline-flex align-items-center text-wrap" 
+                  style="font-size: 0.85rem; max-width: 100%;">
+              <span>{{ reg }}</span>
+              <button type="button" 
+                      class="btn btn-link text-white p-0 ml-1" 
+                      (click)="removerReglamentoResolucion(reg)" 
+                      title="Quitar artículo">
+                <i class="material-icons" style="font-size: 14px; vertical-align: middle;">close</i>
+              </button>
+            </span>
+          </div>
+
+          <!-- Selector múltiple de artículos vigentes -->
+          <select class="form-control"
+                  multiple
+                  [(ngModel)]="reglamentosSeleccionadosResolucion"
+                  style="min-height: 110px;">
+            <option *ngFor="let reg of reglamentosResolucionFiltrados" [ngValue]="reg">
+              {{ reg }}
+            </option>
+          </select>
+          <small class="form-text text-muted">
+            Mantené presionado Ctrl (o Cmd) para seleccionar o deseleccionar varios artículos e incisos.
+          </small>
+        </div>
       </div>
       <div class="card-footer d-flex justify-content-end gap-2">
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cancelar</button>

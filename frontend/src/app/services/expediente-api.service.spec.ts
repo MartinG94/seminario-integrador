@@ -2,7 +2,12 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../environments/environment';
-import { DescargoVersionDto, ExpedienteApiService } from './expediente-api.service';
+import {
+  ArticuloReglamentoDTO,
+  DescargoVersionDto,
+  ExpedienteApiService,
+  GuardarArticuloReglamentoPayload
+} from './expediente-api.service';
 
 describe('ExpedienteApiService', () => {
   let service: ExpedienteApiService;
@@ -34,6 +39,91 @@ describe('ExpedienteApiService', () => {
     });
     const req = http.expectOne({ method: 'GET', url: `${environment.apiUrl}/expedientes/reglamentos/` });
     req.flush({ reglamentos: ['Reglamento General'] });
+  });
+
+  describe('gestión de artículos de reglamentos', () => {
+    const articulosBaseUrl = `${environment.apiUrl}/expedientes/reglamentos/articulos/`;
+    const mockArticulo: ArticuloReglamentoDTO = {
+      id: 1,
+      titulo: 'Reglamento Interno',
+      seccion: 1,
+      articulo: 14,
+      inciso: 'a',
+      cuerpo: 'Faltas leves en la convivencia interna.',
+      descripcion: 'Faltas leves en la convivencia interna.',
+      cita_corta: 'Art. 14 inc. a',
+      cita_completa: 'Art. 14 inc. a - Reglamento Interno',
+      activo: true,
+      created_at: '2026-10-27T10:00:00Z',
+      updated_at: '2026-10-27T10:00:00Z'
+    };
+
+    it('lista artículos de reglamentos sin parámetros', () => {
+      service.listarArticulosReglamento().subscribe(articulos => {
+        expect(articulos.length).toBe(1);
+        expect(articulos[0].articulo).toBe(14);
+      });
+
+      const req = http.expectOne(r => r.url === articulosBaseUrl);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys().length).toBe(0);
+      req.flush([mockArticulo]);
+    });
+
+    it('lista artículos filtrando por título y búsqueda', () => {
+      service.listarArticulosReglamento({ titulo: 'Estatuto', search: 'asamblea' }).subscribe(articulos => {
+        expect(articulos.length).toBe(1);
+      });
+
+      const req = http.expectOne(
+        r => r.url === articulosBaseUrl &&
+             r.params.get('titulo') === 'Estatuto' &&
+             r.params.get('search') === 'asamblea'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush([mockArticulo]);
+    });
+
+    it('crea un artículo de reglamento', () => {
+      const payload: GuardarArticuloReglamentoPayload = {
+        titulo: 'Reglamento Interno',
+        articulo: 15,
+        inciso: 'b',
+        cuerpo: 'Faltas graves a las normas estatutarias.'
+      };
+
+      service.crearArticuloReglamento(payload).subscribe(art => {
+        expect(art.id).toBe(2);
+        expect(art.articulo).toBe(15);
+      });
+
+      const req = http.expectOne({ method: 'POST', url: articulosBaseUrl });
+      expect(req.request.body).toEqual(payload);
+      req.flush({ ...mockArticulo, id: 2, articulo: 15, inciso: 'b' });
+    });
+
+    it('actualiza un artículo de reglamento parcialmente', () => {
+      const updatePayload: Partial<GuardarArticuloReglamentoPayload> = {
+        cuerpo: 'Texto modificado del artículo.'
+      };
+
+      service.actualizarArticuloReglamento(1, updatePayload).subscribe(art => {
+        expect(art.cuerpo).toBe('Texto modificado del artículo.');
+      });
+
+      const req = http.expectOne({ method: 'PATCH', url: `${articulosBaseUrl}1/` });
+      expect(req.request.body).toEqual(updatePayload);
+      req.flush({ ...mockArticulo, cuerpo: 'Texto modificado del artículo.' });
+    });
+
+    it('elimina lógicamente un artículo de reglamento', () => {
+      service.eliminarArticuloReglamento(1).subscribe(res => {
+        expect(res).toBeNull();
+      });
+
+      const req = http.expectOne({ method: 'DELETE', url: `${articulosBaseUrl}1/` });
+      req.flush(null);
+    });
   });
 
   it('lista mis solicitudes sin parámetros adicionales', () => {
@@ -195,3 +285,4 @@ describe('ExpedienteApiService', () => {
     });
   });
 });
+

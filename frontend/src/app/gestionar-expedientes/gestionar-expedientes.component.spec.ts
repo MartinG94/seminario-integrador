@@ -30,6 +30,7 @@ describe('GestionarExpedientesComponent', () => {
   let dataService: TribunalDataService;
   let httpMock: HttpTestingController;
   let notifications: jasmine.SpyObj<NotificationService>;
+  let expedienteApi: ExpedienteApiService;
 
   const mockBoardResponse: BoardResponseDTO = {
     columns: [
@@ -71,8 +72,15 @@ describe('GestionarExpedientesComponent', () => {
     authService = TestBed.inject(AuthService);
     dataService = TestBed.inject(TribunalDataService);
     httpMock = TestBed.inject(HttpTestingController);
+    expedienteApi = TestBed.inject(ExpedienteApiService);
 
-    // Mockear la respuesta inicial del tablero
+    // Mockear reglamentos vigentes y tablero inicial
+    spyOn(expedienteApi, 'listarReglamentos').and.returnValue(of({
+      reglamentos: [
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
+        'Estatuto - Art. 25: Deberes y obligaciones de los socios'
+      ]
+    }));
     spyOn(dataService, 'obtenerTablero').and.returnValue(of(mockBoardResponse));
 
     fixture.detectChanges();
@@ -1685,6 +1693,141 @@ describe('GestionarExpedientesComponent', () => {
         descargo: { puntaje_ratificado: 1.5 }
       } as any;
       expect(component.getPuntajeFinalInvolucradoDisplay(filaNumPos)).toBe('+1.5');
+    });
+  });
+
+  describe('Resolución y reglamentos respaldantes vigentes (Milestone 5)', () => {
+    const crearExpConReglamentos = (): Expediente => ({
+      id: 'EXP-100',
+      numero: 'EXP-0100/2026',
+      socio: 'Lucas Gómez',
+      legajo: '75001',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia a jornada técnica',
+      fechaCreacion: '2026-03-15',
+      estado: 'revision_resolucion',
+      horasRestantes: 48,
+      tipo: 'falta',
+      puntos: -1,
+      reglamentosRespaldantes: [
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'
+      ]
+    });
+
+    it('llama a listarReglamentos() al iniciar y carga reglamentos disponibles', () => {
+      expect(expedienteApi.listarReglamentos).toHaveBeenCalled();
+      expect(component.reglamentosDisponibles.length).toBe(2);
+      expect(component.reglamentosDisponibles[0]).toContain('Reglamento Interno - Art. 12');
+    });
+
+    it('inicializa reglamentosSeleccionadosResolucion con los reglamentos previos al abrir modal de votación', () => {
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+
+      expect(component.modalVotacionAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado).toBe(exp);
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'
+      ]);
+      expect(component.filtroReglamentosResolucion).toBe('');
+    });
+
+    it('inicializa reglamentosSeleccionadosResolucion como array vacío si el expediente no tiene reglamentos previos', () => {
+      const expSinReg = { ...crearExpConReglamentos(), reglamentosRespaldantes: undefined, reglamentos_respaldantes: undefined };
+      component.abrirModalVotacion(expSinReg);
+
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+    });
+
+    it('permite filtrar artículos por texto en el modal de resolución sin deseleccionar los elegidos', () => {
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.filtroReglamentosResolucion = 'Estatuto';
+
+      const filtrados = component.reglamentosResolucionFiltrados;
+      expect(filtrados).toContain('Estatuto - Art. 25: Deberes y obligaciones de los socios');
+      expect(filtrados).toContain('Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión');
+    });
+
+    it('permite alternar y remover artículos de la resolución en el modal', () => {
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      const nuevoArt = 'Estatuto - Art. 25: Deberes y obligaciones de los socios';
+
+      component.toggleReglamentoResolucion(nuevoArt);
+      expect(component.reglamentosSeleccionadosResolucion).toContain(nuevoArt);
+
+      component.removerReglamentoResolucion('Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión');
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([nuevoArt]);
+    });
+
+    it('actualiza los reglamentos respaldantes en el expediente y emite votación en confirmarVotacion', () => {
+      spyOn(dataService, 'votarDictamen').and.callThrough();
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = [
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
+        'Estatuto - Art. 25: Deberes y obligaciones de los socios'
+      ];
+
+      component.confirmarVotacion();
+
+      expect(exp.reglamentosRespaldantes).toEqual([
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
+        'Estatuto - Art. 25: Deberes y obligaciones de los socios'
+      ]);
+      expect(dataService.votarDictamen).toHaveBeenCalledWith(
+        'EXP-100',
+        component.votosJueces,
+        component.considerandosTexto
+      );
+      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Dictamen votado'));
+      expect(component.modalVotacionAbierto).toBeFalse();
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+    });
+
+    it('getReglamentosSustento preserva intactas las citas históricas aunque un artículo subyacente se dé de baja', () => {
+      const expHistorico: Expediente = {
+        id: 'EXP-HIST',
+        numero: 'EXP-0001/2025',
+        socio: 'Socio Histórico',
+        legajo: '70001',
+        subcomision: 'Mantenimiento',
+        motivo: 'Falta histórica',
+        fechaCreacion: '2025-04-10',
+        estado: 'emitido',
+        horasRestantes: 0,
+        tipo: 'falta',
+        puntos: -2,
+        reglamentosRespaldantes: [
+          'Reglamento Interno 2024 - Art. 8 Inc. b (Dado de baja lógica posteriormente)'
+        ]
+      };
+
+      const resultado = component.getReglamentosSustento(expHistorico);
+      expect(resultado).toEqual([
+        'Reglamento Interno 2024 - Art. 8 Inc. b (Dado de baja lógica posteriormente)'
+      ]);
+    });
+
+    it('getReglamentosSustento devuelve el reglamento asociado o valor predeterminado como fallback seguro', () => {
+      const expConAsociado: Expediente = {
+        id: 'EXP-2',
+        numero: 'EXP-0002/2026',
+        socio: 'Socio Test',
+        legajo: '70002',
+        subcomision: 'GVP',
+        motivo: 'Motivo prueba',
+        fechaCreacion: '2026-01-01',
+        estado: 'creado',
+        horasRestantes: 72,
+        tipo: 'falta',
+        puntos: -1,
+        reglamentoAsociado: 'Reglamento Interno - Art. 50'
+      };
+
+      expect(component.getReglamentosSustento(expConAsociado)).toEqual(['Reglamento Interno - Art. 50']);
+      expect(component.getReglamentosSustento(null)).toEqual(['Reglamento Procesal Disciplinario 2026']);
     });
   });
 

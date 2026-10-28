@@ -10,6 +10,7 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
   ApelacionT01DTO,
+  ArticuloReglamentoDTO,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
@@ -143,7 +144,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   reglamentacionExpandida = false;
   expedienteSeleccionado: Expediente | null = null;
 
-  // Votación
+  // Votación y Reglamentos Respaldantes
+  reglamentosDisponibles: string[] = [];
+  articulosDisponibles: ArticuloReglamentoDTO[] = [];
+  reglamentosSeleccionadosResolucion: string[] = [];
+  filtroReglamentosResolucion = '';
+
+  get expedienteService(): ExpedienteApiService {
+    return this.expedienteApi;
+  }
+
   votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {
     'Dr. Argañaraz (Presidente TD)': 'FAVORABLE',
     'Dra. Bustos (Miembro Titular)': 'FAVORABLE',
@@ -263,6 +273,42 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }));
 
     this.cargarDatosTablero();
+    this.cargarReglamentosDisponibles();
+  }
+
+  cargarReglamentosDisponibles(): void {
+    this.expedienteService.listarReglamentos().subscribe({
+      next: res => {
+        this.reglamentosDisponibles = res?.reglamentos || [];
+        this.articulosDisponibles = (res as any)?.articulos || [];
+      },
+      error: err => {
+        console.warn('No se pudieron cargar los reglamentos vigentes', err);
+      }
+    });
+  }
+
+  get reglamentosResolucionFiltrados(): string[] {
+    const busqueda = (this.filtroReglamentosResolucion || '').trim().toLowerCase();
+    if (!busqueda) {
+      return this.reglamentosDisponibles;
+    }
+    return this.reglamentosDisponibles.filter(reg =>
+      reg.toLowerCase().includes(busqueda) || this.reglamentosSeleccionadosResolucion.includes(reg)
+    );
+  }
+
+  toggleReglamentoResolucion(reg: string): void {
+    const idx = this.reglamentosSeleccionadosResolucion.indexOf(reg);
+    if (idx >= 0) {
+      this.reglamentosSeleccionadosResolucion.splice(idx, 1);
+    } else {
+      this.reglamentosSeleccionadosResolucion.push(reg);
+    }
+  }
+
+  removerReglamentoResolucion(reg: string): void {
+    this.reglamentosSeleccionadosResolucion = this.reglamentosSeleccionadosResolucion.filter(r => r !== reg);
   }
 
   ngOnDestroy(): void {
@@ -870,6 +916,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalVotacionAbierto = true;
+    this.filtroReglamentosResolucion = '';
+    const previos = exp.reglamentosRespaldantes || exp.reglamentos_respaldantes || [];
+    this.reglamentosSeleccionadosResolucion = [...previos];
+  }
+
+  abrirModalVotacion(exp: Expediente): void {
+    this.abrirVotacion(exp);
   }
 
   abrirFirma(exp: Expediente): void {
@@ -909,12 +962,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
+    this.reglamentosSeleccionadosResolucion = [];
+    this.filtroReglamentosResolucion = '';
     this.limpiarJustificaciones();
     this.limpiarT01();
   }
 
   confirmarVotacion(): void {
     if (!this.expedienteSeleccionado) return;
+    const reglamentos = [...this.reglamentosSeleccionadosResolucion];
+    this.expedienteSeleccionado.reglamentosRespaldantes = reglamentos;
+    this.expedienteSeleccionado.reglamentos_respaldantes = reglamentos;
+
+    const enLista = (this.expedientes || []).find(e => e.id === this.expedienteSeleccionado?.id);
+    if (enLista) {
+      enLista.reglamentosRespaldantes = reglamentos;
+      enLista.reglamentos_respaldantes = reglamentos;
+    }
+
     this.dataService.votarDictamen(
       this.expedienteSeleccionado.id,
       this.votosJueces,

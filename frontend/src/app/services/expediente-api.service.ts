@@ -9,6 +9,22 @@ import type { NivelUrgencia } from './tribunal-data.service';
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
 export type EstadoT01 = 'DRAFT' | 'ISSUED';
 
+export const CATALOGO_CONCEPTOS_EXPEDIENTE = [
+  { codigo: 'CD', nombre: 'CD — Comisión Directiva' },
+  { codigo: 'TD', nombre: 'TD — Tribunal de Disciplina' },
+  { codigo: 'GSA', nombre: 'GSA — Gestión Social y Ambiental' },
+  { codigo: 'GVP', nombre: 'GVP — Grupo de Viaje / Gestión de Viaje' },
+  { codigo: 'COMP', nombre: 'COMP — Cómputos' },
+  { codigo: 'RRHH', nombre: 'RRHH — Recursos Humanos' },
+  { codigo: 'RRII', nombre: 'RRII — Relaciones Institucionales' },
+  { codigo: 'PRENSA', nombre: 'PRENSA — Prensa y Difusión' },
+  { codigo: 'MANT', nombre: 'MANT — Mantenimiento' },
+  { codigo: 'EVENTOS', nombre: 'EVENTOS — Organización y Eventos' },
+  { codigo: 'RIFAS', nombre: 'RIFAS — Rifas' },
+  { codigo: 'ASAMBLEA', nombre: 'ASAMBLEA — Asamblea General' },
+  { codigo: 'OTROS', nombre: 'OTROS — Otros Conceptos Institucionales' },
+];
+
 export interface SocioInvolucrado {
   socio_id?: number;
   legajo?: string;
@@ -287,6 +303,8 @@ export interface ExpedienteVisorData {
   causal: string;
   reglamento_asociado: string;
   reglamentos_respaldantes: string[];
+  concepto?: string | null;
+  concepto_display?: string | null;
   puntos: number | string;
   estado: string;
   estado_display: string;
@@ -321,6 +339,8 @@ export interface ExpedienteDetalleDTO {
   id: number;
   numero: string;
   estado: string;
+  concepto?: string | null;
+  concepto_display?: string | null;
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
@@ -396,6 +416,33 @@ export interface PlazoApelacionDTO {
   actualizado_por: string;
 }
 
+export type TipoDocumentoReglamento = 'Reglamento Interno' | 'Estatuto';
+
+export interface ArticuloReglamentoDTO {
+  id: number;
+  titulo: TipoDocumentoReglamento;
+  seccion: number;
+  articulo: number;
+  inciso: string;
+  cuerpo: string;
+  descripcion: string;
+  cita_corta: string;
+  cita_completa: string;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by_display?: string;
+  updated_by_display?: string;
+}
+
+export interface GuardarArticuloReglamentoPayload {
+  titulo: TipoDocumentoReglamento;
+  articulo: number;
+  inciso?: string;
+  cuerpo: string;
+  seccion?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -420,6 +467,29 @@ export class ExpedienteApiService {
 
   listarReglamentos(): Observable<{ reglamentos: string[] }> {
     return this.http.get<{ reglamentos: string[] }>(`${this.apiUrl}/reglamentos/`);
+  }
+
+  listarArticulosReglamento(params?: { titulo?: TipoDocumentoReglamento; search?: string }): Observable<ArticuloReglamentoDTO[]> {
+    let httpParams = new HttpParams();
+    if (params?.titulo) {
+      httpParams = httpParams.set('titulo', params.titulo);
+    }
+    if (params?.search) {
+      httpParams = httpParams.set('search', params.search);
+    }
+    return this.http.get<ArticuloReglamentoDTO[]>(`${this.apiUrl}/reglamentos/articulos/`, { params: httpParams });
+  }
+
+  crearArticuloReglamento(payload: GuardarArticuloReglamentoPayload): Observable<ArticuloReglamentoDTO> {
+    return this.http.post<ArticuloReglamentoDTO>(`${this.apiUrl}/reglamentos/articulos/`, payload);
+  }
+
+  actualizarArticuloReglamento(id: number, payload: Partial<GuardarArticuloReglamentoPayload>): Observable<ArticuloReglamentoDTO> {
+    return this.http.patch<ArticuloReglamentoDTO>(`${this.apiUrl}/reglamentos/articulos/${id}/`, payload);
+  }
+
+  eliminarArticuloReglamento(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/reglamentos/articulos/${id}/`);
   }
 
   listarPorLegajo(legajo: string): Observable<ExpedienteRankingDetalle[]> {
@@ -565,3 +635,4 @@ export class ExpedienteApiService {
     return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
   }
 }
+

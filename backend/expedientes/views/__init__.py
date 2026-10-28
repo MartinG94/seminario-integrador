@@ -95,6 +95,11 @@ from expedientes.views.evento_views import (
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.reglamento_views import (
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
+    ReglamentosVigentesView,
+)
 from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
@@ -962,15 +967,6 @@ REGLAMENTOS_VIGENTES = (
 )
 
 
-class ReglamentosVigentesView(APIView):
-    """Lista de reglamentos institucionales vigentes para respaldar un T01."""
-
-    permission_classes = (CanCreateT01,)
-
-    def get(self, request):
-        return Response({"reglamentos": list(REGLAMENTOS_VIGENTES)})
-
-
 class SolicitudT01CreateView(APIView):
     permission_classes = (CanCreateT01,)
 
@@ -1231,9 +1227,12 @@ class CalcularPlazoView(APIView):
 
 
 __all__ = [
+    "ArticuloReglamentoDetailView",
+    "ArticuloReglamentoListCreateView",
     "EventoInstitucionalViewSet",
     "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
+    "ReglamentosVigentesView",
     "SocioApercibimientosView",
     "ExpedienteVisorView",
     "filter_expedientes_by_legajo",
