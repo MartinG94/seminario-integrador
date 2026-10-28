@@ -93,6 +93,15 @@ class ExpedienteWorkflowService:
             raise ValidationError(
                 {"estado": "La transición debe avanzar exactamente al siguiente estado."}
             )
+        if estado_nuevo == EstadoExpedienteEnum.EMITIDO and not expediente.concepto:
+            raise ValidationError(
+                {
+                    "concepto": (
+                        "El Tribunal debe clasificar el concepto del expediente "
+                        "(GSA, GVP, CD, etc.) antes de emitirlo."
+                    )
+                }
+            )
         momento = ahora or timezone.now()
         # En los T01 el plazo efectivo es el último período de apelación abierto (PB-02).
         from expedientes.services.t01_appeal_service import T01AppealService

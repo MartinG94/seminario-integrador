@@ -25,6 +25,8 @@ from expedientes.views import (
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
+    ReportesExportCSVView,
+    ReportesResumenView,
     SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
@@ -45,6 +47,12 @@ urlpatterns = [
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
     ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
+    path("reportes/resumen/", ReportesResumenView.as_view(), name="reportes-resumen"),
+    path(
+        "reportes/exportar-csv/",
+        ReportesExportCSVView.as_view(),
+        name="reportes-exportar-csv",
+    ),
     path(
         "parametros/plazo-apelacion/",
         PlazoApelacionView.as_view(),

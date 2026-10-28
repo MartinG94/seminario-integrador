@@ -43,7 +43,39 @@
               {{ visorData.puntos > 0 ? '+' : '' }}{{ visorData.puntos }} pts
             </span>
           </div>
-          <p class="text-muted small mb-0 mt-1">
+
+          <!-- Clasificación de Concepto Institucional (TD / CD / Admin) -->
+          <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
+            <span *ngIf="!expediente?.concepto" class="badge badge-warning text-dark d-inline-flex align-items-center">
+              <i class="material-icons mr-1" style="font-size: 14px;">warning</i>
+              Sin clasificar · Obligatorio antes de emitir
+            </span>
+            <span *ngIf="expediente?.concepto" class="badge badge-info d-inline-flex align-items-center">
+              <i class="material-icons mr-1" style="font-size: 14px;">label</i>
+              {{ expediente?.concepto_display || expediente?.concepto }}
+            </span>
+
+            <div *ngIf="isTribunalOrAdmin" class="d-inline-flex align-items-center ml-2 selector-concepto-wrapper">
+              <label for="selector-concepto-expediente" class="small text-muted mb-0 mr-2 font-weight-bold">
+                Concepto TD:
+              </label>
+              <select
+                id="selector-concepto-expediente"
+                class="form-control form-control-sm select-concepto-td"
+                [ngModel]="expediente?.concepto"
+                (ngModelChange)="actualizarConcepto($event)"
+                [disabled]="actualizandoConcepto"
+                aria-label="Clasificar concepto institucional">
+                <option [ngValue]="null" disabled selected>-- Clasificar concepto --</option>
+                <option *ngFor="let c of catalogoConceptos" [value]="c.codigo">
+                  {{ c.nombre }}
+                </option>
+              </select>
+              <span *ngIf="actualizandoConcepto" class="spinner-border spinner-border-sm ml-2 text-primary" role="status" aria-hidden="true"></span>
+            </div>
+          </div>
+
+          <p class="text-muted small mb-0 mt-2">
             <strong>Carátula:</strong> {{ visorData.titulo || visorData.motivo }}
           </p>
         </div>
@@ -251,6 +283,9 @@
                             <!-- Alerta si el archivo está dañado o manipulado -->
                             <span *ngIf="ev.archivo_danado" class="badge badge-danger badge-sha-danado" title="Discrepancia de integridad">
                               <i class="material-icons align-middle" style="font-size: 13px;">error</i> Archivo dañado / Discordancia
+                            </span>
+                            <span *ngIf="!ev.archivo_danado && ev.sha256_valido" class="badge badge-success badge-sha-valido" title="Integridad verificada">
+                              <i class="material-icons align-middle" style="font-size: 13px;">verified</i> SHA-256 verificado
                             </span>
 
                             <button class="btn btn-sm btn-outline-info py-1 px-2" 

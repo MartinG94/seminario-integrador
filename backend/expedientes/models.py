@@ -174,6 +174,24 @@ class UrgenciaExpedienteEnum(models.TextChoices):
     URGENTE = "urgente", "Urgente"
 
 
+class ConceptoExpedienteEnum(models.TextChoices):
+    """Catálogo de conceptos institucionales para clasificación por el TD."""
+
+    CD = "CD", "CD — Comisión Directiva"
+    TD = "TD", "TD — Tribunal de Disciplina"
+    GSA = "GSA", "GSA — Gestión Social y Ambiental"
+    GVP = "GVP", "GVP — Grupo de Viaje / Gestión de Viaje"
+    COMP = "COMP", "COMP — Cómputos"
+    RRHH = "RRHH", "RRHH — Recursos Humanos"
+    RRII = "RRII", "RRII — Relaciones Institucionales"
+    PRENSA = "PRENSA", "PRENSA — Prensa y Difusión"
+    MANT = "MANT", "MANT — Mantenimiento"
+    EVENTOS = "EVENTOS", "EVENTOS — Organización y Eventos"
+    RIFAS = "RIFAS", "RIFAS — Rifas"
+    ASAMBLEA = "ASAMBLEA", "ASAMBLEA — Asamblea General"
+    OTROS = "OTROS", "OTROS — Otros Conceptos Institucionales"
+
+
 class ExpedienteNumberSequence(models.Model):
     """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
 
@@ -239,6 +257,15 @@ class Expediente(models.Model):
         default=UrgenciaExpedienteEnum.NORMAL,
         db_index=True,
         help_text="Nivel de urgencia procesal (Baja, Normal, Urgente).",
+    )
+    concepto = models.CharField(
+        max_length=20,
+        choices=ConceptoExpedienteEnum.choices,
+        null=True,
+        blank=True,
+        default=None,
+        db_index=True,
+        help_text="Concepto institucional clasificado manualmente por el TD durante la revisión.",
     )
     # Plazos procesales perentorios (CA1 y CA2)
     calendario_version = models.ForeignKey(

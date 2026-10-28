@@ -20,13 +20,29 @@ __all__ = [
     "CanManageAppealDeadline",
     "CanManageCalendar",
     "CanManageEventos",
+    "CanManageReglamentos",
     "CanOpenExpedientes",
     "CanResolveCausal",
     "CanTransitionExpedientes",
+    "CanViewReportes",
     "IsComisionDirectivaOrAdmin",
     "IsImputadoOrTribunal",
     "IsTribunalOrDirectiva",
 ]
+
+
+class CanManageReglamentos(HasAnyRole):
+    """Autoridades habilitadas para gestionar artículos de reglamentos (TD, CD, Admin)."""
+
+    allowed_roles = (Role.TD, Role.CD, Role.ADMIN)
+
+
+class CanViewReportes(HasAnyRole):
+    """Autoridades y órganos de control habilitados para consultar reportes
+    (TD, CD, Revisores, Admin).
+    """
+
+    allowed_roles = (Role.TD, Role.CD, Role.FISCALIZADORA, Role.ADMIN)
 
 
 class IsComisionDirectivaOrAdmin(HasAnyRole):

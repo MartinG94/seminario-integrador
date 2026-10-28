@@ -19,6 +19,7 @@ from expedientes.domain.descargo_rules import (
     descargo_text_too_long_message,
 )
 from expedientes.models import (
+    ConceptoExpedienteEnum,
     DecisionCausalDescargo,
     DecisionCausalEnum,
     DescargoExpediente,
@@ -295,6 +296,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     reglamento_asociado = serializers.SerializerMethodField()
     reglamentos_respaldantes = serializers.SerializerMethodField()
     descargo_presentado = serializers.SerializerMethodField()
@@ -330,6 +332,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "estado",
             "urgencia",
             "urgencia_display",
+            "concepto",
+            "concepto_display",
             "socio_nombre",
             "socio_legajo",
             "creador",
@@ -678,9 +682,7 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
-    puntaje_final = serializers.CharField(
-        required=False, allow_null=True, allow_blank=True
-    )
+    puntaje_final = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     fundamento = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -1042,6 +1044,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
@@ -1076,6 +1079,8 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "estado_display",
             "urgencia",
             "urgencia_display",
+            "concepto",
+            "concepto_display",
             "puntos",
             "created_at",
             "plazo_limite_at",
@@ -1120,9 +1125,17 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
 
 class UpdateUrgenciaExpedienteSerializer(serializers.Serializer):
-    """Payload para actualizar el nivel de urgencia de un expediente."""
+    """Payload para actualizar el nivel de urgencia o concepto de un expediente."""
 
-    urgencia = serializers.ChoiceField(choices=UrgenciaExpedienteEnum.choices)
+    urgencia = serializers.ChoiceField(choices=UrgenciaExpedienteEnum.choices, required=False)
+    concepto = serializers.ChoiceField(
+        choices=ConceptoExpedienteEnum.choices, required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        if "urgencia" not in attrs and "concepto" not in attrs:
+            raise serializers.ValidationError("Debe proporcionar al menos 'urgencia' o 'concepto'.")
+        return attrs
 
 
 class TransicionarExpedienteSerializer(serializers.Serializer):

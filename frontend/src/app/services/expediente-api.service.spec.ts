@@ -194,4 +194,96 @@ describe('ExpedienteApiService', () => {
       req.flush({ dias_habiles: 7 });
     });
   });
+
+  it('actualiza el concepto del expediente mediante PATCH', () => {
+    service.actualizarConceptoExpediente(123, 'GSA').subscribe(res => {
+      expect(res.concepto).toBe('GSA');
+    });
+
+    const req = http.expectOne(`${environment.apiUrl}/expedientes/123/`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ concepto: 'GSA' });
+    req.flush({ id: 123, concepto: 'GSA', concepto_display: 'GSA — Gestión Social y Ambiental' });
+  });
+
+  describe('reportes e informes analíticos (SCRUM-63)', () => {
+    const reportesBaseUrl = `${environment.apiUrl}/expedientes/reportes/resumen/`;
+    const exportarBaseUrl = `${environment.apiUrl}/expedientes/reportes/exportar-csv/`;
+
+    it('obtiene el resumen de reportes sin filtros', () => {
+      service.obtenerResumenReportes().subscribe(res => {
+        expect(res.kpis_resumen.total_expedientes).toBe(10);
+        expect(res.kpis_resumen.tiempo_vida_promedio_dias).toBe(4.5);
+      });
+
+      const req = http.expectOne(r => r.url === reportesBaseUrl);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys().length).toBe(0);
+      req.flush({
+        filtros_aplicados: { anio: null, cuatrimestre: null, fecha_desde: null, fecha_hasta: null, subcomision_id: null, concepto: null },
+        kpis_resumen: {
+          tiempo_vida_promedio_dias: 4.5,
+          total_emitidos_evaluados: 6,
+          total_expedientes: 10,
+          en_tramite: 4,
+          emitidos: 6,
+          sanciones: 7,
+          meritos: 3,
+          sin_clasificar_concepto: 1,
+          backlog_urgencia: { total_abiertos: 4, baja: 1, normal: 2, urgente: 1, por_estado: {} },
+          descargos_resumen: { total_imputaciones: 10, total_descargos: 8, descargos_t02: 5, descargos_t03: 3, tasa_presentacion_pct: 80, decisiones_t02_total: 5, decisiones_t02_aceptadas: 4, decisiones_t02_rechazadas: 1, tasa_aceptacion_t02_pct: 80, apelaciones_t01: 1, adecuaciones_t01: 1 },
+          puntos_y_riesgo: { puntos_positivos: 15, puntos_negativos: -20, saldo_neto: -5, llamados_atencion_total: 2, felicitaciones_total: 4, socios_alerta_preventiva: 3, socios_riesgo_estatutario: 1 },
+          eventos_resumen: { total_eventos: 5, eventos_finalizados: 4, total_convocatorias: 40, total_presentes: 35, tasa_asistencia_pct: 87.5, eventos_no_sancionables: 1, pct_no_sancionables: 20 }
+        },
+        pedidos_por_subcomision: [],
+        agrupacion_por_concepto: [],
+        pedidos_por_autoridad: [],
+        balance_subcomisiones_y_categorias: [],
+        catalogo_conceptos: [],
+        catalogo_subcomisiones: []
+      });
+    });
+
+    it('obtiene el resumen de reportes aplicando todos los filtros', () => {
+      service.obtenerResumenReportes({
+        anio: 2026,
+        cuatrimestre: '1',
+        fecha_desde: '2026-03-01',
+        fecha_hasta: '2026-06-30',
+        subcomision_id: 2,
+        concepto: 'GSA'
+      }).subscribe(res => {
+        expect(res.filtros_aplicados.anio).toBe(2026);
+      });
+
+      const req = http.expectOne(r =>
+        r.url === reportesBaseUrl &&
+        r.params.get('anio') === '2026' &&
+        r.params.get('cuatrimestre') === '1' &&
+        r.params.get('fecha_desde') === '2026-03-01' &&
+        r.params.get('fecha_hasta') === '2026-06-30' &&
+        r.params.get('subcomision_id') === '2' &&
+        r.params.get('concepto') === 'GSA'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ filtros_aplicados: { anio: 2026 } });
+    });
+
+    it('descarga el reporte en formato CSV como Blob', () => {
+      const mockBlob = new Blob(['Subcomision,Total\nGSA,5'], { type: 'text/csv' });
+      service.descargarReporteCsv({ anio: 2026 }, 'autoridades').subscribe(blob => {
+        expect(blob.size).toBeGreaterThan(0);
+      });
+
+      const req = http.expectOne(r =>
+        r.url === exportarBaseUrl &&
+        r.params.get('seccion') === 'autoridades' &&
+        r.params.get('anio') === '2026'
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(mockBlob);
+    });
+  });
 });
+

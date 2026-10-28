@@ -372,6 +372,19 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 13.1 Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
+
+> **Tareas:** [`specs/009-reportes-e-informes/tasks.md`](specs/009-reportes-e-informes/tasks.md)
+
+- [x] **TS6-01.1 Modelo de Concepto y Regla de Emisión [TDD]:** `ConceptoExpedienteEnum` (`CD`, `TD`, `GSA`, `GVP`, `COMP`, `RRHH`, `RRII`, `PRENSA`, `MANT`, `EVENTOS`, `RIFAS`, `ASAMBLEA`, `OTROS`), campo `Expediente.concepto` (`null=True`), migración `0020_expediente_concepto.py` y validación obligatoria en `ExpedienteWorkflowService.transition` antes de pasar a `emitido`.
+- [x] **TS6-01.2 Motor Analítico `ReportesMetricsService` [TDD]:** Cálculo de los 7 KPIs (`KPI-01` tiempo de vida promedio en días corridos; `KPI-02` pedidos por autoridad; `KPI-03` pedidos por subcomisión intra vs. inter y agrupación por concepto; `KPI-04` backlog por urgencia; `KPI-05` descargos T02/T03 y apelaciones T01; `KPI-06` balance de puntos, regla 3:1 y socios en riesgo; `KPI-07` asistencia y validez de eventos).
+- [x] **TS6-01.3 Endpoints REST y RBAC `CanViewReportes` [TDD]:** `GET /api/v1/expedientes/reportes/resumen/` y `GET /api/v1/expedientes/reportes/exportar-csv/` restringidos a `TD`, `CD`, `FISCALIZADORA` y `ADMIN`.
+- [x] **TS6-01.4 Clasificación de Concepto en `VisorExpedienteComponent` [TDD]:** Selector en la vista del TD con guardado vía `PATCH /api/v1/expedientes/<id>/` y aviso de 10 segundos en `NotificationService`.
+- [x] **TS6-01.5 Rediseño de `ReportesComponent` y Protección de Ruta [TDD]:** Barra de filtros, tarjetas KPI con `tabular-nums`, 3 pestañas, exportación CSV/PDF y ruta `/reportes` protegida con `TribunalGuard`.
+- [x] **TS6-01.6 Verificación Integral y Consistencia PO:** Suites `pytest`, `Karma`, `ruff`, `npm run build` y chequeo de inmutabilidad de `notasPO.md`.
+
+---
+
 ## 14. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.

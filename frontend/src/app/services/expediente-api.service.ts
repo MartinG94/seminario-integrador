@@ -9,6 +9,22 @@ import type { NivelUrgencia } from './tribunal-data.service';
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
 export type EstadoT01 = 'DRAFT' | 'ISSUED';
 
+export const CATALOGO_CONCEPTOS_EXPEDIENTE = [
+  { codigo: 'CD', nombre: 'CD — Comisión Directiva' },
+  { codigo: 'TD', nombre: 'TD — Tribunal de Disciplina' },
+  { codigo: 'GSA', nombre: 'GSA — Gestión Social y Ambiental' },
+  { codigo: 'GVP', nombre: 'GVP — Grupo de Viaje / Gestión de Viaje' },
+  { codigo: 'COMP', nombre: 'COMP — Cómputos' },
+  { codigo: 'RRHH', nombre: 'RRHH — Recursos Humanos' },
+  { codigo: 'RRII', nombre: 'RRII — Relaciones Institucionales' },
+  { codigo: 'PRENSA', nombre: 'PRENSA — Prensa y Difusión' },
+  { codigo: 'MANT', nombre: 'MANT — Mantenimiento' },
+  { codigo: 'EVENTOS', nombre: 'EVENTOS — Organización y Eventos' },
+  { codigo: 'RIFAS', nombre: 'RIFAS — Rifas' },
+  { codigo: 'ASAMBLEA', nombre: 'ASAMBLEA — Asamblea General' },
+  { codigo: 'OTROS', nombre: 'OTROS — Otros Conceptos Institucionales' },
+];
+
 export interface SocioInvolucrado {
   socio_id?: number;
   legajo?: string;
@@ -287,6 +303,8 @@ export interface ExpedienteVisorData {
   causal: string;
   reglamento_asociado: string;
   reglamentos_respaldantes: string[];
+  concepto?: string | null;
+  concepto_display?: string | null;
   puntos: number | string;
   estado: string;
   estado_display: string;
@@ -321,6 +339,8 @@ export interface ExpedienteDetalleDTO {
   id: number;
   numero: string;
   estado: string;
+  concepto?: string | null;
+  concepto_display?: string | null;
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
@@ -394,6 +414,149 @@ export interface PlazoApelacionDTO {
   dias_habiles: number;
   actualizado_at: string | null;
   actualizado_por: string;
+}
+
+// --- Reportes e Informes Institucionales (SCRUM-63) ---
+
+export interface FiltrosReporteDTO {
+  anio?: number | null;
+  cuatrimestre?: string | null;
+  fecha_desde?: string | null;
+  fecha_hasta?: string | null;
+  subcomision_id?: number | null;
+  concepto?: string | null;
+}
+
+export interface BacklogUrgenciaDTO {
+  total_abiertos: number;
+  baja: number;
+  normal: number;
+  urgente: number;
+  por_estado: Record<string, number>;
+}
+
+export interface DescargosResumenDTO {
+  total_imputaciones: number;
+  total_descargos: number;
+  descargos_t02: number;
+  descargos_t03: number;
+  tasa_presentacion_pct: number;
+  decisiones_t02_total: number;
+  decisiones_t02_aceptadas: number;
+  decisiones_t02_rechazadas: number;
+  tasa_aceptacion_t02_pct: number;
+  apelaciones_t01: number;
+  adecuaciones_t01: number;
+}
+
+export interface PuntosYRiesgoDTO {
+  puntos_positivos: number;
+  puntos_negativos: number;
+  saldo_neto: number;
+  llamados_atencion_total: number;
+  felicitaciones_total: number;
+  socios_alerta_preventiva: number;
+  socios_riesgo_estatutario: number;
+}
+
+export interface EventosResumenDTO {
+  total_eventos: number;
+  eventos_finalizados: number;
+  total_convocatorias: number;
+  total_presentes: number;
+  tasa_asistencia_pct: number;
+  eventos_no_sancionables: number;
+  pct_no_sancionables: number;
+}
+
+export interface KpisResumenDTO {
+  tiempo_vida_promedio_dias: number;
+  total_emitidos_evaluados: number;
+  total_expedientes: number;
+  en_tramite: number;
+  emitidos: number;
+  sanciones: number;
+  meritos: number;
+  sin_clasificar_concepto: number;
+  backlog_urgencia: BacklogUrgenciaDTO;
+  descargos_resumen: DescargosResumenDTO;
+  puntos_y_riesgo: PuntosYRiesgoDTO;
+  eventos_resumen: EventosResumenDTO;
+}
+
+export interface PedidoSubcomisionReporteDTO {
+  subcomision_id: number;
+  subcomision_nombre: string;
+  total_expedientes: number;
+  expedientes_intra: number;
+  expedientes_inter: number;
+  imputaciones_intra: number;
+  imputaciones_inter: number;
+  desglose_por_concepto: Record<string, number>;
+}
+
+export interface AgrupacionConceptoReporteDTO {
+  concepto: string;
+  nombre: string;
+  total: number;
+  sanciones: number;
+  meritos: number;
+  en_tramite: number;
+  emitidos: number;
+}
+
+export interface PedidoAutoridadReporteDTO {
+  socio_id: number;
+  nombre_completo: string;
+  legajo: string;
+  subcomision: string;
+  rol_display: string;
+  total_pedidos: number;
+  sanciones: number;
+  meritos: number;
+  en_tramite: number;
+  emitidos: number;
+  tasa_emision_pct: number;
+}
+
+export interface CategoriaBalanceDTO {
+  total_socios: number;
+  saldo_neto: number;
+  alerta_preventiva: number;
+  riesgo_estatutario: number;
+}
+
+export interface BalanceSubcomisionYCategoriasDTO {
+  subcomision_id: number;
+  subcomision_nombre: string;
+  total_socios: number;
+  puntos_positivos: number;
+  puntos_negativos: number;
+  saldo_neto: number;
+  socios_alerta_preventiva: number;
+  socios_riesgo_estatutario: number;
+  desglose_categorias: {
+    pasivo: CategoriaBalanceDTO;
+    activo: CategoriaBalanceDTO;
+  };
+}
+
+export interface ReporteResumenResponseDTO {
+  filtros_aplicados: {
+    anio: number | null;
+    cuatrimestre: string | null;
+    fecha_desde: string | null;
+    fecha_hasta: string | null;
+    subcomision_id: number | null;
+    concepto: string | null;
+  };
+  kpis_resumen: KpisResumenDTO;
+  pedidos_por_subcomision: PedidoSubcomisionReporteDTO[];
+  agrupacion_por_concepto: AgrupacionConceptoReporteDTO[];
+  pedidos_por_autoridad: PedidoAutoridadReporteDTO[];
+  balance_subcomisiones_y_categorias: BalanceSubcomisionYCategoriasDTO[];
+  catalogo_conceptos: Array<{ codigo: string; nombre: string }>;
+  catalogo_subcomisiones: Array<{ id: number; nombre: string }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -564,4 +727,62 @@ export class ExpedienteApiService {
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {
     return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
   }
+
+  actualizarConceptoExpediente(expedienteId: number | string, concepto: string | null): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${expedienteId}/`, { concepto });
+  }
+
+  obtenerResumenReportes(filtros?: FiltrosReporteDTO): Observable<ReporteResumenResponseDTO> {
+    let params = new HttpParams();
+    if (filtros) {
+      if (filtros.anio != null) {
+        params = params.set('anio', filtros.anio.toString());
+      }
+      if (filtros.cuatrimestre) {
+        params = params.set('cuatrimestre', filtros.cuatrimestre);
+      }
+      if (filtros.fecha_desde) {
+        params = params.set('fecha_desde', filtros.fecha_desde);
+      }
+      if (filtros.fecha_hasta) {
+        params = params.set('fecha_hasta', filtros.fecha_hasta);
+      }
+      if (filtros.subcomision_id != null) {
+        params = params.set('subcomision_id', filtros.subcomision_id.toString());
+      }
+      if (filtros.concepto) {
+        params = params.set('concepto', filtros.concepto);
+      }
+    }
+    return this.http.get<ReporteResumenResponseDTO>(`${this.apiUrl}/reportes/resumen/`, { params });
+  }
+
+  descargarReporteCsv(filtros?: FiltrosReporteDTO, seccion: string = 'subcomisiones'): Observable<Blob> {
+    let params = new HttpParams().set('seccion', seccion);
+    if (filtros) {
+      if (filtros.anio != null) {
+        params = params.set('anio', filtros.anio.toString());
+      }
+      if (filtros.cuatrimestre) {
+        params = params.set('cuatrimestre', filtros.cuatrimestre);
+      }
+      if (filtros.fecha_desde) {
+        params = params.set('fecha_desde', filtros.fecha_desde);
+      }
+      if (filtros.fecha_hasta) {
+        params = params.set('fecha_hasta', filtros.fecha_hasta);
+      }
+      if (filtros.subcomision_id != null) {
+        params = params.set('subcomision_id', filtros.subcomision_id.toString());
+      }
+      if (filtros.concepto) {
+        params = params.set('concepto', filtros.concepto);
+      }
+    }
+    return this.http.get(`${this.apiUrl}/reportes/exportar-csv/`, {
+      params,
+      responseType: 'blob'
+    });
+  }
 }
+

@@ -1,5 +1,675 @@
-<app-en-desarrollo
-  titulo="Reportes & Balance"
-  descripcion="Emisión de balances cuatrimestrales, métricas de sanciones y reconocimientos por subcomisión."
-  icono="bar_chart">
-</app-en-desarrollo>
+<div class="main-content content">
+  <div class="container-fluid">
+
+    <!-- Encabezado de Página e Informes Institucionales -->
+    <div class="row mb-3">
+      <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
+        <div>
+          <h2 class="page-title mb-1">Reportes & Balances Institucionales</h2>
+          <p class="text-muted mb-0">Tablero analítico integral de disciplina, descargos, eventos y cómputo de puntos.</p>
+        </div>
+        <div class="actions-header mt-2 mt-md-0 d-flex align-items-center">
+          <div class="btn-group mr-2" role="group">
+            <button mat-raised-button
+                    type="button"
+                    class="btn btn-outline-primary btn-round"
+                    (click)="exportarCSV('subcomisiones')"
+                    [disabled]="exportando || cargando"
+                    title="Exportar CSV de Subcomisiones">
+              <i class="material-icons mr-1">download</i> CSV Subcomisiones
+            </button>
+            <button mat-raised-button
+                    type="button"
+                    class="btn btn-outline-primary btn-round"
+                    (click)="exportarCSV('balance')"
+                    [disabled]="exportando || cargando"
+                    title="Exportar CSV de Balance General">
+              <i class="material-icons mr-1">file_download</i> CSV Balance
+            </button>
+          </div>
+          <button mat-raised-button
+                  type="button"
+                  class="btn btn-primary btn-round d-flex align-items-center"
+                  (click)="imprimirPDF()"
+                  title="Imprimir reporte en PDF">
+            <i class="material-icons mr-1">print</i> Imprimir / PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Filtros Combinables -->
+    <div class="card card-filter shadow-sm mb-4">
+      <div class="card-body p-3">
+        <form (ngSubmit)="onFiltroChange()" class="row align-items-end">
+          
+          <!-- Año -->
+          <div class="col-12 col-sm-6 col-md-2 mb-2">
+            <label class="filter-label" for="filtroAnio">Año</label>
+            <select id="filtroAnio"
+                    class="form-control select-custom"
+                    [(ngModel)]="anioSeleccionado"
+                    name="anio"
+                    (change)="onFiltroChange()">
+              <option [ngValue]="null">Todos</option>
+              <option *ngFor="let a of aniosDisponibles" [ngValue]="a">{{ a }}</option>
+            </select>
+          </div>
+
+          <!-- Período / Cuatrimestre -->
+          <div class="col-12 col-sm-6 col-md-2 mb-2">
+            <label class="filter-label" for="filtroCuatrimestre">Período</label>
+            <select id="filtroCuatrimestre"
+                    class="form-control select-custom"
+                    [(ngModel)]="cuatrimestreSeleccionado"
+                    name="cuatrimestre"
+                    (change)="onFiltroChange()">
+              <option value="anual">Anual Completo</option>
+              <option value="1">1.° Cuatrimestre (Mar-Jun)</option>
+              <option value="2">2.° Cuatrimestre (Ago-Nov)</option>
+              <option value="personalizado">Personalizado...</option>
+            </select>
+          </div>
+
+          <!-- Rango personalizado (Desde / Hasta) -->
+          <div *ngIf="cuatrimestreSeleccionado === 'personalizado'" class="col-12 col-sm-6 col-md-2 mb-2">
+            <label class="filter-label" for="fechaDesde">Fecha Desde</label>
+            <input type="date"
+                   id="fechaDesde"
+                   class="form-control"
+                   [(ngModel)]="fechaDesde"
+                   name="fechaDesde"
+                   (change)="onFiltroChange()">
+          </div>
+
+          <div *ngIf="cuatrimestreSeleccionado === 'personalizado'" class="col-12 col-sm-6 col-md-2 mb-2">
+            <label class="filter-label" for="fechaHasta">Fecha Hasta</label>
+            <input type="date"
+                   id="fechaHasta"
+                   class="form-control"
+                   [(ngModel)]="fechaHasta"
+                   name="fechaHasta"
+                   (change)="onFiltroChange()">
+          </div>
+
+          <!-- Subcomisión -->
+          <div class="col-12 col-sm-6 col-md-3 mb-2">
+            <label class="filter-label" for="filtroSubcomision">Subcomisión</label>
+            <select id="filtroSubcomision"
+                    class="form-control select-custom"
+                    [(ngModel)]="subcomisionSeleccionada"
+                    name="subcomision"
+                    (change)="onFiltroChange()">
+              <option [ngValue]="null">Todas las Subcomisiones</option>
+              <option *ngFor="let s of catalogoSubcomisiones" [ngValue]="s.id">{{ s.nombre }}</option>
+            </select>
+          </div>
+
+          <!-- Concepto TD -->
+          <div class="col-12 col-sm-6 col-md-3 mb-2">
+            <label class="filter-label" for="filtroConcepto">Concepto del TD</label>
+            <select id="filtroConcepto"
+                    class="form-control select-custom"
+                    [(ngModel)]="conceptoSeleccionado"
+                    name="concepto"
+                    (change)="onFiltroChange()">
+              <option value="">Todos los Conceptos</option>
+              <option *ngFor="let c of catalogoConceptos" [value]="c.codigo">{{ c.nombre }}</option>
+              <option value="SIN_CLASIFICAR">Sin clasificar por el TD</option>
+            </select>
+          </div>
+
+          <!-- Acciones de Filtro -->
+          <div class="col-12 col-md-auto ml-auto mb-2 d-flex align-items-center">
+            <button mat-button
+                    type="button"
+                    class="btn btn-secondary btn-round mr-2"
+                    (click)="limpiarFiltros()"
+                    title="Restablecer filtros">
+              <i class="material-icons mr-1">refresh</i> Limpiar
+            </button>
+            <button mat-raised-button
+                    type="button"
+                    class="btn btn-info btn-round"
+                    (click)="exportarCSV()"
+                    [disabled]="exportando || cargando"
+                    title="Exportar vista actual a CSV">
+              <i class="material-icons mr-1">download</i> CSV Tab Actual
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Estado de Carga -->
+    <div *ngIf="cargando" class="card shadow-sm p-5 text-center my-4">
+      <div class="spinner-container d-flex flex-column align-items-center justify-content-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Cargando reporte analítico...</span>
+        </div>
+        <p class="mt-3 text-muted">Procesando y computando indicadores institucionales...</p>
+      </div>
+    </div>
+
+    <!-- Estado de Error -->
+    <div *ngIf="!cargando && errorCarga" class="card card-error shadow-sm p-4 text-center my-4">
+      <div class="card-body">
+        <i class="material-icons text-danger display-4 mb-3">error_outline</i>
+        <h4 class="text-danger">{{ errorCarga }}</h4>
+        <p class="text-muted">No se pudo obtener la información consolidada desde el servidor.</p>
+        <button mat-raised-button
+                type="button"
+                class="btn btn-primary btn-round mt-2"
+                (click)="cargarReporte()">
+          <i class="material-icons mr-1">replay</i> Reintentar Carga
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenido Principal: KPIs y Pestañas Analíticas -->
+    <ng-container *ngIf="!cargando && !errorCarga">
+
+      <!-- 5 Tarjetas de Resumen KPI (Con formato tabular-nums y diseño canónico) -->
+      <div class="row kpi-cards-row mb-4">
+        
+        <!-- KPI-01: Tiempo de Vida Promedio -->
+        <div class="col-12 col-sm-6 col-lg card-kpi-col mb-3">
+          <div class="card card-stats shadow-sm h-100">
+            <div class="card-header card-header-info card-header-icon">
+              <div class="card-icon">
+                <i class="material-icons">timer</i>
+              </div>
+              <p class="card-category">Tiempo Promedio (KPI-01)</p>
+              <h3 class="card-title tabular-nums">
+                {{ kpis?.tiempo_vida_promedio_dias | number:'1.1-1' }} <small>días</small>
+              </h3>
+            </div>
+            <div class="card-footer">
+              <div class="stats text-muted small">
+                <i class="material-icons">check_circle</i>
+                {{ kpis?.total_emitidos_evaluados }} emitidos evaluados
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI-04: Volumen y Backlog por Urgencia -->
+        <div class="col-12 col-sm-6 col-lg card-kpi-col mb-3">
+          <div class="card card-stats shadow-sm h-100">
+            <div class="card-header card-header-warning card-header-icon">
+              <div class="card-icon">
+                <i class="material-icons">pending_actions</i>
+              </div>
+              <p class="card-category">Backlog Activo (KPI-04)</p>
+              <h3 class="card-title tabular-nums">
+                {{ kpis?.backlog_urgencia?.total_abiertos }} <small>abiertos</small>
+              </h3>
+            </div>
+            <div class="card-footer">
+              <div class="stats text-muted small">
+                <i class="material-icons">warning</i>
+                <span class="text-danger font-weight-bold">{{ kpis?.backlog_urgencia?.urgente }}</span> urgentes ·
+                {{ kpis?.backlog_urgencia?.normal }} normal ·
+                {{ kpis?.backlog_urgencia?.baja }} baja
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI-05: Descargos y Garantías -->
+        <div class="col-12 col-sm-6 col-lg card-kpi-col mb-3">
+          <div class="card card-stats shadow-sm h-100">
+            <div class="card-header card-header-teal card-header-icon">
+              <div class="card-icon">
+                <i class="material-icons">assignment_turned_in</i>
+              </div>
+              <p class="card-category">Descargos T02/T03 (KPI-05)</p>
+              <h3 class="card-title tabular-nums">
+                {{ kpis?.descargos_resumen?.tasa_presentacion_pct }}%
+              </h3>
+            </div>
+            <div class="card-footer">
+              <div class="stats text-muted small">
+                <i class="material-icons">fact_check</i>
+                T02: {{ kpis?.descargos_resumen?.descargos_t02 }} ({{ kpis?.descargos_resumen?.tasa_aceptacion_t02_pct }}% aceptados) ·
+                T03: {{ kpis?.descargos_resumen?.descargos_t03 }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI-06: Balance de Puntos y Riesgo -->
+        <div class="col-12 col-sm-6 col-lg card-kpi-col mb-3">
+          <div class="card card-stats shadow-sm h-100">
+            <div class="card-header card-header-danger card-header-icon">
+              <div class="card-icon">
+                <i class="material-icons">military_tech</i>
+              </div>
+              <p class="card-category">Balance Puntos (KPI-06)</p>
+              <h3 class="card-title tabular-nums" [class.text-danger]="(kpis?.puntos_y_riesgo?.saldo_neto || 0) < 0" [class.text-success]="(kpis?.puntos_y_riesgo?.saldo_neto || 0) > 0">
+                {{ (kpis?.puntos_y_riesgo?.saldo_neto || 0) > 0 ? '+' : '' }}{{ kpis?.puntos_y_riesgo?.saldo_neto }} <small>pts</small>
+              </h3>
+            </div>
+            <div class="card-footer">
+              <div class="stats text-muted small">
+                <i class="material-icons">report_problem</i>
+                Alerta: <strong class="text-warning">{{ kpis?.puntos_y_riesgo?.socios_alerta_preventiva }}</strong> ·
+                Riesgo: <strong class="text-danger">{{ kpis?.puntos_y_riesgo?.socios_riesgo_estatutario }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI-07: Asistencia y Validez de Eventos -->
+        <div class="col-12 col-sm-6 col-lg card-kpi-col mb-3">
+          <div class="card card-stats shadow-sm h-100">
+            <div class="card-header card-header-success card-header-icon">
+              <div class="card-icon">
+                <i class="material-icons">event_available</i>
+              </div>
+              <p class="card-category">Asistencia Eventos (KPI-07)</p>
+              <h3 class="card-title tabular-nums">
+                {{ kpis?.eventos_resumen?.tasa_asistencia_pct }}%
+              </h3>
+            </div>
+            <div class="card-footer">
+              <div class="stats text-muted small">
+                <i class="material-icons">schedule</i>
+                {{ kpis?.eventos_resumen?.total_presentes }}/{{ kpis?.eventos_resumen?.total_convocatorias }} ·
+                Fuera de plazo: {{ kpis?.eventos_resumen?.pct_no_sancionables }}%
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Estado Vacío cuando no hay registros -->
+      <div *ngIf="!tieneDatos" class="card empty-card shadow-sm p-5 text-center my-4">
+        <div class="card-body">
+          <i class="material-icons text-muted display-3 mb-3">filter_alt_off</i>
+          <h4>No se encontraron datos para los filtros aplicados</h4>
+          <p class="text-muted">No existen expedientes, pedidos ni balances que coincidan con la combinación de filtros seleccionada.</p>
+          <button mat-raised-button
+                  type="button"
+                  class="btn btn-outline-primary btn-round mt-2"
+                  (click)="limpiarFiltros()">
+            <i class="material-icons mr-1">refresh</i> Restablecer Filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor de Pestañas Estructuradas (3 Tabs) -->
+      <div *ngIf="tieneDatos" class="card card-nav-tabs shadow-sm mb-4">
+        
+        <!-- Cabecera de Tabs Flotante -->
+        <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+          <div class="nav-tabs-wrapper">
+            <ul class="nav nav-tabs" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link"
+                   [class.active]="tabActiva === 'subcomisiones'"
+                   (click)="seleccionarTab('subcomisiones')"
+                   href="javascript:void(0)"
+                   role="tab">
+                  <i class="material-icons">domain</i> Subcomisiones & Conceptos (KPI-03)
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link"
+                   [class.active]="tabActiva === 'autoridades'"
+                   (click)="seleccionarTab('autoridades')"
+                   href="javascript:void(0)"
+                   role="tab">
+                  <i class="material-icons">badge</i> Pedidos por Autoridad (KPI-02)
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link"
+                   [class.active]="tabActiva === 'balance'"
+                   (click)="seleccionarTab('balance')"
+                   href="javascript:void(0)"
+                   role="tab">
+                  <i class="material-icons">balance</i> Balance General & Asistencias (KPI-05..07)
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="text-white-50 d-none d-md-block small">
+            Vistas tabulares desagregadas
+          </div>
+        </div>
+
+        <div class="card-body p-3">
+
+          <!-- ================================================================= -->
+          <!-- PESTAÑA 1: Subcomisiones (Intra vs. Inter) & Conceptos TD (KPI-03) -->
+          <!-- ================================================================= -->
+          <div *ngIf="tabActiva === 'subcomisiones'" class="tab-pane active" id="tab-subcomisiones">
+            
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h4 class="card-title font-weight-bold mb-0">Pedidos Originados por Subcomisión</h4>
+              <button mat-button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      (click)="exportarCSV('subcomisiones')">
+                <i class="material-icons mr-1">download</i> Exportar CSV
+              </button>
+            </div>
+            <p class="text-muted small mb-3">
+              Mapea el origen institucional del expediente y cuantifica la relación entre causas dirigidas a miembros de la propia subcomisión (<strong>intra-subcomisión</strong>) vs. miembros de otras subcomisiones (<strong>inter-subcomisión</strong>).
+            </p>
+
+            <div class="table-responsive mb-4">
+              <table class="table table-hover table-striped align-middle">
+                <thead class="text-primary">
+                  <tr>
+                    <th>Subcomisión de Origen</th>
+                    <th class="text-center">Total Expedientes</th>
+                    <th class="text-center">Exp. Intra</th>
+                    <th class="text-center">Exp. Inter</th>
+                    <th class="text-center">Imputaciones Intra</th>
+                    <th class="text-center">Imputaciones Inter</th>
+                    <th>Conceptos Predominantes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of pedidosSubcomision">
+                    <td class="font-weight-bold">{{ row.subcomision_nombre }}</td>
+                    <td class="text-center tabular-nums font-weight-bold">{{ row.total_expedientes }}</td>
+                    <td class="text-center tabular-nums text-info">{{ row.expedientes_intra }}</td>
+                    <td class="text-center tabular-nums text-warning">{{ row.expedientes_inter }}</td>
+                    <td class="text-center tabular-nums">{{ row.imputaciones_intra }}</td>
+                    <td class="text-center tabular-nums">{{ row.imputaciones_inter }}</td>
+                    <td class="small">{{ obtenerResumenConceptos(row.desglose_por_concepto) }}</td>
+                  </tr>
+                  <tr *ngIf="pedidosSubcomision.length === 0">
+                    <td colspan="7" class="text-center text-muted py-4">No hay pedidos registrados para el período.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Agrupación por Concepto del TD -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h4 class="card-title font-weight-bold mb-0">Agrupación por Concepto del Tribunal de Disciplina</h4>
+              <button mat-button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      (click)="exportarCSV('conceptos')">
+                <i class="material-icons mr-1">download</i> Exportar CSV
+              </button>
+            </div>
+            <p class="text-muted small mb-3">
+              Clasificación institucional asignada por el Tribunal de Disciplina conforme a las 13 áreas temáticas o estado no clasificado.
+            </p>
+
+            <div class="table-responsive">
+              <table class="table table-hover table-striped align-middle">
+                <thead class="text-primary">
+                  <tr>
+                    <th>Código</th>
+                    <th>Concepto Institucional</th>
+                    <th class="text-center">Total</th>
+                    <th class="text-center text-danger">Sanciones</th>
+                    <th class="text-center text-success">Méritos</th>
+                    <th class="text-center text-warning">En Trámite</th>
+                    <th class="text-center text-info">Emitidos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of agrupacionConceptos">
+                    <td>
+                      <span class="badge" [class.badge-secondary]="c.concepto === 'SIN_CLASIFICAR'" [class.badge-info]="c.concepto !== 'SIN_CLASIFICAR'">
+                        {{ c.concepto }}
+                      </span>
+                    </td>
+                    <td class="font-weight-bold">{{ c.nombre }}</td>
+                    <td class="text-center tabular-nums font-weight-bold">{{ c.total }}</td>
+                    <td class="text-center tabular-nums text-danger">{{ c.sanciones }}</td>
+                    <td class="text-center tabular-nums text-success">{{ c.meritos }}</td>
+                    <td class="text-center tabular-nums text-warning">{{ c.en_tramite }}</td>
+                    <td class="text-center tabular-nums text-info">{{ c.emitidos }}</td>
+                  </tr>
+                  <tr *ngIf="agrupacionConceptos.length === 0">
+                    <td colspan="7" class="text-center text-muted py-4">No hay conceptos registrados.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- PESTAÑA 2: Pedidos por Autoridad (KPI-02)                          -->
+          <!-- ================================================================= -->
+          <div *ngIf="tabActiva === 'autoridades'" class="tab-pane active" id="tab-autoridades">
+            
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h4 class="card-title font-weight-bold mb-0">Pedidos por Autoridad Solicitante o Convocante</h4>
+              <button mat-button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      (click)="exportarCSV('autoridades')">
+                <i class="material-icons mr-1">download</i> Exportar CSV
+              </button>
+            </div>
+            <p class="text-muted small mb-3">
+              Detalle nominal de autoridades con facultades disciplinarias que originaron solicitudes T01 o convocaron eventos institucionales.
+            </p>
+
+            <div class="table-responsive">
+              <table class="table table-hover table-striped align-middle">
+                <thead class="text-primary">
+                  <tr>
+                    <th>Autoridad</th>
+                    <th>Legajo</th>
+                    <th>Subcomisión</th>
+                    <th>Rol Institucional</th>
+                    <th class="text-center">Total Pedidos</th>
+                    <th class="text-center text-danger">Sanciones</th>
+                    <th class="text-center text-success">Méritos</th>
+                    <th class="text-center text-warning">En Trámite</th>
+                    <th class="text-center text-info">Emitidos</th>
+                    <th class="text-center">Tasa Emisión</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let a of pedidosAutoridad">
+                    <td class="font-weight-bold">{{ a.nombre_completo }}</td>
+                    <td class="tabular-nums">{{ a.legajo }}</td>
+                    <td>{{ a.subcomision }}</td>
+                    <td><span class="badge badge-light border">{{ a.rol_display }}</span></td>
+                    <td class="text-center tabular-nums font-weight-bold">{{ a.total_pedidos }}</td>
+                    <td class="text-center tabular-nums text-danger">{{ a.sanciones }}</td>
+                    <td class="text-center tabular-nums text-success">{{ a.meritos }}</td>
+                    <td class="text-center tabular-nums text-warning">{{ a.en_tramite }}</td>
+                    <td class="text-center tabular-nums text-info">{{ a.emitidos }}</td>
+                    <td class="text-center tabular-nums font-weight-bold">{{ a.tasa_emision_pct }}%</td>
+                  </tr>
+                  <tr *ngIf="pedidosAutoridad.length === 0">
+                    <td colspan="10" class="text-center text-muted py-4">No hay autoridades con pedidos registrados para el período.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- PESTAÑA 3: Balance General, Descargos & Asistencias (KPI-05..07)  -->
+          <!-- ================================================================= -->
+          <div *ngIf="tabActiva === 'balance'" class="tab-pane active" id="tab-balance">
+            
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h4 class="card-title font-weight-bold mb-0">Balance de Puntos por Subcomisión y Categorías Sociales</h4>
+              <button mat-button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      (click)="exportarCSV('balance')">
+                <i class="material-icons mr-1">download</i> Exportar CSV
+              </button>
+            </div>
+            <p class="text-muted small mb-3">
+              Cómputo transaccional de saldos positivos, negativos y netos sin sentencias manuales de modificación, discriminando entre socios pasivos (1.° a 3.° año) y socios activos (4.° a 6.° año).
+            </p>
+
+            <div class="table-responsive mb-4">
+              <table class="table table-hover table-striped align-middle">
+                <thead class="text-primary">
+                  <tr>
+                    <th>Subcomisión</th>
+                    <th class="text-center">Total Socios</th>
+                    <th class="text-center text-success">Puntos (+)</th>
+                    <th class="text-center text-danger">Puntos (-)</th>
+                    <th class="text-center">Saldo Neto</th>
+                    <th class="text-center text-warning">Alerta (≤ -7)</th>
+                    <th class="text-center text-danger">Riesgo (≤ -10)</th>
+                    <th class="text-center">Pasivos (1°-3°)</th>
+                    <th class="text-center">Activos (4°-6°)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let b of balanceSubcomisiones">
+                    <td class="font-weight-bold">{{ b.subcomision_nombre }}</td>
+                    <td class="text-center tabular-nums">{{ b.total_socios }}</td>
+                    <td class="text-center tabular-nums text-success font-weight-bold">+{{ b.puntos_positivos }}</td>
+                    <td class="text-center tabular-nums text-danger font-weight-bold">{{ b.puntos_negativos }}</td>
+                    <td class="text-center tabular-nums font-weight-bold" [class.text-danger]="b.saldo_neto < 0" [class.text-success]="b.saldo_neto > 0">
+                      {{ b.saldo_neto > 0 ? '+' : '' }}{{ b.saldo_neto }}
+                    </td>
+                    <td class="text-center tabular-nums">
+                      <span *ngIf="b.socios_alerta_preventiva > 0" class="badge badge-warning text-dark font-weight-bold">
+                        {{ b.socios_alerta_preventiva }}
+                      </span>
+                      <span *ngIf="b.socios_alerta_preventiva === 0" class="text-muted">0</span>
+                    </td>
+                    <td class="text-center tabular-nums">
+                      <span *ngIf="b.socios_riesgo_estatutario > 0" class="badge badge-danger font-weight-bold">
+                        {{ b.socios_riesgo_estatutario }}
+                      </span>
+                      <span *ngIf="b.socios_riesgo_estatutario === 0" class="text-muted">0</span>
+                    </td>
+                    <td class="text-center tabular-nums small">
+                      {{ b.desglose_categorias.pasivo.saldo_neto > 0 ? '+' : '' }}{{ b.desglose_categorias.pasivo.saldo_neto }} pts
+                      <span class="text-muted">({{ b.desglose_categorias.pasivo.total_socios }})</span>
+                    </td>
+                    <td class="text-center tabular-nums small">
+                      {{ b.desglose_categorias.activo.saldo_neto > 0 ? '+' : '' }}{{ b.desglose_categorias.activo.saldo_neto }} pts
+                      <span class="text-muted">({{ b.desglose_categorias.activo.total_socios }})</span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="balanceSubcomisiones.length === 0">
+                    <td colspan="9" class="text-center text-muted py-4">No hay balances registrados.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Paneles Complementarios: Descargos y Eventos -->
+            <div class="row">
+              
+              <!-- Panel: Garantías Procesales y Descargos -->
+              <div class="col-12 col-lg-6 mb-3">
+                <div class="card shadow-sm h-100 border">
+                  <div class="card-header bg-light py-2 px-3">
+                    <h5 class="card-title font-weight-bold mb-0 text-primary">
+                      <i class="material-icons mr-1 align-middle">gavel</i>
+                      Eficacia de Descargos y Garantías (KPI-05)
+                    </h5>
+                  </div>
+                  <div class="card-body p-3">
+                    <div class="row">
+                      <div class="col-6 mb-3">
+                        <small class="text-muted d-block">Imputaciones Totales</small>
+                        <strong class="tabular-nums h5">{{ kpis?.descargos_resumen?.total_imputaciones }}</strong>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <small class="text-muted d-block">Descargos Presentados</small>
+                        <strong class="tabular-nums h5 text-primary">
+                          {{ kpis?.descargos_resumen?.total_descargos }}
+                          <small class="text-muted">({{ kpis?.descargos_resumen?.tasa_presentacion_pct }}%)</small>
+                        </strong>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <small class="text-muted d-block">T02 Certificados</small>
+                        <span class="tabular-nums">{{ kpis?.descargos_resumen?.descargos_t02 }}</span>
+                        <div class="small text-muted">
+                          Aceptados: <strong class="text-success">{{ kpis?.descargos_resumen?.decisiones_t02_aceptadas }}</strong> /
+                          Rechazados: <strong class="text-danger">{{ kpis?.descargos_resumen?.decisiones_t02_rechazadas }}</strong>
+                        </div>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <small class="text-muted d-block">Tasa Aceptación T02</small>
+                        <strong class="tabular-nums h5 text-success">
+                          {{ kpis?.descargos_resumen?.tasa_aceptacion_t02_pct }}%
+                        </strong>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted d-block">T03 Extraordinarios</small>
+                        <span class="tabular-nums font-weight-bold">{{ kpis?.descargos_resumen?.descargos_t03 }}</span>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted d-block">Apelaciones / Adecuaciones T01</small>
+                        <span class="tabular-nums font-weight-bold">
+                          {{ kpis?.descargos_resumen?.apelaciones_t01 }} apelaciones · {{ kpis?.descargos_resumen?.adecuaciones_t01 }} adecuaciones
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel: Cumplimiento de Eventos -->
+              <div class="col-12 col-lg-6 mb-3">
+                <div class="card shadow-sm h-100 border">
+                  <div class="card-header bg-light py-2 px-3">
+                    <h5 class="card-title font-weight-bold mb-0 text-primary">
+                      <i class="material-icons mr-1 align-middle">event_note</i>
+                      Validez y Asistencia a Eventos (KPI-07)
+                    </h5>
+                  </div>
+                  <div class="card-body p-3">
+                    <div class="row">
+                      <div class="col-6 mb-3">
+                        <small class="text-muted d-block">Eventos Convocados</small>
+                        <strong class="tabular-nums h5">{{ kpis?.eventos_resumen?.total_eventos }}</strong>
+                        <div class="small text-muted">{{ kpis?.eventos_resumen?.eventos_finalizados }} finalizados</div>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <small class="text-muted d-block">Tasa de Asistencia</small>
+                        <strong class="tabular-nums h5 text-success">{{ kpis?.eventos_resumen?.tasa_asistencia_pct }}%</strong>
+                        <div class="small text-muted">{{ kpis?.eventos_resumen?.total_presentes }} de {{ kpis?.eventos_resumen?.total_convocatorias }}</div>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted d-block">Eventos No Sancionables</small>
+                        <strong class="tabular-nums h5 text-warning">{{ kpis?.eventos_resumen?.eventos_no_sancionables }}</strong>
+                        <div class="small text-muted">({{ kpis?.eventos_resumen?.pct_no_sancionables }}% del total)</div>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted d-block">Causales de Invalidez</small>
+                        <p class="small text-muted mb-0">
+                          Aviso &lt; 2 días hábiles o informe &gt; 72 hs hábiles no generan sanción reglamentaria.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </ng-container>
+
+  </div>
+</div>
