@@ -192,6 +192,22 @@ class ConceptoExpedienteEnum(models.TextChoices):
     OTROS = "OTROS", "OTROS — Otros Conceptos Institucionales"
 
 
+class ClasificacionExpedienteEnum(models.TextChoices):
+    """Clasificación o concepto del expediente asignado o validado por TD (SCRUM-63)."""
+
+    CD = "CD", "Comisión Directiva"
+    RRHH = "RRHH", "Recursos Humanos"
+    PRENSA = "PRENSA", "Prensa y Difusión"
+    OYE = "OYE", "Organización y Eventos"
+    GSA = "GSA", "Gestión Social y Ambiental"
+    RII = "RII", "Relaciones Institucionales"
+    COMPUTOS = "COMPUTOS", "Cómputos"
+    TD = "TD", "Tribunal de Disciplina"
+    CR = "CR", "Comisión Rifaria"
+    MANTENIMIENTO = "MANTENIMIENTO", "Mantenimiento"
+    RC = "RC", "Revisores de Cuentas"
+    GVP = "GVP", "Grupo de Viaje y Permanencia"
+    GENERAL = "GENERAL", "General"
 class ExpedienteNumberSequence(models.Model):
     """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
 
@@ -250,6 +266,13 @@ class Expediente(models.Model):
         choices=EstadoExpedienteEnum.choices,
         default=EstadoExpedienteEnum.CREADO,
         db_index=True,
+    )
+    clasificacion = models.CharField(
+        max_length=50,
+        choices=ClasificacionExpedienteEnum.choices,
+        default=ClasificacionExpedienteEnum.GENERAL,
+        db_index=True,
+        help_text="Concepto o subcomisión clasificadora asignada por TD.",
     )
     urgencia = models.CharField(
         max_length=20,
@@ -671,6 +694,13 @@ class SolicitudT01(models.Model):
     destinatario_socio_id = models.PositiveBigIntegerField(null=True, blank=True)
     destinatarios_socios_ids = models.JSONField(default=list, blank=True)
     tipo_accion = models.CharField(max_length=10, choices=TipoAccion.choices)
+    clasificacion = models.CharField(
+        max_length=50,
+        choices=ClasificacionExpedienteEnum.choices,
+        default=ClasificacionExpedienteEnum.GENERAL,
+        db_index=True,
+        help_text="Concepto o subcomisión clasificadora asignada por TD.",
+    )
     urgencia = models.CharField(
         max_length=20,
         choices=UrgenciaExpedienteEnum.choices,

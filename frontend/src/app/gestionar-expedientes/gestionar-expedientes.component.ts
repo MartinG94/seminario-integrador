@@ -419,6 +419,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  getIconoOrden(col: string): string {
+    if (this.columnaOrden !== col) return 'swap_vert';
+    return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
+  }
+
   // Transición accesible mediante botón con teclado (CA3 y CA4)
   transicionarEstado(exp: Expediente, nuevoEstado: EstadoExpediente, event?: Event): void {
     if (event) {

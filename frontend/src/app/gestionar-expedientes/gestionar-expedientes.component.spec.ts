@@ -135,6 +135,35 @@ describe('GestionarExpedientesComponent', () => {
     });
   });
 
+  it('getIconoOrden debe retornar swap_vert para columnas no ordenadas y arrow_upward/arrow_downward segun ordenAscendente', () => {
+    component.columnaOrden = 'numero';
+    component.ordenAscendente = true;
+
+    expect(component.getIconoOrden('numero')).toBe('arrow_upward');
+    expect(component.getIconoOrden('titulo')).toBe('swap_vert');
+
+    component.cambiarOrden('numero');
+    expect(component.ordenAscendente).toBeFalse();
+    expect(component.getIconoOrden('numero')).toBe('arrow_downward');
+
+    component.cambiarOrden('titulo');
+    expect(component.columnaOrden).toBe('titulo');
+    expect(component.ordenAscendente).toBeTrue();
+    expect(component.getIconoOrden('titulo')).toBe('arrow_upward');
+    expect(component.getIconoOrden('numero')).toBe('swap_vert');
+  });
+
+  it('debe renderizar el encabezado estilo mis expedientes con Exp. y sortable-th en vista tabla', () => {
+    component.vistaActual = 'tabla';
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const expTh = compiled.querySelector('thead th.sortable-th');
+    expect(expTh).toBeTruthy();
+    expect(expTh?.textContent).toContain('Exp.');
+    expect(compiled.querySelector('.card-header-tabs-teal .card-title')?.textContent).toContain('Detalle de Expedientes');
+  });
+
   it('transicionarEstado debe invocar transicionarExpediente del servicio (CA3 y CA4)', () => {
     const expMock = {
       id: '1',

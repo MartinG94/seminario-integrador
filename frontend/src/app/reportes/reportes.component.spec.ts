@@ -1,350 +1,205 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
 import { ReportesComponent } from './reportes.component';
 import {
-  ExpedienteApiService,
-  ReporteResumenResponseDTO
-} from '../services/expediente-api.service';
-import { NotificationService } from '../services/notification.service';
+  ReportesService,
+  MetricasT01DTO,
+  MetricasReunionesDTO,
+  MetricasSubcomisionDTO,
+  HistoricoRecordsDTO,
+} from '../services/reportes.service';
 
-describe('ReportesComponent', () => {
+describe('ReportesComponent (SCRUM-63)', () => {
   let component: ReportesComponent;
   let fixture: ComponentFixture<ReportesComponent>;
-  let apiServiceSpy: jasmine.SpyObj<ExpedienteApiService>;
-  let notificationServiceSpy: jasmine.SpyObj<NotificationService>;
+  let mockReportesService: jasmine.SpyObj<ReportesService>;
 
-  const mockReporte: ReporteResumenResponseDTO = {
-    filtros_aplicados: {
-      anio: 2026,
-      cuatrimestre: 'anual',
-      fecha_desde: null,
-      fecha_hasta: null,
-      subcomision_id: null,
-      concepto: null
+  const mockT01Data: MetricasT01DTO = {
+    kpis: {
+      expedientes_generados: 238,
+      socios_alcanzados: 230,
+      puntos_aprobados_positivos: 366,
+      puntos_aprobados_negativos: -164,
+      tiempo_vida_promedio_dias: 3.8,
     },
-    kpis_resumen: {
-      tiempo_vida_promedio_dias: 4.5,
-      total_emitidos_evaluados: 12,
-      total_expedientes: 18,
-      en_tramite: 6,
-      emitidos: 12,
-      sanciones: 10,
-      meritos: 8,
-      sin_clasificar_concepto: 2,
-      backlog_urgencia: {
-        total_abiertos: 6,
-        baja: 1,
-        normal: 3,
-        urgente: 2,
-        por_estado: { creado: 2, justificando: 4 }
-      },
-      descargos_resumen: {
-        total_imputaciones: 20,
-        total_descargos: 16,
-        descargos_t02: 10,
-        descargos_t03: 6,
-        tasa_presentacion_pct: 80.0,
-        decisiones_t02_total: 10,
-        decisiones_t02_aceptadas: 8,
-        decisiones_t02_rechazadas: 2,
-        tasa_aceptacion_t02_pct: 80.0,
-        apelaciones_t01: 3,
-        adecuaciones_t01: 2
-      },
-      puntos_y_riesgo: {
-        puntos_positivos: 25.0,
-        puntos_negativos: -15.0,
-        saldo_neto: 10.0,
-        llamados_atencion_total: 4,
-        felicitaciones_total: 6,
-        socios_alerta_preventiva: 2,
-        socios_riesgo_estatutario: 1
-      },
-      eventos_resumen: {
-        total_eventos: 8,
-        eventos_finalizados: 7,
-        total_convocatorias: 70,
-        total_presentes: 63,
-        tasa_asistencia_pct: 90.0,
-        eventos_no_sancionables: 1,
-        pct_no_sancionables: 12.5
-      }
+    expedientes_por_clasificacion: [
+      { clasificacion: 'CD', label: 'Comisión Directiva', cantidad: 42 },
+      { clasificacion: 'GSA', label: 'Gestión Social y Ambiental', cantidad: 23 },
+    ],
+    distribucion_por_grupo: [
+      { grupo: '58', porcentaje: 31.1, cantidad: 74 },
+      { grupo: '59', porcentaje: 26.9, cantidad: 64 },
+    ],
+    distribucion_puntos: [
+      { puntaje: -1.0, cantidad: 14 },
+      { puntaje: 0.5, cantidad: 68 },
+    ],
+  };
+
+  const mockReunionesData: MetricasReunionesDTO = {
+    kpis: {
+      expedientes_generados: 90,
+      socios_alcanzados: 263,
+      puntos_por_inasistencias: -463,
     },
-    pedidos_por_subcomision: [
-      {
-        subcomision_id: 1,
-        subcomision_nombre: 'Gestión Social y Ambiental',
-        total_expedientes: 5,
-        expedientes_intra: 3,
-        expedientes_inter: 2,
-        imputaciones_intra: 4,
-        imputaciones_inter: 3,
-        desglose_por_concepto: { GSA: 4, EVENTOS: 1 }
-      }
+    expedientes_por_categoria: [
+      { categoria: 'CDS', cantidad: 28 },
+      { categoria: 'Reunión Subcomisión', cantidad: 27 },
     ],
-    agrupacion_por_concepto: [
+    proporcion_aprobacion: [
+      { tipo: 'Aprobado por TD', porcentaje: 51.2, cantidad: 46 },
+    ],
+    socios_por_grupo: [
+      { grupo: '61', cantidad: 83 },
+    ],
+  };
+
+  const mockSubcomisionData: MetricasSubcomisionDTO = {
+    subcomision: {
+      id: 6,
+      nombre: 'Gestión Social y Ambiental',
+      color_hex: '#28a745',
+    },
+    kpis: {
+      puntaje_ciclo_t01: 64.2,
+      total_socios: 8,
+    },
+    distribucion_puntos: [
+      { puntaje: 0.5, cantidad: 4 },
+    ],
+    intra_vs_inter: [
+      { tipo: 'Intra-Subcomisión', cantidad: 13, porcentaje: 46.0, color: '#28a745' },
+      { tipo: 'Inter-Subcomisiones', cantidad: 15, porcentaje: 54.0, color: '#007bff' },
+    ],
+    participacion_otras_subcomisiones: [
+      { subcomision: 'Gestión Social y Ambiental', porcentaje: 46.0, color: '#28a745' },
+    ],
+    tabla_socios: [
       {
-        concepto: 'GSA',
-        nombre: 'Gestión Social y Ambiental',
-        total: 4,
-        sanciones: 3,
-        meritos: 1,
-        en_tramite: 1,
-        emitidos: 3
+        posicion: 1,
+        legajo: '87414',
+        apellido: 'Sanchez Turu Michel',
+        nombre: 'Diego Gabriel',
+        grupo: '58',
+        puntos_asignados_ciclo: 3.5,
+        puntos_totales: 25.16,
       },
-      {
-        concepto: 'SIN_CLASIFICAR',
-        nombre: 'Sin clasificar por el TD',
-        total: 2,
-        sanciones: 1,
-        meritos: 1,
-        en_tramite: 2,
-        emitidos: 0
-      }
     ],
-    pedidos_por_autoridad: [
+  };
+
+  const mockHistoricoData: HistoricoRecordsDTO = {
+    record_absoluto: {
+      socio_numero: 11779,
+      nombre_completo: 'Diego Gabriel Sánchez Turu Michel',
+      legajo: '87414',
+      subcomision: 'Gestión Social y Ambiental',
+      grupo: '58',
+      puntaje_maximo: 25.0,
+      periodo: 'Ciclo 2021 - 2026',
+      distincion: 'Récord Histórico Absoluto',
+    },
+    top_historico: [
       {
-        socio_id: 10,
-        nombre_completo: 'Perez, Juan',
-        legajo: '70123',
+        posicion: 1,
+        socio_numero: 11779,
+        nombre_completo: 'Diego Gabriel Sánchez Turu Michel',
         subcomision: 'Gestión Social y Ambiental',
-        rol_display: 'Secretario',
-        total_pedidos: 4,
-        sanciones: 3,
-        meritos: 1,
-        en_tramite: 1,
-        emitidos: 3,
-        tasa_emision_pct: 75.0
-      }
+        puntaje_historico: 25.0,
+        record_destacado: true,
+      },
     ],
-    balance_subcomisiones_y_categorias: [
-      {
-        subcomision_id: 1,
-        subcomision_nombre: 'Gestión Social y Ambiental',
-        total_socios: 25,
-        puntos_positivos: 15.0,
-        puntos_negativos: -5.0,
-        saldo_neto: 10.0,
-        socios_alerta_preventiva: 1,
-        socios_riesgo_estatutario: 0,
-        desglose_categorias: {
-          pasivo: { total_socios: 15, saldo_neto: 4.0, alerta_preventiva: 1, riesgo_estatutario: 0 },
-          activo: { total_socios: 10, saldo_neto: 6.0, alerta_preventiva: 0, riesgo_estatutario: 0 }
-        }
-      }
+    kpis: {
+      total_expedientes_historicos: 2640,
+      anios_registrados: '2013 - 2026',
+    },
+    serie_anual: [
+      { anio: 2025, cantidad: 480 },
+      { anio: 2026, cantidad: 349 },
     ],
-    catalogo_conceptos: [
-      { codigo: 'GSA', nombre: 'GSA — Gestión Social y Ambiental' },
-      { codigo: 'TD', nombre: 'TD — Tribunal de Disciplina' }
+    distribucion_historica_puntos: [
+      { puntaje: -1.0, cantidad: 548 },
+      { puntaje: 0.5, cantidad: 249 },
     ],
-    catalogo_subcomisiones: [
-      { id: 1, nombre: 'Gestión Social y Ambiental' },
-      { id: 2, nombre: 'Relaciones Institucionales' }
-    ]
   };
 
   beforeEach(async () => {
-    apiServiceSpy = jasmine.createSpyObj('ExpedienteApiService', [
-      'obtenerResumenReportes',
-      'descargarReporteCsv'
-    ]);
-    notificationServiceSpy = jasmine.createSpyObj('NotificationService', [
-      'success',
-      'error',
-      'warning',
-      'info'
+    mockReportesService = jasmine.createSpyObj('ReportesService', [
+      'getMetricasT01',
+      'getMetricasReuniones',
+      'getSubcomisiones',
+      'getMetricasSubcomision',
+      'getHistoricoYRecords',
     ]);
 
-    apiServiceSpy.obtenerResumenReportes.and.returnValue(of(mockReporte));
+    mockReportesService.getSubcomisiones.and.returnValue(
+      of([
+        { id: 6, nombre: 'Gestión Social y Ambiental' },
+        { id: 9, nombre: 'Comisión Directiva' },
+      ])
+    );
+    mockReportesService.getMetricasT01.and.returnValue(of(mockT01Data));
+    mockReportesService.getMetricasReuniones.and.returnValue(of(mockReunionesData));
+    mockReportesService.getMetricasSubcomision.and.returnValue(of(mockSubcomisionData));
+    mockReportesService.getHistoricoYRecords.and.returnValue(of(mockHistoricoData));
 
     await TestBed.configureTestingModule({
       declarations: [ReportesComponent],
       imports: [FormsModule],
-      providers: [
-        { provide: ExpedienteApiService, useValue: apiServiceSpy },
-        { provide: NotificationService, useValue: notificationServiceSpy }
-      ]
+      providers: [{ provide: ReportesService, useValue: mockReportesService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ReportesComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
-  it('debe crearse e invocar la carga inicial de reportes', () => {
-    fixture.detectChanges();
+  it('debe crearse correctamente el componente', () => {
     expect(component).toBeTruthy();
-    expect(apiServiceSpy.obtenerResumenReportes).toHaveBeenCalled();
-    expect(component.reporte).toEqual(mockReporte);
-    expect(component.catalogoConceptos.length).toBe(2);
-    expect(component.catalogoSubcomisiones.length).toBe(2);
   });
 
-  it('renderiza las 5 tarjetas de KPI con formato tabular-nums', () => {
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const tabularElements = compiled.querySelectorAll('.tabular-nums');
-    expect(tabularElements.length).toBeGreaterThanOrEqual(5);
-
-    const textContent = compiled.textContent || '';
-    expect(textContent).toContain('4.5');
-    expect(textContent).toContain('6');
-    expect(textContent).toContain('80%');
-    expect(textContent).toContain('90%');
+  it('debe inicializar en la pestaña t01 y cargar sus métricas', () => {
+    expect(component.tabActiva).toBe('t01');
+    expect(mockReportesService.getMetricasT01).toHaveBeenCalled();
+    expect(component.metricasT01?.kpis.tiempo_vida_promedio_dias).toBe(3.8);
+    expect(component.metricasT01?.kpis.expedientes_generados).toBe(238);
   });
 
-  it('permite alternar entre las 3 pestañas estructuradas (role="tablist")', () => {
-    fixture.detectChanges();
-    expect(component.tabActiva).toBe('subcomisiones');
+  it('debe cambiar de pestaña y cargar los datos correspondientes', () => {
+    component.cambiarTab('reuniones');
+    expect(component.tabActiva).toBe('reuniones');
+    expect(mockReportesService.getMetricasReuniones).toHaveBeenCalled();
 
-    component.seleccionarTab('autoridades');
-    fixture.detectChanges();
-    expect(component.tabActiva).toBe('autoridades');
-    let compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('#tab-autoridades')).toBeTruthy();
-    expect(compiled.textContent).toContain('Perez, Juan');
+    component.cambiarTab('subcomision');
+    expect(component.tabActiva).toBe('subcomision');
+    expect(mockReportesService.getMetricasSubcomision).toHaveBeenCalled();
 
-    component.seleccionarTab('balance');
-    fixture.detectChanges();
-    expect(component.tabActiva).toBe('balance');
-    compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('#tab-balance')).toBeTruthy();
-    expect(compiled.textContent).toContain('Eficacia de Descargos y Garantías');
+    component.cambiarTab('historico');
+    expect(component.tabActiva).toBe('historico');
+    expect(mockReportesService.getHistoricoYRecords).toHaveBeenCalled();
   });
 
-  it('actualiza los filtros reactivamente al modificar valores', () => {
-    fixture.detectChanges();
-    apiServiceSpy.obtenerResumenReportes.calls.reset();
-
-    component.anioSeleccionado = 2025;
-    component.cuatrimestreSeleccionado = '1';
-    component.subcomisionSeleccionada = 1;
-    component.conceptoSeleccionado = 'GSA';
-    component.onFiltroChange();
-
-    expect(apiServiceSpy.obtenerResumenReportes).toHaveBeenCalledWith({
-      anio: 2025,
-      cuatrimestre: '1',
-      subcomision_id: 1,
-      concepto: 'GSA'
-    });
+  it('debe contener el Récord Histórico Absoluto de Diego Sánchez #11779 en 25 pts', () => {
+    component.cambiarTab('historico');
+    expect(component.historicoRecords?.record_absoluto.socio_numero).toBe(11779);
+    expect(component.historicoRecords?.record_absoluto.puntaje_maximo).toBe(25.0);
+    expect(component.historicoRecords?.record_absoluto.nombre_completo).toContain('Diego');
   });
 
-  it('admite rango personalizado de fechas al seleccionar cuatrimestre personalizado', () => {
-    fixture.detectChanges();
-    apiServiceSpy.obtenerResumenReportes.calls.reset();
-
-    component.cuatrimestreSeleccionado = 'personalizado';
-    component.fechaDesde = '2026-03-01';
-    component.fechaHasta = '2026-06-30';
-    component.onFiltroChange();
-
-    expect(apiServiceSpy.obtenerResumenReportes).toHaveBeenCalledWith({
-      anio: 2026,
-      fecha_desde: '2026-03-01',
-      fecha_hasta: '2026-06-30'
-    });
-  });
-
-  it('restablece los filtros a sus valores predeterminados y notifica', () => {
-    fixture.detectChanges();
-    component.anioSeleccionado = 2024;
-    component.cuatrimestreSeleccionado = '2';
-    component.conceptoSeleccionado = 'TD';
-
+  it('debe limpiar filtros y recargar datos al invocar limpiarFiltros', () => {
+    component.filtroSubcomisionId = 6;
     component.limpiarFiltros();
-
-    expect(component.anioSeleccionado).toBe(2026);
-    expect(component.cuatrimestreSeleccionado).toBe('anual');
-    expect(component.conceptoSeleccionado).toBe('');
-    expect(notificationServiceSpy.info).toHaveBeenCalledWith(
-      'Filtros restablecidos a valores por defecto.'
-    );
+    expect(component.filtroSubcomisionId).toBeNull();
   });
 
-  it('exporta el CSV de la sección indicada y muestra notificación de éxito', fakeAsync(() => {
-    const mockBlob = new Blob(['Subcomision,Total\nGSA,5'], { type: 'text/csv' });
-    apiServiceSpy.descargarReporteCsv.and.returnValue(of(mockBlob));
-    spyOn(window.URL, 'createObjectURL').and.returnValue('blob:mock-url');
-    spyOn(window.URL, 'revokeObjectURL');
-
-    component.exportarCSV('autoridades');
-    tick();
-
-    expect(apiServiceSpy.descargarReporteCsv).toHaveBeenCalledWith(
-      jasmine.any(Object),
-      'autoridades'
-    );
-    expect(notificationServiceSpy.success).toHaveBeenCalledWith(
-      'Reporte CSV de autoridades descargado exitosamente.'
-    );
-  }));
-
-  it('notifica error cuando la descarga CSV falla', fakeAsync(() => {
-    apiServiceSpy.descargarReporteCsv.and.returnValue(
-      throwError(() => new Error('Error de red'))
-    );
-
-    component.exportarCSV('subcomisiones');
-    tick();
-
-    expect(component.exportando).toBeFalse();
-    expect(notificationServiceSpy.error).toHaveBeenCalledWith(
-      'Error al generar la exportación en CSV.'
-    );
-  }));
-
-  it('maneja el error de carga inicial y permite reintentar', () => {
-    apiServiceSpy.obtenerResumenReportes.and.returnValue(
-      throwError(() => new Error('Error al conectar'))
-    );
-
-    component.cargarReporte();
-    fixture.detectChanges();
-
-    expect(component.cargando).toBeFalse();
-    expect(component.errorCarga).toBeTruthy();
-    expect(notificationServiceSpy.error).toHaveBeenCalled();
-
-    // Reintentar con éxito
-    apiServiceSpy.obtenerResumenReportes.and.returnValue(of(mockReporte));
-    component.cargarReporte();
-    fixture.detectChanges();
-
-    expect(component.errorCarga).toBeNull();
-    expect(component.reporte).toEqual(mockReporte);
-  });
-
-  it('muestra estado vacío si no hay datos que coincidan', () => {
-    const reporteSinDatos: ReporteResumenResponseDTO = {
-      ...mockReporte,
-      kpis_resumen: {
-        ...mockReporte.kpis_resumen,
-        total_expedientes: 0
-      },
-      pedidos_por_subcomision: [],
-      pedidos_por_autoridad: [],
-      balance_subcomisiones_y_categorias: []
-    };
-    apiServiceSpy.obtenerResumenReportes.and.returnValue(of(reporteSinDatos));
-
-    component.cargarReporte();
-    fixture.detectChanges();
-
-    expect(component.tieneDatos).toBeFalse();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.empty-card')).toBeTruthy();
-    expect(compiled.textContent).toContain('No se encontraron datos');
-  });
-
-  it('formatea el resumen de conceptos auxiliares correctamente', () => {
-    expect(component.obtenerResumenConceptos({ GSA: 3, TD: 1 })).toBe('GSA (3), TD (1)');
-    expect(component.obtenerResumenConceptos({})).toBe('—');
-  });
-
-  it('dispara la acción de impresión / PDF', () => {
+  it('debe invocar window.print al hacer clic en imprimir', () => {
     spyOn(window, 'print');
-    component.imprimirPDF();
+    component.imprimir();
     expect(window.print).toHaveBeenCalled();
+  });
+
+  it('debe exportar CSV sin arrojar excepciones', () => {
+    spyOn(document, 'createElement').and.callThrough();
+    expect(() => component.exportarCSV()).not.toThrow();
   });
 });
