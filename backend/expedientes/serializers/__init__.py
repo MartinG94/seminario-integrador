@@ -403,7 +403,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             return next((d for d in descargos if d.socio_id == socio.pk), None)
 
         role = getattr(socio, "role", "")
-        # Si es TD/CD/Admin o staff y no es imputado personal en la causa, puede consultar los descargos
+        # Si es TD/CD/Admin o staff y no es imputado personal en la causa,
+        # puede consultar los descargos
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
@@ -426,7 +427,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         ):
             if socio is None:
                 return False
-            vigente = next((d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk), None)
+            vigente = next(
+                (d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk),
+                None,
+            )
             if vigente:
                 return True
             return bool(obj.descargo_presentado and obj.socio_id == socio.pk)
