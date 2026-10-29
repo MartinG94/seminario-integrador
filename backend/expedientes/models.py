@@ -208,6 +208,8 @@ class ClasificacionExpedienteEnum(models.TextChoices):
     RC = "RC", "Revisores de Cuentas"
     GVP = "GVP", "Grupo de Viaje y Permanencia"
     GENERAL = "GENERAL", "General"
+
+
 class ExpedienteNumberSequence(models.Model):
     """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
 

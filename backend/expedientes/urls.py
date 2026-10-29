@@ -1,11 +1,3 @@
-from expedientes.views.reportes_views import (
-    ExpedienteClasificacionPatchView,
-    ReportesHistoricoRecordsView,
-    ReportesReunionesView,
-    ReportesSubcomisionesListView,
-    ReportesSubcomisionView,
-    ReportesT01View,
-)
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -42,6 +34,14 @@ from expedientes.views import (
     TransicionarExpedienteView,
     TransicionExpedienteView,
 )
+from expedientes.views.reportes_views import (
+    ExpedienteClasificacionPatchView,
+    ReportesHistoricoRecordsView,
+    ReportesReunionesView,
+    ReportesSubcomisionesListView,
+    ReportesSubcomisionView,
+    ReportesT01View,
+)
 
 app_name = "expedientes"
 
@@ -53,10 +53,22 @@ urlpatterns = [
     # Reportes e Indicadores Institucionales (SCRUM-63)
     path("reportes/t01/", ReportesT01View.as_view(), name="reportes-t01"),
     path("reportes/reuniones/", ReportesReunionesView.as_view(), name="reportes-reuniones"),
-    path("reportes/subcomisiones/", ReportesSubcomisionesListView.as_view(), name="reportes-subcomisiones"),
+    path(
+        "reportes/subcomisiones/",
+        ReportesSubcomisionesListView.as_view(),
+        name="reportes-subcomisiones",
+    ),
     path("reportes/subcomision/", ReportesSubcomisionView.as_view(), name="reportes-subcomision"),
-    path("reportes/historico-records/", ReportesHistoricoRecordsView.as_view(), name="reportes-historico-records"),
-    path("<int:pk>/clasificacion/", ExpedienteClasificacionPatchView.as_view(), name="expediente-clasificacion-patch"),
+    path(
+        "reportes/historico-records/",
+        ReportesHistoricoRecordsView.as_view(),
+        name="reportes-historico-records",
+    ),
+    path(
+        "<int:pk>/clasificacion/",
+        ExpedienteClasificacionPatchView.as_view(),
+        name="expediente-clasificacion-patch",
+    ),
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
