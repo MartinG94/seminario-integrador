@@ -13,4 +13,8 @@ python-dotenv>=1.0.0
 pytest>=7.4.0
 pytest-django>=4.7.0
 pytest-cov>=5.0.0
+pypdf>=5.0,<6.0
 ruff>=0.3.0
+
+# Generacion de PDF para previsualizacion de resoluciones (SCRUM-56)
+reportlab>=4.0,<5.0

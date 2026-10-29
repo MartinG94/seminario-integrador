@@ -1,6 +1,11 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from expedientes.resolution_views import (
+    ResolucionEmitirView,
+    ResolucionPreviewView,
+    ResolucionView,
+)
 from expedientes.views import (
     AdecuacionT01View,
     ApelacionT01View,
@@ -40,6 +45,17 @@ router.register(r"eventos", EventoInstitucionalViewSet, basename="evento")
 router.register(r"apercibimientos", RegistroApercibimientoViewSet, basename="apercibimiento")
 
 urlpatterns = [
+    path(
+        "<int:expediente_id>/resolucion/preview/",
+        ResolucionPreviewView.as_view(),
+        name="resolucion-preview",
+    ),
+    path("<int:expediente_id>/resolucion/", ResolucionView.as_view(), name="resolucion"),
+    path(
+        "<int:expediente_id>/resolucion/emitir/",
+        ResolucionEmitirView.as_view(),
+        name="resolucion-emitir",
+    ),
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
