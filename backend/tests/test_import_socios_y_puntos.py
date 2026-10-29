@@ -12,7 +12,7 @@ from ranking.services import get_reconciled_ranking_queryset
 from tests.legacy_schema import create_seed_support_tables
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 class TestImportSociosYPuntosCommand:
     """Verifica la correcta ingestión del padrón, expedientes y saldos."""
 
@@ -20,6 +20,26 @@ class TestImportSociosYPuntosCommand:
     def setup_legacy_tables(self) -> None:
         """Asegura la existencia de las tablas legadas en la BD de pruebas."""
         create_seed_support_tables(connection)
+        yield
+        # Teardown de aislamiento: limpiar registros insertados
+        # para no colisionar con suites posteriores en la base de pruebas
+        with connection.cursor() as cursor:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+            existing = set(connection.introspection.table_names())
+            for table in [
+                "socio_tiposubcomision",
+                "socio_especialidad",
+                "socio_estado",
+                "socio_lista",
+                "socio_estudio",
+                "socio_telefono",
+                "socio_medio",
+                "tribunal_expediente",
+                "tribunal_puntajegeneral",
+            ]:
+                if table in existing:
+                    cursor.execute(f"DELETE FROM `{table}`")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     def test_command_dry_run_executes_cleanly(self) -> None:
         out = StringIO()

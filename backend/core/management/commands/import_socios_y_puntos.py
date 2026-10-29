@@ -185,6 +185,36 @@ class Command(BaseCommand):
     def _ensure_catalogs(self) -> None:
         """Asegura que los catálogos en MySQL tengan los registros canónicos."""
         self.stdout.write(self.style.NOTICE("\n--- 1. Verificando catálogos base ---"))
+        # Tablas satélite de soporte si no existieran (ej. base de pruebas efímera)
+        # Se crean primero para no disparar commits implícitos en MySQL tras los inserts
+        with connection.cursor() as cursor:
+            tables = set(connection.introspection.table_names())
+            if "socio_telefono" not in tables:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS `socio_telefono` (
+                      `compositeKey` int(11) NOT NULL,
+                      `nroSocio` int(11) NOT NULL,
+                      `idTelefono` int(11) NOT NULL,
+                      `telefono` varchar(45) NOT NULL,
+                      `codTipoTelefono` int(11) NOT NULL,
+                      PRIMARY KEY (`compositeKey`)
+                    )
+                    """
+                )
+            if "socio_medio" not in tables:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS `socio_medio` (
+                      `compositeKey` int(11) NOT NULL,
+                      `nroSocio` int(11) NOT NULL,
+                      `codMedio` int(11) NOT NULL,
+                      `descripcion` varchar(45) NOT NULL,
+                      PRIMARY KEY (`compositeKey`)
+                    )
+                    """
+                )
+
         with connection.cursor() as cursor:
             # Subcomisiones legacy
             for cod, nombre in SUBCOMISIONES_CATALOG:
@@ -217,35 +247,6 @@ class Command(BaseCommand):
         for _, nombre in SUBCOMISIONES_CATALOG:
             if nombre != "Sin Subcomisión":
                 DjangoSubcomision.objects.get_or_create(name=nombre)
-
-        # Tablas satélite de soporte si no existieran (ej. base de pruebas efímera)
-        with connection.cursor() as cursor:
-            tables = set(connection.introspection.table_names())
-            if "socio_telefono" not in tables:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS `socio_telefono` (
-                      `compositeKey` int(11) NOT NULL,
-                      `nroSocio` int(11) NOT NULL,
-                      `idTelefono` int(11) NOT NULL,
-                      `telefono` varchar(45) NOT NULL,
-                      `codTipoTelefono` int(11) NOT NULL,
-                      PRIMARY KEY (`compositeKey`)
-                    )
-                    """
-                )
-            if "socio_medio" not in tables:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS `socio_medio` (
-                      `compositeKey` int(11) NOT NULL,
-                      `nroSocio` int(11) NOT NULL,
-                      `codMedio` int(11) NOT NULL,
-                      `descripcion` varchar(45) NOT NULL,
-                      PRIMARY KEY (`compositeKey`)
-                    )
-                    """
-                )
 
         self.stdout.write("✓ Catálogos verificados.")
 
