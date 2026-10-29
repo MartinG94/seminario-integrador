@@ -28,6 +28,8 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     reglamento_asociado: 'Reglamento Procesal 2026',
     reglamentos_respaldantes: ['Art. 21', 'Art. 24'],
     puntos: '-1.00',
+    concepto: null,
+    concepto_display: null,
     estado: 'revision_resolucion',
     estado_display: 'Justificaciones en revisión',
     urgencia: 'urgente',
@@ -174,12 +176,15 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
       'obtenerVisorExpediente',
       'descargarEvidencia',
       'registrarDecisionCausal',
+      'actualizarConceptoExpediente',
     ]);
     notificationServiceSpy = jasmine.createSpyObj('NotificationService', [
       'success',
       'error',
       'warning',
       'info',
+      'showSuccess',
+      'showError',
     ]);
     authServiceSpy = jasmine.createSpyObj('AuthService', ['tieneRol']);
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
@@ -272,7 +277,7 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     const evidencia = mockVisorData.involucrados[0].descargo!.evidencias[0];
     component.descargarEvidencia(evidencia);
 
-    expect(expedienteApiSpy.descargarEvidencia).toHaveBeenCalledWith(123, 'ev-1');
+    expect(expedienteApiSpy.descargarEvidencia).toHaveBeenCalledWith(123, 'ev-1', 'descarga');
     expect(notificationServiceSpy.info).toHaveBeenCalledWith(
       jasmine.stringMatching(/Descargando comprobante/)
     );
@@ -294,5 +299,80 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
   it('debe navegar de vuelta al tablero al hacer clic en volver', () => {
     component.volverAlTablero();
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/gestionar-expedientes']);
+  });
+
+  describe('Clasificación de concepto institucional TD (SCRUM-63)', () => {
+    it('debe mostrar la advertencia "Sin clasificar · Obligatorio antes de emitir" si concepto es null o vacío', () => {
+      component.visorData!.concepto = null;
+      component.visorData!.concepto_display = null;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Sin clasificar · Obligatorio antes de emitir');
+      const badgeWarning = el.querySelector('.badge-warning');
+      expect(badgeWarning).toBeTruthy();
+    });
+
+    it('debe mostrar el badge con el concepto clasificado cuando existe', () => {
+      component.visorData!.concepto = 'GSA';
+      component.visorData!.concepto_display = 'GSA — Gestión Social y Ambiental';
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).not.toContain('Sin clasificar · Obligatorio antes de emitir');
+      expect(el.textContent).toContain('GSA — Gestión Social y Ambiental');
+      const badgeInfo = el.querySelector('.badge-info');
+      expect(badgeInfo).toBeTruthy();
+    });
+
+    it('debe renderizar el selector de conceptos para usuarios con rol TD, CD o ADMIN', () => {
+      authServiceSpy.tieneRol.and.returnValue(true);
+      fixture.detectChanges();
+
+      const select = fixture.nativeElement.querySelector('#selector-concepto-expediente') as HTMLSelectElement;
+      expect(select).toBeTruthy();
+      expect(component.isTribunalOrAdmin).toBeTrue();
+      expect(component.catalogoConceptos.length).toBe(13);
+    });
+
+    it('no debe renderizar el selector de conceptos para roles sin privilegios (SOCIO, FISCALIZADORA)', () => {
+      authServiceSpy.tieneRol.and.returnValue(false);
+      fixture.detectChanges();
+
+      const select = fixture.nativeElement.querySelector('#selector-concepto-expediente');
+      expect(select).toBeFalsy();
+      expect(component.isTribunalOrAdmin).toBeFalse();
+    });
+
+    it('debe despachar actualizarConceptoExpediente al cambiar concepto y notificar éxito con NotificationService', () => {
+      expedienteApiSpy.actualizarConceptoExpediente.and.returnValue(
+        of({ concepto: 'GSA', concepto_display: 'GSA — Gestión Social y Ambiental' })
+      );
+
+      component.actualizarConcepto('GSA');
+
+      expect(expedienteApiSpy.actualizarConceptoExpediente).toHaveBeenCalledWith(123, 'GSA');
+      expect(component.visorData?.concepto).toBe('GSA');
+      expect(component.visorData?.concepto_display).toBe('GSA — Gestión Social y Ambiental');
+      expect(notificationServiceSpy.showSuccess).toHaveBeenCalledWith(
+        'Concepto institucional actualizado correctamente.',
+        'Tribunal de Disciplina'
+      );
+    });
+
+    it('debe notificar error centralizado con NotificationService si la API rechaza la actualización', () => {
+      expedienteApiSpy.actualizarConceptoExpediente.and.returnValue(
+        throwError(() => ({
+          error: { detail: 'No posee facultades para clasificar la causa.' },
+        }))
+      );
+
+      component.actualizarConcepto('OTROS');
+
+      expect(expedienteApiSpy.actualizarConceptoExpediente).toHaveBeenCalledWith(123, 'OTROS');
+      expect(notificationServiceSpy.showError).toHaveBeenCalledWith(
+        'No posee facultades para clasificar la causa.'
+      );
+    });
   });
 });

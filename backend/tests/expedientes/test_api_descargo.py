@@ -438,9 +438,10 @@ class TestDescargoEndpoint:
     def test_socio_cd_involucrado_sin_descargo_muestra_descargo_presentado_false(
         self, api_client: APIClient, socio_titular: Socio
     ) -> None:
-        """Un socio con rol CD involucrado en un expediente con otro socio que sí tiene descargo
-        debe ver descargo_presentado=False en mis-expedientes mientras no haya presentado el propio."""
+        """Un socio con rol CD en causa con otro socio con descargo
+        debe ver descargo_presentado=False en mis-expedientes sin presentar propio."""
         from django.contrib.auth.models import User
+
         from socios.models import Role
 
         user_cd = User.objects.create_user(username="cd_user", password="secret_password")

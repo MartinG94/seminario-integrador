@@ -44,14 +44,11 @@ export const AdminLayoutRoutes: Routes = [
       }
     },
     { path: 'calendario-institucional', component: CalendarioInstitucionalComponent },
-    { 
-      path: 'reportes',               
-      component: EnDesarrolloComponent,
-      data: {
-        titulo: 'Reportes & Balance',
-        descripcion: 'Emisión de balances cuatrimestrales, métricas de sanciones y reconocimientos por subcomisión.',
-        icono: 'bar_chart'
-      }
+    {
+      path: 'reportes',
+      component: ReportesComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
     },
     { path: 'ranking-socios',         component: RankingSociosComponent },
     {

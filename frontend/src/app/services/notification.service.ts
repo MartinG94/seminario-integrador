@@ -35,6 +35,8 @@ export class NotificationService implements OnDestroy {
   error(message: string): number { return this.show('error', message); }
   warning(message: string): number { return this.show('warning', message); }
   info(message: string): number { return this.show('info', message); }
+  showSuccess(message: string, _title?: string): number { return this.success(message); }
+  showError(message: string, _title?: string): number { return this.error(message); }
 
   show(type: NotificationType, message: string): number {
     const existing = this.messages.value.find(item => item.type === type && item.message === message);

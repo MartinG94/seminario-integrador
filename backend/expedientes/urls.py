@@ -25,12 +25,22 @@ from expedientes.views import (
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
+    ReportesExportCSVView,
+    ReportesResumenView,
     SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
     SolicitudT01EmitView,
     TransicionarExpedienteView,
     TransicionExpedienteView,
+)
+from expedientes.views.reportes_views import (
+    ExpedienteClasificacionPatchView,
+    ReportesHistoricoRecordsView,
+    ReportesReunionesView,
+    ReportesSubcomisionesListView,
+    ReportesSubcomisionView,
+    ReportesT01View,
 )
 
 app_name = "expedientes"
@@ -40,11 +50,36 @@ router.register(r"eventos", EventoInstitucionalViewSet, basename="evento")
 router.register(r"apercibimientos", RegistroApercibimientoViewSet, basename="apercibimiento")
 
 urlpatterns = [
+    # Reportes e Indicadores Institucionales (SCRUM-63)
+    path("reportes/t01/", ReportesT01View.as_view(), name="reportes-t01"),
+    path("reportes/reuniones/", ReportesReunionesView.as_view(), name="reportes-reuniones"),
+    path(
+        "reportes/subcomisiones/",
+        ReportesSubcomisionesListView.as_view(),
+        name="reportes-subcomisiones",
+    ),
+    path("reportes/subcomision/", ReportesSubcomisionView.as_view(), name="reportes-subcomision"),
+    path(
+        "reportes/historico-records/",
+        ReportesHistoricoRecordsView.as_view(),
+        name="reportes-historico-records",
+    ),
+    path(
+        "<int:pk>/clasificacion/",
+        ExpedienteClasificacionPatchView.as_view(),
+        name="expediente-clasificacion-patch",
+    ),
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
     ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
+    path("reportes/resumen/", ReportesResumenView.as_view(), name="reportes-resumen"),
+    path(
+        "reportes/exportar-csv/",
+        ReportesExportCSVView.as_view(),
+        name="reportes-exportar-csv",
+    ),
     path(
         "parametros/plazo-apelacion/",
         PlazoApelacionView.as_view(),

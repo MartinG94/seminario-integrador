@@ -174,6 +174,42 @@ class UrgenciaExpedienteEnum(models.TextChoices):
     URGENTE = "urgente", "Urgente"
 
 
+class ConceptoExpedienteEnum(models.TextChoices):
+    """Catálogo de conceptos institucionales para clasificación por el TD."""
+
+    CD = "CD", "CD — Comisión Directiva"
+    TD = "TD", "TD — Tribunal de Disciplina"
+    GSA = "GSA", "GSA — Gestión Social y Ambiental"
+    GVP = "GVP", "GVP — Grupo de Viaje / Gestión de Viaje"
+    COMP = "COMP", "COMP — Cómputos"
+    RRHH = "RRHH", "RRHH — Recursos Humanos"
+    RRII = "RRII", "RRII — Relaciones Institucionales"
+    PRENSA = "PRENSA", "PRENSA — Prensa y Difusión"
+    MANT = "MANT", "MANT — Mantenimiento"
+    EVENTOS = "EVENTOS", "EVENTOS — Organización y Eventos"
+    RIFAS = "RIFAS", "RIFAS — Rifas"
+    ASAMBLEA = "ASAMBLEA", "ASAMBLEA — Asamblea General"
+    OTROS = "OTROS", "OTROS — Otros Conceptos Institucionales"
+
+
+class ClasificacionExpedienteEnum(models.TextChoices):
+    """Clasificación o concepto del expediente asignado o validado por TD (SCRUM-63)."""
+
+    CD = "CD", "Comisión Directiva"
+    RRHH = "RRHH", "Recursos Humanos"
+    PRENSA = "PRENSA", "Prensa y Difusión"
+    OYE = "OYE", "Organización y Eventos"
+    GSA = "GSA", "Gestión Social y Ambiental"
+    RII = "RII", "Relaciones Institucionales"
+    COMPUTOS = "COMPUTOS", "Cómputos"
+    TD = "TD", "Tribunal de Disciplina"
+    CR = "CR", "Comisión Rifaria"
+    MANTENIMIENTO = "MANTENIMIENTO", "Mantenimiento"
+    RC = "RC", "Revisores de Cuentas"
+    GVP = "GVP", "Grupo de Viaje y Permanencia"
+    GENERAL = "GENERAL", "General"
+
+
 class ExpedienteNumberSequence(models.Model):
     """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
 
@@ -214,6 +250,12 @@ class Expediente(models.Model):
     """Expediente disciplinario o mérito institucional."""
 
     numero = models.CharField(max_length=50, unique=True, db_index=True)
+    titulo = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Título breve institucional del expediente.",
+    )
     socio = models.ForeignKey(
         "socios.Socio",
         on_delete=models.PROTECT,
@@ -233,12 +275,28 @@ class Expediente(models.Model):
         default=EstadoExpedienteEnum.CREADO,
         db_index=True,
     )
+    clasificacion = models.CharField(
+        max_length=50,
+        choices=ClasificacionExpedienteEnum.choices,
+        default=ClasificacionExpedienteEnum.GENERAL,
+        db_index=True,
+        help_text="Concepto o subcomisión clasificadora asignada por TD.",
+    )
     urgencia = models.CharField(
         max_length=20,
         choices=UrgenciaExpedienteEnum.choices,
         default=UrgenciaExpedienteEnum.NORMAL,
         db_index=True,
         help_text="Nivel de urgencia procesal (Baja, Normal, Urgente).",
+    )
+    concepto = models.CharField(
+        max_length=20,
+        choices=ConceptoExpedienteEnum.choices,
+        null=True,
+        blank=True,
+        default=None,
+        db_index=True,
+        help_text="Concepto institucional clasificado manualmente por el TD durante la revisión.",
     )
     # Plazos procesales perentorios (CA1 y CA2)
     calendario_version = models.ForeignKey(
@@ -644,6 +702,13 @@ class SolicitudT01(models.Model):
     destinatario_socio_id = models.PositiveBigIntegerField(null=True, blank=True)
     destinatarios_socios_ids = models.JSONField(default=list, blank=True)
     tipo_accion = models.CharField(max_length=10, choices=TipoAccion.choices)
+    clasificacion = models.CharField(
+        max_length=50,
+        choices=ClasificacionExpedienteEnum.choices,
+        default=ClasificacionExpedienteEnum.GENERAL,
+        db_index=True,
+        help_text="Concepto o subcomisión clasificadora asignada por TD.",
+    )
     urgencia = models.CharField(
         max_length=20,
         choices=UrgenciaExpedienteEnum.choices,

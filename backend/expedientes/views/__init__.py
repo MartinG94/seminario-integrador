@@ -95,6 +95,10 @@ from expedientes.views.evento_views import (
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.reportes_views import (
+    ReportesExportCSVView,
+    ReportesResumenView,
+)
 from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
@@ -946,13 +950,20 @@ class ExpedienteDetailView(APIView):
 
         if not IsTribunalOrDirectiva().has_permission(request, self):
             raise PermissionDenied(
-                "Solo integrantes del Tribunal o Comisión Directiva pueden actualizar la urgencia."
+                "Solo integrantes del Tribunal o Comisión Directiva "
+                "pueden actualizar la urgencia o concepto."
             )
 
         serializer = UpdateUrgenciaExpedienteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        expediente.urgencia = serializer.validated_data["urgencia"]
-        expediente.save(update_fields=["urgencia", "updated_at"])
+        update_fields = ["updated_at"]
+        if "urgencia" in serializer.validated_data:
+            expediente.urgencia = serializer.validated_data["urgencia"]
+            update_fields.append("urgencia")
+        if "concepto" in serializer.validated_data:
+            expediente.concepto = serializer.validated_data["concepto"]
+            update_fields.append("concepto")
+        expediente.save(update_fields=update_fields)
 
         return Response(
             ExpedienteListSerializer(expediente, context={"request": request}).data,
@@ -1236,9 +1247,14 @@ class CalcularPlazoView(APIView):
 
 
 __all__ = [
+    "ArticuloReglamentoDetailView",
+    "ArticuloReglamentoListCreateView",
     "EventoInstitucionalViewSet",
     "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
+    "ReglamentosVigentesView",
+    "ReportesExportCSVView",
+    "ReportesResumenView",
     "SocioApercibimientosView",
     "ExpedienteVisorView",
     "filter_expedientes_by_legajo",

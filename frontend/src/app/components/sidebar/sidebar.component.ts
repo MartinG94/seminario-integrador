@@ -25,7 +25,7 @@ export const ROUTES: RouteInfo[] = [
     { path: '/ranking-socios',         title: 'Ranking de Socios',     icon: 'military_tech',    class: '' },
     { path: '/gestionar-expedientes',  title: 'Gestionar Expedientes', icon: 'gavel',           class: '', roles: ['TD', 'ADMIN', 'CD'] },
     { path: '/calendario-institucional', title: 'Calendario Institucional', icon: 'calendar_month', class: '' },
-    { path: '/reportes',               title: 'Reportes & Balance',    icon: 'bar_chart',       class: '' },
+    { path: '/reportes',               title: 'Reportes & Balance',    icon: 'analytics',       class: '', roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] },
     { path: '/eventos-asistencia',     title: 'Eventos & Asistencia',  icon: 'event_available', class: '', roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] },
 ];
 
