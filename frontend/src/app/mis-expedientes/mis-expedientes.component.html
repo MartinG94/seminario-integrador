@@ -3,7 +3,7 @@
 
     <!-- Tarjetas de Estadísticas Personales -->
     <div class="row">
-      <div class="col-lg-6 col-md-6 col-sm-12">
+      <div class="col-lg-3 col-md-6 col-sm-12">
         <div class="card card-stats">
           <div class="card-header card-header-icon" [ngClass]="getHeaderClassPuntos(saldoNeto)">
             <div class="card-icon">
@@ -17,13 +17,37 @@
         </div>
       </div>
 
-      <div class="col-lg-6 col-md-6 col-sm-12">
+      <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="card card-stats">
+          <div class="card-header card-header-success card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">emoji_events</i>
+            </div>
+            <p class="card-category">Felicitaciones Vigentes</p>
+            <h3 class="card-title font-weight-bold text-success">{{felicitaciones}}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="card card-stats">
+          <div class="card-header card-header-warning card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">warning_amber</i>
+            </div>
+            <p class="card-category">Llamados de Atención</p>
+            <h3 class="card-title font-weight-bold text-warning">{{llamadosAtencion}}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-12">
         <div class="card card-stats">
           <div class="card-header card-header-info card-header-icon">
             <div class="card-icon">
               <i class="material-icons">folder_open</i>
             </div>
-            <p class="card-category">Expedientes en Trámite</p>
+            <p class="card-category">Total de Expedientes</p>
             <h3 class="card-title">{{misExpedientes.length}}</h3>
           </div>
         </div>
@@ -78,9 +102,23 @@
                     </td>
                     <td>{{exp.fechaCreacion | date:'dd/MM/yyyy'}}</td>
                     <td>
-                      <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
-                        {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
-                      </span>
+                      <ng-container *ngIf="exp.esFelicitacion; else checkLlamado">
+                        <span class="badge badge-success px-2 py-1 font-weight-bold" title="Felicitación (+0.33)">
+                          <i class="material-icons" style="font-size: 14px; vertical-align: middle;">emoji_events</i> Felicitación
+                        </span>
+                      </ng-container>
+                      <ng-template #checkLlamado>
+                        <ng-container *ngIf="exp.esLlamado; else standardPts">
+                          <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold" title="Llamado de atención (-0.33)">
+                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">warning</i> Llamado
+                          </span>
+                        </ng-container>
+                        <ng-template #standardPts>
+                          <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
+                            {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
+                          </span>
+                        </ng-template>
+                      </ng-template>
                     </td>
                     <td>
                       <span class="badge-mat" [ngClass]="getEstadoBadgeClass(exp.estado, exp)">
@@ -143,6 +181,10 @@
                 <td class="font-weight-bold text-dark">{{formatCaseNumber(expedienteDetalle?.numero)}}</td>
               </tr>
               <tr>
+                <th class="text-muted">Título:</th>
+                <td class="font-weight-bold text-dark">{{expedienteDetalle?.titulo || expedienteDetalle?.motivo}}</td>
+              </tr>
+              <tr>
                 <th class="text-muted">Razón:</th>
                 <td class="text-dark">{{expedienteDetalle?.razon || expedienteDetalle?.motivo}}</td>
               </tr>
@@ -157,9 +199,23 @@
               <tr>
                 <th class="text-muted">Puntos:</th>
                 <td>
-                  <span class="font-weight-bold" [ngClass]="(expedienteDetalle?.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
-                    {{(expedienteDetalle?.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle?.puntos}} pts
-                  </span>
+                  <ng-container *ngIf="expedienteDetalle?.esFelicitacion; else modalCheckLlamado">
+                    <span class="badge badge-success px-2 py-1 font-weight-bold">
+                      <i class="material-icons" style="font-size: 14px; vertical-align: middle;">emoji_events</i> Felicitación (+0.33)
+                    </span>
+                  </ng-container>
+                  <ng-template #modalCheckLlamado>
+                    <ng-container *ngIf="expedienteDetalle?.esLlamado; else modalStandardPts">
+                      <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold">
+                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">warning</i> Llamado (-0.33)
+                      </span>
+                    </ng-container>
+                    <ng-template #modalStandardPts>
+                      <span class="font-weight-bold" [ngClass]="(expedienteDetalle?.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
+                        {{(expedienteDetalle?.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle?.puntos}} pts
+                      </span>
+                    </ng-template>
+                  </ng-template>
                 </td>
               </tr>
               <tr>

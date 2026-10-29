@@ -250,6 +250,12 @@ class Expediente(models.Model):
     """Expediente disciplinario o mérito institucional."""
 
     numero = models.CharField(max_length=50, unique=True, db_index=True)
+    titulo = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Título breve institucional del expediente.",
+    )
     socio = models.ForeignKey(
         "socios.Socio",
         on_delete=models.PROTECT,

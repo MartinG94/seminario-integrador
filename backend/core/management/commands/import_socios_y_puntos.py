@@ -75,6 +75,58 @@ ESTADOS_SOCIO_CATALOG = [
     (5, "Baja", "Baja definitiva"),
 ]
 
+# Títulos concisos e institucionales para los 48 expedientes históricos de Diego Sánchez (11779)
+TITULOS_EXPEDIENTES_11779 = {
+    "308/2026": "Inasistencia a Limpieza de Sede (Periodo 31/08 - 04/10)",
+    "288/2026": "Inasistencia a Limpieza de Sede (Periodo 03/08 - 30/08)",
+    "142/2026": "Inasistencia a Limpieza de Sede (Periodo 06/04 - 31/05)",
+    "91/2026": "Inasistencia Justificada a Turno de Campaña de Socios",
+    "55/2026": "Inasistencia Justificada a Reunión de Grupo 58",
+    "17/2025": "Inasistencia Justificada a Asamblea Extraordinaria",
+    "448/2024": "Inasistencia Justificada a Reunión de Grupo 58",
+    "279/2026": "Reconocimiento por Gestión y Logística en Bienal BIMM 2026",
+    "269/2026": "Reconocimiento por Sponsors y Vinculación Institucional Comisión Rifaria",
+    "176/2026": "Sanción Disciplinaria por Desacuerdo en Primeras Olimpiadas AVEIT",
+    "174/2026": "Reconocimiento por Turnos de Cobertura en Torneo de Cartas Magic",
+    "173/2026": "Reconocimiento por Exposición y Representación Institucional en Bienal BIMM 2026",
+    "172/2026": "Reconocimiento por Logística Integral y Armado de Stand en Bienal BIMM 2026",
+    "126/2026": "Felicitación por Taller de Reparación de Juguetes GSA con Terra",
+    "77/2026": "Felicitación por Stand Institucional JOSEII y Gestión de Rifas",
+    "398/2025": "Reconocimiento por Voluntariado en Reforestación Pampa de Achala",
+    "353/2025": "Felicitación por Montaje y Preparación Previa TEDx AVEIT",
+    "335/2025": "Reconocimiento por Tutoría en Proyecto de Robótica Fundación Vaso",
+    "332/2025": "Reconocimiento por Montaje y Decoración en Fiesta de Halloween 2025",
+    "327/2025": "Reconocimiento por Colaboración y Buffet en Evento Adoptá en AVEIT 2025",
+    "317/2025": "Sanción por Difusión No Autorizada de Grabaciones Internas de Seguridad",
+    "287/2025": "Reconocimiento por Liderazgo de Bloque Sistemas en Maratón AVEIT 7ma Edición",
+    "259/2025": "Reconocimiento por Tarea de Cola de Maratón en 7ma Edición",
+    "255/2025": "Reconocimiento por Colaboración en Presupuestos y Compras Campaña de Socios",
+    "232/2025": "Felicitación por Organización de Capacitación en Robótica Santex",
+    "220/2025": "Reconocimiento por Limpieza y Recuperación Integral Post-Jornada",
+    "211/2025": "Reconocimiento por Colaboración en Festejo del Día del Niño GSA",
+    "142/2025": "Reconocimiento por Desempeño Sobresaliente como Secretario General",
+    "471/2024": "Reconocimiento por Gestión Presupuestaria y Difusión en Fiesta Retro Grupo 58",
+    "460/2024": "Reconocimiento por Voluntariado y Acreditaciones en TEDx AVEIT",
+    "457/2024": "Reconocimiento por Montaje y Atención en Evento Adoptá en AVEIT 2024",
+    "451/2024": "Reconocimiento por Participación en Proyecto Padrinos",
+    "446/2024": "Reconocimiento por Voluntariado en Reforestación Altas Cumbres",
+    "444/2024": "Reconocimiento por Coordinación de Bebidas y Limpieza en Fiesta de Halloween 2024",
+    "439/2024": "Reconocimiento por Jornada de Germinación en Invernadero Institucional",
+    "414/2024": "Reconocimiento por Desempeño y Proactividad como Prosecretario de CD",
+    "411/2024": "Llamado de Atención por Manejo Inadecuado de Sistemas y Asignación de Limpiezas",
+    "363/2024": "Sanción por Incumplimiento de Pautas de Difusión en Canales Oficiales",
+    "340/2024": "Reconocimiento por Turnos Voluntarios en Entrega de Boletas Gran Rifa",
+    "338/2024": "Reconocimiento por Contacto y Seguimiento a Preinscriptos de Campaña",
+    "337/2024": "Reconocimiento por Contacto y Gestión de Asignación de Boletas Socios Junior",
+    "289/2024": "Reconocimiento por Decoración y Desarmado en Fiesta de Cierre Falsa Boda",
+    "262/2024": "Reconocimiento por Limpieza de Múltiples Zonas en Sede Social",
+    "216/2024": "Reconocimiento por Jornada Voluntaria de Acondicionamiento Previo a Campaña",
+    "200/2024": "Reconocimiento por Asistencia y Compromiso en Reuniones de Bloque",
+    "196/2024": "Reconocimiento por Reparación y Soporte Técnico del Televisor en Aula 231",
+    "260/2023": "Reconocimiento por Liderazgo de Hackathon y Producción en Evento Institucional",
+    "187/2023": "Reconocimiento por Apoyo Operativo y Coordinación en Evento Institucional",
+}
+
 
 class Command(BaseCommand):
     help = "Importa socios.csv, Puntos.csv y ExpedientesEjemplo11779.csv."
@@ -587,12 +639,14 @@ class Command(BaseCommand):
         count = 0
         puntos_aplicados_total = Decimal("0.00")
         felicitaciones_count = 0
+        llamados_count = 0
 
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             reader = csv.reader(f)
             next(reader, None)
 
             with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM tribunal_puntajeaplicado WHERE socio_id = 11779")
                 for r in reader:
                     if not r or not any(r):
                         continue
@@ -610,11 +664,15 @@ class Command(BaseCommand):
                     num_int = int(parts[0]) if parts[0].isdigit() else 1
                     year_int = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 2026
                     num_canonico = f"EXP-{num_int:04d}/{year_int}"
+                    titulo = TITULOS_EXPEDIENTES_11779.get(
+                        nro_exp_raw, "Expediente Disciplinario / Mérito Institucional"
+                    )
 
                     exp, _ = Expediente.objects.update_or_create(
                         numero=num_canonico,
                         defaults={
                             "socio": diego_socio,
+                            "titulo": titulo,
                             "estado": EstadoExpedienteEnum.EMITIDO,
                             "puntos": pts,
                             "motivo": razon,
@@ -649,6 +707,8 @@ class Command(BaseCommand):
                     if estado_just != "Justificación aprobada":
                         if pts == Decimal("0.33"):
                             felicitaciones_count += 1
+                        elif pts == Decimal("-0.33"):
+                            llamados_count += 1
                         else:
                             cursor.execute(
                                 """
@@ -663,44 +723,58 @@ class Command(BaseCommand):
                     count += 1
 
                 # Consolidación regla 3:1 (4 felicitaciones -> +1.00 pt neto y 1 remanente)
-                pts_consolidados = Decimal(felicitaciones_count // 3)
+                fel_consolidadas = Decimal(felicitaciones_count // 3)
                 fel_remanentes = felicitaciones_count % 3
 
-                if pts_consolidados > 0:
+                if fel_consolidadas > 0:
                     cursor.execute(
                         """
                         INSERT INTO tribunal_puntajeaplicado
                         (puntajeAplicado, socio_id, expediente_id)
                         VALUES (%s, 11779, NULL)
                         """,
-                        [pts_consolidados],
+                        [fel_consolidadas],
                     )
-                    puntos_aplicados_total += pts_consolidados
+                    puntos_aplicados_total += fel_consolidadas
+
+                llam_consolidados = Decimal(llamados_count // 3)
+                llam_remanentes = llamados_count % 3
+
+                if llam_consolidados > 0:
+                    cursor.execute(
+                        """
+                        INSERT INTO tribunal_puntajeaplicado
+                        (puntajeAplicado, socio_id, expediente_id)
+                        VALUES (%s, 11779, NULL)
+                        """,
+                        [-llam_consolidados],
+                    )
+                    puntos_aplicados_total -= llam_consolidados
 
                 cursor.execute(
                     """
                     INSERT INTO tribunal_puntajegeneral
                     (socio_id, puntos, felicitaciones, llamadosAtencion)
-                    VALUES (11779, %s, %s, 0)
+                    VALUES (11779, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         puntos=VALUES(puntos),
                         felicitaciones=VALUES(felicitaciones),
-                        llamadosAtencion=0
+                        llamadosAtencion=VALUES(llamadosAtencion)
                     """,
-                    [puntos_aplicados_total, fel_remanentes],
+                    [puntos_aplicados_total, fel_remanentes, llam_remanentes],
                 )
 
                 AtencionFelicitacion.objects.update_or_create(
                     socio=diego_socio,
                     defaults={
                         "felicitaciones": fel_remanentes,
-                        "llamadosAtencion": 0,
+                        "llamadosAtencion": llam_remanentes,
                     },
                 )
 
         self.stdout.write(
             f"✓ 48 expedientes de Diego Sánchez importados ({puntos_aplicados_total} pts, "
-            f"{fel_remanentes} felicitación)."
+            f"{fel_remanentes} felicitación, {llam_remanentes} llamados)."
         )
 
     def _import_puntos_tribunal_and_generate_expedientes(
@@ -778,6 +852,9 @@ class Command(BaseCommand):
         total_expedientes = 0
         seq_by_year = {y: 500 for y in range(2020, 2027)}
 
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM tribunal_puntajeaplicado WHERE socio_id != 11779")
+
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             reader = csv.reader(f)
             next(reader, None)
@@ -842,30 +919,37 @@ class Command(BaseCommand):
                             seq_by_year[year] = seq_by_year.get(year, 500) + 1
                             seq_num = seq_by_year[year]
 
-                            exp = Expediente.objects.create(
+                            exp, _ = Expediente.objects.update_or_create(
                                 numero=f"EXP-{seq_num:04d}/{year}",
-                                socio=django_socio,
-                                estado=EstadoExpedienteEnum.EMITIDO,
-                                puntos=chunk,
-                                motivo=motivo,
-                                urgencia=UrgenciaExpedienteEnum.NORMAL,
-                                descargo_presentado=False,
+                                defaults={
+                                    "socio": django_socio,
+                                    "titulo": motivo[:255],
+                                    "estado": EstadoExpedienteEnum.EMITIDO,
+                                    "puntos": chunk,
+                                    "motivo": motivo,
+                                    "urgencia": UrgenciaExpedienteEnum.NORMAL,
+                                    "descargo_presentado": False,
+                                },
                             )
                             exp.socios.add(django_socio)
 
-                            CambioEstadoExpediente.objects.create(
-                                expediente=exp,
-                                estado_anterior=EstadoExpedienteEnum.CREADO,
-                                estado_nuevo=EstadoExpedienteEnum.EMITIDO,
-                                actor=actor_username,
-                                motivo=f"Reconocimiento: {motivo[:100]}",
-                            )
+                            if not exp.cambios_estado.exists():
+                                CambioEstadoExpediente.objects.create(
+                                    expediente=exp,
+                                    estado_anterior=EstadoExpedienteEnum.CREADO,
+                                    estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+                                    actor=actor_username,
+                                    motivo=f"Reconocimiento: {motivo[:100]}",
+                                )
 
                             cursor.execute(
                                 """
                                 INSERT INTO tribunal_expediente
                                 (idExpediente, nroExpediente, estadoExpediente_id, puntos_id)
                                 VALUES (%s, %s, 6, 2)
+                                ON DUPLICATE KEY UPDATE
+                                    nroExpediente=VALUES(nroExpediente),
+                                    estadoExpediente_id=6
                                 """,
                                 [exp.id, f"{seq_num}/{year}"[:9]],
                             )
@@ -905,30 +989,37 @@ class Command(BaseCommand):
                             seq_by_year[year] = seq_by_year.get(year, 500) + 1
                             seq_num = seq_by_year[year]
 
-                            exp = Expediente.objects.create(
+                            exp, _ = Expediente.objects.update_or_create(
                                 numero=f"EXP-{seq_num:04d}/{year}",
-                                socio=django_socio,
-                                estado=EstadoExpedienteEnum.EMITIDO,
-                                puntos=chunk,
-                                motivo=motivo,
-                                urgencia=UrgenciaExpedienteEnum.NORMAL,
-                                descargo_presentado=False,
+                                defaults={
+                                    "socio": django_socio,
+                                    "titulo": motivo[:255],
+                                    "estado": EstadoExpedienteEnum.EMITIDO,
+                                    "puntos": chunk,
+                                    "motivo": motivo,
+                                    "urgencia": UrgenciaExpedienteEnum.NORMAL,
+                                    "descargo_presentado": False,
+                                },
                             )
                             exp.socios.add(django_socio)
 
-                            CambioEstadoExpediente.objects.create(
-                                expediente=exp,
-                                estado_anterior=EstadoExpedienteEnum.CREADO,
-                                estado_nuevo=EstadoExpedienteEnum.EMITIDO,
-                                actor=actor_username,
-                                motivo=f"Sanción: {motivo[:100]}",
-                            )
+                            if not exp.cambios_estado.exists():
+                                CambioEstadoExpediente.objects.create(
+                                    expediente=exp,
+                                    estado_anterior=EstadoExpedienteEnum.CREADO,
+                                    estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+                                    actor=actor_username,
+                                    motivo=f"Sanción: {motivo[:100]}",
+                                )
 
                             cursor.execute(
                                 """
                                 INSERT INTO tribunal_expediente
                                 (idExpediente, nroExpediente, estadoExpediente_id, puntos_id)
                                 VALUES (%s, %s, 6, 3)
+                                ON DUPLICATE KEY UPDATE
+                                    nroExpediente=VALUES(nroExpediente),
+                                    estadoExpediente_id=6
                                 """,
                                 [exp.id, f"{seq_num}/{year}"[:9]],
                             )

@@ -222,6 +222,10 @@ def _serializar_socio_involucrado(
 
 
 def _obtener_titulo_expediente(obj: Expediente) -> str:
+    titulo_directo = getattr(obj, "titulo", None)
+    if titulo_directo and str(titulo_directo).strip():
+        return str(titulo_directo).strip()
+
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
         if solicitud and getattr(solicitud, "titulo", None) and solicitud.titulo.strip():
@@ -317,6 +321,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     evidencias = serializers.SerializerMethodField()
     descargos = serializers.SerializerMethodField()
     es_t01 = serializers.SerializerMethodField()
+    es_felicitacion = serializers.SerializerMethodField()
+    es_llamado = serializers.SerializerMethodField()
+    justificacion_aprobada = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -329,6 +336,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "reglamento_asociado",
             "reglamentos_respaldantes",
             "puntos",
+            "es_felicitacion",
+            "es_llamado",
+            "justificacion_aprobada",
             "estado",
             "urgencia",
             "urgencia_display",
@@ -357,6 +367,31 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "descargos",
             "es_t01",
         ]
+
+    def get_es_felicitacion(self, obj: Expediente) -> bool:
+        try:
+            return abs(float(obj.puntos) - 0.33) < 0.01
+        except (TypeError, ValueError):
+            return False
+
+    def get_es_llamado(self, obj: Expediente) -> bool:
+        try:
+            return abs(float(obj.puntos) - (-0.33)) < 0.01
+        except (TypeError, ValueError):
+            return False
+
+    def get_justificacion_aprobada(self, obj: Expediente) -> bool:
+        for d in obj.descargos.all():
+            for dec in d.decisiones_causal.all():
+                if dec.decision == DecisionCausalEnum.ACCEPTED:
+                    return True
+        if (
+            obj.descargo_presentado
+            and obj.estado == EstadoExpedienteEnum.EMITIDO
+            and obj.puntos < 0
+        ):
+            return True
+        return False
 
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"

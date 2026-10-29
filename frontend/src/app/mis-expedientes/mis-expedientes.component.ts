@@ -23,6 +23,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   misExpedientes: Expediente[] = [];
   socioActual = '';
   saldoNeto = 0;
+  felicitaciones = 0;
+  llamadosAtencion = 0;
 
   // Ordenamiento de tabla
   columnaOrden = 'numero';
@@ -152,6 +154,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       evidencias: raw.evidencias || []
     } : undefined;
 
+    const justificacionAprobada = Boolean(
+      raw.justificacion_aprobada ||
+      (raw.descargo_presentado && (raw.estado === 'emitido' || raw.descargo?.puntaje_ratificado === 0)) ||
+      (raw.descargos && raw.descargos.some((d: any) => d.puntaje_ratificado === 0))
+    );
+
     return {
       id: String(raw.id),
       numero: raw.numero,
@@ -169,6 +177,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       horasRestantes: raw.horas_restantes ?? 0,
       tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
       puntos: raw.puntos || 0,
+      esFelicitacion: !!raw.es_felicitacion || Math.abs(Number(raw.puntos) - 0.33) < 0.01,
+      esLlamado: !!raw.es_llamado || Math.abs(Number(raw.puntos) - (-0.33)) < 0.01,
+      justificacionAprobada: justificacionAprobada,
       plazoInicioAt: raw.plazo_inicio_at,
       plazoLimiteAt: raw.plazo_limite_at,
       esT01: !!raw.es_t01,
@@ -197,11 +208,37 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   /**
    * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
-   * Los expedientes en trámite (creado, justificando, espera_resolucion, etc.) no impactan el saldo.
+   * Aplica la exención de puntos para justificaciones aprobadas y la consolidación 3:1 de felicitaciones/llamados.
    */
   public actualizarSaldoNeto(): void {
     const emitidos = this.misExpedientes.filter(e => e.estado === 'emitido');
-    this.saldoNeto = emitidos.reduce((acc, exp) => acc + Number(exp.puntos || 0), 0);
+    let puntosOrdinarios = 0;
+    let felCount = 0;
+    let llamCount = 0;
+
+    for (const exp of emitidos) {
+      // Ignorar aquellos con justificación aprobada (descargo presentado con resolución o causal aprobada)
+      const esJustAprobada = Boolean(
+        exp.justificacionAprobada ||
+        (exp.descargoPresentado && (exp.tipo === 'falta' || Number(exp.puntos) < 0))
+      );
+      if (esJustAprobada) {
+        continue;
+      }
+
+      const pts = Number(exp.puntos || 0);
+      if (exp.esFelicitacion || Math.abs(pts - 0.33) < 0.01) {
+        felCount++;
+      } else if (exp.esLlamado || Math.abs(pts - (-0.33)) < 0.01) {
+        llamCount++;
+      } else {
+        puntosOrdinarios += pts;
+      }
+    }
+
+    this.saldoNeto = puntosOrdinarios + Math.floor(felCount / 3) - Math.floor(llamCount / 3);
+    this.felicitaciones = felCount % 3;
+    this.llamadosAtencion = llamCount % 3;
   }
 
   ngOnDestroy(): void {
