@@ -515,8 +515,9 @@ export class ExpedienteApiService {
     return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
   }
 
-  obtenerDetalleExpediente(expedienteId: number | string): Observable<ExpedienteDetalleDTO> {
-    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/`);
+  obtenerDetalleExpediente(expedienteId: number | string, origen?: string): Observable<ExpedienteDetalleDTO> {
+    const params = origen ? `?origen=${encodeURIComponent(origen)}` : '';
+    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/${params}`);
   }
 
   listarDecisionesCausal(expedienteId: number | string, descargoId: number): Observable<DecisionCausalDTO[]> {

@@ -1056,6 +1056,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return grupo.trim().replace(/^[Gg]/, '');
   }
 
+  esSocioActual(fila: InvolucradoJustificacion): boolean {
+    const perfil = this.auth.getPerfil();
+    if (!perfil) return false;
+    const legajoActual = perfil.legajo ? String(perfil.legajo).trim() : '';
+    const legajoFila = fila.legajo ? String(fila.legajo).trim() : '';
+    return !!(legajoActual && legajoFila && legajoActual === legajoFila);
+  }
+
+  irAMisExpedientesParaDescargo(): void {
+    this.cerrarModales();
+    this.router.navigate(['/mis-expedientes']);
+  }
+
   getEstadoDescargo(fila: InvolucradoJustificacion): 'Leído' | 'No Leído' | 'Sin descargo' {
     if (!fila.descargo) return 'Sin descargo';
     if (

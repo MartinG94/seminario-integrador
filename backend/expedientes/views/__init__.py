@@ -218,7 +218,9 @@ class MisExpedientesView(APIView):
             .select_related("socio", "socio__subcomision")
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
         )
-        serializer = ExpedienteListSerializer(queryset, many=True, context={"request": request})
+        serializer = ExpedienteListSerializer(
+            queryset, many=True, context={"request": request, "es_mis_expedientes": True}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -923,7 +925,10 @@ class ExpedienteDetailView(APIView):
             )
 
         self.check_object_permissions(request, expediente)
-        serializer = ExpedienteListSerializer(expediente, context={"request": request})
+        es_mis = request.query_params.get("origen") == "mis_expedientes"
+        serializer = ExpedienteListSerializer(
+            expediente, context={"request": request, "es_mis_expedientes": es_mis}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request, pk: int) -> Response:
