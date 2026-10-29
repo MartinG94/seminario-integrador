@@ -87,7 +87,21 @@
                         {{getEstadoLabel(exp.estado, exp)}}
                       </span>
                     </td>
-                    <td class="text-right">
+                    <td class="text-right text-nowrap">
+                      <button *ngIf="exp.estado === 'justificando' && !exp.descargo && !esPlazoVencido(exp)"
+                              mat-raised-button
+                              class="btn btn-primary btn-sm mr-2 btn-descargo-tabla"
+                              (click)="abrirModalDescargo(exp)"
+                              title="Presentar Descargo">
+                        <i class="material-icons" style="font-size: 16px; vertical-align: middle;">add_circle</i> Descargo
+                      </button>
+                      <button *ngIf="exp.estado === 'justificando' && exp.descargo && !esPlazoVencido(exp)"
+                              mat-raised-button
+                              class="btn btn-warning btn-sm mr-2 btn-editar-descargo-tabla"
+                              (click)="abrirModalEditarDescargo(exp)"
+                              title="Editar Descargo">
+                        <i class="material-icons" style="font-size: 16px; vertical-align: middle;">edit</i> Descargo
+                      </button>
                       <button mat-raised-button
                               class="btn btn-info btn-sm"
                               (click)="abrirModalDetalle(exp)"
@@ -344,13 +358,13 @@
           </ng-container>
 
           <ng-container *ngIf="!expedienteDetalle?.esT01 && expedienteDetalle?.estado === 'justificando'">
-            <!-- Si no tiene justificativo: botón Añadir -->
+            <!-- Si no tiene justificativo: botón Descargo -->
             <button *ngIf="!expedienteDetalle?.descargo && !esPlazoVencido(expedienteDetalle)" 
                     mat-raised-button 
                     color="primary" 
-                    class="btn btn-primary"
+                    class="btn btn-primary btn-descargo"
                     (click)="abrirModalDescargo(expedienteDetalle)">
-              <i class="material-icons" style="font-size: 16px;">add_circle</i> Añadir Justificativo
+              <i class="material-icons" style="font-size: 16px;">add_circle</i> Descargo
             </button>
 
             <!-- Si ya tiene justificativo: botones Editar y Eliminar -->

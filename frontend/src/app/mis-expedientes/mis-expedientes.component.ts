@@ -271,7 +271,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     } else {
       this.cargarHistorialDescargo(exp.id);
     }
-    this.expedienteApi.obtenerDetalleExpediente(exp.id).subscribe({
+    this.expedienteApi.obtenerDetalleExpediente(exp.id, 'mis_expedientes').subscribe({
       next: (detalle) => {
         if (this.modalDetalleAbierto && this.expedienteDetalle?.id === String(detalle.id)) {
           this.expedienteDetalle = this.mapearExpedienteApi(detalle);
@@ -912,7 +912,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const normalizado = (estado || '').toLowerCase().trim();
     if (normalizado === 'justificando' && exp) {
       if (this.esPlazoVencido(exp)) {
-        return 'Resolviendo';
+        return 'Justificando (Plazo vencido)';
       }
       const tiempo = this.getCompactCountdownLabel(exp);
       return tiempo ? `Justificando ${tiempo}` : 'Justificando';

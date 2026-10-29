@@ -469,6 +469,14 @@
                             (click)="verDescargo(fila)">
                       <i class="material-icons" aria-hidden="true" style="font-size: 14px;">visibility</i> Ver Descargo
                     </button>
+                    <button *ngIf="!fila.descargo && esSocioActual(fila) && expedienteSeleccionado?.estado === 'justificando'" 
+                            type="button" 
+                            class="btn btn-sm btn-primary btn-justificar-involucrado"
+                            [attr.aria-label]="'Presentar Descargo de ' + getNombreCompletoInvolucrado(fila)"
+                            (click)="irAMisExpedientesParaDescargo()"
+                            title="Ir a Mis Expedientes para presentar descargo">
+                      <i class="material-icons" aria-hidden="true" style="font-size: 14px;">add_circle</i> Descargo
+                    </button>
                   </td>
                 </tr>
                 <tr *ngIf="involucradosJustificacion.length === 0">
