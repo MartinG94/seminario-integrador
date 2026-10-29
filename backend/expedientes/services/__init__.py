@@ -13,7 +13,7 @@ from expedientes.services.meeting_compliance_service import MeetingComplianceSer
 from expedientes.services.meeting_notice_notification_service import (
     MeetingNoticeNotificationService,
 )
-from expedientes.services.reportes_service import ReportesMetricsService
+from expedientes.services.reportes_service import ReportesMetricsService, ReportesService
 from expedientes.services.warning_accumulation_service import WarningAccumulationService
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 
@@ -29,5 +29,6 @@ __all__ = [
     "MeetingComplianceService",
     "MeetingNoticeNotificationService",
     "ReportesMetricsService",
+    "ReportesService",
     "WarningAccumulationService",
 ]
