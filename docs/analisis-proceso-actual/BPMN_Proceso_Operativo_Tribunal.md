@@ -26,7 +26,7 @@
 | **Nombre del Proceso** | Gestión Integral del Régimen Disciplinario, Justificaciones y Premiaciones |
 | **Dueño del Proceso (Owner)** | Presidente del Tribunal de Disciplina |
 | **Tipo de Proceso** | Proceso de Soporte, Gobierno y Control Institucional (Core Disciplinario) |
-| **Objetivo** | Tramitar el ciclo completo de causas disciplinarias y de reconocimiento al mérito en sus cinco (5) estados consolidados (*Expediente Creado*, *En período de justificaciones*, *En revisión y resolución*, *Pendiente de firma y envío*, *Expedientes ya emitidos*), administrando los plazos preclusivos de 5 días hábiles, recepcionando justificaciones unificadas (con certificados o descargos extraordinarios), posibilitando la votación y firma colegiada de los jueces, computando de forma inmutable los saldos de puntos (+/-), disparando alertas preventivas (-7 pts) y críticas de cese (-10 pts), y generando los balances de auditoría interna. |
+| **Objetivo** | Tramitar el ciclo completo de causas disciplinarias y de reconocimiento al mérito en sus estados oficiales, administrando los plazos preclusivos de 5 días hábiles, recepcionando justificaciones unificadas (con certificados o descargos extraordinarios), posibilitando la redacción unificada de la resolución (`VISTO / CONSIDERANDO / SE RESUELVE`) con fijación directa del puntaje final por socio y firma colegiada digital de mínimo 3 integrantes habilitados (identificando Grupo Social `Gxx` y condición `Titular`/`Suplente`), computando de forma inmutable los saldos de puntos (+/-), disparando alertas preventivas (-7 pts) y críticas de cese (-10 pts), y generando los balances de auditoría interna. |
 | **Disparador (Trigger)** | Cierre administrativo de un evento institucional obligatorio con inasistencias detectadas o recepción de Formulario T01 formal con Hoja de Anexo por autoridad habilitada. |
 | **Límite Inicial** | Detección de falta/mérito o registro formal de solicitud de puntos. |
 | **Límite Final** | Publicación de la resolución firmada, impacto inalterable en el saldo de puntos y emisión de balances cuatrimestrales de auditoría. |
@@ -41,7 +41,7 @@
 | `Módulo de Eventos & Asistencia` | Acta de cierre con inasistencias registradas ("pasar el dedo"). | Disparar causas automáticas por faltas a eventos obligatorios. |
 | `Autoridades Habilitadas (CD/Subcomisiones/Equipos)` | Formulario T01 + Hoja Anexo circunstanciada. | Iniciar formalmente causas de sanción o reconocimiento al mérito. |
 | `Socio Imputado / Postulado` | Formulario Unificado de Justificación con certificado o descargo libre. | Ejercer el derecho reglamentario a defensa dentro del plazo preclusivo. |
-| `Tribunal de Disciplina` | Votos nominales fundados, considerandos y firmas colegiadas. | Deliberar y emitir sentencia obligatoria e irrecurrible. |
+| `Tribunal de Disciplina` | Texto estructurado (`VISTO / CONSIDERANDO / SE RESUELVE`), puntaje final por socio y firmas colegiadas con Grupo Social y titularidad. | Emitir resolución colegiada obligatoria e irrecurrible. |
 | `Servicio de Reloj del Sistema` | Temporizador de cinco (5) días hábiles (excluye fines de semana y feriados). | Controlar la preclusión temporal objetiva del período de descargo. |
 
 ---
@@ -50,7 +50,7 @@
 * **Recursos Humanos (Roles y Carriles)**:
   - `Socio`: Consulta causas personales y carga descargos en el formulario unificado.
   - `Autoridad Solicitante`: Carga solicitudes T01, administra eventos y realiza check-in digital.
-  - `Jueces del Tribunal de Disciplina (3)`: Revisan pruebas, deliberan, votan y firman colegiadamente.
+  - `Jueces del Tribunal de Disciplina (mín. 3 firmantes)`: Revisan pruebas, deliberan, redactan la resolución fijando el puntaje final por socio y firman colegiadamente consignando Grupo Social y titularidad.
 * **Recursos Tecnológicos**:
   - Plataforma Web Responsive Mobile SGD-AVEIT (Frontend HTML5/Tailwind con diseño Material Dashboard PRO).
   - Backend en Python con endpoints REST y control transaccional.
@@ -62,8 +62,7 @@
 ### 1.4. Formularios y Documentos Estructurados
 * **Formulario T01 con Hoja Anexo:** Solicitud de puntos (+/-) con fundamentación fáctica, fechas y testigos.
 * **Formulario Unificado de Justificaciones (T02/T03):** Interfaz unificada que conmuta entre *Justificación con Certificado* (motivos de salud, examen o laborales con comprobante obligatorio) y *Descargo Extraordinario* (exposición libre).
-* **Cédula de Votación Nominal:** Registro individual de votos de los tres jueces intervinientes.
-* **Resolución Oficial:** Documento formal estructurado en VISTOS, CONSIDERANDOS y RESOLUCIÓN con firmas digitales.
+* **Resolución Oficial Unificada:** Documento formal estructurado en `VISTO`, `CONSIDERANDO` y `SE RESUELVE` con fijación directa del puntaje final por socio y firmas digitales colegiadas (consignando Grupo Social `Gxx` y carácter `Titular`/`Suplente`).
 * **Balance Cuatrimestral de Disciplina:** Informe oficial consolidado con estadísticas y rankings.
 
 ---
@@ -73,9 +72,9 @@
 * **RN-02:** Bloqueo automático irreversible del botón de justificación al expirar el temporizador y pase a *En revisión y resolución*.
 * **RN-03:** Ciclo secuencial de 5 estados oficiales consolidados.
 * **RN-05:** Carga obligatoria de al menos un comprobante digital al seleccionar causal tipificada en el formulario unificado.
-* **RN-08:** Inhibición automática del juez del TD que tenga conflicto de interés y convocatoria del juez suplente.
-* **RN-09:** Aprobación de resoluciones por mayoría calificada (mínimo 2 de 3 votos).
-* **RN-11:** Firma colegiada tripartita requerida para la validez y publicación del fallo.
+* **RN-08:** Inhibición automática del miembro del TD que tenga conflicto de interés (solicitante o imputado) y convocatoria del suplente de su Grupo Social.
+* **RN-09:** Determinación directa del puntaje final por socio en el editor unificado de resolución (prescindiendo de pantalla intermedia de votación nominal paso a paso, conforme directiva del PO del `07/10/2026`).
+* **RN-11:** Firma colegiada de al menos tres (3) miembros habilitados (registrando Grupo Social `Gxx` y condición `Titular`/`Suplente`) requerida para la validez y publicación del fallo.
 * **RN-12:** Prohibición absoluta de alterar saldos mediante sentencias directas (`UPDATE`); solo movimientos por ledger inmutable.
 * **RN-13 y RN-14:** Disparo automático de Alerta Preventiva a los -7 puntos y Alerta Crítica Roja de Cese a los -10 puntos.
 
@@ -232,26 +231,20 @@
     },
     {
       "type": "userTask",
-      "id": "task_votar_nominal",
-      "label": "Registrar votación nominal fundada de los 3 jueces",
+      "id": "task_redactar_resolucion",
+      "label": "Redactar VISTO, CONSIDERANDO, SE RESUELVE y fijar puntaje final por socio",
       "lane": "Lane_Tribunal"
     },
     {
       "type": "businessRuleTask",
-      "id": "task_verificar_mayoria",
-      "label": "Verificar mayoría absoluta reglamentaria (>= 2/3)",
+      "id": "task_verificar_inhibiciones",
+      "label": "Verificar ausencia de conflicto de interés en firmantes (RN-08)",
       "lane": "Lane_Sistema"
-    },
-    {
-      "type": "userTask",
-      "id": "task_redactar_resolucion",
-      "label": "Redactar Vistos, Considerandos y Resolución final",
-      "lane": "Lane_Tribunal"
     },
     {
       "type": "serviceTask",
       "id": "task_estado_pendiente_firma",
-      "label": "Actualizar expediente a 'Pendiente de firma y envío'",
+      "label": "Habilitar recolección de firmas colegiadas (mín. 3 miembros con Grupo Social)",
       "lane": "Lane_Sistema"
     },
     {
@@ -397,11 +390,10 @@ flowchart TB
         %% CARRIL 3: TRIBUNAL DE DISCIPLINA
         subgraph Lane_Tribunal ["Lane: Miembros del Tribunal de Disciplina"]
             Task_ExamPruebas["Examinar Pruebas, Descargos y Antecedentes"]
-            Task_VotoNominal["Registrar Votación Nominal Fundada (3 Jueces)"]
-            Task_RedactarRes["Redactar Vistos, Considerandos y Resolución"]
-            Task_FirmaJ1["Firmar Digitalmente (Juez 1)"]
-            Task_FirmaJ2["Firmar Digitalmente (Juez 2)"]
-            Task_FirmaJ3["Firmar Digitalmente (Juez 3)"]
+            Task_RedactarRes["Redactar VISTO, CONSIDERANDO, SE RESUELVE y Fijar Puntaje por Socio"]
+            Task_FirmaJ1["Firmar Digitalmente con Grupo Social y Titularidad (Miembro 1)"]
+            Task_FirmaJ2["Firmar Digitalmente con Grupo Social y Titularidad (Miembro 2)"]
+            Task_FirmaJ3["Firmar Digitalmente con Grupo Social y Titularidad (Miembro 3)"]
         end
 
         %% CARRIL 4: SERVICIOS Y AUTOMATIZACIONES BACKEND
@@ -417,8 +409,8 @@ flowchart TB
             Task_Preclusion["Bloquear Formulario por Vencimiento de Plazo"]
             Gw_JoinDescargo{"(+) Convergencia Descargos"}
             Task_SetReviewResol["Actualizar Estado a 'En revisión y resolución'"]
-            Task_ValMayoria["Verificar Mayoría Calificada (>= 2/3)"]
-            Task_SetFirma["Actualizar Estado a 'Pendiente de firma y envío'"]
+            Task_ValInhibicion["Verificar Habilitación y Sin Conflicto de Interés"]
+            Task_SetFirma["Habilitar Recolección de Firmas Colegiadas (Mín. 3)"]
             Gw_ForkFirmas{"(+) Fork Firmas Colegiadas"}
             Gw_JoinFirmas{"(+) Join Firmas Completas"}
             Task_Ledger["Impactar Movimiento en Ledger Inmutable"]
@@ -448,8 +440,8 @@ flowchart TB
     Gw_DescargoChoice -- "Descargo Extraordinario" --> Task_DescargoLibre --> Task_SaveDescargo --> Gw_JoinDescargo
     Gw_DescargoChoice -- "Sin Respuesta en Término" --> Timer_5d --> Task_Preclusion --> Gw_JoinDescargo
 
-    Gw_JoinDescargo --> Task_SetReviewResol --> Task_ExamPruebas --> Task_VotoNominal --> Task_ValMayoria
-    Task_ValMayoria --> Task_RedactarRes --> Task_SetFirma --> Gw_ForkFirmas
+    Gw_JoinDescargo --> Task_SetReviewResol --> Task_ExamPruebas --> Task_RedactarRes --> Task_ValInhibicion
+    Task_ValInhibicion --> Task_SetFirma --> Gw_ForkFirmas
 
     Gw_ForkFirmas --> Task_FirmaJ1 --> Gw_JoinFirmas
     Gw_ForkFirmas --> Task_FirmaJ2 --> Gw_JoinFirmas
@@ -475,8 +467,8 @@ flowchart TB
     End_Red,End_Yellow,End_Ok class:endEvent;
     Timer_5d class:timerEvent;
     Gw_Origen,Gw_JoinOrigen,Gw_DescargoChoice,Gw_JoinDescargo,Gw_ForkFirmas,Gw_JoinFirmas,Gw_Threshold class:gateway;
-    Task_CierreEvento,Task_CargaT01,Task_JustifCert,Task_DescargoLibre,Task_ExamPruebas,Task_VotoNominal,Task_RedactarRes,Task_FirmaJ1,Task_FirmaJ2,Task_FirmaJ3 class:userTask;
-    Task_DetectAusentes,Task_ValFacultades,Task_CrearExp,Task_StartTimer,Task_SaveJustif,Task_SaveDescargo,Task_Preclusion,Task_SetReviewResol,Task_ValMayoria,Task_SetFirma,Task_Ledger,Task_SetEmitido,Task_Publicar,Task_EvalUmbral,Task_AlertRed,Task_AlertYellow class:serviceTask;
+    Task_CierreEvento,Task_CargaT01,Task_JustifCert,Task_DescargoLibre,Task_ExamPruebas,Task_RedactarRes,Task_FirmaJ1,Task_FirmaJ2,Task_FirmaJ3 class:userTask;
+    Task_DetectAusentes,Task_ValFacultades,Task_CrearExp,Task_StartTimer,Task_SaveJustif,Task_SaveDescargo,Task_Preclusion,Task_SetReviewResol,Task_ValInhibicion,Task_SetFirma,Task_Ledger,Task_SetEmitido,Task_Publicar,Task_EvalUmbral,Task_AlertRed,Task_AlertYellow class:serviceTask;
 ```
 
 ---
