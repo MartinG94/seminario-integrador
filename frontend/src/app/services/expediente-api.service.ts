@@ -179,6 +179,43 @@ export interface RegistrarDecisionCausalPayload {
   evidencia_ids?: string[];
 }
 
+/** Expediente emitido citado en una valoración T03: solo su id y su número. */
+export interface AntecedenteCitadoDTO {
+  expediente_id: number;
+  numero: string;
+}
+
+export interface ValoracionT03DTO {
+  id: number;
+  descargo: number;
+  version: number;
+  resultado: DecisionCausal;
+  resultado_display: string;
+  fundamento: string;
+  antecedentes: AntecedenteCitadoDTO[];
+  autor: string;
+  autor_legajo: string;
+  autor_rol: string;
+  autor_condicion: string;
+  autor_condicion_display: string;
+  created_at: string;
+}
+
+export interface RegistrarValoracionT03Payload {
+  resultado: DecisionCausal;
+  fundamento: string;
+  antecedente_ids: number[];
+}
+
+/** Ficha mínima de un antecedente emitido (S4-03, RF-16). */
+export interface AntecedenteT03DTO {
+  id: number;
+  numero: string;
+  fecha_emision: string;
+  motivo: string;
+  reglamento_invocado: string;
+}
+
 export interface DescargoDetalleDTO {
   id: number;
   socio_id: number;
@@ -193,6 +230,7 @@ export interface DescargoDetalleDTO {
   evidencias: EvidenciaMetadata[];
   regla_sugerida?: DecisionCausal;
   decisiones_causal?: DecisionCausalDTO[];
+  valoraciones_t03?: ValoracionT03DTO[];
 }
 
 export interface SocioInvolucradoDetalleDTO {
@@ -349,6 +387,28 @@ export class ExpedienteApiService {
 
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
+  }
+
+  listarValoracionesT03(expedienteId: number | string, descargoId: number): Observable<ValoracionT03DTO[]> {
+    return this.http.get<ValoracionT03DTO[]>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/valoraciones-t03/`
+    );
+  }
+
+  registrarValoracionT03(
+    expedienteId: number | string,
+    descargoId: number,
+    payload: RegistrarValoracionT03Payload
+  ): Observable<ValoracionT03DTO> {
+    return this.http.post<ValoracionT03DTO>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/valoraciones-t03/`,
+      payload
+    );
+  }
+
+  buscarAntecedente(numero: string): Observable<AntecedenteT03DTO> {
+    const params = new HttpParams().set('numero', numero.trim());
+    return this.http.get<AntecedenteT03DTO>(`${this.apiUrl}/antecedentes/`, { params });
   }
 }
 

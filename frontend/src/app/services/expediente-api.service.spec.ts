@@ -2,7 +2,12 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../environments/environment';
-import { DescargoVersionDto, ExpedienteApiService } from './expediente-api.service';
+import {
+  AntecedenteT03DTO,
+  DescargoVersionDto,
+  ExpedienteApiService,
+  ValoracionT03DTO
+} from './expediente-api.service';
 
 describe('ExpedienteApiService', () => {
   let service: ExpedienteApiService;
@@ -154,5 +159,55 @@ describe('ExpedienteApiService', () => {
     req.flush([{ id: 1, numero: 1, operacion: 'PRESENTADO' }]);
     expect(versiones.length).toBe(1);
     expect(versiones[0].numero).toBe(1);
+  });
+
+  describe('valoración T03 (S4-03)', () => {
+    it('registra la valoración de un T03 con su fundamento y antecedentes', () => {
+      let valoracion: ValoracionT03DTO | undefined;
+      service.registrarValoracionT03(12, 5, {
+        resultado: 'ACCEPTED',
+        fundamento: 'El Tribunal considera acreditada la causa extraordinaria.',
+        antecedente_ids: [7]
+      }).subscribe(v => (valoracion = v));
+
+      const req = http.expectOne(`${environment.apiUrl}/expedientes/12/descargos/5/valoraciones-t03/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        resultado: 'ACCEPTED',
+        fundamento: 'El Tribunal considera acreditada la causa extraordinaria.',
+        antecedente_ids: [7]
+      });
+      req.flush({ id: 3, descargo: 5, version: 1, resultado: 'ACCEPTED', antecedentes: [{ expediente_id: 7, numero: 'EXP-0007/2026' }] });
+      expect(valoracion?.version).toBe(1);
+      expect(valoracion?.antecedentes[0].numero).toBe('EXP-0007/2026');
+    });
+
+    it('lista el historial de valoraciones de un T03', () => {
+      let versiones: number[] = [];
+      service.listarValoracionesT03(12, 5).subscribe(v => (versiones = v.map(item => item.version)));
+
+      const req = http.expectOne(`${environment.apiUrl}/expedientes/12/descargos/5/valoraciones-t03/`);
+      expect(req.request.method).toBe('GET');
+      req.flush([{ version: 2 }, { version: 1 }]);
+      expect(versiones).toEqual([2, 1]);
+    });
+
+    it('busca un antecedente emitido enviando el número tal como lo escribe el miembro', () => {
+      let ficha: AntecedenteT03DTO | undefined;
+      service.buscarAntecedente(' 7/2026 ').subscribe(a => (ficha = a));
+
+      const req = http.expectOne(r => r.url === `${environment.apiUrl}/expedientes/antecedentes/`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('numero')).toBe('7/2026');
+      req.flush({
+        id: 7,
+        numero: 'EXP-0007/2026',
+        fecha_emision: '2026-09-15T12:00:00Z',
+        motivo: 'Inasistencia a la reunión plenaria',
+        reglamento_invocado: 'Art. 86 del Reglamento Interno'
+      });
+      expect(ficha?.id).toBe(7);
+      expect(ficha?.reglamento_invocado).toBe('Art. 86 del Reglamento Interno');
+    });
   });
 });
