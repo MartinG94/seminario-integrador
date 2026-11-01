@@ -7,6 +7,8 @@ import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.c
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
 import { ValoracionT03PanelComponent } from '../../gestionar-expedientes/valoracion-t03-panel/valoracion-t03-panel.component';
+import { VisorExpedienteComponent } from '../../gestionar-expedientes/visor-expediente/visor-expediente.component';
+
 import { ReportesComponent } from '../../reportes/reportes.component';
 import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.component';
 import { SolicitarPuntosComponent } from '../../solicitar-puntos/solicitar-puntos.component';
@@ -83,6 +85,7 @@ import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dial
     NotificationsComponent,
     UpgradeComponent,
     EnDesarrolloComponent,
+    VisorExpedienteComponent,
   ]
 })
 

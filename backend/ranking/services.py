@@ -66,6 +66,10 @@ def calculate_reconciliation(
     return sh, sc, diff, reconciled
 
 
+JUNIOR_SIN_SUBCOMISION_ANOS = (1, 2)
+SIN_SUBCOMISION = "Sin Subcomisión"
+
+
 def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
     """
     Retorna un QuerySet de Socio con todas las anotaciones necesarias para el ranking
@@ -131,9 +135,9 @@ def get_reconciled_ranking_queryset() -> QuerySet[Socio]:
             Value(2147483647),
             output_field=IntegerField(),
         ),
-        subcomision_nombre_calc=Coalesce(
-            "_subcomision_nombre",
-            Value("Sin Subcomisión"),
+        subcomision_nombre_calc=Case(
+            When(anoSocial__in=JUNIOR_SIN_SUBCOMISION_ANOS, then=Value(SIN_SUBCOMISION)),
+            default=Coalesce("_subcomision_nombre", Value(SIN_SUBCOMISION)),
             output_field=CharField(),
         ),
     )
@@ -170,22 +174,26 @@ def filter_ranking_queryset(
                 "99",
             ):
                 qs = qs.filter(
-                    Q(subcomision__isnull=True)
-                    | Q(_subcomision_nombre__iexact="Sin Subcomisión")
+                    Q(anoSocial__in=JUNIOR_SIN_SUBCOMISION_ANOS)
+                    | Q(subcomision__isnull=True)
+                    | Q(_subcomision_nombre__iexact=SIN_SUBCOMISION)
                     | Q(subcomision_id=99)
                 )
             elif sub_str.isdigit():
                 if int(sub_str) == 99:
                     qs = qs.filter(
-                        Q(subcomision__isnull=True)
-                        | Q(_subcomision_nombre__iexact="Sin Subcomisión")
+                        Q(anoSocial__in=JUNIOR_SIN_SUBCOMISION_ANOS)
+                        | Q(subcomision__isnull=True)
+                        | Q(_subcomision_nombre__iexact=SIN_SUBCOMISION)
                         | Q(subcomision_id=99)
                     )
                 else:
-                    qs = qs.filter(subcomision_id=int(sub_str))
+                    qs = qs.exclude(anoSocial__in=JUNIOR_SIN_SUBCOMISION_ANOS).filter(
+                        subcomision_id=int(sub_str)
+                    )
             else:
                 sub_pattern = f"^{make_accent_insensitive_regex(sub_str)}$"
-                qs = qs.filter(
+                qs = qs.exclude(anoSocial__in=JUNIOR_SIN_SUBCOMISION_ANOS).filter(
                     Q(_subcomision_nombre__iexact=sub_str)
                     | Q(_subcomision_nombre__iregex=sub_pattern)
                 )

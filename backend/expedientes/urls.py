@@ -2,7 +2,9 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from expedientes.views import (
+    AdecuacionT01View,
     AntecedenteT03View,
+    ApelacionT01View,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
@@ -15,8 +17,12 @@ from expedientes.views import (
     EvidenciaUploadView,
     ExpedienteCollectionView,
     ExpedienteDetailView,
+    ExpedientesPorSocioView,
+    ExpedienteVisorView,
+    HistorialT01View,
     MisExpedientesView,
     MisSolicitudesT01View,
+    PlazoApelacionView,
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
@@ -41,8 +47,17 @@ urlpatterns = [
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
     ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
+    path(
+        "parametros/plazo-apelacion/",
+        PlazoApelacionView.as_view(),
+        name="parametro-plazo-apelacion",
+    ),
+    path("<int:pk>/apelacion/", ApelacionT01View.as_view(), name="t01-apelacion"),
+    path("<int:pk>/adecuaciones/", AdecuacionT01View.as_view(), name="t01-adecuaciones"),
+    path("<int:pk>/t01/historial/", HistorialT01View.as_view(), name="t01-historial"),
     path("", SolicitudT01CreateView.as_view(), name="solicitud-create"),
     path("gestion/", ExpedienteCollectionView.as_view(), name="expedientes"),
+    path("por-socio/", ExpedientesPorSocioView.as_view(), name="expedientes-por-socio"),
     path("mis-expedientes/", MisExpedientesView.as_view(), name="mis-expedientes"),
     path("mis-solicitudes/", MisSolicitudesT01View.as_view(), name="mis-solicitudes"),
     path("antecedentes/", AntecedenteT03View.as_view(), name="antecedente-t03"),
@@ -79,6 +94,7 @@ urlpatterns = [
         CaseNotificationAuditView.as_view(),
         name="expediente-notificaciones",
     ),
+    path("<int:pk>/visor/", ExpedienteVisorView.as_view(), name="expediente-visor"),
     path("<int:pk>/", ExpedienteDetailView.as_view(), name="expediente-detail"),
     path("<uuid:pk>/", SolicitudT01DetailView.as_view(), name="solicitud-detail"),
     path("<uuid:pk>/emitir/", SolicitudT01EmitView.as_view(), name="solicitud-emit"),

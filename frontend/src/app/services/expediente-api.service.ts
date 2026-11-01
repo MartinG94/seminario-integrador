@@ -82,6 +82,7 @@ export interface SolicitudT01 {
 export interface ExpedienteRankingDetalle {
   id: number;
   numero: string;
+  titulo?: string;
   motivo: string;
   puntos: number | string;
   estado: string;
@@ -177,6 +178,7 @@ export interface RegistrarDecisionCausalPayload {
   decision: DecisionCausal;
   fundamento?: string;
   evidencia_ids?: string[];
+  puntaje_final?: number | string | null;
 }
 
 /** Expediente emitido citado en una valoración T03: solo su id y su número. */
@@ -231,6 +233,8 @@ export interface DescargoDetalleDTO {
   regla_sugerida?: DecisionCausal;
   decisiones_causal?: DecisionCausalDTO[];
   valoraciones_t03?: ValoracionT03DTO[];
+  leido?: boolean;
+  puntaje_ratificado?: number | string | null;
 }
 
 export interface SocioInvolucradoDetalleDTO {
@@ -243,12 +247,191 @@ export interface SocioInvolucradoDetalleDTO {
   estado?: string;
 }
 
+
+export interface ResponsableTdDTO {
+  titulo: string;
+  legajo: string;
+  nombre: string;
+  grupo: string;
+  es_suplente?: boolean;
+  display: string;
+}
+
+export interface EvidenciaVisorDTO {
+  id: string;
+  nombre_original: string;
+  extension: string;
+  mime_type: string;
+  tamanio_bytes: number;
+  sha256_hash: string;
+  sha256_valido: boolean;
+  archivo_danado: boolean;
+  es_vigente: boolean;
+  created_at: string;
+}
+
+export interface DescargoVisorDTO {
+  id: number;
+  socio_id: number;
+  socio_legajo: string;
+  socio_nombre: string;
+  tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
+  tipo_display: string;
+  causal: string;
+  texto: string;
+  archivo: string;
+  presentado_at: string | null;
+  contiene_datos_medicos?: boolean;
+  datos_medicos_restringidos?: boolean;
+  evidencias: EvidenciaVisorDTO[];
+  regla_sugerida?: DecisionCausal;
+  decisiones_causal?: DecisionCausalDTO[];
+}
+
+export interface InvolucradoVisorDTO {
+  id: number;
+  legajo: string;
+  nombre: string;
+  first_name?: string;
+  last_name?: string;
+  grupo?: string;
+  estado?: string;
+  tiene_descargo: boolean;
+  estado_descargo: 'PRESENTADO' | 'PLAZO_VENCIDO_SIN_DESCARGO' | 'PENDIENTE' | 'NO_INICIADO';
+  estado_descargo_display: string;
+  descargo?: DescargoVisorDTO | null;
+}
+
+export interface TimelineHitoDTO {
+  id: string | number;
+  fecha_hora: string;
+  tipo: string;
+  tipo_display: string;
+  titulo: string;
+  descripcion: string;
+  actor: string;
+  icono?: string;
+  color?: string;
+  es_secundario?: boolean;
+}
+
+export interface ExpedienteVisorData {
+  id: number;
+  numero: string;
+  anio: number;
+  titulo: string;
+  motivo: string;
+  razon: string;
+  causal: string;
+  reglamento_asociado: string;
+  reglamentos_respaldantes: string[];
+  puntos: number | string;
+  estado: string;
+  estado_display: string;
+  urgencia: NivelUrgencia;
+  urgencia_display: string;
+  fecha_solicitud: string;
+  created_at: string;
+  solicitante: {
+    legajo: string;
+    nombre: string;
+    grupo?: string;
+    display: string;
+  };
+  anexo: {
+    anexo_fecha: string | null;
+    anexo_lugar: string;
+    anexo_relato: string;
+    anexo_testigos: string;
+  };
+  plazo_inicio_at: string | null;
+  plazo_limite_at: string | null;
+  esta_en_plazo: boolean;
+  horas_restantes: number;
+  responsables_td: ResponsableTdDTO[];
+  involucrados: InvolucradoVisorDTO[];
+  timeline: TimelineHitoDTO[];
+  puede_resolver_causal?: boolean;
+  puede_dictar_resolucion?: boolean;
+}
+
 export interface ExpedienteDetalleDTO {
   id: number;
   numero: string;
   estado: string;
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
+  reglamentos_respaldantes?: string[];
+}
+
+// --- Apelación y adecuación del T01 (PB-02, Spec 008) ---
+
+export interface SocioT01DTO {
+  id: number;
+  legajo: string;
+  nombre: string;
+}
+
+export interface PeriodoApelacionDTO {
+  socio_id: number;
+  socio: string;
+  origen: 'APERTURA' | 'ADECUACION';
+  dias_habiles: number;
+  inicio_at: string;
+  limite_at: string;
+  abierto: boolean;
+}
+
+export interface ApelacionT01DTO {
+  socio_id: number;
+  socio: string;
+  numero: number;
+  texto: string;
+  created_at: string;
+}
+
+export interface AdecuacionT01DTO {
+  version: number;
+  puntos_anteriores: string;
+  puntos_nuevos: string;
+  socios_anteriores: SocioT01DTO[];
+  socios_nuevos: SocioT01DTO[];
+  motivos: string;
+  reabre_plazo: boolean;
+  socios_con_nuevo_plazo: number[];
+  autor_legajo: string;
+  created_at: string;
+}
+
+export interface HistorialT01DTO {
+  es_t01: boolean;
+  estado: string;
+  plazo_dias_vigente: number;
+  puntos_vigentes: string;
+  involucrados: SocioT01DTO[];
+  original: {
+    numero_t01: string;
+    tipo_accion: 'SANCTION' | 'MERIT';
+    emitido_at: string | null;
+    solicitante: string;
+    snapshot: { puntos?: string; titulo?: string } | null;
+  } | null;
+  periodos: PeriodoApelacionDTO[];
+  apelaciones: ApelacionT01DTO[];
+  adecuaciones: AdecuacionT01DTO[];
+}
+
+export interface AdecuarT01Payload {
+  puntos: number;
+  socios: number[];
+  motivos: string;
+  reabrir_plazo: boolean;
+}
+
+export interface PlazoApelacionDTO {
+  dias_habiles: number;
+  actualizado_at: string | null;
+  actualizado_por: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -283,6 +466,11 @@ export class ExpedienteApiService {
       `${this.apiUrl}/gestion/`,
       { params }
     );
+  }
+
+  listarPorSocio(legajo: string): Observable<ExpedienteRankingDetalle[]> {
+    const params = new HttpParams().set('legajo', legajo);
+    return this.http.get<ExpedienteRankingDetalle[]>(`${this.apiUrl}/por-socio/`, { params });
   }
 
   listarMisSolicitudes(params?: { search?: string; estado?: string }): Observable<SolicitudMonitoreo[]> {
@@ -346,8 +534,9 @@ export class ExpedienteApiService {
     return this.http.post<EvidenciaMetadata[]>(`${this.apiUrl}/${expedienteId}/evidencia/`, formData);
   }
 
-  descargarEvidencia(expedienteId: number | string, evidenciaId: string): Observable<Blob> {
+  descargarEvidencia(expedienteId: number | string, evidenciaId: string, accion: 'descarga' | 'ver' = 'descarga'): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${expedienteId}/evidencia/${evidenciaId}/`, {
+      params: { accion },
       responseType: 'blob'
     });
   }
@@ -364,8 +553,9 @@ export class ExpedienteApiService {
     return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
   }
 
-  obtenerDetalleExpediente(expedienteId: number | string): Observable<ExpedienteDetalleDTO> {
-    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/`);
+  obtenerDetalleExpediente(expedienteId: number | string, origen?: string): Observable<ExpedienteDetalleDTO> {
+    const params = origen ? `?origen=${encodeURIComponent(origen)}` : '';
+    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/${params}`);
   }
 
   listarDecisionesCausal(expedienteId: number | string, descargoId: number): Observable<DecisionCausalDTO[]> {
@@ -410,5 +600,30 @@ export class ExpedienteApiService {
     const params = new HttpParams().set('numero', numero.trim());
     return this.http.get<AntecedenteT03DTO>(`${this.apiUrl}/antecedentes/`, { params });
   }
-}
 
+  obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
+    return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);
+  }
+
+  apelarT01(expedienteId: number | string, texto: string): Observable<HistorialT01DTO> {
+    return this.http.post<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/apelacion/`, { texto });
+  }
+
+  adecuarT01(expedienteId: number | string, payload: AdecuarT01Payload): Observable<HistorialT01DTO> {
+    return this.http.post<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/adecuaciones/`, payload);
+  }
+
+  obtenerPlazoApelacion(): Observable<PlazoApelacionDTO> {
+    return this.http.get<PlazoApelacionDTO>(`${this.apiUrl}/parametros/plazo-apelacion/`);
+  }
+
+  actualizarPlazoApelacion(diasHabiles: number): Observable<PlazoApelacionDTO> {
+    return this.http.put<PlazoApelacionDTO>(`${this.apiUrl}/parametros/plazo-apelacion/`, {
+      dias_habiles: diasHabiles
+    });
+  }
+
+  obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {
+    return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
+  }
+}

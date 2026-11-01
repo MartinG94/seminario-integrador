@@ -222,3 +222,36 @@
     .btn { white-space: normal; }
   }
 }
+
+// Plazo de apelación del T01 (PB-02)
+.appeal-deadline {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border-main);
+  border-radius: 8px;
+}
+
+.appeal-deadline-title {
+  margin: 0 0 8px;
+  color: var(--color-primary);
+  font-family: var(--font-subtitle);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.appeal-deadline-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.appeal-deadline-input {
+  width: 96px;
+}
+
+.appeal-deadline-help {
+  margin: 8px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}

@@ -1,13 +1,18 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
-import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
+import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
 import {
@@ -15,8 +20,10 @@ import {
   DecisionCausalDTO,
   DescargoDetalleDTO,
   ExpedienteApiService,
+  HistorialT01DTO,
   ValoracionT03DTO
 } from '../services/expediente-api.service';
+import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
 import { ValoracionT03PanelComponent } from './valoracion-t03-panel/valoracion-t03-panel.component';
 
 describe('GestionarExpedientesComponent', () => {
@@ -39,14 +46,18 @@ describe('GestionarExpedientesComponent', () => {
   };
 
   beforeEach(async () => {
-    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'warning', 'info']);
     await TestBed.configureTestingModule({
       imports: [
         CommonModule,
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
-        MatButtonModule
+        MatButtonModule,
+        MatAutocompleteModule,
+        MatFormFieldModule,
+        MatInputModule,
+        NoopAnimationsModule
       ],
       declarations: [GestionarExpedientesComponent, ValoracionT03PanelComponent],
       providers: [
@@ -125,6 +136,35 @@ describe('GestionarExpedientesComponent', () => {
       fecha_desde: '2026-01-01',
       fecha_hasta: '2026-03-31'
     });
+  });
+
+  it('getIconoOrden debe retornar swap_vert para columnas no ordenadas y arrow_upward/arrow_downward segun ordenAscendente', () => {
+    component.columnaOrden = 'numero';
+    component.ordenAscendente = true;
+
+    expect(component.getIconoOrden('numero')).toBe('arrow_upward');
+    expect(component.getIconoOrden('titulo')).toBe('swap_vert');
+
+    component.cambiarOrden('numero');
+    expect(component.ordenAscendente).toBeFalse();
+    expect(component.getIconoOrden('numero')).toBe('arrow_downward');
+
+    component.cambiarOrden('titulo');
+    expect(component.columnaOrden).toBe('titulo');
+    expect(component.ordenAscendente).toBeTrue();
+    expect(component.getIconoOrden('titulo')).toBe('arrow_upward');
+    expect(component.getIconoOrden('numero')).toBe('swap_vert');
+  });
+
+  it('debe renderizar el encabezado estilo mis expedientes con Exp. y sortable-th en vista tabla', () => {
+    component.vistaActual = 'tabla';
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const expTh = compiled.querySelector('thead th.sortable-th');
+    expect(expTh).toBeTruthy();
+    expect(expTh?.textContent).toContain('Exp.');
+    expect(compiled.querySelector('.card-header-tabs-teal .card-title')?.textContent).toContain('Detalle de Expedientes');
   });
 
   it('transicionarEstado debe invocar transicionarExpediente del servicio (CA3 y CA4)', () => {
@@ -248,7 +288,7 @@ describe('GestionarExpedientesComponent', () => {
         expect(cards.length).toBe(1);
         const card = cards[0];
         expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-          '007/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+          '7/2026 Urgente -1 pts Inasistencia a reunión institucional 07/10/2026 group 1'
         );
         expect(card.querySelector('button, .card-subcomm, .timer-badge')).toBeNull();
       }
@@ -271,7 +311,7 @@ describe('GestionarExpedientesComponent', () => {
       renderCase({ numero: '018/2026', puntos: -0.5, urgencia: undefined });
       const card: HTMLElement = fixture.nativeElement.querySelector('.kanban-card-mat');
       expect(card.innerText.replace(/\s+/g, ' ').trim()).toBe(
-        '018/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
+        '18/2026 Normal -0.5 pts Inasistencia a reunión institucional 07/10/2026 group 1'
       );
     });
 
@@ -498,14 +538,14 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.esEvaluable(sinDescargo)).toBeFalse();
     });
 
-    it('no carga justificaciones antes de la etapa de revisión', () => {
+    it('carga justificaciones e involucrados al abrir el detalle', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
-      spyOn(api, 'obtenerDetalleExpediente');
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of(detalle('justificando')));
 
       component.abrirDetalle({ ...expRevision, estado: 'justificando' } as Expediente);
 
-      expect(api.obtenerDetalleExpediente).not.toHaveBeenCalled();
-      expect(component.involucradosJustificacion).toEqual([]);
+      expect(api.obtenerDetalleExpediente).toHaveBeenCalledWith('12');
+      expect(component.involucradosJustificacion.length).toBe(3);
     });
 
     it('permite a la Comisión Directiva consultar después de emitida la resolución, sin registrar', () => {
@@ -627,43 +667,37 @@ describe('GestionarExpedientesComponent', () => {
       expect(notifications.error).toHaveBeenCalledWith('No se pudo abrir el comprobante.');
     });
 
-    it('muestra la tabla de involucrados con la acción de cada justificación presentada', () => {
+    it('muestra la tabla de involucrados con el botón Ver Descargo para quienes tienen descargo', () => {
       abrirComo('TD');
       fixture.detectChanges();
 
-      const tabla: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-involucrados-justificacion"]');
+      const tabla: HTMLElement = fixture.nativeElement.querySelector('.tabla-involucrados');
       expect(tabla).toBeTruthy();
       expect(tabla.textContent).toContain('Pérez');
-      const botones = tabla.querySelectorAll('.btn-evaluar-justificacion');
+      const botones = tabla.querySelectorAll('.btn-ver-descargo');
       expect(botones.length).toBe(2);
-      expect(botones[1].textContent).toContain('Valorar T03');
-      expect(botones[0].textContent).toContain('Evaluar justificación');
-      expect(botones[0].querySelector('.material-icons')?.textContent).toContain('gavel');
+      expect(botones[0].textContent).toContain('Ver Descargo');
     });
 
-    it('renderiza el panel de evaluación accesible del involucrado', () => {
+    it('abre el modal de descargo al hacer clic en Ver Descargo y permite volver al detalle', () => {
+      const router = TestBed.inject(Router);
+      spyOn(router, 'navigate');
       abrirComo('TD');
       fixture.detectChanges();
-      (fixture.nativeElement.querySelector('.btn-evaluar-justificacion') as HTMLButtonElement).click();
-      component.borradorCausal.decision = 'REJECTED';
-      component.borradorCausal.fundamento = 'Hola';
-      fixture.detectChanges();
 
-      const panel: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-evaluar-justificacion"]');
-      expect(panel).toBeTruthy();
-      expect(panel.textContent).toContain('76001');
-      expect(panel.textContent).toContain('Enfermedad certificada');
-      expect(panel.textContent).toContain('Adjunto certificado.');
-      expect(panel.querySelector('.btn-ver-comprobante')?.textContent).toContain('VER COMPROBANTE');
-      expect(panel.querySelector('.btn-aprobar-causal')?.textContent).toContain('APROBAR');
-      expect(panel.querySelector('.btn-desaprobar-causal')?.textContent).toContain('DESAPROBAR');
-      expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
+      const btnVerDescargo = fixture.nativeElement.querySelector('.btn-ver-descargo') as HTMLButtonElement;
+      expect(btnVerDescargo).toBeTruthy();
+      btnVerDescargo.click();
 
-      const textarea = panel.querySelector('textarea') as HTMLTextAreaElement;
-      expect(textarea.getAttribute('aria-required')).toBe('true');
-      const ayuda = panel.querySelector('#' + textarea.getAttribute('aria-describedby')!.split(' ')[0]);
-      expect(ayuda?.textContent).toContain('mínimo 20 caracteres');
-      expect(panel.querySelector('.contador-fundamento')?.textContent).toContain('4 / 5000');
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.involucradoSeleccionado).toBeTruthy();
+      expect(component.involucradoSeleccionado?.socioId).toBe(3);
+
+      component.volverADetalleDesdeDescargo();
+      expect(component.modalDescargoAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
     });
 
     describe('Valoración T03 en la sala (S4-03)', () => {
@@ -705,7 +739,7 @@ describe('GestionarExpedientesComponent', () => {
 
       function valorarT03(valoraciones: ValoracionT03DTO[] = []) {
         const fila = abrirConT03(valoraciones);
-        component.seleccionarInvolucrado(fila);
+        component.verDescargo(fila);
         return fila;
       }
 
@@ -734,40 +768,91 @@ describe('GestionarExpedientesComponent', () => {
         expect(component.esEvaluable(fila)).toBeFalse();
       });
 
-      it('ofrece la acción de valorar el T03 y conserva la de evaluar el T02', () => {
+      it('ofrece la acción de valorar el T03 y conserva Ver Descargo en el T02', () => {
         abrirConT03();
         fixture.detectChanges();
 
-        const acciones = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.btn-evaluar-justificacion'));
+        const acciones = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.btn-ver-descargo'));
         expect(acciones.map(accion => accion.textContent)).toEqual([
-          jasmine.stringContaining('Evaluar justificación'),
+          jasmine.stringContaining('Ver Descargo'),
           jasmine.stringContaining('Valorar T03')
         ]);
       });
 
-      it('muestra el panel de valoración sólo para el T03', () => {
+      it('sólo ofrece ver el descargo a quien no puede valorar', () => {
+        const fila = abrirConT03([], 'CD', 'emitido');
+
+        expect(component.accionDescargo(fila)).toBe('Ver Descargo');
+      });
+
+      it('muestra el estado de la valoración en la fila del T03', () => {
+        abrirConT03();
+        fixture.detectChanges();
+
+        const estados = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.estado-justificacion'));
+        expect(estados.map(estado => estado.textContent)).toEqual(['Pendiente de valoración']);
+      });
+
+      it('muestra el panel de valoración en lugar del puntaje, que no aplica al T03', () => {
         valorarT03();
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeTruthy();
-        expect(fixture.nativeElement.querySelector('.btn-aprobar-causal')).toBeNull();
-        expect(fixture.nativeElement.textContent).not.toContain('Sugerencia del sistema');
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.btn-guardar-volver')).toBeNull();
       });
 
       it('no muestra el panel de valoración para el T02', () => {
-        evaluarT02();
+        abrirConT03();
+        component.verDescargo(filaT02());
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
-        expect(fixture.nativeElement.querySelector('.btn-aprobar-causal')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
+      });
+
+      it('no muestra el panel a la autoridad imputada, sin historial reservado', () => {
+        const fila = abrirConT03();
+        delete fila.descargo?.valoraciones_t03;
+        component.verDescargo(fila);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeNull();
       });
 
       it('muestra el historial en sólo lectura a la Comisión Directiva', () => {
-        component.seleccionarInvolucrado(abrirConT03([valoracion()], 'CD', 'emitido'));
+        component.verDescargo(abrirConT03([valoracion()], 'CD', 'emitido'));
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('.historial-t03')).toBeTruthy();
         expect(fixture.nativeElement.querySelector('.btn-registrar-valoracion')).toBeNull();
+      });
+
+      it('no da por leído un T03 sin valorar', () => {
+        expect(component.getEstadoDescargo(abrirConT03())).toBe('No Leído');
+      });
+
+      it('da por leído un T03 valorado', () => {
+        expect(component.getEstadoDescargo(abrirConT03([valoracion()]))).toBe('Leído');
+      });
+
+      it('no permite generar la resolución con un T03 sin valorar', () => {
+        const base = abrirConT03();
+        filaT02().descargo!.leido = true;
+
+        expect(component.getEstadoDescargo(base)).toBe('No Leído');
+        expect(component.puedeGenerarResolucion).toBeFalse();
+      });
+
+      it('permite generar la resolución cuando se valoró el T03', () => {
+        spyOn(api, 'registrarValoracionT03').and.returnValue(of(valoracion()));
+        valorarT03();
+        filaT02().descargo!.leido = true;
+
+        component.registrarValoracionT03(payload);
+
+        expect(component.puedeGenerarResolucion).toBeTrue();
       });
 
       it('agrega el antecedente encontrado', () => {
@@ -853,7 +938,7 @@ describe('GestionarExpedientesComponent', () => {
           valorarT03();
           component.buscarAntecedenteT03('7/2026');
 
-          component.seleccionarInvolucrado(filaT02());
+          component.verDescargo(filaT02());
           respuesta.next(antecedente);
 
           expect(component.antecedentesT03).toEqual([]);
@@ -863,7 +948,7 @@ describe('GestionarExpedientesComponent', () => {
           valorarT03();
           component.buscarAntecedenteT03('7/2026');
 
-          component.volverAListadoInvolucrados();
+          component.volverADetalleDesdeDescargo();
           respuesta.next(antecedente);
 
           expect(component.antecedentesT03).toEqual([]);
@@ -894,7 +979,7 @@ describe('GestionarExpedientesComponent', () => {
           valorarT03();
           component.buscarAntecedenteT03('999/2026');
 
-          component.volverAListadoInvolucrados();
+          component.volverADetalleDesdeDescargo();
           respuesta.error({ status: 404, error: { detail: 'No existe.' } });
 
           expect(notifications.error).not.toHaveBeenCalled();
@@ -952,7 +1037,7 @@ describe('GestionarExpedientesComponent', () => {
           valorarT03();
           component.buscarAntecedenteT03('7/2026');
 
-          component.volverAListadoInvolucrados();
+          component.volverADetalleDesdeDescargo();
 
           expect(component.buscandoAntecedente).toBeFalse();
         });
@@ -963,7 +1048,7 @@ describe('GestionarExpedientesComponent', () => {
           const fila = valorarT03();
           component.registrarValoracionT03(payload);
 
-          component.seleccionarInvolucrado(filaT02());
+          component.verDescargo(filaT02());
           component.antecedentesT03 = [antecedente];
           respuesta.next(valoracion());
 
@@ -989,7 +1074,7 @@ describe('GestionarExpedientesComponent', () => {
         valorarT03();
         component.antecedentesT03 = [antecedente];
 
-        component.volverAListadoInvolucrados();
+        component.volverADetalleDesdeDescargo();
 
         expect(component.antecedentesT03).toEqual([]);
       });
@@ -1002,18 +1087,147 @@ describe('GestionarExpedientesComponent', () => {
         expect(buscador.placeholder).toContain('motivo');
       });
     });
+  });
 
-    it('muestra el panel en sólo lectura a la Comisión Directiva', () => {
-      abrirComo('CD', 'emitido');
-      component.seleccionarInvolucrado(filaT02());
+  describe('Evaluación de Descargo y Fijación de Puntaje Final (Modal 6 - SCRUM-51)', () => {
+    let api: ExpedienteApiService;
+    let filaPrueba: InvolucradoJustificacion;
+    const expBase: Expediente = {
+      id: '888',
+      numero: 'EXP-0888/2026',
+      socio: 'Diego Gabriel Sánchez',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia a reunión obligatoria',
+      puntos: -3,
+      estado: 'revision_resolucion',
+      urgencia: 'normal',
+      fechaCreacion: '2026-03-10'
+    } as any;
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      filaPrueba = {
+        socioId: 10,
+        legajo: '74907',
+        nombre: 'Diego Gabriel',
+        apellido: 'Sánchez',
+        grupo: '59',
+        descargo: {
+          id: 5,
+          tipo: 'T02_CERTIFICADO',
+          leido: false,
+          texto: 'Presento certificado médico...',
+          evidencias: [{ id: 'ev-1', nombre_original: 'certificado.pdf' }]
+        } as any
+      };
+      component.expedienteSeleccionado = { ...expBase, id: '888', numero: 'EXP-0888/2026', puntos: -3 };
+      component.involucradosJustificacion = [filaPrueba];
+    });
+
+    it('genera el encabezado correcto con id de expediente, legajo y nombre completo', () => {
+      component.involucradoSeleccionado = filaPrueba;
+      const encabezado = component.getEncabezadoModalDescargo();
+      expect(encabezado).toBe('Descargo exp 888 y 74907, Diego Gabriel Sánchez');
+    });
+
+    it('inicializa puntajeFinalInput con los puntos del expediente al abrir el descargo', () => {
+      component.verDescargo(filaPrueba);
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.involucradoSeleccionado).toBe(filaPrueba);
+      expect(component.puntajeFinalInput).toBe(-3);
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+    });
+
+    it('valida la regla de fundamentación: obligatoria cuando puntaje_final < puntos_pedido', () => {
+      component.verDescargo(filaPrueba);
+      // Pedido es -3 (sanción).
+      // Si puntajeFinalInput = -5 (agrava la sanción, < -3) -> obligatorio
+      component.puntajeFinalInput = -5;
+      expect(component.esFundamentoObligatorio()).toBeTrue();
+
+      // Si puntajeFinalInput = -1 o 0 (reduce o anula la sanción, >= -3) -> opcional
+      component.puntajeFinalInput = 0;
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+
+      component.puntajeFinalInput = -3;
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+    });
+
+    it('no permite guardar si el fundamento es obligatorio y tiene menos de 10 caracteres', () => {
+      component.verDescargo(filaPrueba);
+      component.puntajeFinalInput = -5; // Menor que -3
+      component.fundamentoPuntajeInput = 'corto';
+
+      spyOn(api, 'registrarDecisionCausal');
+      component.guardarYVolverDescargo();
+
+      expect(api.registrarDecisionCausal).not.toHaveBeenCalled();
+      expect(notifications.warning).toHaveBeenCalled();
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+    });
+
+    it('al presionar Guardar y Volver con datos válidos persiste, marca como Leído y regresa al detalle', () => {
+      component.verDescargo(filaPrueba);
+      component.puntajeFinalInput = 0; // A favor del socio, no exige fundamento
+      spyOn(api, 'registrarDecisionCausal').and.returnValue(of({ id: 99, version: 1 } as any));
+
+      component.guardarYVolverDescargo();
+
+      expect(api.registrarDecisionCausal).toHaveBeenCalledWith('888', 5, jasmine.objectContaining({
+        puntaje_final: 0
+      }));
+      expect(filaPrueba.descargo!.leido).toBeTrue();
+      expect(filaPrueba.descargo!.puntaje_ratificado).toBe(0);
+      expect(component.modalDescargoAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(notifications.success).toHaveBeenCalledWith('Evaluación del descargo guardada con éxito.');
+    });
+
+    it('al presionar Volver regresa al detalle sin marcar como Leído', () => {
+      component.verDescargo(filaPrueba);
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+
+      component.volverADetalleDesdeDescargo();
+
+      expect(component.modalDescargoAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+      expect(filaPrueba.descargo!.leido).toBeFalse();
+    });
+
+    it('renderiza botones Guardar y Volver y Volver en el footer de Modal 6 cuando está en revisión', () => {
+      component.expedienteSeleccionado = expBase; // estado: 'revision_resolucion'
+      component.verDescargo(filaPrueba);
       fixture.detectChanges();
 
-      const panel: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="titulo-evaluar-justificacion"]');
-      expect(panel.querySelector('.btn-ver-comprobante')).toBeTruthy();
-      expect(panel.querySelector('.btn-aprobar-causal')).toBeNull();
-      expect(panel.querySelector('textarea')).toBeNull();
+      const modalDescargo = fixture.nativeElement.querySelector('.modal-descargo-backdrop');
+      expect(modalDescargo).toBeTruthy();
+
+      const btnGuardar = modalDescargo.querySelector('.btn-guardar-volver');
+      const btnVolver = modalDescargo.querySelector('.btn-volver');
+
+      expect(btnGuardar).toBeTruthy();
+      expect(btnVolver).toBeTruthy();
+      expect(btnGuardar.textContent).toContain('Guardar y Volver');
+      expect(btnVolver.textContent).toContain('Volver');
+    });
+
+    it('oculta el botón Guardar y Volver cuando no está en revisión', () => {
+      component.expedienteSeleccionado = { ...expBase, estado: 'justificando' } as any;
+      component.verDescargo(filaPrueba);
+      fixture.detectChanges();
+
+      const modalDescargo = fixture.nativeElement.querySelector('.modal-descargo-backdrop');
+      expect(modalDescargo).toBeTruthy();
+
+      const btnGuardar = modalDescargo.querySelector('.btn-guardar-volver');
+      const btnVolver = modalDescargo.querySelector('.btn-volver');
+
+      expect(btnGuardar).toBeNull();
+      expect(btnVolver).toBeTruthy();
     });
   });
+
 
   describe('S3-08: Visualización de socios involucrados', () => {
     const expUnicoSocio: Expediente = {
@@ -1134,7 +1348,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnFirmar).toBeTruthy();
     });
 
-    it('debe permitir navegar a Socios Involucrados desde el detalle y volver sin perder el contexto', () => {
+    it('debe mostrar los involucrados en el cuerpo del modal de detalle', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
       const expDetalle: Expediente = {
         ...expMultiplesSocios,
@@ -1143,6 +1357,7 @@ describe('GestionarExpedientesComponent', () => {
       };
 
       component.abrirDetalle(expDetalle);
+      component.cargandoJustificaciones = false;
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
@@ -1150,26 +1365,10 @@ describe('GestionarExpedientesComponent', () => {
       expect(compiled.textContent).toContain('Motivo:');
       expect(compiled.textContent).toContain('Falta de informes');
 
-      // Al abrir Socios Involucrados desde el footer del detalle, se cierra el modal de detalle evitando superposición
-      const btnVerInvolucrados = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Ver Involucrados"]') as HTMLButtonElement;
-      expect(btnVerInvolucrados).toBeTruthy();
-      btnVerInvolucrados.click();
-      fixture.detectChanges();
-
-      expect(component.modalDetalleAbierto).toBeFalse();
-      expect(component.modalSociosAbierto).toBeTrue();
-      expect(compiled.querySelectorAll('.modal-backdrop-custom').length).toBe(1);
-
-      // Al hacer clic en Volver, regresa al modal de detalle del expediente sin cerrar todo
-      const btnVolver = compiled.querySelector('.modal-backdrop-custom button[aria-label="Volver al detalle"]') as HTMLButtonElement;
-      expect(btnVolver).toBeTruthy();
-      btnVolver.click();
-      fixture.detectChanges();
-
-      expect(component.modalSociosAbierto).toBeFalse();
-      expect(component.modalDetalleAbierto).toBeTrue();
-      expect(component.expedienteSeleccionado).toEqual(expDetalle);
-      expect(compiled.textContent).toContain('Motivo:');
+      const tabla = compiled.querySelector('.tabla-involucrados');
+      expect(tabla).toBeTruthy();
+      expect(tabla?.textContent).toContain('Lucas Martín Guillén');
+      expect(tabla?.textContent).toContain('Diego Gabriel Sánchez');
     });
   });
 
@@ -1206,41 +1405,38 @@ describe('GestionarExpedientesComponent', () => {
       const modal = compiled.querySelector('.modal-backdrop-custom');
       expect(modal).toBeTruthy();
 
-      // Cabecera: solo título identificador sin subtítulo duplicado
-      const title = modal?.querySelector('.card-header .card-title')?.textContent?.trim();
-      expect(title).toBe('Expediente 419/2025');
-      expect(modal?.querySelector('.card-header .card-category')).toBeNull();
+      // Cabecera: Exp: <n>/<YYYY> + título centrado
+      const badgeExp = modal?.querySelector('.modal-badge-exp')?.textContent?.trim();
+      expect(badgeExp).toBe('Exp: 419/2025');
+      const title = modal?.querySelector('.modal-titulo-central h4')?.textContent?.trim();
+      expect(title).toBe('Falta disciplinaria por inasistencias plenarias');
 
-      // 1. Estado de expediente
-      expect(modal?.textContent).toContain('Estado de expediente:');
+      // 1. Estado
+      expect(modal?.textContent).toContain('Estado:');
       expect(modal?.textContent).toContain('En Revisión');
 
       // 2. Fecha de Solicitud (formato dd/MM/yyyy)
       expect(modal?.textContent).toContain('Fecha de Solicitud:');
       expect(modal?.textContent).toContain('15/10/2025');
 
-      // 3. Título
-      expect(modal?.textContent).toContain('Título:');
-      expect(modal?.textContent).toContain('Falta disciplinaria por inasistencias plenarias');
-
-      // 4. Motivo
+      // 3. Motivo
       expect(modal?.textContent).toContain('Motivo:');
       expect(modal?.textContent).toContain('Inasistencia injustificada a reuniones plenarias consecutivas');
 
-      // 5. Sanción solicitada
-      expect(modal?.textContent).toContain('Sanción solicitada:');
-      expect(modal?.textContent).toContain('-2 pts');
+      // 4. Puntaje Solicitado
+      expect(modal?.textContent).toContain('Puntaje Solicitado:');
+      expect(modal?.textContent).toContain('-2');
 
-      // 6. Reglamento
-      expect(modal?.textContent).toContain('Reglamento:');
+      // 5. Reglamentación
+      expect(modal?.textContent).toContain('Reglamentación:');
       expect(modal?.textContent).toContain('Reglamento de Faltas y Sanciones Internas');
 
-      // 7. Solicitante
+      // 6. Solicitante
       expect(modal?.textContent).toContain('Solicitante:');
       expect(modal?.textContent).toContain('74907 - Gastiaburu, Lucas');
 
-      // Control de Urgencia debajo de los metadatos
-      expect(modal?.textContent).toContain('Nivel de Urgencia:');
+      // Control de Urgencia
+      expect(modal?.textContent).toContain('Urgencia:');
     });
 
     it('debe usar fallback canónico de reglamento sin citas de artículos', () => {
@@ -1260,33 +1456,628 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.formatSolicitante(null)).toBe('Comisión Directiva');
     });
 
-    it('no debe renderizar las secciones pospuestas ni tabla embebida de involucrados en Modal 1', () => {
-      component.abrirDetalle(expMock);
-      fixture.detectChanges();
-
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.card-responsable')).toBeNull();
-      expect(compiled.querySelector('.reglamentos-list')).toBeNull();
-      expect(compiled.querySelector('.card-body table')).toBeNull();
-      expect(compiled.textContent).not.toContain('Responsables del tribunal');
-      expect(compiled.textContent).not.toContain('Reglamentos respaldantes');
-    });
-
-    it('debe conservar las acciones existentes en el pie del modal', () => {
+    it('debe renderizar la tabla de involucrados y las acciones validadas en el pie del modal', () => {
       spyOn(authService, 'tieneRol').and.returnValue(true);
       component.abrirDetalle(expMock);
+      component.cargandoJustificaciones = false;
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const btnInvolucrados = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Ver Involucrados"]');
-      const btnEmitir = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Emitir Resolución"]');
-      const btnCerrar = compiled.querySelector('.modal-backdrop-custom .card-footer button.btn-default');
-
-      expect(btnInvolucrados).toBeTruthy();
-      expect(btnEmitir).toBeTruthy();
-      expect(btnCerrar).toBeTruthy();
+      expect(compiled.querySelector('.tabla-involucrados')).toBeTruthy();
+      expect(compiled.querySelector('.card-footer .btn-cerrar-modal')).toBeTruthy();
     });
   });
+  describe('Apelación y adecuación del T01 (PB-02)', () => {
+    let api: ExpedienteApiService;
+    let socioApi: SocioApiService;
+    const motivos = 'El debate acreditó que la falta fue compartida con un tercer socio.';
+
+    const expediente = {
+      id: '7',
+      numero: 'EXP-0701/2026',
+      socio: 'Ana Pérez',
+      legajo: '78002',
+      subcomision: 'Cómputos',
+      motivo: 'Uso indebido del laboratorio',
+      fechaCreacion: '2026-10-20',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -2
+    } as Expediente;
+
+    const historial = (cambios: Partial<HistorialT01DTO> = {}): HistorialT01DTO => ({
+      es_t01: true,
+      estado: 'revision_resolucion',
+      plazo_dias_vigente: 5,
+      puntos_vigentes: '-2.00',
+      involucrados: [
+        { id: 3, legajo: '78002', nombre: 'Ana Pérez (N° 78002)' },
+        { id: 4, legajo: '78003', nombre: 'Bruno Díaz (N° 78003)' }
+      ],
+      original: {
+        numero_t01: 'T01-2026-ABC',
+        tipo_accion: 'SANCTION',
+        emitido_at: '2026-10-15T10:00:00Z',
+        solicitante: 'Carla Gómez (N° 78001)',
+        snapshot: { puntos: '-2.00' }
+      },
+      periodos: [],
+      apelaciones: [
+        { socio_id: 3, socio: 'Ana Pérez (N° 78002)', numero: 1, texto: 'Primera versión de la apelación.', created_at: '2026-10-16T10:00:00Z' },
+        { socio_id: 3, socio: 'Ana Pérez (N° 78002)', numero: 2, texto: 'No estuve presente en el laboratorio.', created_at: '2026-10-17T10:00:00Z' }
+      ],
+      adecuaciones: [],
+      ...cambios
+    });
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      socioApi = TestBed.inject(SocioApiService);
+    });
+
+    function abrirComo(rol: string, dto: HistorialT01DTO = historial(), estado = 'revision_resolucion'): void {
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({ id: 7, numero: 'EXP-0701/2026', estado, socios: [], descargos: [] }));
+      spyOn(api, 'obtenerHistorialT01').and.returnValue(of(dto));
+      component.abrirDetalle({ ...expediente, estado } as Expediente);
+      fixture.detectChanges();
+    }
+
+    it('muestra el T01 original y la última versión de cada apelación', () => {
+      abrirComo('CD');
+      expect(api.obtenerHistorialT01).toHaveBeenCalledWith('7');
+      expect(component.historialT01?.original?.numero_t01).toBe('T01-2026-ABC');
+      const apelacionesSocio3 = component.apelacionesDe(3);
+      expect(apelacionesSocio3.length).toBe(2);
+      expect(apelacionesSocio3[apelacionesSocio3.length - 1].texto).toBe('No estuve presente en el laboratorio.');
+      expect(component.apelacionesDe(4).length).toBe(0);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.panel-t01')).toBeNull();
+      expect(component.puedeAdecuarT01).toBeFalse();
+    });
+
+    it('no muestra el panel en expedientes que no vienen de un T01', () => {
+      abrirComo('TD', historial({ es_t01: false }));
+      expect((fixture.nativeElement as HTMLElement).querySelector('.panel-t01')).toBeNull();
+    });
+
+    it('sólo el TD adecúa y sólo en "Justificaciones en revisión"', () => {
+      abrirComo('TD', historial(), 'justificando');
+      expect(component.puedeAdecuarT01).toBeFalse();
+    });
+
+    it('prepara el borrador con los puntos e involucrados vigentes', () => {
+      abrirComo('TD');
+      expect(component.puedeAdecuarT01).toBeTrue();
+      expect(component.borradorAdecuacion.puntos).toBe(-2);
+      expect(component.borradorAdecuacion.socios.map(s => s.id)).toEqual([3, 4]);
+    });
+
+    it('busca socios para agregar sin repetir involucrados', fakeAsync(() => {
+      abrirComo('TD');
+      spyOn(socioApi, 'searchSocios').and.returnValue(of({
+        count: 2, next: null, previous: null,
+        results: [
+          { id: 4, legajo: '78003', first_name: 'Bruno', last_name: 'Díaz' } as SocioListItemDTO,
+          { id: 9, legajo: '78004', first_name: 'Dario', last_name: 'Luna' } as SocioListItemDTO
+        ]
+      }));
+      component.buscarSocioAdecuacion('lu');
+      tick(300);
+      expect(socioApi.searchSocios).not.toHaveBeenCalled();
+      component.buscarSocioAdecuacion('luna');
+      tick(300);
+      expect(component.candidatosAdecuacion.map(s => s.id)).toEqual([9]);
+
+      component.agregarSocioAdecuacion(component.candidatosAdecuacion[0]);
+      component.quitarSocioAdecuacion(4);
+      expect(component.borradorAdecuacion.socios.map(s => s.id)).toEqual([3, 9]);
+    }));
+
+    it('valida involucrados y motivos antes de enviar', () => {
+      abrirComo('TD');
+      spyOn(api, 'adecuarT01');
+      component.borradorAdecuacion.socios = [];
+      component.registrarAdecuacion();
+      expect(notifications.error).toHaveBeenCalledWith('Debe quedar al menos un involucrado en el expediente.');
+
+      component.borradorAdecuacion.socios = [{ id: 3, legajo: '78002', nombre: 'Ana' }];
+      component.borradorAdecuacion.motivos = 'Breve';
+      component.registrarAdecuacion();
+      expect(notifications.error).toHaveBeenCalledWith('Indicá los motivos de la adecuación con al menos 20 caracteres.');
+      expect(api.adecuarT01).not.toHaveBeenCalled();
+    });
+
+    it('registra la adecuación con nuevo plazo y actualiza el detalle', () => {
+      abrirComo('TD');
+      const actualizado = historial({ estado: 'justificando', puntos_vigentes: '-1.50' });
+      spyOn(api, 'adecuarT01').and.returnValue(of(actualizado));
+      component.borradorAdecuacion.puntos = -1.5;
+      component.borradorAdecuacion.motivos = `  ${motivos}  `;
+      component.borradorAdecuacion.reabrirPlazo = true;
+
+      component.registrarAdecuacion();
+
+      expect(api.adecuarT01).toHaveBeenCalledWith('7', {
+        puntos: -1.5,
+        socios: [3, 4],
+        motivos,
+        reabrir_plazo: true
+      });
+      expect(component.expedienteSeleccionado?.estado).toBe('justificando');
+      expect(component.expedienteSeleccionado?.puntos).toBe(-1.5);
+      expect(component.borradorAdecuacion.motivos).toBe('');
+      expect(notifications.success).toHaveBeenCalledWith(
+        'Adecuación registrada. Se abrió un nuevo plazo de apelación y se notificaron los motivos.'
+      );
+    });
+
+    it('informa el rechazo del servidor', () => {
+      abrirComo('TD');
+      spyOn(api, 'adecuarT01').and.returnValue(throwError(() => ({ status: 400, error: { detail: 'Sin cambios.' } })));
+      component.borradorAdecuacion.motivos = motivos;
+      component.registrarAdecuacion();
+      expect(notifications.error).toHaveBeenCalled();
+      expect(component.adecuando).toBeFalse();
+    });
+  });
+
+  describe('SCRUM-70 / PR #64: Modal de Detalle Rediseñado según boceto PO', () => {
+    let api: ExpedienteApiService;
+    let router: Router;
+
+    const expBase: Expediente = {
+      id: '201',
+      numero: 'EXP-001/2026',
+      socio: 'Lucas Gastiaburu',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia no justificada a reunión plenaria',
+      titulo: 'Inasistencia a plenaria',
+      fechaCreacion: '2026-03-01',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1.5,
+      urgencia: 'urgente',
+      cantidadSocios: 2,
+      reglamentos_respaldantes: [
+        'Reglamento de Faltas Internas Art. 4',
+        'Reglamento General de Miembros'
+      ],
+      sociosInvolucrados: [
+        { id: '10', legajo: '74907', nombre: 'Lucas Gastiaburu', grupo: '59' },
+        { id: '11', legajo: '74908', nombre: 'Ana Gómez', grupo: '60' }
+      ]
+    };
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      router = TestBed.inject(Router);
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+    });
+
+    it('debe renderizar la cabecera con Exp: <n>/<YYYY>, título centrado y botón de cierre', () => {
+      component.abrirDetalle(expBase);
+      fixture.detectChanges();
+
+      const modal = fixture.nativeElement.querySelector('.modal-backdrop-custom');
+      expect(modal).toBeTruthy();
+
+      const badgeExp = modal.querySelector('.modal-badge-exp');
+      expect(badgeExp).toBeTruthy();
+      expect(badgeExp.textContent.trim()).toBe('Exp: 1/2026');
+
+      const titulo = modal.querySelector('.modal-titulo-central h4');
+      expect(titulo).toBeTruthy();
+      expect(titulo.textContent.trim()).toBe('Inasistencia a plenaria');
+
+      const btnClose = modal.querySelector('.btn-close-modal');
+      expect(btnClose).toBeTruthy();
+      spyOn(component, 'cerrarModales');
+      btnClose.click();
+      expect(component.cerrarModales).toHaveBeenCalled();
+    });
+
+    it('debe renderizar metadatos, motivo en recuadro destacado y reglamentación con toggle', () => {
+      component.abrirDetalle(expBase);
+      fixture.detectChanges();
+
+      const modal = fixture.nativeElement.querySelector('.modal-backdrop-custom');
+      expect(modal.textContent).toContain('Estado:');
+      expect(modal.textContent).toContain('En Revisión');
+      expect(modal.textContent).toContain('Urgencia:');
+      expect(modal.textContent).toContain('Urgente');
+      expect(modal.textContent).toContain('Puntaje Solicitado:');
+      expect(modal.textContent).toContain('-1.5');
+      expect(modal.textContent).toContain('Fecha de Solicitud:');
+      expect(modal.textContent).toContain('01/03/2026');
+      expect(modal.textContent).toContain('Solicitante:');
+
+      // Motivo destacado
+      const motivoBox = modal.querySelector('.motivo-box');
+      expect(motivoBox).toBeTruthy();
+      expect(motivoBox.textContent).toContain('Inasistencia no justificada a reunión plenaria');
+
+      // Reglamentación múltiple con toggle
+      const toggleBtn = modal.querySelector('.toggle-reglamento-btn');
+      expect(toggleBtn).toBeTruthy();
+      expect(component.reglamentacionExpandida).toBeFalse();
+
+      toggleBtn.click();
+      fixture.detectChanges();
+      expect(component.reglamentacionExpandida).toBeTrue();
+      expect(modal.textContent).toContain('Reglamento General de Miembros');
+
+      toggleBtn.click();
+      fixture.detectChanges();
+      expect(component.reglamentacionExpandida).toBeFalse();
+    });
+
+    it('debe mostrar tabla de involucrados con 6 columnas y formatear nombres y grupos', () => {
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 201,
+        numero: 'EXP-001/2026',
+        estado: 'revision_resolucion',
+        socios: [
+          { id: 10, legajo: '74907', nombre: 'Lucas Gastiaburu', first_name: 'Lucas', last_name: 'Gastiaburu', grupo: '59' },
+          { id: 11, legajo: '74908', nombre: 'Ana Gómez', first_name: 'Ana', last_name: 'Gómez', grupo: '60' }
+        ],
+        descargos: []
+      }));
+
+      component.abrirDetalle(expBase);
+      fixture.detectChanges();
+
+      const tabla = fixture.nativeElement.querySelector('.tabla-involucrados');
+      expect(tabla).toBeTruthy();
+
+      const ths = Array.from(tabla.querySelectorAll('thead th')).map((el: any) => el.textContent.trim());
+      expect(ths).toContain('N° de Socio');
+      expect(ths).toContain('Nombre Completo');
+      expect(ths).toContain('Grupo');
+      expect(ths).toContain('Estado de Descargo');
+      expect(ths).toContain('Puntaje Final');
+
+      const filas = tabla.querySelectorAll('tbody tr');
+      expect(filas.length).toBe(2);
+
+      const fila1 = component.involucradosJustificacion[0];
+      expect(component.getNombreCompletoInvolucrado(fila1)).toBe('Lucas Gastiaburu');
+      expect(component.formatGrupoInvolucrado(fila1.grupo)).toBe('59');
+      expect(component.getEstadoDescargo(fila1)).toBe('Sin descargo');
+      expect(component.getPuntajeFinalInvolucrado(fila1)).toBe(-1.5);
+    });
+
+    it('debe calcular correctamente Estado de Descargo (Leído, No Leído, Sin descargo) y Puntaje Final', () => {
+      const filaSinDescargo: InvolucradoJustificacion = {
+        socioId: 1,
+        legajo: '1',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        grupo: '59',
+        descargo: null
+      };
+      expect(component.getEstadoDescargo(filaSinDescargo)).toBe('Sin descargo');
+
+      const filaNoLeido: InvolucradoJustificacion = {
+        socioId: 2,
+        legajo: '2',
+        nombre: 'Pedro',
+        apellido: 'Gómez',
+        grupo: '59',
+        descargo: { id: 1, tipo: 'T02_CERTIFICADO', leido: false, puntaje_ratificado: null } as any
+      };
+      expect(component.getEstadoDescargo(filaNoLeido)).toBe('No Leído');
+
+      const filaLeido: InvolucradoJustificacion = {
+        socioId: 3,
+        legajo: '3',
+        nombre: 'María',
+        apellido: 'López',
+        grupo: '59',
+        descargo: { id: 2, tipo: 'T02_CERTIFICADO', leido: true, puntaje_ratificado: 0 } as any
+      };
+      expect(component.getEstadoDescargo(filaLeido)).toBe('Leído');
+      expect(component.getPuntajeFinalInvolucrado(filaLeido)).toBe(0);
+
+      const filaRatificado: InvolucradoJustificacion = {
+        socioId: 4,
+        legajo: '4',
+        nombre: 'Carlos',
+        apellido: 'Ruiz',
+        grupo: '59',
+        descargo: { id: 3, tipo: 'T03_EXTRAORDINARIO', leido: true, puntaje_ratificado: -1.5 } as any
+      };
+      expect(component.getPuntajeFinalInvolucrado(filaRatificado)).toBe(-1.5);
+    });
+
+    it('debe controlar la visibilidad del botón Generar Resolución según el estado y si todos los descargos están leídos', () => {
+      // Caso 1: Estado no es revision_resolucion ni espera_resolucion
+      component.expedienteSeleccionado = { ...expBase, estado: 'justificando' };
+      component.involucradosJustificacion = [];
+      expect(component.puedeGenerarResolucion).toBeFalse();
+
+      // Caso 2: Estado revision_resolucion pero hay un descargo No Leído
+      component.expedienteSeleccionado = { ...expBase, estado: 'revision_resolucion' };
+      component.involucradosJustificacion = [
+        {
+          socioId: 10,
+          legajo: '74907',
+          nombre: 'Lucas',
+          apellido: 'Gastiaburu',
+          grupo: '59',
+          descargo: { id: 1, tipo: 'T02_CERTIFICADO', leido: false } as any
+        }
+      ];
+      expect(component.todosLosDescargosVistos).toBeFalse();
+      expect(component.puedeGenerarResolucion).toBeFalse();
+
+      // Caso 3: Estado revision_resolucion y todos los descargos están en Leído (o sin descargo)
+      component.involucradosJustificacion = [
+        {
+          socioId: 10,
+          legajo: '74907',
+          nombre: 'Lucas',
+          apellido: 'Gastiaburu',
+          grupo: '59',
+          descargo: { id: 1, tipo: 'T02_CERTIFICADO', leido: true } as any
+        },
+        {
+          socioId: 11,
+          legajo: '74908',
+          nombre: 'Ana',
+          apellido: 'Gómez',
+          grupo: '60',
+          descargo: null
+        }
+      ];
+      expect(component.todosLosDescargosVistos).toBeTrue();
+      expect(component.puedeGenerarResolucion).toBeTrue();
+
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+      const btnGenerar = fixture.nativeElement.querySelector('.btn-generar-resolucion');
+      expect(btnGenerar).toBeTruthy();
+      spyOn(component, 'abrirVotacion');
+      btnGenerar.click();
+      expect(component.abrirVotacion).toHaveBeenCalledWith(component.expedienteSeleccionado);
+    });
+
+    it('debe mostrar y accionar Firmar Resolución cuando el estado es pendiente_firma', () => {
+      component.expedienteSeleccionado = { ...expBase, estado: 'pendiente_firma' };
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+
+      expect(component.puedeFirmarResolucion).toBeTrue();
+      const btnFirmar = fixture.nativeElement.querySelector('.btn-firmar-resolucion');
+      expect(btnFirmar).toBeTruthy();
+      spyOn(component, 'abrirFirma');
+      btnFirmar.click();
+      expect(component.abrirFirma).toHaveBeenCalledWith(component.expedienteSeleccionado);
+    });
+
+    it('debe mostrar Ver Resolución en emitido y pendiente_correos y abrir modalResolucionAbierto', () => {
+      component.expedienteSeleccionado = { ...expBase, estado: 'emitido' };
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+
+      expect(component.puedeVerResolucion).toBeTrue();
+      const btnVer = fixture.nativeElement.querySelector('.btn-ver-resolucion');
+      expect(btnVer).toBeTruthy();
+
+      btnVer.click();
+      fixture.detectChanges();
+
+      expect(component.modalResolucionAbierto).toBeTrue();
+      const modalResolucion = fixture.nativeElement.querySelector('.modal-resolucion-backdrop');
+      expect(modalResolucion).toBeTruthy();
+    });
+
+    it('al hacer clic en Ver Descargo debe abrir el modal de descargo sin navegar y sin mutar localmente No Leído a Leído', () => {
+      spyOn(router, 'navigate');
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '74907',
+        nombre: 'Lucas',
+        apellido: 'Gastiaburu',
+        grupo: '59',
+        descargo: { id: 1, tipo: 'T02_CERTIFICADO', leido: false } as any
+      };
+      component.expedienteSeleccionado = expBase;
+      component.involucradosJustificacion = [fila];
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+
+      const btnDescargo = fixture.nativeElement.querySelector('.btn-ver-descargo');
+      expect(btnDescargo).toBeTruthy();
+
+      btnDescargo.click();
+
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.involucradoSeleccionado).toBe(fila);
+      // No debe haber mutado a true por el clic
+      expect(fila.descargo!.leido).toBeFalse();
+
+      component.volverADetalleDesdeDescargo();
+      expect(component.modalDescargoAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+    });
+  });
+
+  describe('Filtros en una sola línea y Urgencia sin símbolos', () => {
+    const expMock: Expediente = {
+      id: '1',
+      numero: 'EXP-001/2026',
+      socio: 'Lucas Gastiaburu'
+    } as any;
+    it('debe tener opción "Todos" en los desplegables de estado y urgencia', () => {
+      expect(component.estadosDisponibles[0].label).toBe('Todos');
+      expect(component.urgenciasDisponibles[0].label).toBe('Todos');
+    });
+
+    it('debe inicializar filtroFechaDesde con el año en curso para optimizar el rendimiento inicial', () => {
+      expect(component.filtroFechaDesde).toBe(`${new Date().getFullYear()}-01-01`);
+    });
+
+    it('en la vista de tabla, debe renderizar la urgencia en texto plano sin iconos ni caracteres extra', () => {
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+
+      const tabla = fixture.nativeElement.querySelector('.explorer-table-container');
+      expect(tabla).toBeTruthy();
+      const badgeUrgencia = tabla.querySelector('tbody td .badge-mat');
+      if (badgeUrgencia) {
+        expect(badgeUrgencia.querySelector('i')).toBeNull();
+        const texto = badgeUrgencia.textContent.trim();
+        expect(['Baja', 'Normal', 'Urgente']).toContain(texto);
+      }
+    });
+
+    it('la barra de filtros debe contener el input de búsqueda sin etiqueta y los botones con flex-shrink-0', () => {
+      const inputBusqueda = fixture.nativeElement.querySelector('#filtro-socio');
+      expect(inputBusqueda).toBeTruthy();
+      expect(inputBusqueda.getAttribute('placeholder')).toContain('Buscar por socio');
+
+      const labelSocio = fixture.nativeElement.querySelector('label[for="filtro-socio"]');
+      expect(labelSocio).toBeNull();
+
+      const contenedorAcciones = fixture.nativeElement.querySelector('.filtro-acciones');
+      expect(contenedorAcciones).toBeTruthy();
+      expect(contenedorAcciones.classList.contains('flex-shrink-0')).toBeTrue();
+    });
+    it('debe navegar al visor de sustanciación al invocar abrirVisor', () => {
+      const router = TestBed.inject(Router);
+      const navigateSpy = spyOn(router, 'navigate');
+
+      component.abrirVisor(expMock);
+      expect(navigateSpy).toHaveBeenCalledWith(['/gestionar-expedientes', expMock.id, 'visor']);
+    });
+
+    it('debe mantener oculto el botón Sustanciar / Visor en el modal de detalle según requerimiento', () => {
+      component.abrirDetalle(expMock);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const btnVisor = compiled.querySelector('.modal-backdrop-custom .card-footer button[title="Sustanciar / Visor"]');
+      expect(btnVisor).toBeNull();
+    });
+
+  });
+
+  describe('Escala discreta de puntajes, llamados, felicitaciones y bloqueo de edición', () => {
+    const expEnRevision: Expediente = {
+      id: '12',
+      numero: 'EXP-012/2026',
+      estado: 'revision_resolucion',
+      puntos: -1.0,
+      titulo: 'Falta disciplinaria'
+    } as any;
+
+    const expEnTramite: Expediente = {
+      id: '13',
+      numero: 'EXP-013/2026',
+      estado: 'justificando',
+      puntos: -1.0,
+      titulo: 'En etapa probatoria'
+    } as any;
+
+    it('solo permite modificar puntaje si el expediente está En Revisión (revision_resolucion o espera_resolucion)', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      expect(component.puedeModificarPuntaje).toBeTrue();
+
+      component.expedienteSeleccionado = { ...expEnRevision, estado: 'espera_resolucion' } as any;
+      expect(component.puedeModificarPuntaje).toBeTrue();
+
+      component.expedienteSeleccionado = expEnTramite;
+      expect(component.puedeModificarPuntaje).toBeFalse();
+    });
+
+    it('recorre la escala discreta con incremento y decremento de puntaje', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      component.opcionPuntajeFinal = '0.0';
+
+      component.incrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('FELICITACION');
+
+      component.incrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.5');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('FELICITACION');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('LLAMADO_ATENCION');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('-0.5');
+    });
+
+    it('no permite incrementar o decrementar si el expediente no está En Revisión', () => {
+      component.expedienteSeleccionado = expEnTramite;
+      component.opcionPuntajeFinal = '0.0';
+
+      component.incrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+
+      component.decrementarPuntaje();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+    });
+
+    it('getTipoDescargoDisplay muestra la causal tipificada como tipo principal', () => {
+      const descT02 = {
+        id: 1,
+        tipo: 'T02_CERTIFICADO',
+        causal: 'Examen Académico Universitario en UTN FRC'
+      } as any;
+      expect(component.getTipoDescargoDisplay(descT02)).toBe('Examen Académico Universitario en UTN FRC');
+
+      const descSinCausal = {
+        id: 2,
+        tipo: 'T02_CERTIFICADO',
+        causal: ''
+      } as any;
+      expect(component.getTipoDescargoDisplay(descSinCausal)).toBe('Certificado de Examen (T02)');
+    });
+
+    it('exige fundamentación obligatoria solo cuando el puntaje final perjudica al socio respecto al pedido', () => {
+      // Sanción original de -1.0
+      component.expedienteSeleccionado = expEnRevision;
+
+      // Si se fija -0.5 o 0.0 o Felicitación (a favor del socio), NO es obligatoria
+      component.opcionPuntajeFinal = '0.0';
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+
+      component.opcionPuntajeFinal = 'LLAMADO_ATENCION'; // rank -0.25 > -1.0
+      expect(component.esFundamentoObligatorio()).toBeFalse();
+
+      // Si se agrava la sanción a -1.5 (perjudicial), SÍ es obligatoria
+      component.opcionPuntajeFinal = '-1.5'; // rank -1.5 < -1.0
+      expect(component.esFundamentoObligatorio()).toBeTrue();
+    });
+
+    it('formatea correctamente los puntajes y llamados/felicitaciones en getPuntajeFinalInvolucradoDisplay', () => {
+      const filaLlamado = {
+        descargo: { puntaje_ratificado: 'LLAMADO_ATENCION' }
+      } as any;
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaLlamado)).toBe('Llamado de Atención');
+
+      const filaFelic = {
+        descargo: { puntaje_ratificado: 'FELICITACION' }
+      } as any;
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaFelic)).toBe('Felicitación');
+
+      const filaNumPos = {
+        descargo: { puntaje_ratificado: 1.5 }
+      } as any;
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaNumPos)).toBe('+1.5');
+    });
+  });
+
 });
-
-

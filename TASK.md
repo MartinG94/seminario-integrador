@@ -318,7 +318,23 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 11.1 Sprint 4 — Desglose Atómico: S4-03 / SCRUM-53 (Valorar T03 mediante Antecedentes y Sana Crítica)
+## 11.1 Sprint 4 — Desglose Atómico: S4-01 / SCRUM-51 (Visor Autorizado de Expedientes y Evidencia Probatoria)
+
+> **Spec de Referencia:** [`specs/007-visor-expediente-evidencia/spec.md`](specs/007-visor-expediente-evidencia/spec.md)  
+> **Plan Técnico:** [`specs/007-visor-expediente-evidencia/plan.md`](specs/007-visor-expediente-evidencia/plan.md)  
+> **Tareas:** [`specs/007-visor-expediente-evidencia/tasks.md`](specs/007-visor-expediente-evidencia/tasks.md)
+
+- [x] **TS4-01.1 Modelo y Migración de Auditoría de Consulta (Backend TDD):** Implementar modelo `AuditoriaConsultaExpediente` inmutable en `backend/expedientes/models.py` y migración `0017_auditoria_consulta_expediente.py` dependiente de `0016`.
+- [x] **TS4-01.2 Serializador Visor, Verificación SHA-256 y Protección Médica (Backend TDD):** Implementar `ExpedienteVisorSerializer` con cabecera TD, los 3 jueces con grupo Gxx, timeline cronológico, verificación de integridad SHA-256, enmascaramiento de datos médicos para terceros y rotulado de "Plazo vencido sin descargo".
+- [x] **TS4-01.3 Endpoint REST Visor con Auditoría Automática (Backend TDD):** Implementar `ExpedienteVisorView` en `backend/expedientes/views/visor_views.py` protegido con `IsImputadoOrTribunal` y registro inmutable en base de datos.
+- [x] **TS4-01.4 Suite de Tests Backend (`test_visor_expediente.py`):** Cobertura completa de CA1, CA2, CA3 y CA4.
+- [x] **TS4-01.5 Servicio Frontend y DTOs (`ExpedienteApiService`):** Declarar interfaces tipadas y método `obtenerVisorExpediente` en `frontend/src/app/services/expediente-api.service.ts`.
+- [x] **TS4-01.6 Componente Frontend `VisorExpedienteComponent` (Angular):** Crear vista de pantalla completa con cabecera canónica TD, 3 jueces con cohorte Gxx, acordeón T01, tabla de involucrados con evidencias e integridad SHA-256, rotulado de plazo vencido, timeline vertical y botón de retorno.
+- [x] **TS4-01.7 Enrutamiento y Botones de Acceso en Gestión:** Registrar ruta en `admin-layout.routing.ts`, declarar en `admin-layout.module.ts`, e incorporar botón "Sustanciar / Visor" en tabla y Kanban de `gestionar-expedientes`.
+- [x] **TS4-01.8 Suite de Tests Frontend (`visor-expediente.component.spec.ts`):** Tests unitarios en Karma/Jasmine para la vista dedicada.
+- [x] **TS4-01.9 Verificación Integral y Consistencia PO:** Chequeo estricto contra `notasPO.md` y preparación de instrucciones manuales para el usuario en bash.
+
+## 11.2 Sprint 4 — Desglose Atómico: S4-03 / SCRUM-53 (Valorar T03 mediante Antecedentes y Sana Crítica)
 
 > **Spec de Referencia:** [`specs/s4-scrum-53-valorar-t03-antecedentes/spec.md`](specs/s4-scrum-53-valorar-t03-antecedentes/spec.md)  
 > **Plan Técnico:** [`specs/s4-scrum-53-valorar-t03-antecedentes/plan.md`](specs/s4-scrum-53-valorar-t03-antecedentes/plan.md)  
@@ -328,8 +344,8 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS4-03.16 Verificación del backend:** Suite `pytest`, `ruff`, migraciones y control contra `notasPO.md`; reserva de la valoración frente a imputados con rol de autoridad.
 - [x] **TS4-03.17 Servicio frontend y DTOs [TDD]:** `listarValoracionesT03`, `registrarValoracionT03` y `buscarAntecedente` en `ExpedienteApiService`.
 - [x] **TS4-03.18 a TS4-03.20 Panel de valoración [TDD]:** Resultado, fundamento con contador, antecedentes, aviso orientativo no bloqueante e historial con la condición del autor.
-- [x] **TS4-03.21 Integración en la sala [TDD]:** T03 valorable, «Pendiente de valoración» o resultado vigente en la Tabla de Involucrados y buscador por número y motivo.
-- [ ] **TS4-03.22 Verificación final:** Suites completas, revisión responsive y de accesibilidad, prueba manual del PO y control contra `notasPO.md`.
+- [x] **TS4-03.21 Integración en la sala [TDD]:** Acción «Valorar T03», panel dentro del modal de descargo, «Pendiente de valoración» o resultado vigente en la tabla de involucrados, y buscador por número y motivo. El T03 valorado cuenta como descargo leído para generar la resolución.
+- [x] **TS4-03.22 Verificación final:** Suites completas, prueba manual de Axel y control contra `notasPO.md`; actualización contra `main` con la migración de merge `0019`.
 
 ---
 
@@ -349,7 +365,27 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 13. Instrucciones para la Actualización de este Archivo
+## 13. Sprint 4 — Desglose Atómico: PB-02 (Tramitar Apelación y Adecuación del T01)
+
+> **Spec de Referencia:** [`specs/008-apelacion-adecuacion-t01/spec.md`](specs/008-apelacion-adecuacion-t01/spec.md)  
+> **Plan Técnico:** [`specs/008-apelacion-adecuacion-t01/plan.md`](specs/008-apelacion-adecuacion-t01/plan.md)  
+> **Tareas:** [`specs/008-apelacion-adecuacion-t01/tasks.md`](specs/008-apelacion-adecuacion-t01/tasks.md)
+
+- [x] **TPB-02.1 Dominio de apelación y adecuación [TDD]:** Plazo de 1 a 30 días hábiles, texto de apelación, cambios de puntos e involucrados, agravamiento y socios afectados.
+- [x] **TPB-02.2 Modelos inmutables y migración [TDD]:** `ParametroPlazoApelacion`, `PeriodoApelacion`, `ApelacionT01` y `AdecuacionT01` sólo-inserción (migración `0017`).
+- [x] **TPB-02.3 Plazo parametrizado y períodos por socio [TDD]:** Apertura con el parámetro vigente al entrar a `justificando` y vencimiento según el último período abierto.
+- [x] **TPB-02.4 Servicio de apelación y adecuación [TDD]:** Apelación versionada con constancia por mail, rechazo de T02/T03 en T01, adecuación con mail de motivos y nuevo período aprobado por el TD.
+- [x] **TPB-02.5 Endpoints REST y permisos [TDD]:** Parámetro del plazo, apelación, adecuación e historial del T01.
+- [x] **TPB-02.6 Servicio frontend y DTOs [TDD]:** Métodos en `ExpedienteApiService`.
+- [x] **TPB-02.7 Apelación en "Mis Expedientes":** "Apelar"/"Editar apelación" en lugar del justificativo T02/T03, plazo propio y adecuaciones comunicadas.
+- [x] **TPB-02.8 Debate y adecuación en el detalle del TD:** Apelaciones por socio, formulario con autocompletado de socios, nuevo plazo opcional e historial.
+- [x] **TPB-02.9 Parámetro del plazo en "Calendario Institucional":** Consulta para TD, CD y Administración; edición para TD y Administración.
+- [x] **TPB-02.10 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build y control contra `notasPO.md`.
+- [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:** Cabecera Exp: <n>/<YYYY> + título, metadatos, sección Reglamentación, caja Motivo, tabla Involucrados y justificaciones (6 columnas con Leído/No Leído/Sin descargo, Puntaje Final y acción Ver Descargo) y validación de botones (Generar Resolución, Firmar Resolución, Ver Resolución).
+
+---
+
+## 14. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

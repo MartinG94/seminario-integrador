@@ -42,6 +42,7 @@ export interface BoardCaseDTO {
   creador?: string;
   solicitante?: string;
   reglamento_asociado?: string;
+  reglamentos_respaldantes?: string[];
   created_at: string;
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
@@ -83,6 +84,8 @@ export interface Expediente {
   solicitante?: string;
   reglamento_asociado?: string;
   reglamentoAsociado?: string;
+  reglamentos_respaldantes?: string[];
+  reglamentosRespaldantes?: string[];
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;
@@ -96,6 +99,8 @@ export interface Expediente {
   sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
+  /** Originado en un T01: se apela en lugar de presentar T02/T03 (PB-02). */
+  esT01?: boolean;
   descargoPresentado?: boolean;
   descargo?: {
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
@@ -254,7 +259,7 @@ export class TribunalDataService {
         aprobado: true
       },
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal)'],
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)'],
         hashCriptografico: '',
         timestamp: ''
       }
@@ -279,7 +284,7 @@ export class TribunalDataService {
         { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541', grupo: '60', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Presidente TD', 'Vocal 1', 'Vocal 2'],
+        juecesFirmantes: ['Presidente TD', 'Miembro Titular 1', 'Miembro Titular 2'],
         hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
         timestamp: '2026-02-22 18:30:12'
       }
@@ -349,7 +354,7 @@ export class TribunalDataService {
         { id: '5', nombre: 'Axel René Villegas', legajo: '403655', grupo: '59', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Vocal 1)', 'Ing. Rossi (Vocal 2)'],
+        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)', 'Ing. Rossi (Miembro Titular)'],
         hashCriptografico: 'sha256-abc123789fed456',
         timestamp: '2026-03-05 11:20:00'
       }
@@ -549,6 +554,9 @@ export class TribunalDataService {
       creador: c.creador || '',
       solicitante: c.solicitante || c.creador || '',
       reglamento_asociado: c.reglamento_asociado || '',
+      reglamentoAsociado: c.reglamento_asociado || '',
+      reglamentos_respaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
+      reglamentosRespaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
       fechaCreacion: c.created_at || '',
       estado: c.estado,
       estadoDisplay: c.estado_display,

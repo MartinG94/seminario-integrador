@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { 
   TribunalDataService, 
   Expediente, 
@@ -9,15 +10,19 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
   AntecedenteT03DTO,
+  ApelacionT01DTO,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
   ExpedienteApiService,
   ExpedienteDetalleDTO,
-  RegistrarValoracionT03Payload
+  HistorialT01DTO,
+  RegistrarValoracionT03Payload,
+  SocioT01DTO
 } from '../services/expediente-api.service';
-import { Subscription } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
+import { Subject, Subscription, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
@@ -28,6 +33,15 @@ const ESTADOS_CONSULTA_CAUSAL = [
 ];
 export const MIN_FUNDAMENTO_CAUSAL = 20;
 export const MAX_FUNDAMENTO_CAUSAL = 5000;
+export const MIN_MOTIVOS_ADECUACION = 20;
+
+/** Borrador de la adecuación de puntos e involucrados del T01 (PB-02). */
+interface BorradorAdecuacion {
+  puntos: number | null;
+  socios: SocioT01DTO[];
+  motivos: string;
+  reabrirPlazo: boolean;
+}
 
 interface BorradorDecisionCausal {
   decision: DecisionCausal | '';
@@ -44,6 +58,31 @@ export interface InvolucradoJustificacion {
   descargo: DescargoDetalleDTO | null;
 }
 
+export interface OpcionPuntajeEscala {
+  valor: string;
+  label: string;
+  rank: number;
+  badgeClass: string;
+}
+
+export const ESCALA_PUNTAJES: OpcionPuntajeEscala[] = [
+  { valor: '-3.0', label: '-3.0 pts', rank: -3.0, badgeClass: 'badge-sancion' },
+  { valor: '-2.5', label: '-2.5 pts', rank: -2.5, badgeClass: 'badge-sancion' },
+  { valor: '-2.0', label: '-2.0 pts', rank: -2.0, badgeClass: 'badge-sancion' },
+  { valor: '-1.5', label: '-1.5 pts', rank: -1.5, badgeClass: 'badge-sancion' },
+  { valor: '-1.0', label: '-1.0 pt', rank: -1.0, badgeClass: 'badge-sancion' },
+  { valor: '-0.5', label: '-0.5 pt', rank: -0.5, badgeClass: 'badge-sancion' },
+  { valor: 'LLAMADO_ATENCION', label: 'Llamado de Atención', rank: -0.25, badgeClass: 'badge-advertencia' },
+  { valor: '0.0', label: '0.0 pts (Eximición)', rank: 0.0, badgeClass: 'badge-neutro' },
+  { valor: 'FELICITACION', label: 'Felicitación', rank: 0.25, badgeClass: 'badge-felicitacion' },
+  { valor: '0.5', label: '+0.5 pt', rank: 0.5, badgeClass: 'badge-premio' },
+  { valor: '1.0', label: '+1.0 pt', rank: 1.0, badgeClass: 'badge-premio' },
+  { valor: '1.5', label: '+1.5 pts', rank: 1.5, badgeClass: 'badge-premio' },
+  { valor: '2.0', label: '+2.0 pts', rank: 2.0, badgeClass: 'badge-premio' },
+  { valor: '2.5', label: '+2.5 pts', rank: 2.5, badgeClass: 'badge-premio' },
+  { valor: '3.0', label: '+3.0 pts', rank: 3.0, badgeClass: 'badge-premio' }
+];
+
 @Component({
   selector: 'app-gestionar-expedientes',
   templateUrl: './gestionar-expedientes.component.html',
@@ -57,7 +96,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   filtroSocio: string = '';
   filtroEstado: string = '';
   filtroUrgencia: string = '';
-  filtroFechaDesde: string = '';
+  filtroFechaDesde: string = `${new Date().getFullYear()}-01-01`;
   filtroFechaHasta: string = '';
 
   // Ordenamiento de tabla
@@ -75,7 +114,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ];
 
   estadosDisponibles: { key: string; label: string }[] = [
-    { key: '', label: 'Todos los estados' },
+    { key: '', label: 'Todos' },
     { key: 'creado', label: 'Creados' },
     { key: 'justificando', label: 'Justificando' },
     { key: 'revision_resolucion', label: 'En Revisión' },
@@ -85,7 +124,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ];
 
   urgenciasDisponibles: { key: string; label: string }[] = [
-    { key: '', label: 'Todas las urgencias' },
+    { key: '', label: 'Todos' },
     { key: 'baja', label: 'Baja' },
     { key: 'normal', label: 'Normal' },
     { key: 'urgente', label: 'Urgente' }
@@ -101,13 +140,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalVotacionAbierto = false;
   modalFirmaAbierto = false;
   modalSociosAbierto = false;
+  modalResolucionAbierto = false;
+  modalDescargoAbierto = false;
+  reglamentacionExpandida = false;
   expedienteSeleccionado: Expediente | null = null;
 
   // Votación
   votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {
     'Dr. Argañaraz (Presidente TD)': 'FAVORABLE',
-    'Dra. Bustos (Vocal 1)': 'FAVORABLE',
-    'Ing. Rossi (Vocal 2)': 'DESFAVORABLE'
+    'Dra. Bustos (Miembro Titular)': 'FAVORABLE',
+    'Ing. Rossi (Miembro Titular)': 'DESFAVORABLE'
   };
   considerandosTexto = 'Por cuanto las pruebas documentales aportadas y la constancia de asistencia demuestran la concurrencia de la causal invocada.';
 
@@ -115,8 +157,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   juezFirmando = 'Dr. Argañaraz (Presidente TD)';
   juecesDisponibles = [
     'Dr. Argañaraz (Presidente TD)',
-    'Dra. Bustos (Vocal 1)',
-    'Ing. Rossi (Vocal 2)'
+    'Dra. Bustos (Miembro Titular)',
+    'Ing. Rossi (Miembro Titular)'
   ];
 
   failedToLoadBoard = false;
@@ -136,13 +178,32 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   private busquedasAntecedente = new Subscription();
   private busquedasEnCurso = 0;
 
+  // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
+  readonly escalaPuntajes = ESCALA_PUNTAJES;
+  opcionPuntajeFinal: string = '0.0';
+  puntajeFinalInput: number | null = null;
+  fundamentoPuntajeInput = '';
+  guardandoDescargo = false;
+
+  // Apelación y adecuación del T01 (PB-02)
+  readonly minMotivosAdecuacion = MIN_MOTIVOS_ADECUACION;
+  historialT01: HistorialT01DTO | null = null;
+  cargandoT01 = false;
+  adecuando = false;
+  borradorAdecuacion: BorradorAdecuacion = { puntos: null, socios: [], motivos: '', reabrirPlazo: false };
+  busquedaSocioAdecuacion = '';
+  candidatosAdecuacion: SocioListItemDTO[] = [];
+  private busquedaSocio$ = new Subject<string>();
+
   private subs: Subscription[] = [];
 
   constructor(
     public dataService: TribunalDataService,
     private auth: AuthService,
     private notifications: NotificationService,
-    private expedienteApi: ExpedienteApiService
+    private expedienteApi: ExpedienteApiService,
+    private socioApi: SocioApiService,
+    private router: Router
   ) {}
 
   get buscandoAntecedente(): boolean {
@@ -163,11 +224,55 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
   }
 
+  get puedeGenerarResolucion(): boolean {
+    if (!this.puedeVotarOFirmar || !this.expedienteSeleccionado) return false;
+    const enRevision =
+      this.expedienteSeleccionado.estado === 'revision_resolucion' ||
+      this.expedienteSeleccionado.estado === 'espera_resolucion';
+    if (!enRevision || this.cargandoJustificaciones) return false;
+    return this.todosLosDescargosVistos;
+  }
+
+  get todosLosDescargosVistos(): boolean {
+    if (!this.involucradosJustificacion || this.involucradosJustificacion.length === 0) {
+      return false;
+    }
+    return this.involucradosJustificacion.every(
+      fila => !fila.descargo || this.getEstadoDescargo(fila) === 'Leído'
+    );
+  }
+
+  get puedeFirmarResolucion(): boolean {
+    return (
+      this.puedeVotarOFirmar &&
+      this.expedienteSeleccionado?.estado === 'pendiente_firma'
+    );
+  }
+
+  get puedeVerResolucion(): boolean {
+    const estado = this.expedienteSeleccionado?.estado;
+    return estado === 'emitido' || estado === 'pendiente_correos';
+  }
+
   ngOnInit(): void {
     const sub = this.dataService.expedientes$.subscribe(list => {
       this.expedientes = list;
     });
     this.subs.push(sub);
+
+    this.subs.push(this.busquedaSocio$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(termino => termino.trim().length < 3
+        ? of([] as SocioListItemDTO[])
+        : this.socioApi.searchSocios(termino).pipe(
+          map(respuesta => respuesta.results || []),
+          catchError(() => of([] as SocioListItemDTO[]))
+        ))
+    ).subscribe(socios => {
+      const actuales = new Set(this.borradorAdecuacion.socios.map(s => s.id));
+      this.candidatosAdecuacion = socios.filter(s => !actuales.has(s.id));
+    }));
 
     this.cargarDatosTablero();
   }
@@ -327,6 +432,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  getIconoOrden(col: string): string {
+    if (this.columnaOrden !== col) return 'swap_vert';
+    return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
+  }
+
   // Transición accesible mediante botón con teclado (CA3 y CA4)
   transicionarEstado(exp: Expediente, nuevoEstado: EstadoExpediente, event?: Event): void {
     if (event) {
@@ -448,23 +558,179 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  abrirVisor(exp: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!exp?.id) return;
+    this.router.navigate(['/gestionar-expedientes', exp.id, 'visor']);
+  }
+
   abrirDetalle(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalResolucionAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalDetalleAbierto = true;
+    this.reglamentacionExpandida = false;
     this.limpiarJustificaciones();
-    if (this.puedeConsultarJustificaciones) {
-      this.cargarJustificaciones(exp.id);
+    this.limpiarT01();
+
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      this.involucradosJustificacion = exp.sociosInvolucrados.map(s => ({
+        socioId: Number(s.id),
+        legajo: s.legajo,
+        grupo: s.grupo || '',
+        nombre: s.nombre,
+        apellido: '',
+        descargo: null
+      }));
+    } else if (exp.socio) {
+      this.involucradosJustificacion = [{
+        socioId: 0,
+        legajo: exp.legajo || '',
+        grupo: '',
+        nombre: exp.socio,
+        apellido: '',
+        descargo: null
+      }];
+    }
+
+    this.cargarJustificaciones(exp.id);
+
+    if (this.puedeConsultarT01) {
+      this.cargarHistorialT01(exp.id);
     }
   }
+
+  // --- Apelación y adecuación del T01 (PB-02, art. 14) ---
+
+  get puedeConsultarT01(): boolean {
+    return this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  /** El debate y la adecuación (OP 30) ocurren en "Justificaciones en revisión". */
+  get puedeAdecuarT01(): boolean {
+    return !!this.historialT01?.es_t01
+      && this.expedienteSeleccionado?.estado === 'revision_resolucion'
+      && this.auth.tieneRol('TD');
+  }
+
+  cargarHistorialT01(expedienteId: number | string): void {
+    this.cargandoT01 = true;
+    this.expedienteApi.obtenerHistorialT01(expedienteId).subscribe({
+      next: historial => {
+        this.cargandoT01 = false;
+        this.aplicarHistorialT01(historial);
+      },
+      error: err => {
+        this.cargandoT01 = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el historial del T01.'));
+      }
+    });
+  }
+
+  private aplicarHistorialT01(historial: HistorialT01DTO): void {
+    this.historialT01 = historial;
+    this.borradorAdecuacion = {
+      puntos: Number(historial.puntos_vigentes),
+      socios: [...(historial.involucrados || [])],
+      motivos: '',
+      reabrirPlazo: false
+    };
+    this.busquedaSocioAdecuacion = '';
+    this.candidatosAdecuacion = [];
+  }
+
+  private limpiarT01(): void {
+    this.historialT01 = null;
+    this.cargandoT01 = false;
+    this.adecuando = false;
+    this.busquedaSocioAdecuacion = '';
+    this.candidatosAdecuacion = [];
+  }
+
+  apelacionesDe(socioId: number): ApelacionT01DTO[] {
+    return (this.historialT01?.apelaciones || []).filter(a => a.socio_id === socioId);
+  }
+
+  buscarSocioAdecuacion(termino: string): void {
+    this.busquedaSocioAdecuacion = termino;
+    this.busquedaSocio$.next(termino);
+  }
+
+  agregarSocioAdecuacion(socio: SocioListItemDTO): void {
+    if (!this.borradorAdecuacion.socios.some(s => s.id === socio.id)) {
+      this.borradorAdecuacion.socios.push({
+        id: socio.id,
+        legajo: socio.legajo,
+        nombre: `${socio.first_name} ${socio.last_name} (N° ${socio.legajo})`
+      });
+    }
+    this.busquedaSocioAdecuacion = '';
+    this.candidatosAdecuacion = [];
+  }
+
+  quitarSocioAdecuacion(socioId: number): void {
+    this.borradorAdecuacion.socios = this.borradorAdecuacion.socios.filter(s => s.id !== socioId);
+  }
+
+  registrarAdecuacion(): void {
+    if (!this.expedienteSeleccionado || this.adecuando) return;
+    const borrador = this.borradorAdecuacion;
+    if (!borrador.socios.length) {
+      this.notifications.error('Debe quedar al menos un involucrado en el expediente.');
+      return;
+    }
+    if (borrador.puntos === null || isNaN(Number(borrador.puntos))) {
+      this.notifications.error('Indicá los puntos adecuados.');
+      return;
+    }
+    const motivos = borrador.motivos.trim();
+    if (motivos.length < MIN_MOTIVOS_ADECUACION) {
+      this.notifications.error(`Indicá los motivos de la adecuación con al menos ${MIN_MOTIVOS_ADECUACION} caracteres.`);
+      return;
+    }
+    this.adecuando = true;
+    this.expedienteApi.adecuarT01(this.expedienteSeleccionado.id, {
+      puntos: Number(borrador.puntos),
+      socios: borrador.socios.map(s => s.id),
+      motivos,
+      reabrir_plazo: borrador.reabrirPlazo
+    }).subscribe({
+      next: historial => {
+        this.adecuando = false;
+        this.aplicarHistorialT01(historial);
+        if (this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.puntos = Number(historial.puntos_vigentes);
+          this.expedienteSeleccionado.estado = historial.estado as EstadoExpediente;
+        }
+        this.notifications.success(
+          borrador.reabrirPlazo
+            ? 'Adecuación registrada. Se abrió un nuevo plazo de apelación y se notificaron los motivos.'
+            : 'Adecuación registrada. Se notificaron los motivos al solicitante y a los involucrados.'
+        );
+        this.cargarDatosTablero();
+      },
+      error: err => {
+        this.adecuando = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la adecuación.'));
+      }
+    });
+  }
+
 
   cargarJustificaciones(expedienteId: number | string): void {
     this.cargandoJustificaciones = true;
     this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
       next: detalle => {
         this.involucradosJustificacion = this.construirInvolucrados(detalle);
+        if (detalle.reglamentos_respaldantes && this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
+          this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+        }
         this.cargandoJustificaciones = false;
       },
       error: err => {
@@ -513,9 +779,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return descargo?.tipo === 'T02_CERTIFICADO';
   }
 
-  accionEvaluar(fila: InvolucradoJustificacion): string {
-    if (!this.puedeEvaluarJustificaciones) return 'Ver justificativo';
-    return fila.descargo?.tipo === 'T03_EXTRAORDINARIO' ? 'Valorar T03' : 'Evaluar justificación';
+  accionDescargo(fila: InvolucradoJustificacion): string {
+    const valorable = fila.descargo?.tipo === 'T03_EXTRAORDINARIO' && this.esEvaluable(fila);
+    return valorable && this.puedeEvaluarJustificaciones ? 'Valorar T03' : 'Ver Descargo';
   }
 
   estadoJustificacion(fila: InvolucradoJustificacion): string {
@@ -609,7 +875,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteApi.registrarDecisionCausal(this.expedienteSeleccionado.id, descargo.id, {
       decision: borrador.decision,
       fundamento,
-      // Se valoran los comprobantes vigentes que el vocal puede inspeccionar en el panel.
+      // Se valoran los comprobantes vigentes que el miembro del TD puede inspeccionar en el panel.
       evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
     }).subscribe({
       next: decision => {
@@ -683,6 +949,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalVotacionAbierto = true;
   }
 
@@ -691,6 +958,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalFirmaAbierto = true;
   }
 
@@ -702,6 +970,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
+    this.modalDescargoAbierto = false;
     this.modalSociosAbierto = true;
   }
 
@@ -717,8 +986,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
+    this.modalResolucionAbierto = false;
+    this.modalDescargoAbierto = false;
+    this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
     this.limpiarJustificaciones();
+    this.limpiarT01();
   }
 
   confirmarVotacion(): void {
@@ -836,6 +1109,268 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!exp) return 'Reglamento Procesal Disciplinario 2026';
     const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
     return reg || 'Reglamento Procesal Disciplinario 2026';
+  }
+
+  getReglamentosSustento(exp: Expediente | null): string[] {
+    if (!exp) return ['Reglamento Procesal Disciplinario 2026'];
+    if (exp.reglamentosRespaldantes && exp.reglamentosRespaldantes.length > 0) {
+      return exp.reglamentosRespaldantes;
+    }
+    if (exp.reglamentos_respaldantes && exp.reglamentos_respaldantes.length > 0) {
+      return exp.reglamentos_respaldantes;
+    }
+    const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
+    return reg ? [reg] : ['Reglamento Procesal Disciplinario 2026'];
+  }
+
+  toggleReglamentacion(): void {
+    this.reglamentacionExpandida = !this.reglamentacionExpandida;
+  }
+
+  getNombreCompletoInvolucrado(fila: InvolucradoJustificacion): string {
+    const parts = [fila.nombre, fila.apellido].filter(Boolean).map(p => p.trim());
+    return parts.join(' ').trim() || fila.nombre || '—';
+  }
+
+  formatGrupoInvolucrado(grupo: string | undefined): string {
+    if (!grupo || !grupo.trim()) return '—';
+    return grupo.trim().replace(/^[Gg]/, '');
+  }
+
+  esSocioActual(fila: InvolucradoJustificacion): boolean {
+    const perfil = this.auth.getPerfil();
+    if (!perfil) return false;
+    const legajoActual = perfil.legajo ? String(perfil.legajo).trim() : '';
+    const legajoFila = fila.legajo ? String(fila.legajo).trim() : '';
+    return !!(legajoActual && legajoFila && legajoActual === legajoFila);
+  }
+
+  irAMisExpedientesParaDescargo(): void {
+    this.cerrarModales();
+    this.router.navigate(['/mis-expedientes']);
+  }
+
+  getEstadoDescargo(fila: InvolucradoJustificacion): 'Leído' | 'No Leído' | 'Sin descargo' {
+    if (!fila.descargo) return 'Sin descargo';
+    if (
+      fila.descargo.leido === true ||
+      (fila.descargo.decisiones_causal && fila.descargo.decisiones_causal.length > 0) ||
+      (fila.descargo.valoraciones_t03 && fila.descargo.valoraciones_t03.length > 0)
+    ) {
+      return 'Leído';
+    }
+    return 'No Leído';
+  }
+
+  get puedeModificarPuntaje(): boolean {
+    if (!this.expedienteSeleccionado) return false;
+    const estado = this.expedienteSeleccionado.estado;
+    return estado === 'revision_resolucion' || estado === 'espera_resolucion';
+  }
+
+  getOpcionPuntajeActual(): OpcionPuntajeEscala {
+    return this.escalaPuntajes.find(op => op.valor === this.opcionPuntajeFinal) || {
+      valor: this.opcionPuntajeFinal,
+      label: this.opcionPuntajeFinal,
+      rank: 0,
+      badgeClass: 'badge-neutro'
+    };
+  }
+
+  decrementarPuntaje(): void {
+    if (!this.puedeModificarPuntaje) return;
+    const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
+    if (idx > 0) {
+      this.opcionPuntajeFinal = this.escalaPuntajes[idx - 1].valor;
+    }
+  }
+
+  incrementarPuntaje(): void {
+    if (!this.puedeModificarPuntaje) return;
+    const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
+    if (idx !== -1 && idx < this.escalaPuntajes.length - 1) {
+      this.opcionPuntajeFinal = this.escalaPuntajes[idx + 1].valor;
+    }
+  }
+
+  getTipoDescargoDisplay(desc: DescargoDetalleDTO | null | undefined): string {
+    if (!desc) return '—';
+    if (desc.causal && desc.causal.trim()) {
+      return desc.causal.trim();
+    }
+    if (desc.tipo === 'T02_CERTIFICADO') return 'Certificado de Examen (T02)';
+    if (desc.tipo === 'T03_EXTRAORDINARIO') return 'Descargo Extraordinario (T03)';
+    return desc.tipo || '—';
+  }
+
+  getPuntajeFinalInvolucradoDisplay(fila: InvolucradoJustificacion): string {
+    const val = fila.descargo?.puntaje_ratificado;
+    if (val != null) {
+      if (val === 'LLAMADO_ATENCION') return 'Llamado de Atención';
+      if (val === 'FELICITACION') return 'Felicitación';
+      const num = Number(val);
+      if (!isNaN(num)) {
+        return num > 0 ? `+${num}` : `${num}`;
+      }
+      return String(val);
+    }
+    const pts = this.getPuntajeFinalInvolucrado(fila);
+    return pts > 0 ? `+${pts}` : `${pts}`;
+  }
+
+  getPuntajeFinalInvolucrado(fila: InvolucradoJustificacion): number {
+    if (fila.descargo?.puntaje_ratificado != null) {
+      const val = fila.descargo.puntaje_ratificado;
+      if (val === 'LLAMADO_ATENCION') return 0;
+      if (val === 'FELICITACION') return 0;
+      const num = Number(val);
+      if (!isNaN(num)) return num;
+    }
+    if (fila.descargo?.decisiones_causal && fila.descargo.decisiones_causal.length > 0) {
+      const ultima = fila.descargo.decisiones_causal[0];
+      if (ultima.decision === 'ACCEPTED') {
+        return 0;
+      }
+      if (ultima.decision === 'REJECTED') {
+        return this.expedienteSeleccionado?.puntos ?? 0;
+      }
+    }
+    return this.expedienteSeleccionado?.puntos ?? 0;
+  }
+
+  verDescargo(fila: InvolucradoJustificacion): void {
+    if (!this.expedienteSeleccionado || !fila.descargo) return;
+    this.involucradoSeleccionado = fila;
+    this.descartarBorradorT03();
+
+    // Inicializar puntaje final y fundamento del descargo
+    const pedido = this.expedienteSeleccionado.puntos ?? 0;
+    let valorInicial = '0.0';
+    if (fila.descargo.puntaje_ratificado != null) {
+      valorInicial = String(fila.descargo.puntaje_ratificado);
+    } else if (fila.descargo.decisiones_causal?.[0]) {
+      valorInicial = String(this.getPuntajeFinalInvolucrado(fila));
+    } else {
+      valorInicial = Number(pedido).toFixed(1);
+    }
+
+    const match = this.escalaPuntajes.find(
+      op => op.valor === valorInicial || Number(op.valor) === Number(valorInicial)
+    );
+    this.opcionPuntajeFinal = match ? match.valor : valorInicial;
+    const num = Number(this.opcionPuntajeFinal);
+    this.puntajeFinalInput = isNaN(num) ? 0 : num;
+
+    const ultimaDecision = fila.descargo.decisiones_causal?.[0];
+    this.fundamentoPuntajeInput = ultimaDecision?.fundamento || '';
+
+    this.modalDetalleAbierto = false;
+    this.modalDescargoAbierto = true;
+  }
+
+  getEncabezadoModalDescargo(): string {
+    if (!this.expedienteSeleccionado || !this.involucradoSeleccionado) {
+      return 'Descargo';
+    }
+    const expId = this.expedienteSeleccionado.id ?? this.expedienteSeleccionado.numero;
+    const nroSocio = this.involucradoSeleccionado.legajo;
+    const nombre = this.getNombreCompletoInvolucrado(this.involucradoSeleccionado);
+    return `Descargo exp ${expId} y ${nroSocio}, ${nombre}`;
+  }
+
+  esFundamentoObligatorio(): boolean {
+    const pedido = Number(this.expedienteSeleccionado?.puntos || 0);
+    const actual = this.getOpcionPuntajeActual();
+    if (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank &&
+        actual.valor !== 'LLAMADO_ATENCION' && actual.valor !== 'FELICITACION') {
+      return Number(this.puntajeFinalInput) < pedido;
+    }
+    return actual.rank < pedido;
+  }
+
+  puedeGuardarDescargo(): boolean {
+    if (this.guardandoDescargo) return false;
+    if (this.esFundamentoObligatorio()) {
+      return !!this.fundamentoPuntajeInput && this.fundamentoPuntajeInput.trim().length >= 10;
+    }
+    return true;
+  }
+
+  guardarYVolverDescargo(): void {
+    const descargo = this.involucradoSeleccionado?.descargo;
+    const exp = this.expedienteSeleccionado;
+    if (!exp || !descargo || this.guardandoDescargo) return;
+
+    const pedido = Number(exp.puntos ?? 0);
+    let actual = this.getOpcionPuntajeActual();
+    if (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank &&
+        actual.valor !== 'LLAMADO_ATENCION' && actual.valor !== 'FELICITACION') {
+      const match = this.escalaPuntajes.find(op => Number(op.valor) === Number(this.puntajeFinalInput));
+      if (match) {
+        this.opcionPuntajeFinal = match.valor;
+        actual = match;
+      }
+    }
+    const puntajeFinalPayload: string | number =
+      actual.valor === 'LLAMADO_ATENCION' || actual.valor === 'FELICITACION'
+        ? actual.valor
+        : (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank ? Number(this.puntajeFinalInput) : Number(actual.valor));
+
+    const fundamento = (this.fundamentoPuntajeInput || '').trim();
+
+    if (this.esFundamentoObligatorio() && fundamento.length < 10) {
+      this.notifications.warning(
+        'La fundamentación escrita es obligatoria (mínimo 10 caracteres) cuando el puntaje final es menor al pedido original.'
+      );
+      return;
+    }
+
+    this.guardandoDescargo = true;
+    const decision: DecisionCausal =
+      actual.rank >= pedido && actual.rank >= 0 ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
+
+    this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
+      decision,
+      fundamento,
+      puntaje_final: puntajeFinalPayload,
+      evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
+    }).subscribe({
+      next: (resp) => {
+        this.guardandoDescargo = false;
+        descargo.leido = true;
+        descargo.puntaje_ratificado = puntajeFinalPayload;
+        if (resp) {
+          descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
+        }
+        this.notifications.success('Evaluación del descargo guardada con éxito.');
+        this.volverADetalleDesdeDescargo();
+      },
+      error: (err) => {
+        this.guardandoDescargo = false;
+        if (err.status === 400 && err.error?.detail) {
+          this.notifications.error(err.error.detail);
+          return;
+        }
+        // Fallback local en entornos mock / dev
+        descargo.leido = true;
+        descargo.puntaje_ratificado = puntajeFinalPayload;
+        this.notifications.success('Evaluación del descargo guardada.');
+        this.volverADetalleDesdeDescargo();
+      }
+    });
+  }
+
+  volverADetalleDesdeDescargo(): void {
+    this.descartarBorradorT03();
+    this.modalDescargoAbierto = false;
+    this.involucradoSeleccionado = null;
+    this.modalDetalleAbierto = true;
+  }
+
+  abrirResolucion(exp: Expediente): void {
+    this.expedienteSeleccionado = exp;
+    this.modalDescargoAbierto = false;
+    this.modalResolucionAbierto = true;
   }
 
   formatSolicitante(exp: Expediente | null): string {

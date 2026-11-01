@@ -1078,12 +1078,12 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
   | `fechaHoraVoto` | `DateTime` | Momento de emisión del voto en sesión. | Sellado de tiempo no nulo. |
-  | `sentidoVoto` | `String` | Posición del vocal ("Afirmativo", "Rechazo", "Disidencia", "Inhibido"). | Valor de catálogo (`RN-04`, `RN-05`). |
+  | `sentidoVoto` | `String` | Posición del miembro del TD ("Afirmativo", "Rechazo", "Disidencia", "Inhibido"). | Valor de catálogo (`RN-04`, `RN-05`). |
   | `fundamentacionJuridica` | `String` | Argumentos reglamentarios que respaldan la postura. | No Nulo. |
-  | `puntosDictaminados` | `Float` | Cuantía de puntos que propone el vocal. | Múltiplo de 0.5 (`RN-08`). |
+  | `puntosDictaminados` | `Float` | Cuantía de puntos que propone el miembro del TD. | Múltiplo de 0.5 (`RN-08`). |
 * **Métodos Conceptuales:**
   - `esAfirmativo(): Boolean`: Retorna `true` si `sentidoVoto == "Afirmativo"`.
-  - `esInhibicion(): Boolean`: Retorna `true` si el vocal se inhibió por conflicto de interés (`RN-05`).
+  - `esInhibicion(): Boolean`: Retorna `true` si el miembro del TD se inhibió por conflicto de interés (`RN-05`).
 * **Relaciones:**
   - `delibera con` $\leftarrow$ `ExpedienteDisciplinario` (0..* a 1 - Composición).
   - `registrado por` $\rightarrow$ `MiembroTribunal` (0..* a 1).
@@ -1137,7 +1137,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   | :--- | :--- | :--- | :--- |
   | `fechaHoraFirma` | `DateTime` | Momento exacto de suscripción digital. | Sellado de tiempo no nulo. |
   | `selloDigital` | `String` | Firma digital / hash criptográfico del firmante. | Inalterable (`RN-06`). |
-  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Vocal Titular Activo"). | No Nulo (`RN-06`, `RN-10`). |
+  | `rolFirmante` | `String` | Rol institucional con el que firma (ej. "Miembro Titular Activo"). | No Nulo (`RN-06`, `RN-10`). |
 * **Relaciones:**
   - `respaldada por` $\leftarrow$ `ResolucionDisciplinaria` (1..* a 1 - Composición).
   - `firmada por` $\rightarrow$ `MiembroTribunal` (0..* a 1).
@@ -1214,7 +1214,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 | **`RN-02` (Reglamento Interno)** | Alerta Preventiva Temprana al acumular $\ge 7$ y $< 10$ puntos negativos. | • `Socio.tieneAlertaAmarilla()`<br>• `CambioEstadoSocio` / `EstadoSocio`<br>• `BalanceCuatrimestral.cantidadSociosAlertaAmarilla` |
 | **`RN-03` (Art. 12 Inc. 2 Reglamento 2026)** | Plazo Preclusivo fatal de 5 días hábiles para presentar descargos (T02/T03). | • `ExpedienteDisciplinario.calcularPlazoPreclusivo()`<br>• `ExpedienteDisciplinario.estaEnPlazoDescargo()`<br>• `NotificacionAcuseSancion.fechaHoraLimiteDescargo`<br>• `FormularioJustificacion.esPresentadoEnTermino()` |
 | **`RN-04` (Art. 96 Estatuto Social)** | Mayoría absoluta reglamentaria ($\ge 2$ votos) e irrecurribilidad en fallos del TD. | • `ExpedienteDisciplinario.tieneQuorumVotacion()`<br>• `ExpedienteDisciplinario.calcularMayoriaVotacion()`<br>• `VotoNominal.esAfirmativo()` |
-| **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de vocal del TD con conflicto de interés o promotor de la acción. | • `VotoNominal.esInhibicion()`<br>• `MiembroTribunal`<br>• `RolInstitucional.validarCompetenciaAccion()` |
+| **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de miembro del TD con conflicto de interés o promotor de la acción. | • `VotoNominal.esInhibicion()`<br>• `MiembroTribunal`<br>• `RolInstitucional.validarCompetenciaAccion()` |
 | **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma Colegiada digital de Socios Activos previa a la emisión del fallo. | • `FirmaColegiada`<br>• `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |
 | **`RN-07` (Arts. 21 a 26 Reglamento 2026)** | Delimitación estricta de competencias funcionales para solicitar apertura de causas. | • `RolInstitucional.validarCompetenciaAccion()`<br>• `SolicitudT01.validarCompetenciaSolicitante()`<br>• `MembresiaSubcomision.esAutoridadHabilitada()` |
 | **`RN-08` (Circular 001/2026)** | Escalas tarifadas y fraccionamiento obligatorio en múltiplos de 0.5 puntos. | • `TipificacionFaltaMerito.esPuntajeValido()`<br>• `DetalleImputacion.puntosPropuestos`<br>• `DetalleResolucionSocio.esPuntajeValido()`<br>• `MovimientoPuntos.puntosVariacion` |

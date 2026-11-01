@@ -434,3 +434,52 @@ class TestDescargoEndpoint:
         assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED)
         descargo = DescargoExpediente.objects.get(expediente=exp, socio=socio_titular)
         assert descargo.texto == texto_exacto
+
+    def test_socio_cd_involucrado_sin_descargo_muestra_descargo_presentado_false(
+        self, api_client: APIClient, socio_titular: Socio
+    ) -> None:
+        """Un socio con rol CD involucrado en un expediente con otro socio que sí tiene descargo
+        debe ver descargo_presentado=False en mis-expedientes mientras no haya presentado el propio."""
+        from django.contrib.auth.models import User
+        from socios.models import Role
+
+        user_cd = User.objects.create_user(username="cd_user", password="secret_password")
+        socio_cd = Socio.objects.create(
+            user=user_cd,
+            first_name="Diego",
+            last_name="Sanchez",
+            legajo="87414",
+            email="cd@aveit.utn.edu.ar",
+            role=Role.CD,
+            social_year=5,
+            is_enabled=True,
+        )
+
+        exp = Expediente.objects.create(
+            numero="EXP-300/2026",
+            socio=socio_titular,
+            motivo="Causa con multiples involucrados",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_inicio_at=timezone.now(),
+            plazo_limite_at=timezone.now() + timedelta(days=3),
+            descargo_presentado=False,
+        )
+        exp.socios.add(socio_titular, socio_cd)
+
+        # El socio titular presenta su descargo
+        DescargoExpediente.objects.create(
+            expediente=exp,
+            socio=socio_titular,
+            tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
+            texto="Descargo del primer socio",
+            es_vigente=True,
+        )
+
+        api_client.force_authenticate(user=user_cd)
+        response = api_client.get("/api/v1/expedientes/mis-expedientes/")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        item = next((x for x in data if x["id"] == exp.id), None)
+        assert item is not None
+        assert item["descargo_presentado"] is False
+        assert item["descargo_texto"] is None

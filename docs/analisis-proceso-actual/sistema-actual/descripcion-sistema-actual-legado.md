@@ -223,9 +223,9 @@ Contenido jurídico formal de los VISTOS y CONSIDERANDOS del expediente.
 | `reglamento1` | `reglamento1` | varchar(300) | NO | Cita legal principal (texto libre). |
 | `reglamento2` | `reglamento2` | varchar(300) | SÍ | Cita legal accesoria 1. |
 | `reglamento3` | `reglamento3` | varchar(300) | SÍ | Cita legal accesoria 2. |
-| `responsable1_id` | `responsable1` | int(11) | SÍ | **FK →** `socio_lista.nroSocio`. Vocal/Juez firmante 1. |
-| `responsable2_id` | `responsable2` | int(11) | SÍ | **FK →** `socio_lista.nroSocio`. Vocal/Juez firmante 2. |
-| `responsable3_id` | `responsable3` | int(11) | SÍ | **FK →** `socio_lista.nroSocio`. Vocal/Juez firmante 3. |
+| `responsable1_id` | `responsable1` | int(11) | SÍ | **FK →** `socio_lista.nroSocio`. Miembro firmante 1 del TD (Titular o Suplente). |
+| `responsable2_id` | `responsable2` | int(11) | SÍ | **FK →** `socio_lista.nroSocio`. Miembro firmante 2 del TD (Titular o Suplente). |
+| `responsable3_id` | `responsable3` | int(11) | SÍ | **FK →** `socio_lista.nroSocio`. Miembro firmante 3 del TD (Titular o Suplente). |
 | `responsable1Text` | `responsable1Text` | varchar(128) | SÍ | Nombre ad-hoc del firmante 1 (para contingencias o no socios). |
 | `responsable2Text` | `responsable2Text` | varchar(128) | SÍ | Nombre ad-hoc del firmante 2. |
 | `responsable3Text` | `responsable3Text` | varchar(128) | SÍ | Nombre ad-hoc del firmante 3. |

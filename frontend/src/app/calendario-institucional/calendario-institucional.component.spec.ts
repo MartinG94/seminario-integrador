@@ -12,6 +12,7 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
 import { CalendarioApiService, HolidayDto, CalcularPlazoResponse } from '../services/calendario-api.service';
 import { CalendarioInstitucionalComponent } from './calendario-institucional.component';
+import { ExpedienteApiService } from '../services/expediente-api.service';
 
 @Component({ template: '<p>Otra vista</p>' })
 class CalendarNextView {}
@@ -22,6 +23,7 @@ describe('CalendarioInstitucionalComponent', () => {
   let api: jasmine.SpyObj<CalendarioApiService>;
   let auth: jasmine.SpyObj<AuthService>;
   let notifications: jasmine.SpyObj<NotificationService>;
+  let expedienteApi: jasmine.SpyObj<ExpedienteApiService>;
 
   const holidays: HolidayDto[] = [
     { id: 1, fecha: '2026-10-12', descripcion: 'Diversidad cultural', creado_por: null,
@@ -43,12 +45,15 @@ describe('CalendarioInstitucionalComponent', () => {
     auth = jasmine.createSpyObj('AuthService', ['tieneRol']);
     auth.tieneRol.and.returnValue(true);
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    expedienteApi = jasmine.createSpyObj('ExpedienteApiService', ['obtenerPlazoApelacion', 'actualizarPlazoApelacion']);
+    expedienteApi.obtenerPlazoApelacion.and.returnValue(of({ dias_habiles: 5, actualizado_at: null, actualizado_por: '' }));
     await TestBed.configureTestingModule({
       imports: [FormsModule, MatDialogModule, NoopAnimationsModule,
         RouterTestingModule.withRoutes([{ path: 'prueba', component: CalendarNextView }])],
       declarations: [CalendarioInstitucionalComponent, CalendarNextView],
       providers: [{ provide: CalendarioApiService, useValue: api }, { provide: AuthService, useValue: auth },
-        { provide: NotificationService, useValue: notifications }],
+        { provide: NotificationService, useValue: notifications },
+        { provide: ExpedienteApiService, useValue: expedienteApi }],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
     fixture = TestBed.createComponent(CalendarioInstitucionalComponent);
@@ -368,4 +373,37 @@ describe('CalendarioInstitucionalComponent', () => {
     fixture.detectChanges();
     tick(500);
   }));
+
+  describe('Plazo de apelación del T01 (PB-02)', () => {
+    it('lo muestra a quien gestiona el calendario', () => {
+      expect(expedienteApi.obtenerPlazoApelacion).toHaveBeenCalledTimes(1);
+      expect(component.appealDeadlineDraft).toBe(5);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Plazo de apelación del T01');
+    });
+
+    it('rechaza valores fuera de rango sin llamar a la API', () => {
+      component.appealDeadlineDraft = 31;
+      component.saveAppealDeadline();
+      expect(expedienteApi.actualizarPlazoApelacion).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledWith('El plazo de apelación debe estar entre 1 y 30 días hábiles.');
+    });
+
+    it('guarda el nuevo plazo', () => {
+      expedienteApi.actualizarPlazoApelacion.and.returnValue(
+        of({ dias_habiles: 7, actualizado_at: '2026-10-23T10:00:00Z', actualizado_por: '78100' })
+      );
+      component.appealDeadlineDraft = 7;
+      component.saveAppealDeadline();
+      expect(expedienteApi.actualizarPlazoApelacion).toHaveBeenCalledWith(7);
+      expect(component.appealDeadline?.dias_habiles).toBe(7);
+      expect(notifications.success).toHaveBeenCalledWith('Plazo de apelación actualizado. Rige para los próximos períodos.');
+    });
+
+    it('la Comisión Directiva sólo lo consulta', () => {
+      auth.tieneRol.and.callFake((...roles: string[]) => roles.includes('CD'));
+      fixture.detectChanges();
+      expect(component.canEditAppealDeadline).toBeFalse();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.btn-save-appeal-deadline')).toBeNull();
+    });
+  });
 });
