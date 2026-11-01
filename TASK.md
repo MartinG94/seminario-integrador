@@ -336,9 +336,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ## 11.2 Sprint 4 — Desglose Atómico: S4-03 / SCRUM-53 (Valorar T03 mediante Antecedentes y Sana Crítica)
 
-> **Spec de Referencia:** [`specs/s4-scrum-53-valorar-t03-antecedentes/spec.md`](specs/s4-scrum-53-valorar-t03-antecedentes/spec.md)  
-> **Plan Técnico:** [`specs/s4-scrum-53-valorar-t03-antecedentes/plan.md`](specs/s4-scrum-53-valorar-t03-antecedentes/plan.md)  
-> **Tareas:** [`specs/s4-scrum-53-valorar-t03-antecedentes/tasks.md`](specs/s4-scrum-53-valorar-t03-antecedentes/tasks.md)
+> **Referencia:** Jira SCRUM-53 (S4-03).
 
 - [x] **TS4-03.1 a TS4-03.15 Backend y datos de prueba [TDD]:** Dominio, condición del padrón, modelos inmutables y migración `0017`, servicio de valoración, antecedentes emitidos, inhibición de partes interesadas, API, búsqueda de causas emitidas y escenarios `EXP-0905` y `EXP-0906`.
 - [x] **TS4-03.16 Verificación del backend:** Suite `pytest`, `ruff`, migraciones y control contra `notasPO.md`; reserva de la valoración frente a imputados con rol de autoridad.
