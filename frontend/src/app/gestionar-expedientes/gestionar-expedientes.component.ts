@@ -17,6 +17,7 @@ import {
   RegistrarValoracionT03Payload
 } from '../services/expediente-api.service';
 import { Subscription } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
@@ -133,6 +134,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   antecedentesT03: AntecedenteT03DTO[] = [];
   registrandoValoracion = false;
   private busquedasAntecedente = new Subscription();
+  private busquedasEnCurso = 0;
 
   private subs: Subscription[] = [];
 
@@ -142,6 +144,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService
   ) {}
+
+  get buscandoAntecedente(): boolean {
+    return this.busquedasEnCurso > 0;
+  }
 
   get puedeVotarOFirmar(): boolean {
     return this.auth.tieneRol('TD', 'ADMIN');
@@ -496,7 +502,6 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   private limpiarJustificaciones(): void {
     this.involucradosJustificacion = [];
     this.descartarBorradorT03();
-    this.registrandoValoracion = false;
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
     this.registrandoCausal = false;
@@ -628,7 +633,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   buscarAntecedenteT03(numero: string): void {
-    const busqueda = this.expedienteApi.buscarAntecedente(numero).subscribe({
+    this.busquedasEnCurso++;
+    const busqueda = this.expedienteApi.buscarAntecedente(numero).pipe(
+      finalize(() => this.busquedasEnCurso--)
+    ).subscribe({
       next: antecedente => {
         // El número admite varias escrituras: el repetido sólo se detecta con la ficha.
         if (this.antecedentesT03.some(a => a.id === antecedente.id)) {
@@ -657,7 +665,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       next: valoracion => {
         this.registrandoValoracion = false;
         descargo.valoraciones_t03 = [valoracion, ...(descargo.valoraciones_t03 || [])];
-        this.descartarBorradorT03();
+        // Si el miembro ya pasó a otro involucrado, ese borrador no se toca.
+        if (this.involucradoSeleccionado?.descargo === descargo) {
+          this.descartarBorradorT03();
+        }
         this.notifications.success(`Valoración registrada (versión ${valoracion.version}).`);
       },
       error: err => {

@@ -23,6 +23,7 @@ export class ValoracionT03PanelComponent implements OnChanges {
   @Input() descargoId = 0;
   @Input() puedeValorar = false;
   @Input() registrando = false;
+  @Input() buscandoAntecedente = false;
   @Input() antecedentes: AntecedenteT03DTO[] = [];
   @Input() historial: ValoracionT03DTO[] = [];
 
@@ -73,6 +74,10 @@ export class ValoracionT03PanelComponent implements OnChanges {
 
   enviar(): void {
     if (this.registrando) return;
+    if (this.buscandoAntecedente) {
+      this.notifications.error('Esperá a que termine la búsqueda del antecedente.');
+      return;
+    }
     if (!this.resultado) {
       this.notifications.error('Elegí si aprobás o desaprobás el T03.');
       return;

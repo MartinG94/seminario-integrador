@@ -924,6 +924,67 @@ describe('GestionarExpedientesComponent', () => {
         });
       });
 
+      describe('registro y búsquedas en curso', () => {
+        it('informa la búsqueda en curso hasta que responde', () => {
+          const respuesta = new Subject<AntecedenteT03DTO>();
+          spyOn(api, 'buscarAntecedente').and.returnValue(respuesta);
+          valorarT03();
+
+          component.buscarAntecedenteT03('7/2026');
+          expect(component.buscandoAntecedente).toBeTrue();
+
+          respuesta.next(antecedente);
+          respuesta.complete();
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('deja de informar la búsqueda cuando falla', () => {
+          spyOn(api, 'buscarAntecedente').and.returnValue(throwError(() => ({ status: 404 })));
+          valorarT03();
+
+          component.buscarAntecedenteT03('999/2026');
+
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('deja de informar la búsqueda cuando se descarta el borrador', () => {
+          spyOn(api, 'buscarAntecedente').and.returnValue(new Subject<AntecedenteT03DTO>());
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.volverAListadoInvolucrados();
+
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('no borra el borrador de otro involucrado si el registro responde tarde', () => {
+          const respuesta = new Subject<ValoracionT03DTO>();
+          spyOn(api, 'registrarValoracionT03').and.returnValue(respuesta);
+          const fila = valorarT03();
+          component.registrarValoracionT03(payload);
+
+          component.seleccionarInvolucrado(filaT02());
+          component.antecedentesT03 = [antecedente];
+          respuesta.next(valoracion());
+
+          expect(component.antecedentesT03).toEqual([antecedente]);
+          expect(fila.descargo?.valoraciones_t03?.length).toBe(1);
+        });
+
+        it('mantiene el bloqueo de doble envío aunque se cierre el expediente', () => {
+          const respuesta = new Subject<ValoracionT03DTO>();
+          spyOn(api, 'registrarValoracionT03').and.returnValue(respuesta);
+          valorarT03();
+          component.registrarValoracionT03(payload);
+
+          component.cerrarModales();
+          expect(component.registrandoValoracion).toBeTrue();
+
+          respuesta.next(valoracion());
+          expect(component.registrandoValoracion).toBeFalse();
+        });
+      });
+
       it('descarta los antecedentes al volver al listado', () => {
         valorarT03();
         component.antecedentesT03 = [antecedente];

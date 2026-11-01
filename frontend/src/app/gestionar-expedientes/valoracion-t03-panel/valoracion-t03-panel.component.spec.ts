@@ -150,6 +150,19 @@ describe('ValoracionT03PanelComponent', () => {
       expect(consultar<HTMLButtonElement>('.btn-registrar-valoracion')?.disabled).toBeTrue();
     });
 
+    it('no registra mientras se busca un antecedente, para no perder la cita', () => {
+      component.buscandoAntecedente = true;
+      fixture.detectChanges();
+      component.elegirResultado('ACCEPTED');
+      component.fundamento = fundamento;
+
+      component.enviar();
+
+      expect(emitido).not.toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalledOnceWith('Esperá a que termine la búsqueda del antecedente.');
+      expect(consultar<HTMLButtonElement>('.btn-registrar-valoracion')?.disabled).toBeTrue();
+    });
+
     it('oculta el formulario a quien sólo puede consultar', () => {
       component.puedeValorar = false;
       fixture.detectChanges();
