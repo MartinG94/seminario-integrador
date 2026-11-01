@@ -4,7 +4,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonModule } from '@angular/material/button';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent } from './gestionar-expedientes.component';
@@ -627,7 +627,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(notifications.error).toHaveBeenCalledWith('No se pudo abrir el comprobante.');
     });
 
-    it('muestra la tabla de involucrados con el botón Evaluar justificación sólo en T02', () => {
+    it('muestra la tabla de involucrados con la acción de cada justificación presentada', () => {
       abrirComo('TD');
       fixture.detectChanges();
 
@@ -635,7 +635,8 @@ describe('GestionarExpedientesComponent', () => {
       expect(tabla).toBeTruthy();
       expect(tabla.textContent).toContain('Pérez');
       const botones = tabla.querySelectorAll('.btn-evaluar-justificacion');
-      expect(botones.length).toBe(1);
+      expect(botones.length).toBe(2);
+      expect(botones[1].textContent).toContain('Valorar T03');
       expect(botones[0].textContent).toContain('Evaluar justificación');
       expect(botones[0].querySelector('.material-icons')?.textContent).toContain('gavel');
     });
@@ -838,6 +839,89 @@ describe('GestionarExpedientesComponent', () => {
         expect(component.antecedentesT03).toEqual([antecedente]);
         expect(component.registrandoValoracion).toBeFalse();
         expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      describe('respuestas tardías de la búsqueda de antecedentes', () => {
+        let respuesta: Subject<AntecedenteT03DTO>;
+
+        beforeEach(() => {
+          respuesta = new Subject<AntecedenteT03DTO>();
+          spyOn(api, 'buscarAntecedente').and.returnValue(respuesta);
+        });
+
+        it('no la suma al borrador de otro involucrado', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.seleccionarInvolucrado(filaT02());
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma después de volver al listado', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.volverAListadoInvolucrados();
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma después de cerrar el expediente', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.cerrarModales();
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma al borrador que sigue a un registro', () => {
+          spyOn(api, 'registrarValoracionT03').and.returnValue(of(valoracion()));
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.registrarValoracionT03(payload);
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no notifica el error de una búsqueda descartada', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('999/2026');
+
+          component.volverAListadoInvolucrados();
+          respuesta.error({ status: 404, error: { detail: 'No existe.' } });
+
+          expect(notifications.error).not.toHaveBeenCalled();
+        });
+
+        it('cancela la búsqueda en curso al destruir la sala', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.ngOnDestroy();
+
+          expect(respuesta.observers.length).toBe(0);
+        });
+
+        it('conserva dos búsquedas seguidas del mismo borrador', () => {
+          const segunda = new Subject<AntecedenteT03DTO>();
+          (api.buscarAntecedente as jasmine.Spy).and.returnValues(respuesta, segunda);
+          const otroAntecedente = { ...antecedente, id: 8, numero: 'EXP-0008/2026' };
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+          component.buscarAntecedenteT03('8/2026');
+
+          segunda.next(otroAntecedente);
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03.map(a => a.id)).toEqual([8, 7]);
+        });
       });
 
       it('descarta los antecedentes al volver al listado', () => {

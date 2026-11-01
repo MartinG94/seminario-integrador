@@ -132,6 +132,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   // Valoración de T03 dentro del detalle (S4-03)
   antecedentesT03: AntecedenteT03DTO[] = [];
   registrandoValoracion = false;
+  private busquedasAntecedente = new Subscription();
 
   private subs: Subscription[] = [];
 
@@ -167,6 +168,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
+    this.busquedasAntecedente.unsubscribe();
   }
 
   toggleColapsar(estado: string, event?: Event): void {
@@ -493,7 +495,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   private limpiarJustificaciones(): void {
     this.involucradosJustificacion = [];
-    this.antecedentesT03 = [];
+    this.descartarBorradorT03();
     this.registrandoValoracion = false;
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
@@ -540,12 +542,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   seleccionarInvolucrado(fila: InvolucradoJustificacion): void {
     if (!this.esEvaluable(fila)) return;
     this.involucradoSeleccionado = fila;
-    this.antecedentesT03 = [];
+    this.descartarBorradorT03();
     this.borradorCausal = { decision: '', fundamento: '' };
   }
 
   volverAListadoInvolucrados(): void {
-    this.antecedentesT03 = [];
+    this.descartarBorradorT03();
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
   }
@@ -618,8 +620,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** La valoración es inmutable: una búsqueda en curso no puede llegar a otro borrador. */
+  private descartarBorradorT03(): void {
+    this.busquedasAntecedente.unsubscribe();
+    this.busquedasAntecedente = new Subscription();
+    this.antecedentesT03 = [];
+  }
+
   buscarAntecedenteT03(numero: string): void {
-    this.expedienteApi.buscarAntecedente(numero).subscribe({
+    const busqueda = this.expedienteApi.buscarAntecedente(numero).subscribe({
       next: antecedente => {
         // El número admite varias escrituras: el repetido sólo se detecta con la ficha.
         if (this.antecedentesT03.some(a => a.id === antecedente.id)) {
@@ -632,6 +641,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error(httpErrorMessage(err, 'No se pudo consultar el antecedente.'));
       }
     });
+    this.busquedasAntecedente.add(busqueda);
   }
 
   quitarAntecedenteT03(id: number): void {
@@ -647,7 +657,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       next: valoracion => {
         this.registrandoValoracion = false;
         descargo.valoraciones_t03 = [valoracion, ...(descargo.valoraciones_t03 || [])];
-        this.antecedentesT03 = [];
+        this.descartarBorradorT03();
         this.notifications.success(`Valoración registrada (versión ${valoracion.version}).`);
       },
       error: err => {
