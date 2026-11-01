@@ -8,11 +8,13 @@ import {
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
+  AntecedenteT03DTO,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
   ExpedienteApiService,
-  ExpedienteDetalleDTO
+  ExpedienteDetalleDTO,
+  RegistrarValoracionT03Payload
 } from '../services/expediente-api.service';
 import { Subscription } from 'rxjs';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
@@ -126,6 +128,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   cargandoJustificaciones = false;
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
+
+  // Valoración de T03 dentro del detalle (S4-03)
+  antecedentesT03: AntecedenteT03DTO[] = [];
+  registrandoValoracion = false;
 
   private subs: Subscription[] = [];
 
@@ -487,19 +493,33 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   private limpiarJustificaciones(): void {
     this.involucradosJustificacion = [];
+    this.antecedentesT03 = [];
+    this.registrandoValoracion = false;
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
     this.registrandoCausal = false;
   }
 
   esEvaluable(fila: InvolucradoJustificacion): boolean {
-    return fila.descargo?.tipo === 'T02_CERTIFICADO';
+    const descargo = fila.descargo;
+    if (descargo?.tipo === 'T03_EXTRAORDINARIO') return !!descargo.valoraciones_t03;
+    return descargo?.tipo === 'T02_CERTIFICADO';
+  }
+
+  accionEvaluar(fila: InvolucradoJustificacion): string {
+    if (!this.puedeEvaluarJustificaciones) return 'Ver justificativo';
+    return fila.descargo?.tipo === 'T03_EXTRAORDINARIO' ? 'Valorar T03' : 'Evaluar justificación';
   }
 
   estadoJustificacion(fila: InvolucradoJustificacion): string {
     const descargo = fila.descargo;
     if (!descargo) return 'Sin justificación';
-    if (descargo.tipo === 'T03_EXTRAORDINARIO') return 'Extraordinaria (T03)';
+    if (descargo.tipo === 'T03_EXTRAORDINARIO') {
+      // Sin historial en la respuesta, la valoración está reservada para este usuario (RF-24).
+      if (!descargo.valoraciones_t03) return 'Extraordinaria (T03)';
+      const vigente = descargo.valoraciones_t03[0];
+      return vigente ? this.etiquetaDecision(vigente.resultado) : 'Pendiente de valoración';
+    }
     const ultima = descargo.decisiones_causal?.[0];
     if (!ultima) return 'Pendiente de evaluación';
     return this.etiquetaDecision(ultima.decision);
@@ -520,10 +540,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   seleccionarInvolucrado(fila: InvolucradoJustificacion): void {
     if (!this.esEvaluable(fila)) return;
     this.involucradoSeleccionado = fila;
+    this.antecedentesT03 = [];
     this.borradorCausal = { decision: '', fundamento: '' };
   }
 
   volverAListadoInvolucrados(): void {
+    this.antecedentesT03 = [];
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
   }
@@ -592,6 +614,45 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       error: err => {
         this.registrandoCausal = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la decisión.'));
+      }
+    });
+  }
+
+  buscarAntecedenteT03(numero: string): void {
+    this.expedienteApi.buscarAntecedente(numero).subscribe({
+      next: antecedente => {
+        // El número admite varias escrituras: el repetido sólo se detecta con la ficha.
+        if (this.antecedentesT03.some(a => a.id === antecedente.id)) {
+          this.notifications.error('Ese antecedente ya está vinculado.');
+          return;
+        }
+        this.antecedentesT03 = [...this.antecedentesT03, antecedente];
+      },
+      error: err => {
+        this.notifications.error(httpErrorMessage(err, 'No se pudo consultar el antecedente.'));
+      }
+    });
+  }
+
+  quitarAntecedenteT03(id: number): void {
+    this.antecedentesT03 = this.antecedentesT03.filter(a => a.id !== id);
+  }
+
+  registrarValoracionT03(payload: RegistrarValoracionT03Payload): void {
+    const descargo = this.involucradoSeleccionado?.descargo;
+    if (!this.expedienteSeleccionado || !descargo || this.registrandoValoracion) return;
+
+    this.registrandoValoracion = true;
+    this.expedienteApi.registrarValoracionT03(this.expedienteSeleccionado.id, descargo.id, payload).subscribe({
+      next: valoracion => {
+        this.registrandoValoracion = false;
+        descargo.valoraciones_t03 = [valoracion, ...(descargo.valoraciones_t03 || [])];
+        this.antecedentesT03 = [];
+        this.notifications.success(`Valoración registrada (versión ${valoracion.version}).`);
+      },
+      error: err => {
+        this.registrandoValoracion = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la valoración.'));
       }
     });
   }

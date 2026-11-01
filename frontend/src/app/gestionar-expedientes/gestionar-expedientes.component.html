@@ -44,7 +44,7 @@
               <input id="filtro-socio" 
                      type="text" 
                      class="form-control" 
-                     placeholder="Buscar por socio, legajo, creador o título..." 
+                     placeholder="Buscar por número, motivo, socio, legajo, creador o título..."
                      [(ngModel)]="filtroSocio" 
                      (keyup.enter)="cargarDatosTablero()">
             </div>
@@ -403,10 +403,10 @@
                   </td>
                   <td class="text-right text-nowrap">
                     <button *ngIf="esEvaluable(fila)" type="button" class="btn btn-sm btn-primary btn-evaluar-justificacion"
-                            [attr.aria-label]="(puedeEvaluarJustificaciones ? 'Evaluar justificación de ' : 'Ver justificativo de ') + fila.nombre + ' ' + fila.apellido"
+                            [attr.aria-label]="accionEvaluar(fila) + ' de ' + fila.nombre + ' ' + fila.apellido"
                             (click)="seleccionarInvolucrado(fila)">
                       <i class="material-icons" aria-hidden="true">{{puedeEvaluarJustificaciones ? 'gavel' : 'visibility'}}</i>
-                      {{puedeEvaluarJustificaciones ? 'Evaluar justificación' : 'Ver justificativo'}}
+                      {{accionEvaluar(fila)}}
                     </button>
                   </td>
                 </tr>
@@ -437,7 +437,7 @@
           <hr>
 
           <h6 class="seccion-titulo">Justificativo</h6>
-          <p class="mb-1"><strong>Causal:</strong> {{d.causal}}</p>
+          <p *ngIf="d.causal" class="mb-1"><strong>Causal:</strong> {{d.causal}}</p>
           <p class="mb-2"><strong>Exposición:</strong> {{d.texto || 'Sin exposición escrita.'}}</p>
           <div class="text-center my-3">
             <p *ngIf="!d.evidencias.length" class="text-muted small mb-0">El socio no presentó comprobante.</p>
@@ -450,10 +450,20 @@
               <div class="small text-muted">{{ev.nombre_original}}</div>
             </div>
           </div>
-          <p class="small text-muted mb-0">Sugerencia del sistema: {{sugerenciaSistema(d)}}</p>
+          <p *ngIf="d.tipo === 'T02_CERTIFICADO'" class="small text-muted mb-0">Sugerencia del sistema: {{sugerenciaSistema(d)}}</p>
           <hr>
 
-          <ng-container *ngIf="puedeEvaluarJustificaciones">
+          <app-valoracion-t03-panel *ngIf="d.tipo === 'T03_EXTRAORDINARIO'"
+                                    [descargoId]="d.id"
+                                    [puedeValorar]="puedeEvaluarJustificaciones"
+                                    [registrando]="registrandoValoracion"
+                                    [antecedentes]="antecedentesT03"
+                                    [historial]="d.valoraciones_t03 || []"
+                                    (buscarAntecedente)="buscarAntecedenteT03($event)"
+                                    (quitarAntecedente)="quitarAntecedenteT03($event)"
+                                    (registrar)="registrarValoracionT03($event)"></app-valoracion-t03-panel>
+
+          <ng-container *ngIf="puedeEvaluarJustificaciones && d.tipo === 'T02_CERTIFICADO'">
             <h6 class="seccion-titulo">Resolución de justificativo</h6>
             <div class="d-flex justify-content-center mb-3" role="group"
                  [attr.aria-label]="'Decisión sobre la justificación de ' + involucradoSeleccionado?.nombre + ' ' + involucradoSeleccionado?.apellido">
@@ -498,8 +508,8 @@
             <hr>
           </ng-container>
 
-          <h6 class="seccion-titulo">Historial de versiones</h6>
-          <p *ngIf="!d.decisiones_causal?.length" class="text-muted small mb-0">Todavía no hay decisiones registradas.</p>
+          <h6 *ngIf="d.tipo === 'T02_CERTIFICADO'" class="seccion-titulo">Historial de versiones</h6>
+          <p *ngIf="d.tipo === 'T02_CERTIFICADO' && !d.decisiones_causal?.length" class="text-muted small mb-0">Todavía no hay decisiones registradas.</p>
           <ul *ngIf="d.decisiones_causal?.length" class="list-unstyled small mb-0">
             <li *ngFor="let h of d.decisiones_causal" class="mb-2 historial-causal">
               v{{h.version}} &bull;
