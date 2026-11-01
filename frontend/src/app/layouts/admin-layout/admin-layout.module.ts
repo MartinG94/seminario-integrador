@@ -6,6 +6,7 @@ import { AdminLayoutRoutes } from './admin-layout.routing';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
+import { ValoracionT03PanelComponent } from '../../gestionar-expedientes/valoracion-t03-panel/valoracion-t03-panel.component';
 import { ReportesComponent } from '../../reportes/reportes.component';
 import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.component';
 import { SolicitarPuntosComponent } from '../../solicitar-puntos/solicitar-puntos.component';
@@ -60,6 +61,7 @@ import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dial
     MisExpedientesComponent,
     ReglamentosComponent,
     GestionarExpedientesComponent,
+    ValoracionT03PanelComponent,
     ReportesComponent,
     RankingSociosComponent,
     SocioLegajoDialogComponent,

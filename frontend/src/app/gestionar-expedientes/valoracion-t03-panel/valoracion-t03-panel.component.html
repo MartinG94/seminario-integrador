@@ -1,0 +1,89 @@
+<ng-container *ngIf="puedeValorar">
+  <h6 class="seccion-titulo">Valoración del T03</h6>
+  <div class="d-flex justify-content-center mb-3" role="group" aria-label="Resultado de la valoración">
+    <button type="button" class="btn mx-1 btn-aprobar-t03"
+            [ngClass]="resultado === 'ACCEPTED' ? 'btn-success' : 'btn-outline-success'"
+            [attr.aria-pressed]="resultado === 'ACCEPTED'"
+            (click)="elegirResultado('ACCEPTED')">
+      <i class="material-icons" aria-hidden="true">check_circle</i> APROBAR
+    </button>
+    <button type="button" class="btn mx-1 btn-desaprobar-t03"
+            [ngClass]="resultado === 'REJECTED' ? 'btn-danger' : 'btn-outline-danger'"
+            [attr.aria-pressed]="resultado === 'REJECTED'"
+            (click)="elegirResultado('REJECTED')">
+      <i class="material-icons" aria-hidden="true">cancel</i> DESAPROBAR
+    </button>
+  </div>
+
+  <div class="form-group mb-2">
+    <label class="small font-weight-bold" [attr.for]="'antecedente-t03-' + descargoId">Antecedentes (opcional)</label>
+    <div class="d-flex">
+      <input type="text" class="form-control campo-antecedente" placeholder="N.º de expediente, por ejemplo 7/2026"
+             [id]="'antecedente-t03-' + descargoId"
+             [(ngModel)]="numeroAntecedente"
+             (keydown.enter)="$event.preventDefault(); agregarAntecedente()">
+      <button type="button" class="btn btn-sm btn-info ml-2 btn-agregar-antecedente" (click)="agregarAntecedente()">Agregar</button>
+    </div>
+  </div>
+
+  <ul *ngIf="antecedentes.length" class="list-unstyled small mb-2">
+    <li *ngFor="let antecedente of antecedentes" class="ficha-antecedente">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="font-weight-bold">{{formatearNumero(antecedente.numero)}} &bull; Emitido el {{antecedente.fecha_emision | date:'dd/MM/yyyy'}}</div>
+          <div>{{antecedente.motivo}}</div>
+          <div class="text-muted">{{antecedente.reglamento_invocado}}</div>
+        </div>
+        <button type="button" class="btn btn-sm btn-link btn-quitar-antecedente"
+                [attr.aria-label]="'Quitar antecedente ' + formatearNumero(antecedente.numero)"
+                (click)="quitarAntecedente.emit(antecedente.id)">
+          <i class="material-icons" aria-hidden="true">close</i>
+        </button>
+      </div>
+    </li>
+  </ul>
+
+  <div *ngIf="antecedentes.length" class="aviso-orientativo small mb-2" role="note">
+    <i class="material-icons" aria-hidden="true">info</i>
+    <span><strong>Aviso orientativo:</strong> el Tribunal ejerce la sana crítica. Si el criterio adoptado se aparta de las consideraciones del antecedente, debe quedar fundamentado en el campo obligatorio.</span>
+  </div>
+
+  <div class="form-group mb-2">
+    <label class="small font-weight-bold" [attr.for]="'fundamento-t03-' + descargoId">Fundamento (obligatorio)</label>
+    <textarea class="form-control" rows="3" aria-required="true"
+              [attr.maxlength]="maxFundamento"
+              [id]="'fundamento-t03-' + descargoId"
+              [attr.aria-describedby]="'ayuda-fundamento-t03-' + descargoId + ' contador-fundamento-t03-' + descargoId"
+              [(ngModel)]="fundamento"></textarea>
+    <div class="d-flex justify-content-between">
+      <small [id]="'ayuda-fundamento-t03-' + descargoId" class="form-text text-muted">
+        Requerido para aprobar o desaprobar (mínimo 20 caracteres).
+      </small>
+      <small [id]="'contador-fundamento-t03-' + descargoId" class="form-text text-muted text-nowrap ml-2 contador-fundamento-t03" aria-live="polite">
+        {{fundamento.length}} / {{maxFundamento}} caracteres
+      </small>
+    </div>
+  </div>
+
+  <div class="text-right">
+    <button type="button" class="btn btn-primary btn-sm btn-registrar-valoracion"
+            [disabled]="registrando"
+            (click)="enviar()">Registrar valoración</button>
+  </div>
+  <hr>
+</ng-container>
+
+<h6 class="seccion-titulo">Historial de versiones</h6>
+<p *ngIf="!historial.length" class="text-muted small mb-0">Todavía no hay valoraciones registradas.</p>
+<ul *ngIf="historial.length" class="list-unstyled small mb-0">
+  <li *ngFor="let h of historial" class="mb-2 historial-t03">
+    v{{h.version}} &bull;
+    <span class="font-weight-bold" [ngClass]="h.resultado === 'ACCEPTED' ? 'text-success' : 'text-danger'">{{h.resultado_display}}</span>
+    &bull; {{h.autor_legajo}} ({{condicionAutor(h)}})
+    &bull; {{h.created_at | date:'dd/MM/yyyy HH:mm'}}
+    <div *ngIf="h.antecedentes.length" class="text-muted">
+      Antecedentes: <span *ngFor="let antecedente of h.antecedentes; let ultimo = last">{{formatearNumero(antecedente.numero)}}{{ultimo ? '' : ', '}}</span>
+    </div>
+    <div class="text-muted">{{h.fundamento}}</div>
+  </li>
+</ul>
