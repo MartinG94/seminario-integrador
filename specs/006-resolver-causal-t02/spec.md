@@ -2,7 +2,7 @@
 
 ## Contexto y Objetivo
 
-Permitir que un vocal del Tribunal de Disciplina (TD) acepte o rechace cada causal tipificada presentada mediante Formulario T02, dejando una decisión auditable, versionada y vinculada a la evidencia valorada, sin alterar el descargo presentado por el socio.
+Permitir que un miembro del Tribunal de Disciplina (TD) acepte o rechace cada causal tipificada presentada mediante Formulario T02, dejando una decisión auditable, versionada y vinculada a la evidencia valorada, sin alterar el descargo presentado por el socio.
 
 - **Referencia Backlog:** S4-02 (EP4, Sprint 4, 3 SP, prioridad Highest) — `docs/gestion-proyecto/jira_backlog_import_v2.csv`.
 - **Referencia Rectora:** [Notas del PO (27/09/2026 y 07/10/2026)](../../docs/gestion-proyecto/notasPO.md).
@@ -13,7 +13,7 @@ Permitir que un vocal del Tribunal de Disciplina (TD) acepte o rechace cada caus
 
 ## Historia de Usuario
 
-**Como** vocal del Tribunal de Disciplina,
+**Como** miembro del Tribunal de Disciplina,
 **quiero** aceptar o rechazar cada causal tipificada con fundamento,
 **para** producir una decisión auditable.
 
@@ -25,10 +25,10 @@ Permitir que un vocal del Tribunal de Disciplina (TD) acepte o rechace cada caus
    El sistema *debe* registrar la decisión (`Aceptada` o `Rechazada`) sobre la causal de cada descargo T02 de forma individual por socio, ya que la resolución se individualiza (Notas del PO, 27/09/2026).
 
 2. **Event-driven (Evidencia valorada):**
-   CUANDO un vocal registre una decisión, el sistema *debe* vincularla a los comprobantes vigentes valorados del descargo, conservando su identificador y hash SHA-256. SI se indica un comprobante ajeno al descargo o no vigente, el sistema *debe* rechazar la decisión con HTTP `400`.
+   CUANDO un miembro del TD registre una decisión, el sistema *debe* vincularla a los comprobantes vigentes valorados del descargo, conservando su identificador y hash SHA-256. SI se indica un comprobante ajeno al descargo o no vigente, el sistema *debe* rechazar la decisión con HTTP `400`.
 
 3. **Ubiquitous (Regla sugerida):**
-   El sistema *debe* calcular la regla sugerida para cada causal T02: `Aceptada` si el descargo tiene al menos un comprobante vigente (Spec 005, T02 exige comprobante) y `Rechazada` en caso contrario. La regla es orientativa y no reemplaza la decisión del vocal.
+   El sistema *debe* calcular la regla sugerida para cada causal T02: `Aceptada` si el descargo tiene al menos un comprobante vigente (Spec 005, T02 exige comprobante) y `Rechazada` en caso contrario. La regla es orientativa y no reemplaza la decisión del miembro del TD.
 
 4. **Event-driven (Fundamento obligatorio):**
    CUANDO la decisión sea `Rechazada` O difiera de la regla sugerida, el sistema *debe* exigir un fundamento escrito de al menos 20 caracteres y rechazar la decisión con HTTP `400` si falta.

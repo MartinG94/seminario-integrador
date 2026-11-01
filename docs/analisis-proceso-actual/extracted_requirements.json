@@ -318,21 +318,21 @@
     },
     {
       "id": "RF-08",
-      "title": "Gestión de Inhibiciones, Recusaciones y Asignación de Vocales Suplentes",
-      "description": "El sistema debe registrar y verificar los conflictos de interés e incompatibilidades de los miembros del TD (incluyendo la inhibición obligatoria del integrante que hubiera promovido la acción de oficio según el Art. 24 y Art. 95 del Estatuto), inhabilitando su participación en la votación del caso y asignando formalmente a un vocal suplente electo.",
+      "title": "Gestión de Inhibiciones, Recusaciones y Asignación de Miembros Suplentes",
+      "description": "El sistema debe registrar y verificar los conflictos de interés e incompatibilidades de los miembros del TD (incluyendo la inhibición obligatoria del integrante que hubiera promovido la acción de oficio según el Art. 24 y Art. 95 del Estatuto), inhabilitando su participación en la votación del caso y asignando formalmente a un miembro suplente electo.",
       "module_or_epic": "Gobernanza del Tribunal",
       "primary_actor": "Tribunal de Disciplina",
       "secondary_actors": [
-        "Vocales Suplentes del TD"
+        "Miembros Suplentes del TD"
       ],
       "inputs": [
         "Declaración de inhibición o detección automática de miembro promotor",
-        "Selección de vocal suplente disponible para integrar el tribunal colegiado"
+        "Selección de miembro suplente disponible para integrar el tribunal colegiado"
       ],
       "outputs": [
         "Composición del cuerpo juzgador ajustada para el expediente",
         "Bloqueo de acceso a votación para el miembro inhibido",
-        "Habilitación de credenciales de votación para el vocal suplente"
+        "Habilitación de credenciales de votación para el miembro suplente"
       ],
       "associated_business_rules": [
         "RN-05"
@@ -840,7 +840,7 @@
     {
       "id": "RN-05",
       "title": "Incompatibilidad y Conflicto de Intereses en Juzgamiento (Art. 95 Estatuto y Art. 24)",
-      "statement": "El miembro del Tribunal de Disciplina que hubiera promovido una acción disciplinaria de oficio o que mantenga un conflicto directo de interés en la causa queda automáticamente inhabilitado para deliberar y juzgar en dicho expediente, debiendo ser sustituido por un vocal suplente.",
+      "statement": "El miembro del Tribunal de Disciplina que hubiera promovido una acción disciplinaria de oficio o que mantenga un conflicto directo de interés en la causa queda automáticamente inhabilitado para deliberar y juzgar en dicho expediente, debiendo ser sustituido por un miembro suplente.",
       "rule_type": "Constraint",
       "logic_or_formula": "IF (Miembro_TD == Solicitante_Accion OR Miembro_TD == Imputado) THEN Inhibir(Miembro_TD) AND Asignar_Suplente(TD)",
       "enforcement_level": "Strict/Mandatory",

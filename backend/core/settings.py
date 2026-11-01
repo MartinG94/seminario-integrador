@@ -224,6 +224,9 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "notificaciones@aveit.utn.e
 # Destinatario de los avisos de Tribunal Ad-Hoc / convocatoria a Asamblea (Art. 95, S4-04).
 COMISION_DIRECTIVA_EMAIL = os.getenv("COMISION_DIRECTIVA_EMAIL", "cd@aveit.org")
 
+# Casilla del Tribunal que recibe la constancia de cada apelación de T01 (PB-02).
+TRIBUNAL_EMAIL = os.getenv("TRIBUNAL_EMAIL", "tribunal@aveit.utn.edu.ar")
+
 # Google OAuth2 Credentials (para integración con Gmail API / XOAUTH2)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")

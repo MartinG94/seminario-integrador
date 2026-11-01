@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('socios', '0001_initial'),
-        ('expedientes', '0016_merge_20261021_0916'),
+        ('expedientes', '0018_auditoria_consulta_expediente'),
     ]
 
     operations = [

@@ -20,6 +20,7 @@ from expedientes.domain.descargo_rules import (
 )
 from expedientes.models import (
     DecisionCausalDescargo,
+    DecisionCausalEnum,
     DescargoExpediente,
     DescargoVersion,
     EstadoExpedienteEnum,
@@ -39,6 +40,7 @@ from expedientes.serializers.evento_serializers import (
     RegistroApercibimientoSerializer,
     ReportarAsistenciaSerializer,
 )
+from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
@@ -245,6 +247,47 @@ def _obtener_reglamento_asociado(obj: Expediente) -> str:
     return "Reglamento Procesal Disciplinario 2026"
 
 
+def _obtener_reglamentos_respaldantes(obj: Expediente) -> list[str]:
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud:
+            if (
+                solicitud.reglamentos_respaldantes
+                and isinstance(solicitud.reglamentos_respaldantes, list)
+                and len(solicitud.reglamentos_respaldantes) > 0
+            ):
+                return [str(r) for r in solicitud.reglamentos_respaldantes if str(r).strip()]
+            if solicitud.causal and str(solicitud.causal).strip():
+                return [str(solicitud.causal).strip()]
+    except Exception:
+        pass
+    return [_obtener_reglamento_asociado(obj)]
+
+
+class ExpedienteResumenSerializer(serializers.ModelSerializer):
+    """Serializador acotado para consulta pública/autenticada de expedientes por socio."""
+
+    titulo = serializers.SerializerMethodField()
+    urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+
+    class Meta:
+        model = Expediente
+        fields = [
+            "id",
+            "numero",
+            "titulo",
+            "motivo",
+            "puntos",
+            "estado",
+            "urgencia",
+            "urgencia_display",
+            "created_at",
+        ]
+
+    def get_titulo(self, obj: Expediente) -> str:
+        return _obtener_titulo_expediente(obj)
+
+
 class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
@@ -253,6 +296,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
     reglamento_asociado = serializers.SerializerMethodField()
+    reglamentos_respaldantes = serializers.SerializerMethodField()
     descargo_presentado = serializers.SerializerMethodField()
     descargo_tipo = serializers.SerializerMethodField()
     descargo_causal = serializers.SerializerMethodField()
@@ -270,6 +314,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     historial = serializers.SerializerMethodField()
     evidencias = serializers.SerializerMethodField()
     descargos = serializers.SerializerMethodField()
+    es_t01 = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -280,6 +325,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "motivo",
             "razon",
             "reglamento_asociado",
+            "reglamentos_respaldantes",
             "puntos",
             "estado",
             "urgencia",
@@ -305,6 +351,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "historial",
             "evidencias",
             "descargos",
+            "es_t01",
         ]
 
     def get_socio_nombre(self, obj: Expediente) -> str:
@@ -330,6 +377,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     def get_reglamento_asociado(self, obj: Expediente) -> str:
         return _obtener_reglamento_asociado(obj)
 
+    def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
+        return _obtener_reglamentos_respaldantes(obj)
+
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
         descargos = [d for d in obj.descargos.all() if d.es_vigente]
         if not descargos:
@@ -339,8 +389,17 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             return descargos[0]
         user = getattr(request, "user", None)
         socio = getattr(user, "socio", None) if user else None
+
+        # En la vista de Mis Expedientes, o si el socio es uno de los imputados en la causa:
+        if self.context.get("es_mis_expedientes") or (
+            socio and (obj.socio_id == socio.pk or any(s.pk == socio.pk for s in obj.socios.all()))
+        ):
+            if socio is None:
+                return None
+            return next((d for d in descargos if d.socio_id == socio.pk), None)
+
         role = getattr(socio, "role", "")
-        # Si es TD/CD/Admin o staff, puede consultar los descargos de la causa
+        # Si es TD/CD/Admin o staff y no es imputado personal en la causa, puede consultar los descargos
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
@@ -356,6 +415,20 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         socio = getattr(user, "socio", None) if user else None
+
+        # En la vista de Mis Expedientes, o si el socio es uno de los imputados en la causa:
+        if self.context.get("es_mis_expedientes") or (
+            socio and (obj.socio_id == socio.pk or any(s.pk == socio.pk for s in obj.socios.all()))
+        ):
+            if socio is None:
+                return False
+            vigente = next(
+                (d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk), None
+            )
+            if vigente:
+                return True
+            return bool(obj.descargo_presentado and obj.socio_id == socio.pk)
+
         role = getattr(socio, "role", "")
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
@@ -451,6 +524,13 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             for change in changes
         ]
 
+    def get_es_t01(self, obj: Expediente) -> bool:
+        """En los expedientes de T01 se apela en lugar de presentar T02/T03 (PB-02)."""
+        try:
+            return obj.solicitud_t01 is not None
+        except SolicitudT01.DoesNotExist:
+            return False
+
     def get_descargos(self, obj: Expediente) -> list[dict]:
         request = self.context.get("request")
         user = getattr(request, "user", None)
@@ -474,6 +554,19 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         result = []
         for d in descargos_list:
             evs = current_evidence_for(d, evidencias)
+            decisiones_qs = list(d.decisiones_causal.all())
+            leido = bool(decisiones_qs)
+            puntaje_ratificado = None
+            if decisiones_qs:
+                primera = decisiones_qs[0]
+                snapshot = primera.descargo_snapshot or {}
+                if "puntaje_final" in snapshot and snapshot["puntaje_final"] is not None:
+                    puntaje_ratificado = snapshot["puntaje_final"]
+                elif primera.decision == DecisionCausalEnum.ACCEPTED:
+                    puntaje_ratificado = 0
+                elif primera.decision == DecisionCausalEnum.REJECTED:
+                    puntaje_ratificado = float(obj.puntos) if obj.puntos is not None else 0.0
+
             item = {
                 "id": d.id,
                 "socio_id": d.socio_id,
@@ -489,13 +582,16 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 "texto": d.texto,
                 "presentado_at": d.presentado_at.isoformat() if d.presentado_at else None,
                 "evidencias": EvidenciaMetadataSerializer(evs, many=True).data,
+                "leido": leido,
+                "puntaje_ratificado": puntaje_ratificado,
             }
             # La valoración del TD es reservada hasta la emisión (confidencialidad).
-            if is_authority and d.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-                item["regla_sugerida"] = suggested_decision(has_current_evidence=bool(evs)).value
-                item["decisiones_causal"] = DecisionCausalSerializer(
-                    d.decisiones_causal.all(), many=True
-                ).data
+            if is_authority:
+                item["decisiones_causal"] = DecisionCausalSerializer(decisiones_qs, many=True).data
+                if d.tipo == TipoDescargoEnum.T02_CERTIFICADO:
+                    item["regla_sugerida"] = suggested_decision(
+                        has_current_evidence=bool(evs)
+                    ).value
             result.append(item)
         return result
 
@@ -602,9 +698,10 @@ class DecisionCausalSerializer(serializers.ModelSerializer):
 
 
 class RegistrarDecisionCausalSerializer(serializers.Serializer):
-    """Payload de la decisión del vocal sobre una causal T02."""
+    """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
+    puntaje_final = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     fundamento = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -615,6 +712,27 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, allow_empty=True
     )
+
+
+class PlazoApelacionSerializer(serializers.Serializer):
+    """Plazo de apelación del T01 en días hábiles (PB-02)."""
+
+    dias_habiles = serializers.IntegerField()
+
+
+class ApelarT01Serializer(serializers.Serializer):
+    """Apelación del socio involucrado en un T01 (PB-02)."""
+
+    texto = serializers.CharField(allow_blank=True, max_length=10000)
+
+
+class AdecuarT01Serializer(serializers.Serializer):
+    """Adecuación de puntos e involucrados decidida en el debate del TD (PB-02)."""
+
+    puntos = serializers.DecimalField(max_digits=10, decimal_places=2)
+    socios = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=True)
+    motivos = serializers.CharField(allow_blank=True, max_length=5000)
+    reabrir_plazo = serializers.BooleanField(default=False)
 
 
 class PresentarDescargoSerializer(serializers.Serializer):
@@ -963,6 +1081,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     razon = serializers.SerializerMethodField()
     titulo = serializers.SerializerMethodField()
     reglamento_asociado = serializers.SerializerMethodField()
+    reglamentos_respaldantes = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -973,6 +1092,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "motivo",
             "razon",
             "reglamento_asociado",
+            "reglamentos_respaldantes",
             "socio",
             "socio_nombre",
             "socio_legajo",
@@ -1019,6 +1139,9 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     def get_reglamento_asociado(self, obj: Expediente) -> str:
         return _obtener_reglamento_asociado(obj)
+
+    def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
+        return _obtener_reglamentos_respaldantes(obj)
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])
@@ -1249,6 +1372,8 @@ __all__ = [
     "AsistenciaItemInputSerializer",
     "EventoInstitucionalCreateSerializer",
     "EventoInstitucionalSerializer",
+    "ExpedienteResumenSerializer",
     "RegistroApercibimientoSerializer",
     "ReportarAsistenciaSerializer",
+    "ExpedienteVisorSerializer",
 ]
