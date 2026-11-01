@@ -434,7 +434,8 @@ describe('GestionarExpedientesComponent', () => {
       causal: '',
       evidencias: [],
       regla_sugerida: undefined,
-      decisiones_causal: undefined
+      decisiones_causal: undefined,
+      valoraciones_t03: []
     });
 
     const detalle = (estado = 'revision_resolucion') => ({
@@ -484,16 +485,16 @@ describe('GestionarExpedientesComponent', () => {
         ['Ana', 'Pérez', '59'], ['Bruno', 'Díaz', '60'], ['Carla', 'Gómez', '61']
       ]);
       expect(filas.map(f => component.estadoJustificacion(f))).toEqual([
-        'Pendiente de evaluación', 'Extraordinaria (T03)', 'Sin justificación'
+        'Pendiente de evaluación', 'Pendiente de valoración', 'Sin justificación'
       ]);
     });
 
-    it('sólo permite evaluar las justificaciones T02', () => {
+    it('permite evaluar los T02 y valorar los T03, pero no a quien no presentó justificación', () => {
       abrirComo('TD');
       const [t02, t03, sinDescargo] = component.involucradosJustificacion;
 
       expect(component.esEvaluable(t02)).toBeTrue();
-      expect(component.esEvaluable(t03)).toBeFalse();
+      expect(component.esEvaluable(t03)).toBeTrue();
       expect(component.esEvaluable(sinDescargo)).toBeFalse();
     });
 
@@ -725,8 +726,8 @@ describe('GestionarExpedientesComponent', () => {
       });
 
       it('no revela la valoración a la autoridad imputada, que no la recibe del servidor', () => {
-        abrirComo('TD');
-        const fila = component.involucradosJustificacion.find(f => f.descargo?.id === 6)!;
+        const fila = abrirConT03();
+        delete fila.descargo?.valoraciones_t03;
 
         expect(component.estadoJustificacion(fila)).toBe('Extraordinaria (T03)');
         expect(component.esEvaluable(fila)).toBeFalse();
