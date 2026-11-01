@@ -6,6 +6,7 @@ from expedientes.domain.tribunal_composition import (
     Member,
     compose,
     roster_issues,
+    social_year_for_group,
 )
 
 T4 = Member(socio_id=1, social_year=4, condition=Condition.TITULAR, label="Titular 4")
@@ -122,3 +123,14 @@ class TestCasosAdHoc:
     def test_casos_a_y_b_simultaneos(self):
         composition = compose(ROSTER, involved_ids={T4.socio_id, S4.socio_id, T6.socio_id})
         assert len(composition.ad_hoc_reasons) == 2
+
+
+def test_anio_social_se_calcula_desde_el_grupo_segun_la_formula_del_po():
+    # Año Social = (Año Actual - 1962) - Número de Grupo (dinámica de promociones).
+    assert [social_year_for_group(g, 2026) for g in (58, 59, 60, 61, 62, 63)] == [6, 5, 4, 3, 2, 1]
+
+
+def test_las_promociones_avanzan_un_anio_social_por_ciclo():
+    assert social_year_for_group(59, 2027) == 6
+    assert social_year_for_group(64, 2027) == 1
+    assert social_year_for_group(58, 2027) == 7  # Exviajeros: fuera de los años activos

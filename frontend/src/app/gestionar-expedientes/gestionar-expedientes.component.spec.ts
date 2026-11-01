@@ -1018,15 +1018,13 @@ describe('GestionarExpedientesComponent', () => {
 
     const compiled = (): HTMLElement => fixture.nativeElement as HTMLElement;
 
-    it('muestra los tres responsables con pie de firma y los apartados', () => {
-      abrirComo('TD');
+    it('no muestra el panel de responsables ni alertas de integrantes faltantes', () => {
+      abrirComo('TD', composicion({ observaciones: ['Falta el suplente del 4.º año.'] }));
 
       expect(api.obtenerComposicionTribunal).toHaveBeenCalledWith('12');
-      const responsables = Array.from(compiled().querySelectorAll('.responsable-tribunal')).map(el => el.textContent || '');
-      expect(responsables.length).toBe(3);
-      expect(responsables[1]).toContain('82005 - Abril Gusella - G58 (Sup.)');
-      expect(responsables[1]).toContain('Reemplaza a Catalina Cerda (N° 81005)');
-      expect(compiled().querySelector('.apartado-tribunal')?.textContent).toContain('81005 - Catalina Cerda');
+      expect(compiled().querySelector('.panel-composicion')).toBeNull();
+      expect(compiled().textContent).not.toContain('Responsables del Tribunal');
+      expect(compiled().textContent).not.toContain('Falta el suplente');
     });
 
     it('no ofrece trámites manuales de apartamiento, ad hoc ni constitución', () => {
@@ -1076,8 +1074,8 @@ describe('GestionarExpedientesComponent', () => {
     describe('Tribunal Ad-Hoc / Asamblea (Art. 95)', () => {
       it('inmoviliza la resolución ordinaria y muestra el aviso', () => {
         abrirComo('TD', casoCritico());
-        expect(compiled().querySelector('.aviso-ad-hoc')?.textContent).toContain('Tribunal Ad-Hoc');
-        expect(compiled().querySelector('.lista-responsables')).toBeNull();
+        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Asamblea General');
+        expect(compiled().querySelector('.panel-composicion')).toBeNull();
         expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
         expect(component.puedeRegistrarAsamblea).toBeFalse();
       });
@@ -1097,7 +1095,7 @@ describe('GestionarExpedientesComponent', () => {
 
         expect(api.registrarResolucionAsamblea).toHaveBeenCalledWith('12', acta);
         expect(notifications.success).toHaveBeenCalledWith('Resolución por Asamblea registrada. El expediente fue emitido.');
-        expect(compiled().querySelector('.resolucion-asamblea')?.textContent).toContain('77010');
+        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Resuelto por Asamblea Extraordinaria');
         expect(compiled().querySelector('.registrar-asamblea')).toBeNull();
       });
 
@@ -1119,12 +1117,6 @@ describe('GestionarExpedientesComponent', () => {
         expect(notifications.error).toHaveBeenCalled();
         expect(component.procesandoComposicion).toBeFalse();
       });
-    });
-
-    it('muestra los responsables estampados en la resolución', () => {
-      abrirComo('TD', composicion({ estampada: true, estampada_at: '2026-10-22T12:00:00Z', apartados: [] }));
-      expect(compiled().querySelector('.estado-composicion')?.textContent).toContain('Estampado en la resolución');
-      expect(compiled().querySelectorAll('.responsable-tribunal').length).toBe(3);
     });
   });
 });

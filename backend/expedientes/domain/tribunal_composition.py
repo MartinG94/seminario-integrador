@@ -8,6 +8,8 @@ Dominio puro sin dependencias de Django (Estatuto AVEIT 2026 y Reglamento Proces
   el titular y el suplente de un mismo año (Caso A) o tres o más integrantes (Caso B),
   el Tribunal ordinario no puede intervenir y la causa requiere Tribunal ad hoc /
   intervención de Asamblea.
+- Dinámica de promociones (fundación 1965): el año social se deriva del grupo (Gxx)
+  con la fórmula canónica `(Año Actual - 1962) - Número de Grupo`.
 """
 
 from collections import Counter
@@ -17,6 +19,7 @@ from enum import StrEnum
 
 ACTIVE_SOCIAL_YEARS = (4, 5, 6)
 AD_HOC_MIN_INVOLVED = 3
+PROMOTION_BASE_YEAR = 1962
 
 
 class Condition(StrEnum):
@@ -51,6 +54,11 @@ class Composition:
     @property
     def requires_ad_hoc(self) -> bool:
         return bool(self.ad_hoc_reasons)
+
+
+def social_year_for_group(group_number: int, current_year: int) -> int:
+    """Año social de una promoción: (Año Actual - 1962) - Número de Grupo."""
+    return (current_year - PROMOTION_BASE_YEAR) - group_number
 
 
 def roster_issues(members: Iterable[Member]) -> list[str]:

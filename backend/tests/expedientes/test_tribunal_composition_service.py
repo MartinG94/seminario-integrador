@@ -87,7 +87,7 @@ class TestConsulta:
             5: tribunal_nomina["t5"].id,
             6: tribunal_nomina["t6"].id,
         }
-        assert payload["asientos"][1]["firma"] == "81005 - Nombre Apellido81005 - G58"
+        assert payload["asientos"][1]["firma"] == "81005 - Nombre Apellido81005 - G59"
         assert payload["apartados"] == []
         assert payload["observaciones"] == []
 
@@ -97,7 +97,7 @@ class TestConsulta:
         seat5 = payload["asientos"][1]
         assert seat5["socio_id"] == tribunal_nomina["s5"].id
         assert seat5["condicion"] == "SUPLENTE"
-        assert seat5["firma"] == "82005 - Nombre Apellido82005 - G58 (Sup.)"
+        assert seat5["firma"] == "82005 - Nombre Apellido82005 - G59 (Sup.)"
         assert seat5["reemplaza_a"] == "Nombre Apellido81005 (N° 81005)"
         (apartado,) = payload["apartados"]
         assert apartado["socio_id"] == tribunal_nomina["t5"].id
@@ -131,9 +131,9 @@ class TestEstampadoAlResolver:
 
         composicion = ComposicionTribunal.objects.get(expediente=causal_expediente)
         assert [i.firma for i in composicion.integrantes.all()] == [
-            "82004 - Nombre Apellido82004 - G59 (Sup.)",
-            "81005 - Nombre Apellido81005 - G58",
-            "81006 - Nombre Apellido81006 - G57",
+            "82004 - Nombre Apellido82004 - G60 (Sup.)",
+            "81005 - Nombre Apellido81005 - G59",
+            "81006 - Nombre Apellido81006 - G58",
         ]
         assert composicion.apartados[0]["socio_id"] == tribunal_nomina["t4"].id
         payload = describe(causal_expediente)

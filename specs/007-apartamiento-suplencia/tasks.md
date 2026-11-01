@@ -9,7 +9,7 @@ Desglose de tareas atómicas (<30 min) conforme a SDD y TDD.
   *Hecho cuando:* `backend/tests/expedientes/test_tribunal_composition_domain.py` en verde.
 
 - [x] **TS4-04.2 Nómina desde el padrón legado [TDD]:**
-  Adaptador `LegacyTribunalRosterAdapter` sobre `socio_lista` (`idTipoSocio` 10/11, `anoSocial`, `user_id`, grupo).
+  Adaptador `LegacyTribunalRosterAdapter` sobre `socio_lista` (`idTipoSocio` 10/11, `user_id`, grupo); año social = `(Año Actual - 1962) - Número de Grupo` (revisión del PO, 25/10/2026), con `anoSocial` como respaldo si no hay grupo.
   *Hecho cuando:* `backend/tests/expedientes/test_tribunal_roster.py` en verde.
 
 - [x] **TS4-04.3 Modelos inmutables y migración [TDD]:**
@@ -28,8 +28,8 @@ Desglose de tareas atómicas (<30 min) conforme a SDD y TDD.
   `obtenerComposicionTribunal`, `registrarResolucionAsamblea` y `descargarActaAsamblea` en `ExpedienteApiService`.
   *Hecho cuando:* tests Jasmine del servicio en verde.
 
-- [x] **TS4-04.7 Panel "Responsables del Tribunal" en el detalle:**
-  Pie de firma con grupo y condición, apartados, aviso de participación restringida, aviso ad hoc y carga del acta por CD/Admin; sin modales de trámite manual.
+- [x] **TS4-04.7 Inhibición visible en el detalle:**
+  Remoción total del panel "Responsables del Tribunal" y de sus alertas (revisión del PO, 25/10/2026); banner de participación restringida, acciones "Aprobar", "Rechazar" y "Transicionar" ocultas al involucrado, aviso sutil de causa derivada a Asamblea y carga del acta por CD/Admin.
   *Hecho cuando:* tests Karma del componente en verde.
 
 - [x] **TS4-04.8 Verificación integral y consistencia PO:**

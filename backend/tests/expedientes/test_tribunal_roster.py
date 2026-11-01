@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_nomina_titulares_y_suplentes_por_anio(tribunal_nomina):
-    roster = LegacyTribunalRosterAdapter().load()
+    roster = LegacyTribunalRosterAdapter().load(current_year=2026)
 
     assert roster.issues == []
     by_socio = {entry.socio.id: entry for entry in roster.entries}
@@ -20,7 +20,7 @@ def test_nomina_titulares_y_suplentes_por_anio(tribunal_nomina):
     assert t5.member.condition == Condition.TITULAR
     assert t5.member.social_year == 5
     assert t5.nro_socio == 81005
-    assert t5.grupo == "G58"
+    assert t5.grupo == "G59"
     assert by_socio[tribunal_nomina["s4"].id].member.condition == Condition.SUPLENTE
 
 
@@ -60,3 +60,18 @@ def test_integrante_con_rol_de_comision_directiva_es_incompatible(make_legacy_so
     make_legacy_socio(81004, 4, CARGO_TITULAR_TD, Role.CD)
     (entry,) = LegacyTribunalRosterAdapter().load().entries
     assert entry.member.other_position == "Comisión Directiva"
+
+
+def test_anio_social_se_deriva_del_grupo_y_no_del_campo_estatico(make_legacy_socio):
+    # El legado informa anoSocial=3 desactualizado, pero G58 es 6.º año en 2026.
+    make_legacy_socio(81006, 3, CARGO_TITULAR_TD, Role.TD, grupo=58)
+    (entry,) = LegacyTribunalRosterAdapter().load(current_year=2026).entries
+    assert entry.member.social_year == 6
+    assert entry.grupo == "G58"
+
+
+def test_sin_grupo_registrado_se_usa_el_anio_social_del_padron(make_legacy_socio):
+    make_legacy_socio(81004, 4, CARGO_TITULAR_TD, Role.TD)
+    (entry,) = LegacyTribunalRosterAdapter().load(current_year=2026).entries
+    assert entry.member.social_year == 4
+    assert entry.grupo == ""

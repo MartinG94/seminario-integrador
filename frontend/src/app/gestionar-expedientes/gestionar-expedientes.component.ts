@@ -9,7 +9,6 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
   ComposicionTribunalDTO,
-  CondicionIntegrante,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
@@ -497,14 +496,6 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.cargandoComposicion = false;
     this.procesandoComposicion = false;
     this.actaAsamblea = null;
-  }
-
-  etiquetaCondicion(condicion: CondicionIntegrante | ''): string {
-    switch (condicion) {
-      case 'TITULAR': return 'Titular';
-      case 'SUPLENTE': return 'Suplente';
-      default: return '';
-    }
   }
 
   seleccionarActaAsamblea(event: Event): void {

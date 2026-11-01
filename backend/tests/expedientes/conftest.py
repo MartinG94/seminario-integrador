@@ -160,12 +160,18 @@ def make_legacy_socio(make_socio):
 
 @pytest.fixture
 def tribunal_nomina(make_legacy_socio) -> dict[str, Socio]:
-    """Nómina estatutaria completa: un titular y un suplente por 4.º, 5.º y 6.º año."""
+    """Nómina estatutaria completa: un titular y un suplente por 4.º, 5.º y 6.º año.
+
+    Grupos según la dinámica de promociones del ciclo vigente (en 2026: G60, G59 y G58).
+    """
+    from django.utils import timezone
+
+    base = timezone.localdate().year - 1962
     return {
-        "t4": make_legacy_socio(81004, 4, CARGO_TITULAR_TD, Role.TD, grupo=59),
-        "s4": make_legacy_socio(82004, 4, CARGO_SUPLENTE_TD, Role.TD, grupo=59),
-        "t5": make_legacy_socio(81005, 5, CARGO_TITULAR_TD, Role.TD, grupo=58),
-        "s5": make_legacy_socio(82005, 5, CARGO_SUPLENTE_TD, Role.TD, grupo=58),
-        "t6": make_legacy_socio(81006, 6, CARGO_TITULAR_TD, Role.TD, grupo=57),
-        "s6": make_legacy_socio(82006, 6, CARGO_SUPLENTE_TD, Role.TD, grupo=57),
+        "t4": make_legacy_socio(81004, 4, CARGO_TITULAR_TD, Role.TD, grupo=base - 4),
+        "s4": make_legacy_socio(82004, 4, CARGO_SUPLENTE_TD, Role.TD, grupo=base - 4),
+        "t5": make_legacy_socio(81005, 5, CARGO_TITULAR_TD, Role.TD, grupo=base - 5),
+        "s5": make_legacy_socio(82005, 5, CARGO_SUPLENTE_TD, Role.TD, grupo=base - 5),
+        "t6": make_legacy_socio(81006, 6, CARGO_TITULAR_TD, Role.TD, grupo=base - 6),
+        "s6": make_legacy_socio(82006, 6, CARGO_SUPLENTE_TD, Role.TD, grupo=base - 6),
     }
