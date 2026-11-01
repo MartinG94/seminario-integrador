@@ -1,10 +1,11 @@
 """Servicio de aplicación para valorar descargos T03 con fundamento y antecedentes (S4-03)."""
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Max
 
 from expedientes.domain.ports import TribunalConditionPort
@@ -25,6 +26,8 @@ from expedientes.models import (
     ValoracionT03Antecedente,
 )
 from expedientes.services.causal_resolution_service import _descargo_snapshot
+
+logger = logging.getLogger(__name__)
 
 VALUABLE_STATES = (
     EstadoExpedienteEnum.REVISION_RESOLUCION,
@@ -52,6 +55,10 @@ class T03ValuationForbidden(T03ValuationServiceError):
     pass
 
 
+class T03ValuationUnavailable(T03ValuationServiceError):
+    pass
+
+
 INTERESTED_PARTY_MESSAGE = (
     "Participación restringida: sos parte interesada en este expediente (imputado o "
     "solicitante) y no podés valorar el descargo, conforme al Art. 95 del Estatuto y "
@@ -62,6 +69,12 @@ INTERESTED_PARTY_MESSAGE = (
 IMPUTADO_RESERVE_MESSAGE = (
     "Acceso restringido: sos imputado en este expediente y no podés consultar la "
     "valoración del Tribunal."
+)
+
+
+PADRON_UNAVAILABLE_MESSAGE = (
+    "No se pudo confirmar tu condición de Miembro en el padrón, por lo que la valoración "
+    "no se registró. Intentá nuevamente en unos minutos."
 )
 
 
@@ -205,6 +218,12 @@ class T03ValuationService:
             or 0
         )
         provider = condition_provider or _default_condition_provider()
+        try:
+            condition = provider.condition_for_user(user.id)
+        except DatabaseError as exc:
+            # No se degrada a NO_INFORMADA: quedaría un dato falso en un registro inmutable.
+            logger.exception("No se pudo leer la condición del Tribunal en el padrón.")
+            raise T03ValuationUnavailable(PADRON_UNAVAILABLE_MESSAGE) from exc
         socio = getattr(user, "socio", None)
         valuation = ValoracionT03.objects.create(
             expediente=expediente,
@@ -216,7 +235,7 @@ class T03ValuationService:
             autor=user,
             autor_legajo=socio.legajo if socio else user.get_username(),
             autor_rol=socio.role if socio else "",
-            autor_condicion=provider.condition_for_user(user.id),
+            autor_condicion=condition,
         )
         for antecedent in antecedents:
             ValoracionT03Antecedente.objects.create(

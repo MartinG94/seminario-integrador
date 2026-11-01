@@ -2,7 +2,7 @@
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.db import OperationalError, connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -16,6 +16,8 @@ from expedientes.models import (
     ValoracionT03,
     ValoracionT03Antecedente,
 )
+from expedientes.services.t03_valuation_service import PADRON_UNAVAILABLE_MESSAGE
+from padron.adapters import DbTribunalConditionProvider
 from padron.models import Socio as PadronSocio
 from socios.models import Role
 from tests.legacy_schema import create_legacy_record
@@ -97,6 +99,21 @@ class TestRegisterValuationApi:
         assert response.data["autor_condicion"] == "NO_INFORMADA"
         assert response.data["autor_condicion_display"] == "No informada en el padrón"
         assert response.data["antecedentes"] == []
+
+    def test_padron_read_failure_503_records_nothing(
+        self, t03_descargo, tribunal_member, emitido, monkeypatch
+    ) -> None:
+        def failing_read(_provider, _user_id: int) -> None:
+            raise OperationalError("padron unavailable")
+
+        monkeypatch.setattr(DbTribunalConditionProvider, "condition_for_user", failing_read)
+
+        response = _post(tribunal_member.user, t03_descargo, antecedente_ids=[emitido.id])
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        assert response.data["detail"] == PADRON_UNAVAILABLE_MESSAGE
+        assert not ValoracionT03.objects.exists()
+        assert not ValoracionT03Antecedente.objects.exists()
 
     @pytest.mark.parametrize("fundamento", ["", "   ", "Muy corto", "x" * 5001])
     def test_invalid_grounds_400(self, t03_descargo, tribunal_member, fundamento) -> None:

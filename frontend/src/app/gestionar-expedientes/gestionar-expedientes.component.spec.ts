@@ -1070,6 +1070,26 @@ describe('GestionarExpedientesComponent', () => {
         });
       });
 
+      it('muestra el motivo cuando el padrón no está disponible', () => {
+        const detail = 'No se pudo confirmar tu condición en el padrón. Intentá nuevamente.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 503, error: { detail } })));
+        valorarT03();
+
+        component.registrarValoracionT03(payload);
+
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      it('mantiene el mensaje genérico ante otros errores del servidor', () => {
+        const detail = 'Traza interna del servidor.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 500, error: { detail } })));
+        valorarT03();
+
+        component.registrarValoracionT03(payload);
+
+        expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo registrar la valoración.');
+      });
+
       it('descarta los antecedentes al volver al listado', () => {
         valorarT03();
         component.antecedentesT03 = [antecedente];

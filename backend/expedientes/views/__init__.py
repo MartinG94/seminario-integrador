@@ -99,6 +99,7 @@ from expedientes.services.t03_valuation_service import (
     T03ValuationNotFound,
     T03ValuationService,
     T03ValuationStateError,
+    T03ValuationUnavailable,
     T03ValuationValidationError,
     is_imputado,
 )
@@ -822,6 +823,8 @@ class ValoracionT03View(APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         except T03ValuationValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except T03ValuationUnavailable as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(ValoracionT03Serializer(valoracion).data, status=status.HTTP_201_CREATED)
 
 

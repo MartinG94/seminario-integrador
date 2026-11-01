@@ -939,7 +939,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.registrandoValoracion = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la valoración.'));
+        // El 503 trae un mensaje pensado para el miembro; el resto de los 5xx sigue siendo genérico.
+        const motivo = err?.status === 503 ? err.error?.detail : null;
+        this.notifications.error(motivo || httpErrorMessage(err, 'No se pudo registrar la valoración.'));
       }
     });
   }
