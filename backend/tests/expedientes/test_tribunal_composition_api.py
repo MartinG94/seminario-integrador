@@ -1,12 +1,10 @@
-"""API del Tribunal de la causa (S4-04): inhibición de involucrados y Asamblea."""
+"""API del Tribunal de la causa (S4-04): inhibición de involucrados."""
 
 import pytest
-from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 
-from expedientes.models import DecisionCausalDescargo, EstadoExpedienteEnum, ResolucionAsamblea
+from expedientes.models import DecisionCausalDescargo, EstadoExpedienteEnum
 from socios.models import Role
-from tests.expedientes.conftest import PDF_BYTES
 
 pytestmark = pytest.mark.django_db
 
@@ -19,10 +17,6 @@ DECISION = {
     "decision": "REJECTED",
     "fundamento": "El certificado no acredita la imposibilidad de asistir a la reunión.",
 }
-
-
-def acta(name: str = "acta.pdf", content: bytes = PDF_BYTES) -> SimpleUploadedFile:
-    return SimpleUploadedFile(name, content, content_type="application/pdf")
 
 
 class TestConsulta:
@@ -58,6 +52,8 @@ class TestEndpointsManualesSuprimidos:
             "composicion/apartamientos/",
             "composicion/designaciones-ad-hoc/",
             "composicion/constituir/",
+            # Sin acta en el sistema: la Asamblea designa integrantes con rol TD (PO, 31/10/2026).
+            "resolucion-asamblea/",
         ],
     )
     def test_no_existen(self, api_client, causal_expediente, causal_vocal, suffix):
@@ -145,80 +141,3 @@ class TestInhibicionDeInvolucrados:
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
-
-
-class TestResolucionAsamblea:
-    @pytest.fixture
-    def caso_critico(self, causal_expediente, tribunal_nomina):
-        causal_expediente.socios.add(tribunal_nomina["t5"], tribunal_nomina["s5"])
-        return causal_expediente
-
-    @pytest.mark.parametrize("role", [Role.CD, Role.ADMIN])
-    def test_cd_o_admin_registran_y_emiten(self, api_client, caso_critico, make_socio, role):
-        api_client.force_authenticate(make_socio(legajo="77020", role=role).user)
-        response = api_client.post(
-            url(caso_critico, "resolucion-asamblea/"), {"acta": acta()}, format="multipart"
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["resolucion_asamblea"]["acta_nombre"] == "acta.pdf"
-        caso_critico.refresh_from_db()
-        assert caso_critico.estado == EstadoExpedienteEnum.EMITIDO
-
-    def test_tribunal_no_registra(self, api_client, caso_critico, tribunal_nomina):
-        api_client.force_authenticate(tribunal_nomina["t4"].user)
-        response = api_client.post(
-            url(caso_critico, "resolucion-asamblea/"), {"acta": acta()}, format="multipart"
-        )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_cd_involucrado_no_registra(self, api_client, caso_critico, make_socio):
-        cd = make_socio(legajo="77021", role=Role.CD)
-        caso_critico.socios.add(cd)
-        api_client.force_authenticate(cd.user)
-        response = api_client.post(
-            url(caso_critico, "resolucion-asamblea/"), {"acta": acta()}, format="multipart"
-        )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_sin_acta(self, api_client, caso_critico, make_socio):
-        api_client.force_authenticate(make_socio(legajo="77022", role=Role.CD).user)
-        response = api_client.post(
-            url(caso_critico, "resolucion-asamblea/"), {}, format="multipart"
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_acta_que_no_es_pdf(self, api_client, caso_critico, make_socio):
-        api_client.force_authenticate(make_socio(legajo="77023", role=Role.CD).user)
-        response = api_client.post(
-            url(caso_critico, "resolucion-asamblea/"),
-            {"acta": acta("acta.png", b"\x89PNG\r\n\x1a\n" + b"0" * 10)},
-            format="multipart",
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_sin_caso_critico_devuelve_409(
-        self, api_client, causal_expediente, tribunal_nomina, make_socio
-    ):
-        api_client.force_authenticate(make_socio(legajo="77024", role=Role.CD).user)
-        response = api_client.post(
-            url(causal_expediente, "resolucion-asamblea/"), {"acta": acta()}, format="multipart"
-        )
-        assert response.status_code == status.HTTP_409_CONFLICT
-
-    def test_descarga_del_acta(self, api_client, caso_critico, make_socio, tribunal_nomina):
-        api_client.force_authenticate(make_socio(legajo="77025", role=Role.CD).user)
-        api_client.post(
-            url(caso_critico, "resolucion-asamblea/"), {"acta": acta()}, format="multipart"
-        )
-        assert ResolucionAsamblea.objects.filter(expediente=caso_critico).exists()
-
-        api_client.force_authenticate(tribunal_nomina["t4"].user)
-        response = api_client.get(url(caso_critico, "resolucion-asamblea/"))
-        assert response.status_code == status.HTTP_200_OK
-        assert response["Content-Type"] == "application/pdf"
-        assert response.content == PDF_BYTES
-
-    def test_descarga_sin_acta(self, api_client, causal_expediente, causal_vocal):
-        api_client.force_authenticate(causal_vocal.user)
-        response = api_client.get(url(causal_expediente, "resolucion-asamblea/"))
-        assert response.status_code == status.HTTP_404_NOT_FOUND

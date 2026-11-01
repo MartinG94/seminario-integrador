@@ -711,33 +711,6 @@ class IntegranteComposicion(InsertOnlyModel):
         return firma
 
 
-class ResolucionAsamblea(InsertOnlyModel):
-    """Resolución por Asamblea Extraordinaria cuando no puede intervenir el TD (Art. 95).
-
-    Guarda el acta en PDF, igual que los comprobantes de descargo (Directiva PO).
-    """
-
-    immutable_message = "La resolución por Asamblea registrada es inmutable."
-
-    expediente = models.OneToOneField(
-        Expediente, on_delete=models.PROTECT, related_name="resolucion_asamblea"
-    )
-    acta_blob = models.BinaryField()
-    acta_nombre = models.CharField(max_length=255)
-    acta_tamanio_bytes = models.PositiveIntegerField()
-    acta_sha256 = models.CharField(max_length=64)
-    registrada_por = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
-    )
-    registrada_por_legajo = models.CharField(max_length=150)
-    created_at = models.DateTimeField(default=timezone.now, editable=False)
-
-    class Meta:
-        db_table = "expedientes_resolucion_asamblea"
-        verbose_name = "Resolución por Asamblea Extraordinaria"
-        verbose_name_plural = "Resoluciones por Asamblea Extraordinaria"
-
-
 class SolicitudT01(models.Model):
     class Estado(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"

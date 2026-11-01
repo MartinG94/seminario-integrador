@@ -1,29 +1,22 @@
-"""Tribunal de la causa: inhibición, suplencia automática y casos ad hoc (S4-04)."""
+"""Tribunal de la causa: inhibición, suplencia automática y casos críticos (S4-04)."""
 
 import pytest
-from django.core.exceptions import ValidationError
 
 from expedientes.models import (
     ComposicionTribunal,
     EstadoExpedienteEnum,
-    ResolucionAsamblea,
     SolicitudT01,
-)
-from expedientes.services.assembly_resolution_service import (
-    AssemblyResolutionService,
-    AssemblyResolutionValidationError,
 )
 from expedientes.services.tribunal_composition_service import (
     AD_HOC_NOTICE_KEY,
     TribunalCompositionNotFound,
     TribunalCompositionService,
-    TribunalCompositionStateError,
     involved_socio_ids,
     is_involved,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from notifications.models import EmailOutbox
-from tests.expedientes.conftest import CARGO_TITULAR_TD, PDF_BYTES
+from tests.expedientes.conftest import CARGO_TITULAR_TD
 
 pytestmark = pytest.mark.django_db
 
@@ -89,7 +82,6 @@ class TestConsulta:
         }
         assert payload["asientos"][1]["firma"] == "81005 - Nombre Apellido81005 - G59"
         assert payload["apartados"] == []
-        assert payload["observaciones"] == []
 
     def test_titular_imputado_lo_reemplaza_su_suplente(self, causal_expediente, tribunal_nomina):
         causal_expediente.socios.add(tribunal_nomina["t5"])
@@ -114,10 +106,6 @@ class TestConsulta:
         assert describe(causal_expediente, tribunal_nomina["t5"].user)["usuario"] == {
             "esta_involucrado": False
         }
-
-    def test_nomina_incompleta_se_informa(self, causal_expediente, make_legacy_socio):
-        make_legacy_socio(81004, 4, CARGO_TITULAR_TD, "TD")
-        assert "Falta el suplente del 4.º año." in describe(causal_expediente)["observaciones"]
 
     def test_expediente_inexistente(self):
         with pytest.raises(TribunalCompositionNotFound):
@@ -145,15 +133,21 @@ class TestEstampadoAlResolver:
         causal_expediente.socios.add(tribunal_nomina["t5"])
         assert seat_socios(describe(causal_expediente))[5] == tribunal_nomina["t5"].id
 
-    def test_nomina_invalida_impide_resolver(self, causal_expediente, make_legacy_socio):
+    def test_nomina_incompleta_no_impide_resolver(self, causal_expediente, make_legacy_socio):
+        # Decisión del PO (31/10/2026): la nómina incompleta deja pasar la resolución.
         make_legacy_socio(81004, 4, CARGO_TITULAR_TD, "TD")
-        with pytest.raises(ValidationError, match="no está integrado"):
-            resolver(causal_expediente)
-        assert not ComposicionTribunal.objects.exists()
+        resolver(causal_expediente)
+
+        causal_expediente.refresh_from_db()
+        assert causal_expediente.estado == EstadoExpedienteEnum.PENDIENTE_CORREOS
+        composicion = ComposicionTribunal.objects.get(expediente=causal_expediente)
+        assert [i.anio_social for i in composicion.integrantes.all()] == [4]
 
 
-class TestCasosAdHoc:
-    def test_caso_a_inmoviliza_la_resolucion_ordinaria(self, causal_expediente, tribunal_nomina):
+class TestCasosCriticos:
+    def test_caso_a_se_informa_sin_inmovilizar_la_causa(self, causal_expediente, tribunal_nomina):
+        # Decisión del PO (31/10/2026): la Asamblea designa integrantes con rol TD por
+        # fuera del sistema; la causa sigue su curso con quienes no están involucrados.
         causal_expediente.socios.add(tribunal_nomina["t5"], tribunal_nomina["s5"])
         payload = describe(causal_expediente)
         assert payload["requiere_ad_hoc"] is True
@@ -161,26 +155,16 @@ class TestCasosAdHoc:
             "El titular y el suplente del 5.º año están involucrados en la causa "
             "(Art. 95 del Estatuto)."
         ]
-        with pytest.raises(ValidationError, match="Tribunal Ad-Hoc"):
-            resolver(causal_expediente)
+        resolver(causal_expediente)
         causal_expediente.refresh_from_db()
-        assert causal_expediente.estado == EstadoExpedienteEnum.ESPERA_RESOLUCION
+        assert causal_expediente.estado == EstadoExpedienteEnum.PENDIENTE_CORREOS
+        composicion = ComposicionTribunal.objects.get(expediente=causal_expediente)
+        assert [i.anio_social for i in composicion.integrantes.all()] == [4, 6]
 
     def test_caso_b_tres_integrantes(self, causal_expediente, tribunal_nomina):
         causal_expediente.socios.add(tribunal_nomina["t4"], tribunal_nomina["t5"])
         solicitar(causal_expediente, tribunal_nomina["s6"])
         assert describe(causal_expediente)["requiere_ad_hoc"] is True
-
-    def test_puede_registrar_asamblea_solo_cd_o_admin(
-        self, causal_expediente, tribunal_nomina, make_socio
-    ):
-        causal_expediente.socios.add(tribunal_nomina["t5"], tribunal_nomina["s5"])
-        cd = make_socio(legajo="77010", role="CD")
-        assert describe(causal_expediente, cd.user)["puede_registrar_asamblea"] is True
-        assert (
-            describe(causal_expediente, tribunal_nomina["t4"].user)["puede_registrar_asamblea"]
-            is False
-        )
 
 
 class TestAvisoAComisionDirectiva:
@@ -208,52 +192,3 @@ class TestAvisoAComisionDirectiva:
             motivo="Inasistencia", socio_ids=[tribunal_nomina["t4"].id], actor="cd"
         )
         assert not ad_hoc_notices().exists()
-
-
-class TestResolucionPorAsamblea:
-    @pytest.fixture
-    def caso_critico(self, causal_expediente, tribunal_nomina):
-        causal_expediente.socios.add(tribunal_nomina["t5"], tribunal_nomina["s5"])
-        return causal_expediente
-
-    def registrar(self, expediente, user, content=PDF_BYTES, filename="acta.pdf"):
-        return AssemblyResolutionService.register(
-            expediente_id=expediente.pk, user=user, content=content, filename=filename
-        )
-
-    def test_registrar_acta_emite_el_expediente(self, caso_critico, make_socio):
-        cd = make_socio(legajo="77010", role="CD")
-        resolucion = self.registrar(caso_critico, cd.user)
-
-        caso_critico.refresh_from_db()
-        assert caso_critico.estado == EstadoExpedienteEnum.EMITIDO
-        assert resolucion.acta_nombre == "acta.pdf"
-        assert resolucion.registrada_por_legajo == "77010"
-        assert not ComposicionTribunal.objects.filter(expediente=caso_critico).exists()
-        motivos = set(caso_critico.cambios_estado.values_list("motivo", flat=True))
-        assert "Resolución por Asamblea Extraordinaria (Art. 95 del Estatuto)." in motivos
-
-    def test_sin_caso_critico_no_corresponde(self, causal_expediente, tribunal_nomina, make_socio):
-        cd = make_socio(legajo="77010", role="CD")
-        with pytest.raises(TribunalCompositionStateError, match="no requiere"):
-            self.registrar(causal_expediente, cd.user)
-
-    def test_no_antes_de_vencer_el_periodo_de_justificaciones(self, caso_critico, make_socio):
-        caso_critico.estado = EstadoExpedienteEnum.JUSTIFICANDO
-        caso_critico.save(update_fields=["estado"])
-        cd = make_socio(legajo="77010", role="CD")
-        with pytest.raises(TribunalCompositionStateError, match="período de justificaciones"):
-            self.registrar(caso_critico, cd.user)
-
-    def test_el_acta_debe_ser_pdf(self, caso_critico, make_socio):
-        cd = make_socio(legajo="77010", role="CD")
-        png = b"\x89PNG\r\n\x1a\n" + b"0" * 10
-        with pytest.raises(AssemblyResolutionValidationError, match="PDF"):
-            self.registrar(caso_critico, cd.user, content=png, filename="acta.png")
-        assert not ResolucionAsamblea.objects.exists()
-
-    def test_no_se_registra_dos_veces(self, caso_critico, make_socio):
-        cd = make_socio(legajo="77010", role="CD")
-        self.registrar(caso_critico, cd.user)
-        with pytest.raises(TribunalCompositionStateError, match="ya tiene"):
-            self.registrar(caso_critico, cd.user)

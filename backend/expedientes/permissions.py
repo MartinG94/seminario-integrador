@@ -24,7 +24,6 @@ __all__ = [
     "CanManageCalendar",
     "CanManageEventos",
     "CanOpenExpedientes",
-    "CanRegisterAssemblyResolution",
     "CanResolveCausal",
     "CanTransitionExpedientes",
     "IsComisionDirectivaOrAdmin",
@@ -68,12 +67,6 @@ class CanResolveCausal(HasAnyRole):
     """Sólo los miembros del Tribunal resuelven causales T02 (S4-02)."""
 
     allowed_roles = (Role.TD,)
-
-
-class CanRegisterAssemblyResolution(HasAnyRole):
-    """CD o Administración registran la Resolución por Asamblea Extraordinaria (Art. 95)."""
-
-    allowed_roles = (Role.CD, Role.ADMIN)
 
 
 class IsNotInvolvedInExpediente(BasePermission):

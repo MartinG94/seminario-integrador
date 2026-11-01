@@ -1,4 +1,4 @@
-"""Persistencia inmutable de la composición estampada y la Resolución por Asamblea (S4-04)."""
+"""Persistencia inmutable de la composición estampada (S4-04)."""
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -8,9 +8,7 @@ from expedientes.models import (
     ComposicionTribunal,
     CondicionIntegranteEnum,
     IntegranteComposicion,
-    ResolucionAsamblea,
 )
-from tests.expedientes.conftest import PDF_BYTES
 
 pytestmark = pytest.mark.django_db
 
@@ -62,20 +60,3 @@ def test_firma_del_integrante_distingue_grupo_y_condicion(composicion):
 
 def test_condiciones_sin_ad_hoc_manual():
     assert set(CondicionIntegranteEnum.values) == {"TITULAR", "SUPLENTE"}
-
-
-def test_resolucion_por_asamblea_es_inmutable(causal_expediente, causal_vocal):
-    resolucion = ResolucionAsamblea.objects.create(
-        expediente=causal_expediente,
-        acta_blob=PDF_BYTES,
-        acta_nombre="acta.pdf",
-        acta_tamanio_bytes=len(PDF_BYTES),
-        acta_sha256="0" * 64,
-        registrada_por=causal_vocal.user,
-        registrada_por_legajo=causal_vocal.legajo,
-    )
-    resolucion.acta_nombre = "otra.pdf"
-    with pytest.raises(ValidationError):
-        resolucion.save()
-    with pytest.raises(ValidationError):
-        resolucion.delete()

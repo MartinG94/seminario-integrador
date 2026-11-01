@@ -5,8 +5,11 @@ Sin trámites manuales (Notas del PO sobre PR #63):
   juzgamiento (Art. 95 Estatuto y Art. 24 RPD).
 - Suplencia automática: la composición se calcula en tiempo real y se estampa de forma
   inmutable al adoptar la resolución.
-- Casos A y B del Art. 95: se inmoviliza la resolución ordinaria, se avisa a Comisión
-  Directiva por Outbox y la causa concluye con la Resolución por Asamblea Extraordinaria.
+- Casos A y B del Art. 95: se avisa a Comisión Directiva por Outbox para que convoque a
+  Asamblea General. La Asamblea designa integrantes con rol TD por fuera del sistema y la
+  causa sigue su curso con quienes no están involucrados (PO, 31/10/2026).
+- La nómina incompleta no bloquea la resolución (PO, 31/10/2026): se estampan los asientos
+  con integrante habilitado.
 """
 
 from dataclasses import dataclass
@@ -17,34 +20,20 @@ from expedientes.domain.tribunal_composition import Composition, Condition, comp
 from expedientes.models import (
     ComposicionTribunal,
     CondicionIntegranteEnum,
-    EstadoExpedienteEnum,
     Expediente,
     IntegranteComposicion,
-    ResolucionAsamblea,
     SolicitudT01,
 )
 from expedientes.services.tribunal_roster import LegacyTribunalRosterAdapter, Roster, RosterEntry
 from notifications.models import EmailOutbox
 from notifications.services import EmailDispatcherService
-from socios.models import Role
 
-# Etapas en las que la causa ya puede resolverse por Asamblea: vencido el período de
-# justificaciones, para no cercenar el derecho de defensa.
-ASSEMBLY_STATES = (
-    EstadoExpedienteEnum.REVISION_RESOLUCION,
-    EstadoExpedienteEnum.ESPERA_RESOLUCION,
-)
-ASSEMBLY_ROLES = (Role.CD, Role.ADMIN)
 AD_HOC_NOTICE_KEY = "td-ad-hoc-expediente-{expediente_id}"
 
 INVOLVED_MESSAGE = (
     "Participación restringida: sos parte interesada en este expediente (imputado o "
     "solicitante). Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del "
     "Estatuto y Art. 24 del Reglamento Procesal."
-)
-AD_HOC_MESSAGE = (
-    "La causa requiere Tribunal Ad-Hoc / intervención de Asamblea (Art. 95 del Estatuto): "
-    "no puede resolverla el Tribunal ordinario."
 )
 
 
@@ -56,20 +45,10 @@ class TribunalCompositionNotFound(TribunalCompositionError):
     pass
 
 
-class TribunalCompositionStateError(TribunalCompositionError):
-    def __init__(self, message: str, observaciones: list[str] | None = None) -> None:
-        super().__init__(message)
-        self.observaciones = observaciones or []
-
-
 @dataclass(frozen=True)
 class _LiveState:
     roster: Roster
     composition: Composition
-
-    @property
-    def issues(self) -> list[str]:
-        return [*self.roster.issues, *self.composition.issues]
 
     def entry(self, socio_id: int) -> RosterEntry:
         return next(e for e in self.roster.entries if e.socio.id == socio_id)
@@ -131,23 +110,12 @@ def _expediente_or_404(expediente_id: int) -> Expediente:
     return expediente
 
 
-def _assembly_payload(resolucion: ResolucionAsamblea | None) -> dict | None:
-    if resolucion is None:
-        return None
-    return {
-        "acta_nombre": resolucion.acta_nombre,
-        "registrada_at": resolucion.created_at,
-        "registrada_por_legajo": resolucion.registrada_por_legajo,
-    }
-
-
 class TribunalCompositionService:
     @staticmethod
     def describe(expediente_id: int, user=None) -> dict:
         """Responsables de la causa: estampados si ya se resolvió, o calculados en vivo."""
         expediente = _expediente_or_404(expediente_id)
         involved = is_involved(expediente, user)
-        resolucion = ResolucionAsamblea.objects.filter(expediente=expediente).first()
         composicion = (
             ComposicionTribunal.objects.filter(expediente=expediente)
             .prefetch_related("integrantes")
@@ -173,9 +141,6 @@ class TribunalCompositionService:
                 "apartados": composicion.apartados,
                 "requiere_ad_hoc": False,
                 "motivos_ad_hoc": [],
-                "observaciones": [],
-                "resolucion_asamblea": None,
-                "puede_registrar_asamblea": False,
                 "usuario": {"esta_involucrado": involved},
             }
 
@@ -195,7 +160,6 @@ class TribunalCompositionService:
                     "reemplaza_a": seat.replaces.label if seat.replaces else "",
                 }
             )
-        role = getattr(getattr(user, "socio", None), "role", None)
         return {
             "estampada": False,
             "estampada_at": None,
@@ -203,50 +167,27 @@ class TribunalCompositionService:
             "apartados": _separated(state),
             "requiere_ad_hoc": state.composition.requires_ad_hoc,
             "motivos_ad_hoc": list(state.composition.ad_hoc_reasons),
-            "observaciones": state.issues,
-            "resolucion_asamblea": _assembly_payload(resolucion),
-            "puede_registrar_asamblea": (
-                state.composition.requires_ad_hoc
-                and resolucion is None
-                and expediente.estado in ASSEMBLY_STATES
-                and role in ASSEMBLY_ROLES
-                and not involved
-            ),
             "usuario": {"esta_involucrado": involved},
         }
 
     @staticmethod
-    def requires_ad_hoc(expediente: Expediente) -> bool:
-        return _live_state(expediente).composition.requires_ad_hoc
+    def stamp_for_resolution(expediente: Expediente) -> ComposicionTribunal:
+        """Congela los responsables al adoptar la resolución (CA4).
 
-    @staticmethod
-    def stamp_for_resolution(expediente: Expediente) -> ComposicionTribunal | None:
-        """Congela los responsables al adoptar la resolución ordinaria (CA4).
-
-        Se invoca dentro de la transacción del pase a `Pendiente de firma y envío`. Si la
-        causa la resolvió la Asamblea, no hay cuerpo ordinario que estampar.
+        Se invoca dentro de la transacción del pase a `Pendiente de firma y envío`. Sólo se
+        estampan los asientos con un integrante no involucrado: la nómina incompleta y los
+        casos críticos no bloquean la resolución (PO, 31/10/2026).
         """
-        if ResolucionAsamblea.objects.filter(expediente=expediente).exists():
-            return None
         existing = ComposicionTribunal.objects.filter(expediente=expediente).first()
         if existing is not None:
             return existing
         state = _live_state(expediente)
-        if state.composition.requires_ad_hoc:
-            raise TribunalCompositionStateError(
-                AD_HOC_MESSAGE, observaciones=list(state.composition.ad_hoc_reasons)
-            )
-        if state.issues:
-            raise TribunalCompositionStateError(
-                "No se puede resolver: el Tribunal no está integrado conforme al Estatuto. "
-                + state.issues[0],
-                observaciones=state.issues,
-            )
-
         composicion = ComposicionTribunal.objects.create(
             expediente=expediente, apartados=_separated(state)
         )
         for seat in state.composition.seats:
+            if seat.member is None:
+                continue
             entry = state.entry(seat.member.socio_id)
             IntegranteComposicion.objects.create(
                 composicion=composicion,
@@ -287,8 +228,9 @@ class TribunalCompositionService:
                     f"Integrantes del Tribunal involucrados en la causa:\n{apartados}\n\n"
                     "Conforme al Art. 95 del Estatuto, corresponde convocar de inmediato a "
                     "Asamblea General. Los imputados conservan su plazo para presentar los "
-                    "formularios T02/T03. Concluida la Asamblea, registrá en el sistema la "
-                    "Resolución por Asamblea Extraordinaria con el PDF del acta.\n\n"
+                    "formularios T02/T03. Los integrantes que designe la Asamblea deben "
+                    "recibir el rol de Tribunal de Disciplina en el sistema para resolver "
+                    "la causa.\n\n"
                     "Sistema de Gestión Disciplinaria A.V.E.I.T."
                 ),
                 "idempotency_key": AD_HOC_NOTICE_KEY.format(expediente_id=expediente.pk),

@@ -16,10 +16,7 @@ from expedientes.models import (
     ExpedienteNumberSequence,
     UrgenciaExpedienteEnum,
 )
-from expedientes.services.tribunal_composition_service import (
-    TribunalCompositionService,
-    TribunalCompositionStateError,
-)
+from expedientes.services.tribunal_composition_service import TribunalCompositionService
 from socios.models import Socio
 
 
@@ -116,11 +113,8 @@ class ExpedienteWorkflowService:
             )
 
         if estado_nuevo == EstadoExpedienteEnum.PENDIENTE_CORREOS:
-            # Adoptar la resolución estampa los responsables o la inmoviliza (Art. 95).
-            try:
-                TribunalCompositionService.stamp_for_resolution(expediente)
-            except TribunalCompositionStateError as exc:
-                raise ValidationError({"estado": str(exc)}) from exc
+            # Adoptar la resolución estampa los responsables no involucrados (Art. 95).
+            TribunalCompositionService.stamp_for_resolution(expediente)
 
         estado_anterior = expediente.estado
         expediente.estado = estado_nuevo

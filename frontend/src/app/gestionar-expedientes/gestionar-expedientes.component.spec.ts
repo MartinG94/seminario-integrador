@@ -1273,9 +1273,6 @@ describe('GestionarExpedientesComponent', () => {
         apartados: [],
         requiere_ad_hoc: false,
         motivos_ad_hoc: [],
-        observaciones: [],
-        resolucion_asamblea: null,
-        puede_registrar_asamblea: false,
         usuario: { esta_involucrado: false }
       };
       spyOn(api, 'obtenerComposicionTribunal').and.returnValue(of(composicionLibre));
@@ -1621,9 +1618,6 @@ describe('GestionarExpedientesComponent', () => {
       ],
       requiere_ad_hoc: false,
       motivos_ad_hoc: [],
-      observaciones: [],
-      resolucion_asamblea: null,
-      puede_registrar_asamblea: false,
       usuario: { esta_involucrado: false },
       ...cambios
     });
@@ -1651,7 +1645,7 @@ describe('GestionarExpedientesComponent', () => {
     const compiled = (): HTMLElement => fixture.nativeElement as HTMLElement;
 
     it('no muestra el panel de responsables ni alertas de integrantes faltantes', () => {
-      abrirComo('TD', composicion({ observaciones: ['Falta el suplente del 4.º año.'] }));
+      abrirComo('TD');
 
       expect(api.obtenerComposicionTribunal).toHaveBeenCalledWith('12');
       expect(compiled().querySelector('.panel-composicion')).toBeNull();
@@ -1702,51 +1696,19 @@ describe('GestionarExpedientesComponent', () => {
       });
     });
 
-    describe('Tribunal Ad-Hoc / Asamblea (Art. 95)', () => {
-      it('inmoviliza la resolución ordinaria y muestra el aviso', () => {
+    describe('Casos críticos del Art. 95', () => {
+      it('muestra el aviso de derivación a Asamblea sin inmovilizar la causa ni pedir un acta', () => {
+        // Decisión del PO (31/10/2026): la Asamblea designa integrantes con rol TD por fuera del sistema.
         abrirComo('TD', casoCritico());
         expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Asamblea General');
         expect(compiled().querySelector('.panel-composicion')).toBeNull();
-        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
-        expect(component.puedeRegistrarAsamblea).toBeFalse();
+        expect(compiled().querySelector('input[type="file"]#acta-asamblea')).toBeNull();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
       });
 
-      it('CD sube el acta y el expediente se emite', () => {
-        abrirComo('CD', casoCritico({ puede_registrar_asamblea: true }));
-        const emitida = casoCritico({
-          resolucion_asamblea: { acta_nombre: 'acta.pdf', registrada_at: '2026-10-23T12:00:00Z', registrada_por_legajo: '77010' }
-        });
-        spyOn(api, 'registrarResolucionAsamblea').and.returnValue(of(emitida));
-        const acta = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' });
-
-        component.seleccionarActaAsamblea({ target: { files: [acta] } } as unknown as Event);
-        fixture.detectChanges();
-        (compiled().querySelector('.btn-registrar-asamblea') as HTMLButtonElement).click();
-        fixture.detectChanges();
-
-        expect(api.registrarResolucionAsamblea).toHaveBeenCalledWith('12', acta);
-        expect(notifications.success).toHaveBeenCalledWith('Resolución por Asamblea registrada. El expediente fue emitido.');
-        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Resuelto por Asamblea Extraordinaria');
-        expect(compiled().querySelector('.registrar-asamblea')).toBeNull();
-      });
-
-      it('exige el acta antes de enviar', () => {
-        abrirComo('CD', casoCritico({ puede_registrar_asamblea: true }));
-        spyOn(api, 'registrarResolucionAsamblea');
-        component.registrarResolucionAsamblea();
-        expect(api.registrarResolucionAsamblea).not.toHaveBeenCalled();
-        expect(notifications.error).toHaveBeenCalledWith('Adjuntá el acta de la Asamblea Extraordinaria en PDF.');
-      });
-
-      it('informa el rechazo del servidor', () => {
-        abrirComo('CD', casoCritico({ puede_registrar_asamblea: true }));
-        spyOn(api, 'registrarResolucionAsamblea').and.returnValue(
-          throwError(() => ({ status: 409, error: { detail: 'La causa no requiere intervención de Asamblea.' } }))
-        );
-        component.actaAsamblea = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' });
-        component.registrarResolucionAsamblea();
-        expect(notifications.error).toHaveBeenCalled();
-        expect(component.procesandoComposicion).toBeFalse();
+      it('sin caso crítico no muestra el aviso', () => {
+        abrirComo('TD');
+        expect(compiled().querySelector('.aviso-asamblea')).toBeNull();
       });
     });
   });

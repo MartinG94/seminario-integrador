@@ -165,23 +165,6 @@ describe('ExpedienteApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush({ asientos: [{}, {}, {}] });
     });
-
-    it('registra la Resolución por Asamblea con el acta en PDF', () => {
-      const acta = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' });
-      service.registrarResolucionAsamblea(12, acta).subscribe();
-      const req = http.expectOne(`${base}/resolucion-asamblea/`);
-      expect(req.request.method).toBe('POST');
-      expect((req.request.body as FormData).get('acta')).toBe(acta);
-      req.flush({});
-    });
-
-    it('descarga el acta de la Asamblea', () => {
-      service.descargarActaAsamblea(12).subscribe(blob => expect(blob.size).toBe(3));
-      const req = http.expectOne(`${base}/resolucion-asamblea/`);
-      expect(req.request.method).toBe('GET');
-      expect(req.request.responseType).toBe('blob');
-      req.flush(new Blob(['pdf']));
-    });
   });
 
   describe('apelación y adecuación del T01 (PB-02)', () => {

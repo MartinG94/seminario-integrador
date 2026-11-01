@@ -345,27 +345,11 @@
           <span><strong>Participación restringida:</strong> Sos parte interesada en este expediente (imputado o solicitante).
             Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del Estatuto y Art. 24 del Reglamento Procesal.</span>
         </div>
-        <!-- Causa derivada a Asamblea General (S4-04, Art. 95 del Estatuto): resolución ordinaria inmovilizada -->
-        <div *ngIf="composicion?.requiere_ad_hoc" class="mt-3 small text-muted aviso-asamblea" role="status">
+        <!-- Caso crítico del Art. 95: se avisó a CD para convocar a Asamblea General (S4-04) -->
+        <p *ngIf="composicion?.requiere_ad_hoc" class="mt-3 small text-muted aviso-asamblea" role="status">
           <i class="material-icons" aria-hidden="true" style="font-size: 16px; vertical-align: middle;">info</i>
-          <ng-container *ngIf="!composicion?.resolucion_asamblea">
-            Causa derivada a Comisión Directiva para su tratamiento en Asamblea General (Art. 95 del Estatuto).
-          </ng-container>
-          <ng-container *ngIf="composicion?.resolucion_asamblea as r">
-            Resuelto por Asamblea Extraordinaria el {{r.registrada_at | date:'dd/MM/yyyy'}}.
-            <button type="button" class="btn btn-sm btn-link p-0 btn-ver-acta" (click)="verActaAsamblea()">Ver acta</button>
-          </ng-container>
-          <div *ngIf="puedeRegistrarAsamblea" class="form-group mt-2 mb-0 registrar-asamblea">
-            <label class="small font-weight-bold" for="acta-asamblea">Acta de la Asamblea Extraordinaria (PDF)</label>
-            <input id="acta-asamblea" type="file" class="form-control-file" accept="application/pdf,.pdf"
-                   (change)="seleccionarActaAsamblea($event)">
-            <div class="text-right mt-1">
-              <button type="button" class="btn btn-sm btn-primary btn-registrar-asamblea"
-                      [disabled]="procesandoComposicion || !actaAsamblea"
-                      (click)="registrarResolucionAsamblea()">Registrar resolución y emitir</button>
-            </div>
-          </div>
-        </div>
+          Causa derivada a Comisión Directiva para su tratamiento en Asamblea General (Art. 95 del Estatuto).
+        </p>
         <div class="row metadatos-row">
           <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
           <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">

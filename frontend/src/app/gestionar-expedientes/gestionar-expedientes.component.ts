@@ -171,11 +171,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
 
-  // Tribunal de la causa (S4-04): inhibición, suplencia automática y Asamblea (Art. 95)
+  // Tribunal de la causa (S4-04): inhibición de involucrados y suplencia automática (Art. 95)
   composicion: ComposicionTribunalDTO | null = null;
   cargandoComposicion = false;
-  procesandoComposicion = false;
-  actaAsamblea: File | null = null;
 
   // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
   readonly escalaPuntajes = ESCALA_PUNTAJES;
@@ -730,13 +728,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return !!this.composicion?.usuario?.esta_involucrado;
   }
 
-  /** Emitir o firmar sólo con responsables calculados, sin inhibición ni caso de Asamblea. */
+  /**
+   * Emitir o firmar sólo con responsables calculados y sin inhibición. Los casos críticos no
+   * inmovilizan la causa: la Asamblea designa integrantes con rol TD (PO, 31/10/2026).
+   */
   get puedeResolverExpedienteSeleccionado(): boolean {
-    return this.puedeVotarOFirmar && !!this.composicion && !this.usuarioInvolucrado && !this.composicion.requiere_ad_hoc;
-  }
-
-  get puedeRegistrarAsamblea(): boolean {
-    return !!this.composicion?.puede_registrar_asamblea && this.auth.tieneRol('CD', 'ADMIN');
+    return this.puedeVotarOFirmar && !!this.composicion && !this.usuarioInvolucrado;
   }
 
   cargarComposicion(expedienteId: number | string): void {
@@ -756,60 +753,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   private limpiarComposicion(): void {
     this.composicion = null;
     this.cargandoComposicion = false;
-    this.procesandoComposicion = false;
-    this.actaAsamblea = null;
   }
-
-  seleccionarActaAsamblea(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.actaAsamblea = input.files?.[0] ?? null;
-  }
-
-  registrarResolucionAsamblea(): void {
-    if (!this.expedienteSeleccionado || this.procesandoComposicion) return;
-    if (!this.actaAsamblea) {
-      this.notifications.error('Adjuntá el acta de la Asamblea Extraordinaria en PDF.');
-      return;
-    }
-    this.procesandoComposicion = true;
-    this.expedienteApi.registrarResolucionAsamblea(this.expedienteSeleccionado.id, this.actaAsamblea).subscribe({
-      next: composicion => {
-        this.procesandoComposicion = false;
-        this.actaAsamblea = null;
-        this.composicion = composicion;
-        this.notifications.success('Resolución por Asamblea registrada. El expediente fue emitido.');
-        this.cargarDatosTablero();
-      },
-      error: err => {
-        this.procesandoComposicion = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la Resolución por Asamblea.'));
-      }
-    });
-  }
-
-  verActaAsamblea(): void {
-    if (!this.expedienteSeleccionado) return;
-    const ventana = window.open('', '_blank');
-    this.expedienteApi.descargarActaAsamblea(this.expedienteSeleccionado.id).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        if (ventana) {
-          ventana.location.href = url;
-        } else {
-          const enlace = document.createElement('a');
-          enlace.href = url;
-          enlace.download = this.composicion?.resolucion_asamblea?.acta_nombre || 'acta-asamblea.pdf';
-          enlace.click();
-        }
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-      },
-      error: err => {
-        ventana?.close();
-        this.notifications.error(httpErrorMessage(err, 'No se pudo abrir el acta de la Asamblea.'));
-      }
-    });
-  }
-
 
   cargarJustificaciones(expedienteId: number | string): void {
     this.cargandoJustificaciones = true;

@@ -30,7 +30,6 @@ from expedientes.models import (
     Holiday,
     OperacionDescargoEnum,
     ParametroPlazoApelacion,
-    ResolucionAsamblea,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
@@ -40,7 +39,6 @@ from expedientes.permissions import (
     CanManageAppealDeadline,
     CanManageCalendar,
     CanOpenExpedientes,
-    CanRegisterAssemblyResolution,
     CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
@@ -70,7 +68,6 @@ from expedientes.serializers import (
     TransicionExpedienteSerializer,
     UpdateUrgenciaExpedienteSerializer,
 )
-from expedientes.services.assembly_resolution_service import AssemblyResolutionService
 from expedientes.services.board_service import build_board_payload
 from expedientes.services.causal_resolution_service import (
     CausalResolutionNotFound,
@@ -97,7 +94,6 @@ from expedientes.services.tribunal_composition_service import (
     TribunalCompositionError,
     TribunalCompositionNotFound,
     TribunalCompositionService,
-    TribunalCompositionStateError,
 )
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
@@ -777,11 +773,6 @@ class DecisionCausalView(APIView):
 def _composition_error_response(exc: TribunalCompositionError) -> Response:
     if isinstance(exc, TribunalCompositionNotFound):
         raise NotFound(str(exc)) from exc
-    if isinstance(exc, TribunalCompositionStateError):
-        return Response(
-            {"detail": str(exc), "observaciones": exc.observaciones},
-            status=status.HTTP_409_CONFLICT,
-        )
     return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -795,51 +786,6 @@ class ComposicionTribunalView(APIView):
             return Response(TribunalCompositionService.describe(pk, request.user))
         except TribunalCompositionError as exc:
             return _composition_error_response(exc)
-
-
-class ResolucionAsambleaView(APIView):
-    """Resolución por Asamblea Extraordinaria cuando no interviene el TD (Art. 95).
-
-    - GET: descarga el acta en PDF (TD, CD y Administrador).
-    - POST: CD o Administración suben el acta y la causa se emite.
-    """
-
-    def get_permissions(self) -> list[permissions.BasePermission]:
-        if self.request.method == "POST":
-            return [
-                permissions.IsAuthenticated(),
-                CanRegisterAssemblyResolution(),
-                IsNotInvolvedInExpediente(),
-            ]
-        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
-
-    def get(self, request: Request, pk: int) -> HttpResponse:
-        resolucion = ResolucionAsamblea.objects.filter(expediente_id=pk).first()
-        if resolucion is None:
-            raise NotFound("La causa no tiene Resolución por Asamblea registrada.")
-        response = HttpResponse(bytes(resolucion.acta_blob), content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{resolucion.acta_nombre}"'
-        return response
-
-    def post(self, request: Request, pk: int) -> Response:
-        archivo = request.FILES.get("acta")
-        if archivo is None:
-            return Response(
-                {"detail": "Adjuntá el acta de la Asamblea en PDF."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        try:
-            AssemblyResolutionService.register(
-                expediente_id=pk,
-                user=request.user,
-                content=archivo.read(),
-                filename=archivo.name,
-            )
-        except TribunalCompositionError as exc:
-            return _composition_error_response(exc)
-        return Response(
-            TribunalCompositionService.describe(pk, request.user), status=status.HTTP_201_CREATED
-        )
 
 
 def _t01_error_response(exc: T01AppealError) -> Response:

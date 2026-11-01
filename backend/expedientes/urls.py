@@ -26,7 +26,6 @@ from expedientes.views import (
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
-    ResolucionAsambleaView,
     SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
@@ -71,11 +70,6 @@ urlpatterns = [
         "<int:pk>/composicion/",
         ComposicionTribunalView.as_view(),
         name="composicion-tribunal",
-    ),
-    path(
-        "<int:pk>/resolucion-asamblea/",
-        ResolucionAsambleaView.as_view(),
-        name="resolucion-asamblea",
     ),
     path(
         "<int:pk>/descargo/versiones/",

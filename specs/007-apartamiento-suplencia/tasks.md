@@ -13,23 +13,23 @@ Desglose de tareas atómicas (<30 min) conforme a SDD y TDD.
   *Hecho cuando:* `backend/tests/expedientes/test_tribunal_roster.py` en verde.
 
 - [x] **TS4-04.3 Modelos inmutables y migración [TDD]:**
-  `ComposicionTribunal`, `IntegranteComposicion` y `ResolucionAsamblea` sólo-inserción (migración `0017`).
+  `ComposicionTribunal` e `IntegranteComposicion` sólo-inserción (migración `0019`).
   *Hecho cuando:* `backend/tests/expedientes/test_tribunal_composition_models.py` en verde.
 
 - [x] **TS4-04.4 Servicio de aplicación [TDD]:**
-  Involucrados (imputados y solicitante), consulta en vivo, estampado al pasar a `Pendiente de firma y envío`, inmovilización por Casos A/B y aviso a CD por Outbox.
+  Involucrados (imputados y solicitante), consulta en vivo, estampado de los asientos disponibles al pasar a `Pendiente de firma y envío` y aviso a CD por Outbox en Casos A/B, sin inmovilizar la causa ni bloquear por nómina incompleta (decisión del PO, 31/10/2026).
   *Hecho cuando:* `backend/tests/expedientes/test_tribunal_composition_service.py` en verde.
 
 - [x] **TS4-04.5 Inhibición y endpoints REST [TDD]:**
-  `IsNotInvolvedInExpediente` (403) en decisiones de justificativos y transiciones; `GET /composicion/` y `GET/POST /resolucion-asamblea/`; supresión de apartamientos, designaciones ad hoc y constitución manual.
-  *Hecho cuando:* `backend/tests/expedientes/test_tribunal_composition_api.py` en verde (200, 201, 400, 401, 403, 404, 409).
+  `IsNotInvolvedInExpediente` (403) en decisiones de justificativos y transiciones; `GET /composicion/`; supresión de apartamientos, designaciones ad hoc, constitución manual y carga del acta de Asamblea.
+  *Hecho cuando:* `backend/tests/expedientes/test_tribunal_composition_api.py` en verde (200, 401, 403, 404).
 
 - [x] **TS4-04.6 Servicio frontend y DTOs [TDD]:**
-  `obtenerComposicionTribunal`, `registrarResolucionAsamblea` y `descargarActaAsamblea` en `ExpedienteApiService`.
+  `obtenerComposicionTribunal` en `ExpedienteApiService`.
   *Hecho cuando:* tests Jasmine del servicio en verde.
 
 - [x] **TS4-04.7 Inhibición visible en el detalle:**
-  Remoción total del panel "Responsables del Tribunal" y de sus alertas (revisión del PO, 25/10/2026); banner de participación restringida, acciones "Aprobar", "Rechazar" y "Transicionar" ocultas al involucrado, aviso sutil de causa derivada a Asamblea y carga del acta por CD/Admin.
+  Remoción total del panel "Responsables del Tribunal" y de sus alertas (revisión del PO, 25/10/2026); banner de participación restringida, acciones "Aprobar", "Rechazar" y "Transicionar" ocultas al involucrado, aviso sutil de causa derivada a Asamblea, sin carga de acta (decisión del PO, 31/10/2026).
   *Hecho cuando:* tests Karma del componente en verde.
 
 - [x] **TS4-04.8 Verificación integral y consistencia PO:**

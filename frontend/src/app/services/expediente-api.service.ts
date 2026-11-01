@@ -419,12 +419,6 @@ export interface IntegranteApartadoDTO {
   condicion: CondicionIntegrante;
 }
 
-export interface ResolucionAsambleaDTO {
-  acta_nombre: string;
-  registrada_at: string;
-  registrada_por_legajo: string;
-}
-
 export interface ComposicionTribunalDTO {
   estampada: boolean;
   estampada_at: string | null;
@@ -432,9 +426,6 @@ export interface ComposicionTribunalDTO {
   apartados: IntegranteApartadoDTO[];
   requiere_ad_hoc: boolean;
   motivos_ad_hoc: string[];
-  observaciones: string[];
-  resolucion_asamblea: ResolucionAsambleaDTO | null;
-  puede_registrar_asamblea: boolean;
   usuario: { esta_involucrado: boolean };
 }
 
@@ -607,17 +598,6 @@ export class ExpedienteApiService {
 
   obtenerComposicionTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
     return this.http.get<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/`);
-  }
-
-  /** CD o Administración suben el acta de la Asamblea Extraordinaria y la causa se emite (Art. 95). */
-  registrarResolucionAsamblea(expedienteId: number | string, acta: File): Observable<ComposicionTribunalDTO> {
-    const formData = new FormData();
-    formData.append('acta', acta);
-    return this.http.post<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/resolucion-asamblea/`, formData);
-  }
-
-  descargarActaAsamblea(expedienteId: number | string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${expedienteId}/resolucion-asamblea/`, { responseType: 'blob' });
   }
 
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {

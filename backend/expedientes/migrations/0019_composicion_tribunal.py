@@ -30,25 +30,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='ResolucionAsamblea',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('acta_blob', models.BinaryField()),
-                ('acta_nombre', models.CharField(max_length=255)),
-                ('acta_tamanio_bytes', models.PositiveIntegerField()),
-                ('acta_sha256', models.CharField(max_length=64)),
-                ('registrada_por_legajo', models.CharField(max_length=150)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('expediente', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='resolucion_asamblea', to='expedientes.expediente')),
-                ('registrada_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'verbose_name': 'Resolución por Asamblea Extraordinaria',
-                'verbose_name_plural': 'Resoluciones por Asamblea Extraordinaria',
-                'db_table': 'expedientes_resolucion_asamblea',
-            },
-        ),
-        migrations.CreateModel(
             name='IntegranteComposicion',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),

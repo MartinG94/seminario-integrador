@@ -556,16 +556,6 @@ body.dark-edition,
   }
 }
 
-// Causa derivada a Asamblea (S4-04)
-.aviso-asamblea {
-  button:focus-visible,
-  input:focus-visible {
-    outline: 2px solid var(--color-border-focus);
-    outline-offset: 2px;
-  }
-}
-
-
 // Estilos del stepper de escala discreta de puntaje
 .input-group-stepper {
   display: flex;
