@@ -198,6 +198,18 @@ describe('ValoracionT03PanelComponent', () => {
       expect(emitido).toHaveBeenCalledOnceWith('7/2026');
     });
 
+    it('no busca mientras se registra, porque la cita quedaría afuera sin aviso', () => {
+      const emitido = spyOn(component.buscarAntecedente, 'emit');
+      component.registrando = true;
+      fixture.detectChanges();
+      component.numeroAntecedente = '7/2026';
+
+      component.agregarAntecedente();
+
+      expect(emitido).not.toHaveBeenCalled();
+      expect(consultar<HTMLButtonElement>('.btn-agregar-antecedente')?.disabled).toBeTrue();
+    });
+
     it('no busca sin un número escrito', () => {
       const emitido = spyOn(component.buscarAntecedente, 'emit');
       component.numeroAntecedente = '   ';

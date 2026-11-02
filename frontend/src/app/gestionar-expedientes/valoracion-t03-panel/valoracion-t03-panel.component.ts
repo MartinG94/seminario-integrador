@@ -64,6 +64,8 @@ export class ValoracionT03PanelComponent implements OnChanges {
   }
 
   agregarAntecedente(): void {
+    // Lo enviado ya está fijado: una cita agregada ahora se perdería sin aviso.
+    if (this.registrando) return;
     const numero = this.numeroAntecedente.trim();
     if (!numero) {
       this.notifications.error('Escribí el número del expediente antecedente.');
