@@ -75,6 +75,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   reglamentoExpandidoForm: string | null = null;
   catalogoItemsModal: CatalogoReglamentoItem[] = [];
   @ViewChild('modalSearchInput') modalSearchInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('modalReglamentosDialog') modalReglamentosDialog?: ElementRef<HTMLElement>;
+  @ViewChild('modalReglamentosBody') modalReglamentosBody?: ElementRef<HTMLElement>;
+  private elementoFocoPrevio: HTMLElement | null = null;
   anexoFecha = '';
   anexoLugar = '';
   anexoTestigos = '';
@@ -407,18 +410,44 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   abrirModalReglamentos(): void {
     if (this.estado === 'ISSUED') return;
+    this.elementoFocoPrevio = (typeof document !== 'undefined' ? document.activeElement as HTMLElement : null);
     this.modalReglamentosAbierto = true;
     this.scrollLock.lock();
     setTimeout(() => {
-      if (this.modalSearchInput?.nativeElement) {
-        this.modalSearchInput.nativeElement.focus();
+      if (this.modalReglamentosBody?.nativeElement) {
+        this.modalReglamentosBody.nativeElement.scrollTop = 0;
       }
-    }, 50);
+      this.modalReglamentosDialog?.nativeElement?.focus({ preventScroll: true });
+      if (this.modalSearchInput?.nativeElement) {
+        this.modalSearchInput.nativeElement.focus({ preventScroll: true });
+      }
+    }, 0);
   }
 
   cerrarModalReglamentos(): void {
     this.modalReglamentosAbierto = false;
     this.scrollLock.unlock();
+    if (this.elementoFocoPrevio && typeof this.elementoFocoPrevio.focus === 'function') {
+      this.elementoFocoPrevio.focus({ preventScroll: true });
+    }
+    this.elementoFocoPrevio = null;
+  }
+
+  onModalReglamentosKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.cerrarModalReglamentos();
+      return;
+    }
+
+    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key)) {
+      const delta = (event.key === 'ArrowDown' ? 40 : event.key === 'ArrowUp' ? -40 : event.key === 'PageDown' ? 200 : -200);
+      if (this.modalReglamentosBody?.nativeElement) {
+        this.modalReglamentosBody.nativeElement.scrollTop += delta;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 
   setFiltroDocumentoModal(doc: 'TODOS' | 'Reglamento Interno' | 'Estatuto'): void {

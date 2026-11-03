@@ -561,14 +561,18 @@
 <div class="modal-reglamentos-backdrop"
      *ngIf="modalReglamentosAbierto"
      (click)="cerrarModalReglamentos()"
-     (wheel)="$event.target === $event.currentTarget && $event.preventDefault()"
-     (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()"
      (keydown.escape)="cerrarModalReglamentos()"
      tabindex="-1"
      role="dialog"
      aria-modal="true"
      aria-labelledby="modal-reglamentos-title">
-  <div class="modal-reglamentos-dialog" (click)="$event.stopPropagation()">
+  <div #modalReglamentosDialog
+       class="modal-reglamentos-dialog"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalReglamentosKeydown($event)">
     <!-- Cabecera del Modal -->
     <div class="modal-reglamentos-header d-flex justify-content-between align-items-start">
       <div>
@@ -635,7 +639,9 @@
     </div>
 
     <!-- Lista de Artículos Seleccionables con Checkboxes -->
-    <div class="modal-reglamentos-body">
+    <div #modalReglamentosBody
+         class="modal-reglamentos-body"
+         tabindex="-1">
       <div *ngIf="articulosModalFiltrados.length === 0" class="text-center py-5 text-muted">
         <i class="material-icons mb-2" style="font-size: 38px; opacity: 0.5;">find_in_page</i>
         <p class="mb-0">No se encontraron artículos que coincidan con la búsqueda actual.</p>

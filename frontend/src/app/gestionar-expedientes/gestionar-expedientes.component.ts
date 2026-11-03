@@ -149,6 +149,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalDescargoAbierto = false;
   reglamentacionExpandida = false;
   expedienteSeleccionado: Expediente | null = null;
+  private elementoFocoPrevio: HTMLElement | null = null;
 
   // Votación y Reglamentos Respaldantes
   reglamentosDisponibles: string[] = [];
@@ -616,6 +617,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.modalDetalleAbierto = true;
     this.scrollLock.lock();
+    this.enfocarModalActivo();
     this.reglamentacionExpandida = false;
     this.reglamentoExpandidoModal = null;
     this.limpiarJustificaciones();
@@ -927,6 +929,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.modalVotacionAbierto = true;
     this.scrollLock.lock();
+    this.enfocarModalActivo();
     this.filtroReglamentosResolucion = '';
     const previos = exp.reglamentosRespaldantes || exp.reglamentos_respaldantes || [];
     this.reglamentosSeleccionadosResolucion = [...previos];
@@ -944,6 +947,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.modalFirmaAbierto = true;
     this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   abrirModalSocios(exp: Expediente, event?: Event): void {
@@ -957,6 +961,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.modalSociosAbierto = true;
     this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   volverADetalle(): void {
@@ -980,6 +985,63 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.filtroReglamentosResolucion = '';
     this.limpiarJustificaciones();
     this.limpiarT01();
+    if (this.elementoFocoPrevio && typeof this.elementoFocoPrevio.focus === 'function') {
+      this.elementoFocoPrevio.focus({ preventScroll: true });
+    }
+    this.elementoFocoPrevio = null;
+  }
+
+  private enfocarModalActivo(): void {
+    if (!this.elementoFocoPrevio && typeof document !== 'undefined') {
+      this.elementoFocoPrevio = document.activeElement as HTMLElement;
+    }
+    setTimeout(() => {
+      if (typeof document === 'undefined') return;
+      const activeDialog = document.querySelector(
+        '.modal-backdrop-custom .modal-dialog-custom'
+      ) as HTMLElement | null;
+      const cardBody = document.querySelector(
+        '.modal-backdrop-custom .modal-detalle-body, .modal-backdrop-custom .card-body'
+      ) as HTMLElement | null;
+
+      if (cardBody) {
+        cardBody.scrollTop = 0;
+      }
+      if (activeDialog && typeof activeDialog.focus === 'function') {
+        activeDialog.focus({ preventScroll: true });
+      } else if (cardBody && typeof cardBody.focus === 'function') {
+        cardBody.focus({ preventScroll: true });
+      }
+    }, 0);
+  }
+
+  onModalKeydown(event: KeyboardEvent): void {
+    if (!event) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.cerrarModales();
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName?.toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      return;
+    }
+
+    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key)) {
+      const delta = (event.key === 'ArrowDown' ? 40 : event.key === 'ArrowUp' ? -40 : event.key === 'PageDown' ? 200 : -200);
+      const cardBody = document.querySelector(
+        '.modal-backdrop-custom .modal-detalle-body, .modal-backdrop-custom .card-body'
+      ) as HTMLElement | null;
+      if (cardBody) {
+        cardBody.scrollTop += delta;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 
   confirmarVotacion(): void {
@@ -1265,6 +1327,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDetalleAbierto = false;
     this.modalDescargoAbierto = true;
     this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   getEncabezadoModalDescargo(): string {
@@ -1363,6 +1426,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.involucradoSeleccionado = null;
     this.modalDetalleAbierto = true;
+    this.enfocarModalActivo();
   }
 
   abrirResolucion(exp: Expediente): void {
@@ -1370,6 +1434,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.modalResolucionAbierto = true;
     this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   formatSolicitante(exp: Expediente | null): string {

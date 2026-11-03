@@ -318,8 +318,19 @@
 </div>
 
 <!-- Modal 1: Detalle Completo del Expediente -->
-<div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
-  <div class="modal-dialog-custom modal-dialog-tribunal">
+<div *ngIf="modalDetalleAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card modal-detalle-card" *ngIf="expedienteSeleccionado">
       <!-- Cabecera del Modal 1 -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
@@ -339,7 +350,7 @@
         </button>
       </div>
 
-      <div class="card-body modal-detalle-body">
+      <div class="card-body modal-detalle-body" tabindex="-1">
         <div class="row metadatos-row">
           <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
           <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
@@ -514,14 +525,25 @@
 </div>
 
 <!-- Modal 2: Emitir Resolución -->
-<div *ngIf="modalVotacionAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
-  <div class="modal-dialog-custom">
+<div *ngIf="modalVotacionAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-warning">
         <h4 class="card-title">Emitir Resolución</h4>
         <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <div class="alert alert-warning">
           <i class="material-icons" style="vertical-align: middle;">info</i>
           <span>La resolución exige mayoría absoluta del cuerpo colegiado (&ge; 2/3 de votos favorables).</span>
@@ -608,14 +630,25 @@
 </div>
 
 <!-- Modal 3: Firmar Resolución -->
-<div *ngIf="modalFirmaAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
-  <div class="modal-dialog-custom">
+<div *ngIf="modalFirmaAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-success">
         <h4 class="card-title">Firmar Resolución</h4>
         <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <div class="alert alert-info">
           <i class="material-icons" style="vertical-align: middle;">lock</i>
           <span>La resolución aprobada requiere la firma sucesiva de los 3 miembros del Tribunal. Se generará sello temporal criptográfico SHA-256.</span>
@@ -651,14 +684,25 @@
 </div>
 
 <!-- Modal 4: Socios Involucrados (S3-08) -->
-<div *ngIf="modalSociosAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
-  <div class="modal-dialog-custom">
+<div *ngIf="modalSociosAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info">
         <h4 class="card-title">Socios Involucrados</h4>
         <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}}</p>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <p class="text-muted small mb-3">
           Socios involucrados en el expediente <strong>{{formatCaseNumber(expedienteSeleccionado.numero)}}</strong>:
         </p>
@@ -691,8 +735,19 @@
 </div>
 
 <!-- Modal 5: Ver Resolución Oficial (Lectura) -->
-<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom modal-resolucion-backdrop" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
-  <div class="modal-dialog-custom modal-dialog-tribunal">
+<div *ngIf="modalResolucionAbierto"
+     class="modal-backdrop-custom modal-resolucion-backdrop"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info d-flex justify-content-between align-items-center">
         <h4 class="card-title mb-0">Resolución Oficial — {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
@@ -700,7 +755,7 @@
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <div class="alert alert-info py-2">
           <i class="material-icons" style="vertical-align: middle;">verified</i>
           <span>Resolución firme debidamente emitida y registrada por el Tribunal de Disciplina.</span>
@@ -733,8 +788,19 @@
 </div>
 
 <!-- Modal 6: Ver Descargo Individual -->
-<div *ngIf="modalDescargoAbierto" class="modal-backdrop-custom modal-descargo-backdrop" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
-  <div class="modal-dialog-custom modal-dialog-tribunal">
+<div *ngIf="modalDescargoAbierto"
+     class="modal-backdrop-custom modal-descargo-backdrop"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="involucradoSeleccionado && involucradoSeleccionado.descargo as desc">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <h4 class="card-title mb-0 font-weight-bold text-white">
@@ -748,7 +814,7 @@
         </button>
       </div>
 
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <!-- Metadatos del descargo -->
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
           <div>

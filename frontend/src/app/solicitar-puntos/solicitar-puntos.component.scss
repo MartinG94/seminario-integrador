@@ -747,6 +747,10 @@ textarea.form-control-aveit {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .modal-reglamentos-header {

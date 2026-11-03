@@ -1318,19 +1318,9 @@ describe('GestionarExpedientesComponent', () => {
       expect(motivoBox).toBeTruthy();
       expect(motivoBox.textContent).toContain('Inasistencia no justificada a reunión plenaria');
 
-      // Reglamentación múltiple con toggle
-      const toggleBtn = modal.querySelector('.toggle-reglamento-btn');
-      expect(toggleBtn).toBeTruthy();
-      expect(component.reglamentacionExpandida).toBeFalse();
-
-      toggleBtn.click();
-      fixture.detectChanges();
-      expect(component.reglamentacionExpandida).toBeTrue();
-      expect(modal.textContent).toContain('Reglamento General de Miembros');
-
-      toggleBtn.click();
-      fixture.detectChanges();
-      expect(component.reglamentacionExpandida).toBeFalse();
+      // Reglamentación múltiple (tabla de reglamentos o recuadro normativo)
+      const tablaReg = modal.querySelector('app-tabla-reglamentos, .reglamentacion-box');
+      expect(tablaReg).toBeTruthy();
     });
 
     it('debe mostrar tabla de involucrados con 6 columnas y formatear nombres y grupos', () => {
@@ -1853,6 +1843,97 @@ describe('GestionarExpedientesComponent', () => {
       fixture.detectChanges();
       expect(component.reglamentoExpandidoDetalle?.cuerpo).toContain('Deber de asistir a las asambleas.');
     });
+  });
+
+  describe('Interacción accesible, bloqueo de scroll y foco en modales de expedientes', () => {
+    let expEjemplo: Expediente;
+
+    beforeEach(() => {
+      expEjemplo = {
+        id: 'EXP-10',
+        numero: 'EXP-0010/2026',
+        socio: 'Juan Perez',
+        legajo: '12345',
+        subcomision: 'GVP',
+        motivo: 'Falta disciplinaria',
+        fechaCreacion: '2026-03-01',
+        estado: 'creado',
+        horasRestantes: 72,
+        tipo: 'falta',
+        puntos: -1
+      };
+    });
+
+    it('transfiere el foco al modal al abrirse y lo restaura al elemento disparador al cerrarse', fakeAsync(() => {
+      const botonDisparador = document.createElement('button');
+      document.body.appendChild(botonDisparador);
+      botonDisparador.focus();
+      expect(document.activeElement).toBe(botonDisparador);
+
+      component.abrirDetalle(expEjemplo);
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalDetalleAbierto).toBeTrue();
+      const dialogEl = fixture.nativeElement.querySelector('.modal-dialog-custom') as HTMLElement;
+      expect(dialogEl).toBeTruthy();
+      expect(document.activeElement === dialogEl || dialogEl.contains(document.activeElement)).toBeTrue();
+
+      component.cerrarModales();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(document.activeElement).toBe(botonDisparador);
+      botonDisparador.remove();
+    }));
+
+    it('cierra el modal al hacer clic en el backdrop y permanece abierto al hacer clic dentro del diálogo', fakeAsync(() => {
+      component.abrirDetalle(expEjemplo);
+      fixture.detectChanges();
+      tick();
+
+      const dialogEl = fixture.nativeElement.querySelector('.modal-dialog-custom') as HTMLElement;
+      expect(dialogEl).toBeTruthy();
+      dialogEl.click();
+      fixture.detectChanges();
+      expect(component.modalDetalleAbierto).toBeTrue();
+
+      const backdropEl = fixture.nativeElement.querySelector('.modal-backdrop-custom') as HTMLElement;
+      expect(backdropEl).toBeTruthy();
+      backdropEl.click();
+      fixture.detectChanges();
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+    }));
+
+    it('cierra el modal al presionar Escape y desplaza el cuerpo al presionar flechas', fakeAsync(() => {
+      component.abrirDetalle(expEjemplo);
+      fixture.detectChanges();
+      tick();
+
+      const cardBody = fixture.nativeElement.querySelector('.modal-detalle-body') as HTMLElement;
+      if (cardBody) {
+        let scrollPos = 50;
+        Object.defineProperty(cardBody, 'scrollTop', {
+          get: () => scrollPos,
+          set: (v: number) => { scrollPos = v; },
+          configurable: true
+        });
+        cardBody.scrollTop = 50;
+        const downEv = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+        component.onModalKeydown(downEv);
+        expect(cardBody.scrollTop).toBe(90);
+
+        const upEv = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+        component.onModalKeydown(upEv);
+        expect(cardBody.scrollTop).toBe(50);
+      }
+
+      const escEv = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      component.onModalKeydown(escEv);
+      expect(component.modalDetalleAbierto).toBeFalse();
+    }));
   });
 
 });

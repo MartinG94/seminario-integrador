@@ -671,17 +671,89 @@ describe('SolicitarPuntosComponent', () => {
 
     it('activa el bloqueo de scroll al abrir el modal y lo remueve al cerrar o destruir', fakeAsync(() => {
       component.abrirModalReglamentos();
+      tick();
       expect(component.modalReglamentosAbierto).toBeTrue();
       expect(document.body.classList.contains('modal-open-scroll-lock')).toBeTrue();
 
       component.cerrarModalReglamentos();
+      tick();
       expect(component.modalReglamentosAbierto).toBeFalse();
       expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
 
       component.abrirModalReglamentos();
+      tick();
       expect(document.body.classList.contains('modal-open-scroll-lock')).toBeTrue();
       component.ngOnDestroy();
       expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+    }));
+
+    it('transfiere el foco al modal y buscador al abrirse y lo restaura al cerrarse', fakeAsync(() => {
+      const botonDisparador = document.createElement('button');
+      document.body.appendChild(botonDisparador);
+      botonDisparador.focus();
+      expect(document.activeElement).toBe(botonDisparador);
+
+      component.abrirModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalReglamentosAbierto).toBeTrue();
+      expect(component.modalSearchInput?.nativeElement).toBeTruthy();
+      expect(document.activeElement).toBe(component.modalSearchInput!.nativeElement);
+
+      component.cerrarModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalReglamentosAbierto).toBeFalse();
+      expect(document.activeElement).toBe(botonDisparador);
+      botonDisparador.remove();
+    }));
+
+    it('cierra el modal al hacer clic en el backdrop y permanece abierto al hacer clic dentro del diálogo', fakeAsync(() => {
+      component.abrirModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      const dialogEl = fixture.nativeElement.querySelector('.modal-reglamentos-dialog') as HTMLElement;
+      expect(dialogEl).toBeTruthy();
+      dialogEl.click();
+      fixture.detectChanges();
+      expect(component.modalReglamentosAbierto).toBeTrue();
+
+      const backdropEl = fixture.nativeElement.querySelector('.modal-reglamentos-backdrop') as HTMLElement;
+      expect(backdropEl).toBeTruthy();
+      backdropEl.click();
+      fixture.detectChanges();
+      expect(component.modalReglamentosAbierto).toBeFalse();
+    }));
+
+    it('cierra el modal de reglamentos al presionar Escape y desplaza el cuerpo con teclas de flecha', fakeAsync(() => {
+      component.abrirModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      const bodyEl = component.modalReglamentosBody?.nativeElement;
+      if (bodyEl) {
+        let scrollValue = 100;
+        Object.defineProperty(bodyEl, 'scrollTop', {
+          get: () => scrollValue,
+          set: (v: number) => { scrollValue = v; },
+          configurable: true
+        });
+        bodyEl.scrollTop = 100;
+        const downEvent = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+        component.onModalReglamentosKeydown(downEvent);
+        expect(bodyEl.scrollTop).toBe(140);
+
+        const upEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+        component.onModalReglamentosKeydown(upEvent);
+        expect(bodyEl.scrollTop).toBe(100);
+      }
+
+      const escEvent = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      component.onModalReglamentosKeydown(escEvent);
+      expect(component.modalReglamentosAbierto).toBeFalse();
     }));
   });
 });
