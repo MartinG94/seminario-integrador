@@ -219,53 +219,19 @@
                       </button>
                     </div>
 
-                    <!-- Bandeja de Chips Compactos Seleccionados -->
-                    <div class="reglamento-chips-tray mt-2" *ngIf="reglamentosSeleccionadosCitas.length > 0">
-                      <div *ngFor="let cita of reglamentosSeleccionadosCitas"
-                           class="reglamento-chip"
-                           [class.chip-estatuto]="cita.documento === 'Estatuto'"
-                           [class.chip-interno]="cita.documento === 'Reglamento Interno'"
-                           [class.chip-expanded]="reglamentoExpandidoForm === cita.raw"
-                           [title]="cita.cuerpo">
-                        <button type="button"
-                                class="chip-main-btn"
-                                (click)="toggleExpandirReglamentoForm(cita.raw)"
-                                [attr.aria-expanded]="reglamentoExpandidoForm === cita.raw">
-                          <i class="material-icons chip-doc-icon">
-                            {{ cita.documento === 'Estatuto' ? 'account_balance' : 'gavel' }}
-                          </i>
-                          <span class="chip-cite-text">{{ cita.citaCorta }}</span>
-                          <i class="material-icons chip-Chevron">
-                            {{ reglamentoExpandidoForm === cita.raw ? 'expand_less' : 'info_outline' }}
-                          </i>
-                        </button>
-                        <button type="button"
-                                class="chip-remove-btn"
-                                *ngIf="estado !== 'ISSUED'"
-                                (click)="removerReglamento(cita.raw)"
-                                title="Quitar artículo">
-                          <i class="material-icons">close</i>
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Cuadro desplegable con el texto completo del artículo al hacer clic en un chip -->
-                    <div class="reglamento-expanded-reader mt-2" *ngIf="reglamentoExpandidoFormDetalle as detalle">
-                      <div class="reader-header d-flex justify-content-between align-items-center">
-                        <span class="reader-cite font-weight-bold">{{ detalle.citaCorta }}</span>
-                        <button type="button" class="reader-close-btn" (click)="reglamentoExpandidoForm = null" title="Cerrar lectura">
-                          <i class="material-icons">close</i>
-                        </button>
-                      </div>
-                      <p class="reader-body mb-0">{{ detalle.cuerpo }}</p>
+                    <!-- Tabla de Reglamentos Seleccionados con Acción Quitar -->
+                    <div class="mt-2" *ngIf="reglamentosSeleccionadosCitas.length > 0">
+                      <app-tabla-reglamentos
+                        [articulos]="reglamentosSeleccionadosCitas"
+                        [editable]="estado !== 'ISSUED'"
+                        (remover)="removerReglamento($event)">
+                      </app-tabla-reglamentos>
                     </div>
 
                     <small class="form-text text-muted mt-1" *ngIf="reglamentosSeleccionados.length === 0">
                       Obligatorio: seleccioná como mínimo un artículo del Estatuto o Reglamento Interno.
                     </small>
-                    <small class="form-text text-muted mt-1" *ngIf="reglamentosSeleccionados.length > 0 && !reglamentoExpandidoFormDetalle">
-                      Pasá el cursor o hacé clic sobre cualquier artículo para leer su texto completo.
-                    </small>
+
                   </div>
                 </div>
               </section>
@@ -486,17 +452,13 @@
                         </span>
                       </td>
 
-                      <!-- Reglamento (Chips Compactos con Tooltip) -->
-                      <td style="max-width: 220px;">
-                        <div class="d-flex flex-wrap gap-1" *ngIf="s.reglamentos_respaldantes && s.reglamentos_respaldantes.length > 0">
-                          <span *ngFor="let cita of formatReglamentosCitas(s.reglamentos_respaldantes)"
-                                class="reglamento-chip reglamento-chip-sm"
-                                [class.chip-estatuto]="cita.documento === 'Estatuto'"
-                                [class.chip-interno]="cita.documento === 'Reglamento Interno'"
-                                [title]="cita.cuerpo">
-                            <span class="chip-cite-text">{{ cita.citaCorta }}</span>
-                          </span>
-                        </div>
+                      <!-- Reglamento (Tabla Compacta Documento, Art., Inc., Cuerpo) -->
+                      <td style="min-width: 280px; max-width: 380px;">
+                        <app-tabla-reglamentos
+                          *ngIf="s.reglamentos_respaldantes && s.reglamentos_respaldantes.length > 0"
+                          [articulos]="formatReglamentosCitas(s.reglamentos_respaldantes)"
+                          [compacta]="true">
+                        </app-tabla-reglamentos>
                         <span class="small text-muted" *ngIf="!s.reglamentos_respaldantes || s.reglamentos_respaldantes.length === 0">
                           {{ s.causal || 'Reglamento Gral.' }}
                         </span>
@@ -599,6 +561,8 @@
 <div class="modal-reglamentos-backdrop"
      *ngIf="modalReglamentosAbierto"
      (click)="cerrarModalReglamentos()"
+     (wheel)="$event.target === $event.currentTarget && $event.preventDefault()"
+     (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()"
      (keydown.escape)="cerrarModalReglamentos()"
      tabindex="-1"
      role="dialog"

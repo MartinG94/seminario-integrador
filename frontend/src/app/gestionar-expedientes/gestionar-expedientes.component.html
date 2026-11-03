@@ -318,7 +318,7 @@
 </div>
 
 <!-- Modal 1: Detalle Completo del Expediente -->
-<div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom">
+<div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
   <div class="modal-dialog-custom modal-dialog-tribunal">
     <div class="card modal-detalle-card" *ngIf="expedienteSeleccionado">
       <!-- Cabecera del Modal 1 -->
@@ -393,56 +393,16 @@
             </div>
           </div>
 
-          <!-- Fila 3: Sección Reglamentación -->
+          <!-- Fila 3: Sección Reglamentación (Tabla Normativa) -->
           <div class="col-12 mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="text-muted small font-weight-bold">Reglamentación:</span>
-              <ng-container *ngIf="getReglamentosSustento(expedienteSeleccionado) as reglamentos">
-                <button *ngIf="reglamentos.length > 1"
-                        type="button"
-                        class="btn btn-sm btn-link p-0 text-primary toggle-reglamento-btn"
-                        (click)="toggleReglamentacion()">
-                  {{reglamentacionExpandida ? 'Ocultar detalle' : 'Ver detalle reglamentario (' + reglamentos.length + ')'}}
-                </button>
-              </ng-container>
             </div>
-            <div class="reglamentacion-box p-2 rounded border">
-              <div class="reglamento-chips-tray">
-                <button type="button"
-                        *ngFor="let cita of getReglamentosSustentoCitas(expedienteSeleccionado)"
-                        class="reglamento-chip-btn"
-                        [class.chip-estatuto]="cita.documento === 'Estatuto'"
-                        [class.chip-interno]="cita.documento === 'Reglamento Interno'"
-                        [class.chip-expanded]="reglamentoExpandidoModal === cita.raw"
-                        [title]="cita.cuerpo"
-                        (click)="toggleExpandirChipReglamento(cita.raw)">
-                  <i class="material-icons chip-doc-icon">
-                    {{ cita.documento === 'Estatuto' ? 'account_balance' : 'gavel' }}
-                  </i>
-                  <span class="chip-cite-text">{{ cita.citaCorta }}</span>
-                  <i class="material-icons chip-chevron">
-                    {{ reglamentoExpandidoModal === cita.raw ? 'expand_less' : 'info_outline' }}
-                  </i>
-                </button>
-              </div>
-
-              <div class="reglamento-expanded-reader mt-2" *ngIf="reglamentoExpandidoDetalle as detalle">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <strong class="reader-cite">{{ detalle.citaCorta }}</strong>
-                  <button type="button" class="reader-close-btn" (click)="reglamentoExpandidoModal = null" title="Cerrar texto del artículo">
-                    <i class="material-icons">close</i>
-                  </button>
-                </div>
-                <p class="reader-body mb-0">{{ detalle.cuerpo }}</p>
-              </div>
-
-              <ng-container *ngIf="getReglamentosSustento(expedienteSeleccionado) as reglamentos">
-                <ul *ngIf="reglamentacionExpandida" class="list-unstyled mt-2 mb-0 pl-2 border-top pt-2">
-                  <li *ngFor="let reg of reglamentos" class="text-dark small py-1">
-                    &bull; {{reg}}
-                  </li>
-                </ul>
-              </ng-container>
+            <div class="reglamentacion-box">
+              <app-tabla-reglamentos
+                *ngIf="getReglamentosSustentoCitas(expedienteSeleccionado) as citas"
+                [articulos]="citas">
+              </app-tabla-reglamentos>
             </div>
           </div>
 
@@ -554,7 +514,7 @@
 </div>
 
 <!-- Modal 2: Emitir Resolución -->
-<div *ngIf="modalVotacionAbierto" class="modal-backdrop-custom">
+<div *ngIf="modalVotacionAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-warning">
@@ -648,7 +608,7 @@
 </div>
 
 <!-- Modal 3: Firmar Resolución -->
-<div *ngIf="modalFirmaAbierto" class="modal-backdrop-custom">
+<div *ngIf="modalFirmaAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-success">
@@ -691,7 +651,7 @@
 </div>
 
 <!-- Modal 4: Socios Involucrados (S3-08) -->
-<div *ngIf="modalSociosAbierto" class="modal-backdrop-custom">
+<div *ngIf="modalSociosAbierto" class="modal-backdrop-custom" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
   <div class="modal-dialog-custom">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info">
@@ -731,7 +691,7 @@
 </div>
 
 <!-- Modal 5: Ver Resolución Oficial (Lectura) -->
-<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom modal-resolucion-backdrop">
+<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom modal-resolucion-backdrop" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
   <div class="modal-dialog-custom modal-dialog-tribunal">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info d-flex justify-content-between align-items-center">
@@ -773,7 +733,7 @@
 </div>
 
 <!-- Modal 6: Ver Descargo Individual -->
-<div *ngIf="modalDescargoAbierto" class="modal-backdrop-custom modal-descargo-backdrop">
+<div *ngIf="modalDescargoAbierto" class="modal-backdrop-custom modal-descargo-backdrop" (wheel)="$event.target === $event.currentTarget && $event.preventDefault()" (touchmove)="$event.target === $event.currentTarget && $event.preventDefault()">
   <div class="modal-dialog-custom modal-dialog-tribunal">
     <div class="card" *ngIf="involucradoSeleccionado && involucradoSeleccionado.descargo as desc">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">

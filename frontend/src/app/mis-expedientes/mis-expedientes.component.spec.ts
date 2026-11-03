@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +17,7 @@ describe('MisExpedientesComponent', () => {
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule, ComponentsModule],
       declarations: [MisExpedientesComponent],
       providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
     }).compileComponents();
@@ -1103,16 +1104,15 @@ describe('MisExpedientesComponent', () => {
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const chips = compiled.querySelectorAll('.reglamento-chip-btn');
-      expect(chips.length).toBe(2);
-      expect(chips[0].textContent).toContain('Estatuto · Art. 14 Inc. a');
-      expect(chips[1].textContent).toContain('Reglamento Interno · Art. 12');
+      const rows = compiled.querySelectorAll('.table-reglamentos-normativa tbody tr');
+      expect(rows.length).toBe(2);
+      expect(rows[0].querySelector('.td-documento')?.textContent).toContain('Estatuto');
+      expect(rows[0].querySelector('.td-articulo')?.textContent?.trim()).toBe('14');
+      expect(rows[0].querySelector('.td-inciso')?.textContent?.trim()).toBe('a');
+      expect(rows[0].querySelector('.td-cuerpo')?.textContent).toContain('Es deber de todo socio activo asistir a las asambleas.');
 
-      (chips[0] as HTMLButtonElement).click();
-      fixture.detectChanges();
-      expect(compiled.querySelector('.reglamento-expanded-reader')?.textContent).toContain(
-        'Es deber de todo socio activo asistir a las asambleas.'
-      );
+      expect(rows[1].querySelector('.td-documento')?.textContent).toContain('Reglamento Interno');
+      expect(rows[1].querySelector('.td-articulo')?.textContent?.trim()).toBe('12');
     });
   });
 });

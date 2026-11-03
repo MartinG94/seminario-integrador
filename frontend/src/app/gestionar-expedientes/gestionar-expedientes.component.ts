@@ -28,6 +28,7 @@ import {
   parseReglamentosList,
   ReglamentoCiteView
 } from '../utils/reglamento-format.util';
+import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
 const ESTADOS_DECISION_CAUSAL = ['revision_resolucion', 'espera_resolucion'];
@@ -210,7 +211,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService,
     private socioApi: SocioApiService,
-    private router: Router
+    private router: Router,
+    private scrollLock: ModalScrollLockService
   ) {}
 
   get puedeVotarOFirmar(): boolean {
@@ -317,6 +319,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.scrollLock.reset();
     this.subs.forEach(s => s.unsubscribe());
   }
 
@@ -612,6 +615,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalResolucionAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalDetalleAbierto = true;
+    this.scrollLock.lock();
     this.reglamentacionExpandida = false;
     this.reglamentoExpandidoModal = null;
     this.limpiarJustificaciones();
@@ -922,6 +926,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalVotacionAbierto = true;
+    this.scrollLock.lock();
     this.filtroReglamentosResolucion = '';
     const previos = exp.reglamentosRespaldantes || exp.reglamentos_respaldantes || [];
     this.reglamentosSeleccionadosResolucion = [...previos];
@@ -938,6 +943,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalSociosAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalFirmaAbierto = true;
+    this.scrollLock.lock();
   }
 
   abrirModalSocios(exp: Expediente, event?: Event): void {
@@ -950,6 +956,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalSociosAbierto = true;
+    this.scrollLock.lock();
   }
 
   volverADetalle(): void {
@@ -960,6 +967,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   cerrarModales(): void {
+    this.scrollLock.reset();
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
@@ -1256,6 +1264,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     this.modalDetalleAbierto = false;
     this.modalDescargoAbierto = true;
+    this.scrollLock.lock();
   }
 
   getEncabezadoModalDescargo(): string {
@@ -1360,6 +1369,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteSeleccionado = exp;
     this.modalDescargoAbierto = false;
     this.modalResolucionAbierto = true;
+    this.scrollLock.lock();
   }
 
   formatSolicitante(exp: Expediente | null): string {

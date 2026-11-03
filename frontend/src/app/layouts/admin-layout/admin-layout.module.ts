@@ -19,13 +19,13 @@ import { IconsComponent } from '../../icons/icons.component';
 import { MapsComponent } from '../../maps/maps.component';
 import { NotificationsComponent } from '../../notifications/notifications.component';
 import { UpgradeComponent } from '../../upgrade/upgrade.component';
-import {MatButtonModule} from '@angular/material/button';
-import {MatInputModule} from '@angular/material/input';
-import {MatRippleModule} from '@angular/material/core';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatTooltipModule} from '@angular/material/tooltip';
-import {MatSelectModule} from '@angular/material/select';
-import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatRippleModule } from '@angular/material/core';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,6 +40,7 @@ import { CrearEventoDialogComponent } from '../../pages/eventos/dialogs/crear-ev
 import { ResumenCierreDialogComponent } from '../../pages/eventos/dialogs/resumen-cierre-dialog/resumen-cierre-dialog.component';
 import { ProgramarReunionDialogComponent } from '../../eventos-asistencia/dialogs/programar-reunion-dialog/programar-reunion-dialog.component';
 import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dialogs/resumen-cierre-dialog/resumen-cierre-dialog.component';
+import { ComponentsModule } from '../../components/components.module';
 
 @NgModule({
   imports: [
@@ -47,6 +48,7 @@ import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dial
     RouterModule.forChild(AdminLayoutRoutes),
     FormsModule,
     ReactiveFormsModule,
+    ComponentsModule,
     MatButtonModule,
     MatRippleModule,
     MatFormFieldModule,
@@ -88,4 +90,3 @@ import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dial
 })
 
 export class AdminLayoutModule {}
-

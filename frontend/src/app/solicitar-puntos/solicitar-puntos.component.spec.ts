@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -154,6 +155,7 @@ describe('SolicitarPuntosComponent', () => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
       imports: [
+        ComponentsModule,
         FormsModule,
         ReactiveFormsModule,
         MatAutocompleteModule,

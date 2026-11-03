@@ -3,15 +3,19 @@ import { ArticuloReglamentoDTO } from '../services/expediente-api.service';
 export interface ReglamentoCiteView {
   raw: string;
   documento: 'Estatuto' | 'Reglamento Interno' | 'Normativa';
-  citaCorta: string;
+  articulo: string;
+  inciso: string;
   cuerpo: string;
+  citaCorta: string;
 }
 
 /**
  * Normaliza una cadena de reglamento respaldante para extraer:
  * - documento ('Estatuto' | 'Reglamento Interno' | 'Normativa')
+ * - articulo (ej. "1", "2", "14")
+ * - inciso (ej. "a", "b", "-" si no aplica)
+ * - cuerpo (texto íntegro del artículo)
  * - citaCorta (ej. "Estatuto · Art. 14 Inc. a")
- * - cuerpo (texto íntegro del artículo para tooltip y panel desplegable)
  */
 export function parseReglamentoCite(
   rawInput: string,
@@ -22,6 +26,8 @@ export function parseReglamentoCite(
     return {
       raw: '',
       documento: 'Normativa',
+      articulo: '-',
+      inciso: '-',
       citaCorta: 'Sin especificar',
       cuerpo: ''
     };
@@ -37,15 +43,16 @@ export function parseReglamentoCite(
     );
     if (match) {
       const doc = detectarDocumento(match.titulo || raw);
-      const artLabel =
-        match.inciso && match.inciso !== '-'
-          ? `Art. ${match.articulo} Inc. ${match.inciso}`
-          : `Art. ${match.articulo}`;
+      const artNum = match.articulo !== undefined && match.articulo !== null ? String(match.articulo) : '-';
+      const incVal = match.inciso && match.inciso.trim() !== '-' ? match.inciso.trim() : '-';
+      const artLabel = incVal !== '-' ? `Art. ${artNum} Inc. ${incVal}` : `Art. ${artNum}`;
       const citaCorta = `${match.titulo} · ${artLabel}`;
       const cuerpo = (match.cuerpo || match.descripcion || '').trim() || raw;
       return {
         raw,
         documento: doc,
+        articulo: artNum,
+        inciso: incVal,
         citaCorta,
         cuerpo
       };
@@ -65,22 +72,36 @@ export function parseReglamentoCite(
     const documento = detectarDocumento(docTitle);
     const citaCorta = `${docTitle} · ${artPart}`;
     const cuerpo = tail || (extraNote ? `${citaCorta}${extraNote}` : raw);
+
+    const artRegex = /Art\.\s*([^\sInc\(\):]+)(?:\s*Inc\.\s*([^\s\(\):]+))?/i.exec(artPart);
+    const articulo = artRegex && artRegex[1] ? artRegex[1].trim() : '-';
+    const inciso = artRegex && artRegex[2] ? artRegex[2].trim() : '-';
+
     return {
       raw,
       documento,
+      articulo,
+      inciso,
       citaCorta,
       cuerpo
     };
   }
 
-  // 3. Fallback para nombres de reglamentos o formatos libres (ej. "Reglamento de Faltas Internas Art. 4")
+  // 3. Fallback para nombres de reglamentos o formatos libres
   const documento = detectarDocumento(raw);
   const citaCorta = head.replace(/\s+-\s+/g, ' · ');
   const cuerpo = tail || raw;
 
+  const fallbackArt = /Art(?:[íi]culo|\.)?\s*([0-9a-zA-Z]+)/i.exec(head);
+  const fallbackInc = /Inc(?:iso|\.)?\s*([0-9a-zA-Z]+)/i.exec(head);
+  const articulo = fallbackArt && fallbackArt[1] ? fallbackArt[1].trim() : '-';
+  const inciso = fallbackInc && fallbackInc[1] ? fallbackInc[1].trim() : '-';
+
   return {
     raw,
     documento,
+    articulo,
+    inciso,
     citaCorta,
     cuerpo
   };

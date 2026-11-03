@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -48,6 +49,7 @@ describe('GestionarExpedientesComponent', () => {
     await TestBed.configureTestingModule({
       imports: [
         CommonModule,
+        ComponentsModule,
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
