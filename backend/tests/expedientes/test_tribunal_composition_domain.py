@@ -124,6 +124,20 @@ class TestCasosAdHoc:
         composition = compose(ROSTER, involved_ids={T4.socio_id, S4.socio_id, T6.socio_id})
         assert len(composition.ad_hoc_reasons) == 2
 
+    def test_ad_hoc_designado_asume_aunque_tenga_menor_socio_id(self):
+        adhoc_5 = Member(socio_id=0, social_year=5, condition=Condition.TITULAR, label="Ad-Hoc 5")
+        composition = compose((adhoc_5, *ROSTER), involved_ids={T5.socio_id, S5.socio_id})
+        assert seat_ids(composition)[5] == 0
+        assert composition.requires_ad_hoc is False
+
+    def test_ad_hoc_designado_como_suplente_asume(self):
+        adhoc_s5 = Member(
+            socio_id=99, social_year=5, condition=Condition.SUPLENTE, label="Ad-Hoc Suplente 5"
+        )
+        composition = compose((*ROSTER, adhoc_s5), involved_ids={T5.socio_id, S5.socio_id})
+        assert seat_ids(composition)[5] == 99
+        assert composition.requires_ad_hoc is False
+
 
 def test_anio_social_se_calcula_desde_el_grupo_segun_la_formula_del_po():
     # Año Social = (Año Actual - 1962) - Número de Grupo (dinámica de promociones).

@@ -41,7 +41,7 @@ def resolver(expediente):
     """Avanza de `Justificaciones en revisión` a `Pendiente de firma y envío`."""
     for estado in (EstadoExpedienteEnum.ESPERA_RESOLUCION, EstadoExpedienteEnum.PENDIENTE_CORREOS):
         ExpedienteWorkflowService.transition(
-            expediente_id=expediente.pk, estado_nuevo=estado, actor="vocal", motivo="Avance"
+            expediente_id=expediente.pk, estado_nuevo=estado, actor="miembro", motivo="Avance"
         )
 
 

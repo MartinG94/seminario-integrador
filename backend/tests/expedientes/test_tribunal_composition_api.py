@@ -97,7 +97,7 @@ class TestInhibicionDeInvolucrados:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_vocal_no_involucrado_evalua(self, api_client, causal_descargo, tribunal_nomina):
+    def test_miembro_no_involucrado_evalua(self, api_client, causal_descargo, tribunal_nomina):
         api_client.force_authenticate(tribunal_nomina["t4"].user)
         response = api_client.post(
             url(causal_descargo.expediente, f"descargos/{causal_descargo.pk}/decisiones/"),
@@ -133,7 +133,9 @@ class TestInhibicionDeInvolucrados:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_vocal_no_involucrado_transiciona(self, api_client, causal_expediente, tribunal_nomina):
+    def test_miembro_no_involucrado_transiciona(
+        self, api_client, causal_expediente, tribunal_nomina
+    ):
         api_client.force_authenticate(tribunal_nomina["t4"].user)
         response = api_client.post(
             url(causal_expediente, "transicionar/"),

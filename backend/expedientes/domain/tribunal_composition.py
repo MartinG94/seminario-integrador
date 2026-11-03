@@ -89,27 +89,59 @@ def roster_issues(members: Iterable[Member]) -> list[str]:
 def compose(members: Iterable[Member], *, involved_ids: set[int]) -> Composition:
     """Integra el cuerpo efectivo: apartamiento automático, suplencia y casos ad hoc."""
     members = list(members)
-    titulares = {m.social_year: m for m in members if m.condition == Condition.TITULAR}
-    suplentes = {m.social_year: m for m in members if m.condition == Condition.SUPLENTE}
     separated = tuple(m for m in members if m.socio_id in involved_ids)
 
     seats = []
     reasons = []
     for year in ACTIVE_SOCIAL_YEARS:
-        titular, suplente = titulares.get(year), suplentes.get(year)
-        titular_free = titular is not None and titular.socio_id not in involved_ids
-        suplente_free = suplente is not None and suplente.socio_id not in involved_ids
-        if titular_free:
-            seats.append(Seat(year, titular))
-        elif suplente_free:
-            seats.append(Seat(year, suplente, replaces=titular))
+        candidatos_titulares = [
+            m for m in members if m.social_year == year and m.condition == Condition.TITULAR
+        ]
+        candidatos_suplentes = [
+            m for m in members if m.social_year == year and m.condition == Condition.SUPLENTE
+        ]
+
+        titular_libre = next(
+            (m for m in candidatos_titulares if m.socio_id not in involved_ids), None
+        )
+        suplente_libre = next(
+            (m for m in candidatos_suplentes if m.socio_id not in involved_ids), None
+        )
+        titular_involucrado = next(
+            (m for m in candidatos_titulares if m.socio_id in involved_ids), None
+        )
+        suplente_involucrado = next(
+            (m for m in candidatos_suplentes if m.socio_id in involved_ids), None
+        )
+
+        titular_ref = titular_involucrado or (
+            candidatos_titulares[0] if candidatos_titulares else None
+        )
+
+        if titular_libre:
+            replaces = (
+                titular_involucrado
+                if titular_involucrado and titular_libre.socio_id != titular_involucrado.socio_id
+                else None
+            )
+            seats.append(Seat(year, titular_libre, replaces=replaces))
+        elif suplente_libre:
+            seats.append(Seat(year, suplente_libre, replaces=titular_ref))
         else:
-            seats.append(Seat(year, None, replaces=titular))
-        if titular and suplente and not titular_free and not suplente_free:
+            seats.append(Seat(year, None, replaces=titular_ref))
+
+        # Caso A: titular y suplente del año involucrados sin suplencia libre habilitada
+        if (
+            titular_involucrado
+            and suplente_involucrado
+            and not titular_libre
+            and not suplente_libre
+        ):
             reasons.append(
                 f"El titular y el suplente del {year}.º año están involucrados en la causa "
                 "(Art. 95 del Estatuto)."
             )
+
     if len(separated) >= AD_HOC_MIN_INVOLVED:
         reasons.append(
             f"{len(separated)} integrantes del Tribunal están involucrados en la causa "

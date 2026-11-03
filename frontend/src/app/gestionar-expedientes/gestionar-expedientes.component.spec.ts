@@ -1688,7 +1688,7 @@ describe('GestionarExpedientesComponent', () => {
         expect(compiled().querySelector('.btn-generar-resolucion')).toBeNull();
       });
 
-      it('un vocal no involucrado puede evaluar y resolver', () => {
+      it('un miembro no involucrado puede evaluar y resolver', () => {
         abrirComo('TD');
         expect(compiled().querySelector('.banner-involucrado')).toBeNull();
         expect(component.puedeEvaluarJustificaciones).toBeTrue();
