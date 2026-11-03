@@ -17,6 +17,21 @@ import { NotificationService, httpErrorMessage } from '../services/notification.
 import type { NivelUrgencia } from '../services/tribunal-data.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { formatCaseNumber } from '../utils/case-number.util';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../utils/reglamento-format.util';
+
+export interface CatalogoReglamentoItem {
+  raw: string;
+  citaCorta: string;
+  documento: 'Estatuto' | 'Reglamento Interno' | 'Normativa';
+  articulo: string;
+  inciso: string;
+  seccion: string;
+  cuerpo: string;
+}
 
 @Component({
   selector: 'app-solicitar-puntos',
@@ -39,6 +54,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   articulosDisponibles: ArticuloReglamentoDTO[] = [];
   reglamentosSeleccionados: string[] = [];
   filtroReglamentos = '';
+  modalReglamentosAbierto = false;
+  filtroDocumentoModal: 'TODOS' | 'Reglamento Interno' | 'Estatuto' = 'TODOS';
+  reglamentoExpandidoForm: string | null = null;
   anexoFecha = '';
   anexoLugar = '';
   anexoTestigos = '';
@@ -234,6 +252,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.puntosSeleccionados = solicitud.puntos ?? (this.tipoAccion === 'SANCTION' ? -1 : 1);
     this.razon = solicitud.razon || solicitud.motivo || '';
     this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ? [...solicitud.reglamentos_respaldantes] : [];
+    this.reglamentoExpandidoForm = null;
     this.anexoFecha = solicitud.anexo_fecha ?? '';
     this.anexoLugar = solicitud.anexo_lugar ?? '';
     this.anexoTestigos = solicitud.anexo_testigos ?? '';
@@ -295,11 +314,103 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     );
   }
 
+  get catalogoItemsModal(): CatalogoReglamentoItem[] {
+    if (this.articulosDisponibles && this.articulosDisponibles.length > 0) {
+      return this.articulosDisponibles.map(art => {
+        const raw = art.cita_completa || (art.cuerpo ? `${art.cita_corta}: ${art.cuerpo}` : art.cita_corta);
+        const parsed = parseReglamentoCite(raw, this.articulosDisponibles);
+        return {
+          raw,
+          citaCorta: parsed.citaCorta,
+          documento: parsed.documento,
+          articulo: String(art.articulo ?? ''),
+          inciso: art.inciso && art.inciso !== '-' ? String(art.inciso) : '',
+          seccion: String(art.seccion ?? ''),
+          cuerpo: (art.cuerpo || art.descripcion || parsed.cuerpo || '').trim()
+        };
+      });
+    }
+    return (this.reglamentosDisponibles || []).map(raw => {
+      const parsed = parseReglamentoCite(raw);
+      return {
+        raw,
+        citaCorta: parsed.citaCorta,
+        documento: parsed.documento,
+        articulo: '',
+        inciso: '',
+        seccion: '',
+        cuerpo: parsed.cuerpo
+      };
+    });
+  }
+
+  get articulosModalFiltrados(): CatalogoReglamentoItem[] {
+    const busqueda = (this.filtroReglamentos || '').trim().toLowerCase();
+    return this.catalogoItemsModal.filter(item => {
+      if (this.filtroDocumentoModal !== 'TODOS' && item.documento !== this.filtroDocumentoModal) {
+        return false;
+      }
+      if (!busqueda) {
+        return true;
+      }
+      return (
+        item.raw.toLowerCase().includes(busqueda) ||
+        item.citaCorta.toLowerCase().includes(busqueda) ||
+        item.cuerpo.toLowerCase().includes(busqueda) ||
+        item.seccion.toLowerCase().includes(busqueda) ||
+        (`art. ${item.articulo}`).toLowerCase().includes(busqueda)
+      );
+    });
+  }
+
+  get reglamentosSeleccionadosCitas(): ReglamentoCiteView[] {
+    return parseReglamentosList(this.reglamentosSeleccionados, null, this.articulosDisponibles);
+  }
+
+  get reglamentoExpandidoFormDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandidoForm || !this.reglamentosSeleccionados.includes(this.reglamentoExpandidoForm)) {
+      return null;
+    }
+    return parseReglamentoCite(this.reglamentoExpandidoForm, this.articulosDisponibles);
+  }
+
+  abrirModalReglamentos(): void {
+    if (this.estado === 'ISSUED') return;
+    this.modalReglamentosAbierto = true;
+  }
+
+  cerrarModalReglamentos(): void {
+    this.modalReglamentosAbierto = false;
+  }
+
+  setFiltroDocumentoModal(doc: 'TODOS' | 'Reglamento Interno' | 'Estatuto'): void {
+    this.filtroDocumentoModal = doc;
+  }
+
+  esReglamentoSeleccionado(raw: string): boolean {
+    return this.reglamentosSeleccionados.includes(raw);
+  }
+
+  contarSeleccionadosPorDocumento(doc: 'Estatuto' | 'Reglamento Interno'): number {
+    return this.reglamentosSeleccionadosCitas.filter(c => c.documento === doc).length;
+  }
+
+  toggleExpandirReglamentoForm(raw: string): void {
+    this.reglamentoExpandidoForm = this.reglamentoExpandidoForm === raw ? null : raw;
+  }
+
+  formatReglamentosCitas(regs: string[] | undefined): ReglamentoCiteView[] {
+    return parseReglamentosList(regs, null, this.articulosDisponibles);
+  }
+
   toggleReglamento(reglamento: string): void {
     if (this.estado === 'ISSUED') return;
     const idx = this.reglamentosSeleccionados.indexOf(reglamento);
     if (idx >= 0) {
       this.reglamentosSeleccionados.splice(idx, 1);
+      if (this.reglamentoExpandidoForm === reglamento) {
+        this.reglamentoExpandidoForm = null;
+      }
     } else {
       this.reglamentosSeleccionados.push(reglamento);
     }
@@ -308,11 +419,15 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   removerReglamento(reglamento: string): void {
     if (this.estado === 'ISSUED') return;
     this.reglamentosSeleccionados = this.reglamentosSeleccionados.filter(r => r !== reglamento);
+    if (this.reglamentoExpandidoForm === reglamento) {
+      this.reglamentoExpandidoForm = null;
+    }
   }
 
   limpiarReglamentos(): void {
     if (this.estado === 'ISSUED') return;
     this.reglamentosSeleccionados = [];
+    this.reglamentoExpandidoForm = null;
   }
 
   resetearFormulario(): void {
@@ -327,6 +442,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.razon = '';
     this.filtroReglamentos = '';
     this.reglamentosSeleccionados = [];
+    this.reglamentoExpandidoForm = null;
+    this.modalReglamentosAbierto = false;
+    this.filtroDocumentoModal = 'TODOS';
     this.anexoFecha = '';
     this.anexoLugar = '';
     this.anexoTestigos = '';
@@ -402,7 +520,6 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     }
   }
 
-
   obtenerTextoInvolucrados(solicitud: SolicitudMonitoreo): string {
     if (!solicitud.involucrados || solicitud.involucrados.length === 0) {
       return 'Sin socios asignados';
@@ -456,6 +573,10 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       this.notifications.error('Los puntos no son coherentes con el tipo de acción.');
       return false;
     }
+    if (!this.reglamentosSeleccionados || this.reglamentosSeleccionados.length === 0) {
+      this.notifications.error('Seleccioná al menos un artículo del reglamento respaldante.');
+      return false;
+    }
     return true;
   }
 
@@ -469,7 +590,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.urgency = solicitud.urgencia ?? 'normal';
     this.puntosSeleccionados = solicitud.puntos == null ? this.puntosSeleccionados : Number(solicitud.puntos);
     this.razon = solicitud.razon || solicitud.motivo || this.razon;
-    this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ?? this.reglamentosSeleccionados;
+    if (solicitud.reglamentos_respaldantes && solicitud.reglamentos_respaldantes.length > 0) {
+      this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes;
+    }
     this.anexoFecha = solicitud.anexo_fecha ?? this.anexoFecha;
     this.anexoLugar = solicitud.anexo_lugar ?? this.anexoLugar;
     this.anexoTestigos = solicitud.anexo_testigos ?? this.anexoTestigos;

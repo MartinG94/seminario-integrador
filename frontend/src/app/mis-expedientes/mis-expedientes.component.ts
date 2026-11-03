@@ -12,6 +12,11 @@ import {
 } from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
 import { formatCaseNumber, humanizeEstado } from '../utils/case-number.util';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../utils/reglamento-format.util';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -175,7 +180,19 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       descargoPresentado: raw.descargo_presentado,
       descargo: descargoObj,
       evidencias: raw.evidencias || [],
-      cantidadSocios: raw.socios ? raw.socios.length : 1
+      cantidadSocios: raw.socios ? raw.socios.length : 1,
+      reglamento_asociado: raw.reglamento_asociado || raw.reglamentoAsociado || '',
+      reglamentoAsociado: raw.reglamento_asociado || raw.reglamentoAsociado || '',
+      reglamentos_respaldantes: Array.isArray(raw.reglamentos_respaldantes)
+        ? raw.reglamentos_respaldantes
+        : Array.isArray(raw.reglamentosRespaldantes)
+        ? raw.reglamentosRespaldantes
+        : [],
+      reglamentosRespaldantes: Array.isArray(raw.reglamentos_respaldantes)
+        ? raw.reglamentos_respaldantes
+        : Array.isArray(raw.reglamentosRespaldantes)
+        ? raw.reglamentosRespaldantes
+        : []
     };
   }
 
@@ -257,13 +274,34 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   // Modal Detalle
   modalDetalleAbierto = false;
   expedienteDetalle: Expediente | null = null;
+  reglamentoExpandidoModal: string | null = null;
 
   /** Historial inmutable del descargo, proveniente del backend (no del estado local). */
   historialDescargo: LogJustificativo[] = [];
 
+  getReglamentosCitas(exp: Expediente | null | undefined): ReglamentoCiteView[] {
+    if (!exp) return [];
+    const list =
+      exp.reglamentos_respaldantes && exp.reglamentos_respaldantes.length > 0
+        ? exp.reglamentos_respaldantes
+        : exp.reglamentosRespaldantes;
+    const single = exp.reglamento_asociado || exp.reglamentoAsociado;
+    return parseReglamentosList(list, single);
+  }
+
+  toggleReglamentoExpandido(raw: string): void {
+    this.reglamentoExpandidoModal = this.reglamentoExpandidoModal === raw ? null : raw;
+  }
+
+  get reglamentoExpandidoDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandidoModal) return null;
+    return parseReglamentoCite(this.reglamentoExpandidoModal);
+  }
+
   abrirModalDetalle(exp: Expediente): void {
     this.expedienteDetalle = exp;
     this.modalDetalleAbierto = true;
+    this.reglamentoExpandidoModal = null;
     this.actualizarScrollBloqueo();
     this.limpiarApelacion();
     if (exp.esT01) {
@@ -284,6 +322,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   cerrarModalDetalle(): void {
     this.modalDetalleAbierto = false;
     this.expedienteDetalle = null;
+    this.reglamentoExpandidoModal = null;
     this.historialDescargo = [];
     this.limpiarApelacion();
     this.actualizarScrollBloqueo();

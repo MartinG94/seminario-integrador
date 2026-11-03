@@ -156,4 +156,27 @@ describe('SolicitudDetalleDialogComponent', () => {
     expect(component.obtenerClaseEstado('desestimado')).toBe('badge-mat-danger');
     expect(component.obtenerClaseEstado('otro')).toBe('badge-mat-info');
   });
+
+  it('renderiza los chips de reglamentos respaldantes con cita corta y despliega el texto completo al hacer clic', () => {
+    component.solicitud = {
+      ...mockSolicitud,
+      reglamentos_respaldantes: [
+        'Estatuto - Art. 14 Inc. a: Deber de asistir a las asambleas ordinarias y extraordinarias.',
+        'Reglamento Interno - Art. 5: Puntualidad en reuniones de subcomisión.'
+      ]
+    };
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const chips = compiled.querySelectorAll('.reglamento-chip-btn');
+    expect(chips.length).toBe(2);
+    expect(chips[0].textContent).toContain('Estatuto · Art. 14 Inc. a');
+    expect(chips[1].textContent).toContain('Reglamento Interno · Art. 5');
+
+    (chips[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('.reglamento-expanded-reader')?.textContent).toContain(
+      'Deber de asistir a las asambleas ordinarias y extraordinarias.'
+    );
+  });
 });

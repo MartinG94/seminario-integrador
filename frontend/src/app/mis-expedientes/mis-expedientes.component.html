@@ -132,6 +132,38 @@
                 <th class="text-muted">Razón:</th>
                 <td class="text-dark">{{expedienteDetalle?.razon || expedienteDetalle?.motivo}}</td>
               </tr>
+              <tr *ngIf="getReglamentosCitas(expedienteDetalle).length > 0">
+                <th class="text-muted">Reglamentos respaldantes:</th>
+                <td>
+                  <div class="reglamento-chips-tray">
+                    <button type="button"
+                            *ngFor="let cita of getReglamentosCitas(expedienteDetalle)"
+                            class="reglamento-chip-btn"
+                            [class.chip-estatuto]="cita.documento === 'Estatuto'"
+                            [class.chip-interno]="cita.documento === 'Reglamento Interno'"
+                            [class.chip-expanded]="reglamentoExpandidoModal === cita.raw"
+                            [title]="cita.cuerpo"
+                            (click)="toggleReglamentoExpandido(cita.raw)">
+                      <i class="material-icons chip-doc-icon">
+                        {{ cita.documento === 'Estatuto' ? 'account_balance' : 'gavel' }}
+                      </i>
+                      <span class="chip-cite-text">{{ cita.citaCorta }}</span>
+                      <i class="material-icons chip-chevron">
+                        {{ reglamentoExpandidoModal === cita.raw ? 'expand_less' : 'info_outline' }}
+                      </i>
+                    </button>
+                  </div>
+                  <div class="reglamento-expanded-reader mt-2" *ngIf="reglamentoExpandidoDetalle as detalle">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <strong class="reader-cite">{{ detalle.citaCorta }}</strong>
+                      <button type="button" class="reader-close-btn" (click)="reglamentoExpandidoModal = null" title="Cerrar texto del artículo">
+                        <i class="material-icons">close</i>
+                      </button>
+                    </div>
+                    <p class="reader-body mb-0">{{ detalle.cuerpo }}</p>
+                  </div>
+                </td>
+              </tr>
               <tr>
                 <th class="text-muted">Solicitante:</th>
                 <td class="font-weight-bold text-dark">{{formatSolicitante(expedienteDetalle)}}</td>

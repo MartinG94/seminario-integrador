@@ -389,11 +389,23 @@ describe('SolicitarPuntosComponent', () => {
     component.titulo = 'Título de prueba';
     component.agregarSocio(component.socios[0]);
     component.razon = 'Motivo de prueba';
+    component.reglamentosSeleccionados = ['Estatuto - Art. 14: Deberes de los socios'];
     component.emitirT01();
     expect(expediente.emitir).toHaveBeenCalledWith('draft-1');
     expect(component.estado).toBe('ISSUED');
     expect(component.numeroExpediente).toBe('T01-2026-1');
     expect(notifications.success).toHaveBeenCalledWith('Expediente creado: T01-2026-1.');
+  });
+
+  it('valida que se seleccione como mínimo un artículo de algún reglamento antes de emitir', () => {
+    component.titulo = 'Título de prueba';
+    component.agregarSocio(component.socios[0]);
+    component.razon = 'Motivo de prueba';
+    component.reglamentosSeleccionados = [];
+    component.emitirT01();
+    expect(notifications.error).toHaveBeenCalledOnceWith('Seleccioná al menos un artículo del reglamento respaldante.');
+    expect(expediente.crearBorrador).not.toHaveBeenCalled();
+    expect(expediente.emitir).not.toHaveBeenCalled();
   });
 
   it('muestra errores del backend', () => {
@@ -616,6 +628,43 @@ describe('SolicitarPuntosComponent', () => {
 
       expect(component.filtroReglamentos).toBe('');
       expect(component.reglamentosSeleccionados).toEqual([]);
+    });
+
+    it('permite combinar artículos del Estatuto y del Reglamento Interno en el catálogo modal y desplegar su texto completo desde los chips', () => {
+      const est1 = 'Estatuto - Art. 14 Inc. a: Es deber de todo socio activo asistir a las asambleas.';
+      const est2 = 'Estatuto - Art. 25: Obligaciones generales del socio.';
+      const reg1 = 'Reglamento Interno - Art. 5: Puntualidad en reuniones de subcomisión.';
+      component.reglamentosDisponibles = [est1, est2, reg1];
+
+      component.abrirModalReglamentos();
+      expect(component.modalReglamentosAbierto).toBeTrue();
+
+      component.setFiltroDocumentoModal('Estatuto');
+      expect(component.articulosModalFiltrados.map(i => i.raw)).toEqual([est1, est2]);
+
+      component.toggleReglamento(est1);
+      component.toggleReglamento(est2);
+      component.setFiltroDocumentoModal('Reglamento Interno');
+      expect(component.articulosModalFiltrados.map(i => i.raw)).toEqual([reg1]);
+      component.toggleReglamento(reg1);
+
+      expect(component.contarSeleccionadosPorDocumento('Estatuto')).toBe(2);
+      expect(component.contarSeleccionadosPorDocumento('Reglamento Interno')).toBe(1);
+      expect(component.reglamentosSeleccionadosCitas.map(c => c.citaCorta)).toEqual([
+        'Estatuto · Art. 14 Inc. a',
+        'Estatuto · Art. 25',
+        'Reglamento Interno · Art. 5'
+      ]);
+
+      component.cerrarModalReglamentos();
+      expect(component.modalReglamentosAbierto).toBeFalse();
+
+      component.toggleExpandirReglamentoForm(est1);
+      expect(component.reglamentoExpandidoFormDetalle?.citaCorta).toBe('Estatuto · Art. 14 Inc. a');
+      expect(component.reglamentoExpandidoFormDetalle?.cuerpo).toContain('Es deber de todo socio activo');
+
+      component.toggleExpandirReglamentoForm(est1);
+      expect(component.reglamentoExpandidoFormDetalle).toBeNull();
     });
   });
 });

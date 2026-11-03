@@ -23,6 +23,11 @@ import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service
 import { Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../utils/reglamento-format.util';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
 const ESTADOS_DECISION_CAUSAL = ['revision_resolucion', 'espera_resolucion'];
@@ -608,6 +613,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.modalDetalleAbierto = true;
     this.reglamentacionExpandida = false;
+    this.reglamentoExpandidoModal = null;
     this.limpiarJustificaciones();
     this.limpiarT01();
 
@@ -1105,6 +1111,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
     const reg = exp.reglamento_asociado || exp.reglamentoAsociado;
     return reg ? [reg] : ['Reglamento Procesal Disciplinario 2026'];
+  }
+
+  reglamentoExpandidoModal: string | null = null;
+
+  getReglamentosSustentoCitas(exp: Expediente | null): ReglamentoCiteView[] {
+    return parseReglamentosList(this.getReglamentosSustento(exp));
+  }
+
+  toggleExpandirChipReglamento(raw: string): void {
+    this.reglamentoExpandidoModal = this.reglamentoExpandidoModal === raw ? null : raw;
+  }
+
+  get reglamentoExpandidoDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandidoModal) return null;
+    return parseReglamentoCite(this.reglamentoExpandidoModal);
   }
 
   toggleReglamentacion(): void {

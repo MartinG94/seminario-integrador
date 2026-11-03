@@ -1829,6 +1829,28 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.getReglamentosSustento(expConAsociado)).toEqual(['Reglamento Interno - Art. 50']);
       expect(component.getReglamentosSustento(null)).toEqual(['Reglamento Procesal Disciplinario 2026']);
     });
+
+    it('renderiza chips compactos con cita corta y despliega el texto completo al hacer clic en el modal de detalle', () => {
+      const expMulti: Expediente = {
+        ...crearExpConReglamentos(),
+        reglamentosRespaldantes: [
+          'Estatuto - Art. 14 Inc. a: Deber de asistir a las asambleas.',
+          'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión.'
+        ]
+      };
+      component.abrirDetalle(expMulti);
+      fixture.detectChanges();
+
+      const citas = component.getReglamentosSustentoCitas(expMulti);
+      expect(citas.map(c => c.citaCorta)).toEqual([
+        'Estatuto · Art. 14 Inc. a',
+        'Reglamento Interno · Art. 12'
+      ]);
+
+      component.toggleExpandirChipReglamento(expMulti.reglamentosRespaldantes![0]);
+      fixture.detectChanges();
+      expect(component.reglamentoExpandidoDetalle?.cuerpo).toContain('Deber de asistir a las asambleas.');
+    });
   });
 
 });

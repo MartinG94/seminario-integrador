@@ -12,3 +12,85 @@
   max-height: 75vh;
   overflow-y: auto;
 }
+
+.reglamento-chips-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reglamento-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background-color: #FFFFFF;
+  color: #151846;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+
+  &:hover {
+    border-color: #151846;
+    background-color: #F8FAFC;
+  }
+
+  &.chip-estatuto {
+    border-color: rgba(21, 24, 70, 0.28);
+    background-color: rgba(21, 24, 70, 0.06);
+    color: #151846;
+  }
+
+  &.chip-interno {
+    border-color: rgba(0, 131, 143, 0.35);
+    background-color: rgba(0, 151, 167, 0.08);
+    color: #006064;
+  }
+
+  &.chip-expanded {
+    border-color: #151846;
+    box-shadow: 0 0 0 2px rgba(110, 157, 220, 0.35);
+  }
+
+  .chip-doc-icon,
+  .chip-chevron {
+    font-size: 14px;
+    line-height: 1;
+  }
+}
+
+.reglamento-expanded-reader {
+  border: 1px solid #CBD5E1;
+  border-left: 4px solid #151846;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  padding: 10px 14px;
+
+  .reader-cite {
+    font-size: 0.82rem;
+    color: #151846;
+  }
+
+  .reader-close-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    color: #64748B;
+    cursor: pointer;
+    display: inline-flex;
+
+    i.material-icons {
+      font-size: 16px;
+    }
+  }
+
+  .reader-body {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #334155;
+    white-space: pre-wrap;
+  }
+}

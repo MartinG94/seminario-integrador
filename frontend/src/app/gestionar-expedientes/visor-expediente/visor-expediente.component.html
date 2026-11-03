@@ -116,10 +116,32 @@
               </div>
               <div class="col-sm-6">
                 <span class="text-muted small d-block">Causal / Normativa Invocada:</span>
-                <div class="d-flex flex-wrap gap-1 mt-1">
-                  <span *ngFor="let reg of visorData.reglamentos_respaldantes" class="badge badge-secondary">
-                    {{ reg }}
-                  </span>
+                <div class="reglamento-chips-tray mt-1">
+                  <button type="button"
+                          *ngFor="let cita of reglamentosCitas"
+                          class="reglamento-chip-btn"
+                          [class.chip-estatuto]="cita.documento === 'Estatuto'"
+                          [class.chip-interno]="cita.documento === 'Reglamento Interno'"
+                          [class.chip-expanded]="reglamentoExpandido === cita.raw"
+                          [title]="cita.cuerpo"
+                          (click)="toggleExpandirReglamento(cita.raw)">
+                    <i class="material-icons chip-doc-icon">
+                      {{ cita.documento === 'Estatuto' ? 'account_balance' : 'gavel' }}
+                    </i>
+                    <span class="chip-cite-text">{{ cita.citaCorta }}</span>
+                    <i class="material-icons chip-chevron">
+                      {{ reglamentoExpandido === cita.raw ? 'expand_less' : 'info_outline' }}
+                    </i>
+                  </button>
+                </div>
+                <div class="reglamento-expanded-reader mt-2" *ngIf="reglamentoExpandidoDetalle as detalle">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="reader-cite">{{ detalle.citaCorta }}</strong>
+                    <button type="button" class="reader-close-btn" (click)="reglamentoExpandido = null" title="Cerrar texto del artículo">
+                      <i class="material-icons">close</i>
+                    </button>
+                  </div>
+                  <p class="reader-body mb-0">{{ detalle.cuerpo }}</p>
                 </div>
               </div>
             </div>

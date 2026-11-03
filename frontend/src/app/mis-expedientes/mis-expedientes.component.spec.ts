@@ -1080,5 +1080,39 @@ describe('MisExpedientesComponent', () => {
       expect(notifications.error).toHaveBeenCalled();
       expect(component.enviandoApelacion).toBeFalse();
     });
+
+    it('mapea reglamentos_respaldantes desde la API y los renderiza como chips interactivos en el modal de detalle', () => {
+      const rawApi = {
+        id: 88,
+        numero: 'EXP-0088/2026',
+        socio_nombre: 'Ana Pérez',
+        socio_legajo: '777',
+        motivo: 'Inasistencia a plenaria',
+        estado: 'justificando',
+        puntos: -1,
+        reglamentos_respaldantes: [
+          'Estatuto - Art. 14 Inc. a: Es deber de todo socio activo asistir a las asambleas.',
+          'Reglamento Interno - Art. 12: Sanciones por inasistencia injustificada.'
+        ]
+      };
+      const mapeado = (component as any).mapearExpedienteApi(rawApi);
+      expect(mapeado.reglamentos_respaldantes.length).toBe(2);
+
+      component.expedienteDetalle = mapeado;
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const chips = compiled.querySelectorAll('.reglamento-chip-btn');
+      expect(chips.length).toBe(2);
+      expect(chips[0].textContent).toContain('Estatuto · Art. 14 Inc. a');
+      expect(chips[1].textContent).toContain('Reglamento Interno · Art. 12');
+
+      (chips[0] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(compiled.querySelector('.reglamento-expanded-reader')?.textContent).toContain(
+        'Es deber de todo socio activo asistir a las asambleas.'
+      );
+    });
   });
 });
