@@ -36,13 +36,17 @@ describe('reglamento-format.util', () => {
     const catalogo: ArticuloReglamentoDTO[] = [
       {
         id: 1,
-        reglamento: 1,
         titulo: 'Estatuto',
+        seccion: 1,
         articulo: 2,
         inciso: 'b',
         cuerpo: 'Texto oficial del catalogo para el art 2 inc b',
+        descripcion: 'Descripcion art 2 inc b',
         cita_corta: 'Estatuto - Art. 2 Inc. b',
-        cita_completa: 'Estatuto - Art. 2 Inc. b: Texto oficial del catalogo para el art 2 inc b'
+        cita_completa: 'Estatuto - Art. 2 Inc. b: Texto oficial del catalogo para el art 2 inc b',
+        activo: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z'
       }
     ];
 
