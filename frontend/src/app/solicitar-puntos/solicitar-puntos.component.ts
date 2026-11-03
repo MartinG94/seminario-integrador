@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
@@ -50,13 +50,30 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   motivoTexto = '';
   titulo = '';
   razon = '';
-  reglamentosDisponibles: string[] = [];
-  articulosDisponibles: ArticuloReglamentoDTO[] = [];
+  private _reglamentosDisponibles: string[] = [];
+  get reglamentosDisponibles(): string[] {
+    return this._reglamentosDisponibles;
+  }
+  set reglamentosDisponibles(value: string[]) {
+    this._reglamentosDisponibles = value || [];
+    this.actualizarCatalogoItemsModal();
+  }
+
+  private _articulosDisponibles: ArticuloReglamentoDTO[] = [];
+  get articulosDisponibles(): ArticuloReglamentoDTO[] {
+    return this._articulosDisponibles;
+  }
+  set articulosDisponibles(value: ArticuloReglamentoDTO[]) {
+    this._articulosDisponibles = value || [];
+    this.actualizarCatalogoItemsModal();
+  }
   reglamentosSeleccionados: string[] = [];
   filtroReglamentos = '';
   modalReglamentosAbierto = false;
   filtroDocumentoModal: 'TODOS' | 'Reglamento Interno' | 'Estatuto' = 'TODOS';
   reglamentoExpandidoForm: string | null = null;
+  catalogoItemsModal: CatalogoReglamentoItem[] = [];
+  @ViewChild('modalSearchInput') modalSearchInput?: ElementRef<HTMLInputElement>;
   anexoFecha = '';
   anexoLugar = '';
   anexoTestigos = '';
@@ -95,21 +112,29 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     private padronApi: PadronApiService,
     private expedienteApi: ExpedienteApiService,
     public dialog: MatDialog,
-    private notifications: NotificationService
+    private notifications: NotificationService,
+    private renderer: Renderer2
   ) {}
 
   ngOnInit(): void {
-    this.padronApi.listarSocios().subscribe({
+    this.padronApi.listarSocios().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: socios => {
         this.socios = socios;
       },
       error: error => this.mostrarError(error)
     });
-    this.socioBusqueda.valueChanges.subscribe(value => this.filtrarSocios(value || ''));
-    this.expedienteApi.listarReglamentos().subscribe({
+    this.socioBusqueda.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(value => this.filtrarSocios(value || ''));
+    this.expedienteApi.listarReglamentos().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: response => {
         this.reglamentosDisponibles = response.reglamentos || [];
         this.articulosDisponibles = (response as any).articulos || [];
+        this.actualizarCatalogoItemsModal();
       },
       error: error => this.mostrarError(error)
     });
@@ -128,6 +153,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.actualizarScrollBloqueo(false);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -137,7 +163,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.failedToLoadRequests = false;
     const search = this.busquedaControl.value?.trim() || undefined;
     const estado = this.estadoFiltro.value || undefined;
-    this.expedienteApi.listarMisSolicitudes({ search, estado }).subscribe({
+    this.expedienteApi.listarMisSolicitudes({ search, estado }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: solicitudes => {
         this.misSolicitudes = solicitudes;
         this.cargandoSolicitudes = false;
@@ -314,9 +342,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     );
   }
 
-  get catalogoItemsModal(): CatalogoReglamentoItem[] {
+  actualizarCatalogoItemsModal(): void {
     if (this.articulosDisponibles && this.articulosDisponibles.length > 0) {
-      return this.articulosDisponibles.map(art => {
+      this.catalogoItemsModal = this.articulosDisponibles.map(art => {
         const raw = art.cita_completa || (art.cuerpo ? `${art.cita_corta}: ${art.cuerpo}` : art.cita_corta);
         const parsed = parseReglamentoCite(raw, this.articulosDisponibles);
         return {
@@ -329,8 +357,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
           cuerpo: (art.cuerpo || art.descripcion || parsed.cuerpo || '').trim()
         };
       });
+      return;
     }
-    return (this.reglamentosDisponibles || []).map(raw => {
+    this.catalogoItemsModal = (this.reglamentosDisponibles || []).map(raw => {
       const parsed = parseReglamentoCite(raw);
       return {
         raw,
@@ -377,10 +406,33 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   abrirModalReglamentos(): void {
     if (this.estado === 'ISSUED') return;
     this.modalReglamentosAbierto = true;
+    this.actualizarScrollBloqueo(true);
+    setTimeout(() => {
+      if (this.modalSearchInput?.nativeElement) {
+        this.modalSearchInput.nativeElement.focus();
+      }
+    }, 50);
   }
 
   cerrarModalReglamentos(): void {
     this.modalReglamentosAbierto = false;
+    this.actualizarScrollBloqueo(false);
+  }
+
+  private actualizarScrollBloqueo(bloquear: boolean): void {
+    if (typeof document === 'undefined') return;
+    const panel = document.querySelector('.main-panel');
+    if (bloquear) {
+      this.renderer.addClass(document.body, 'modal-open-scroll-lock');
+      if (panel) {
+        this.renderer.addClass(panel, 'modal-open-scroll-lock');
+      }
+    } else {
+      this.renderer.removeClass(document.body, 'modal-open-scroll-lock');
+      if (panel) {
+        this.renderer.removeClass(panel, 'modal-open-scroll-lock');
+      }
+    }
   }
 
   setFiltroDocumentoModal(doc: 'TODOS' | 'Reglamento Interno' | 'Estatuto'): void {
@@ -431,6 +483,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   resetearFormulario(): void {
+    this.actualizarScrollBloqueo(false);
     this.borradorId = null;
     this.estado = null;
     this.numeroExpediente = null;

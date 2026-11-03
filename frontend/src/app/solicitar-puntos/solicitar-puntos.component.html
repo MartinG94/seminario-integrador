@@ -1,7 +1,7 @@
 <div class="main-content solicitar-puntos-view">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-11 col-lg-10 ml-auto mr-auto">
+      <div class="col-md-12">
 
         <!-- Card Principal con Pestañas estilo AVEIT -->
         <div class="card card-nav-tabs card-aveit-shell">
@@ -68,7 +68,6 @@
               <!-- SECCIÓN 01: Encuadre de la Acción -->
               <section class="form-section" aria-label="Encuadre de la solicitud">
                 <div class="section-heading">
-                  <span class="section-step tabular-nums">01</span>
                   <div>
                     <h4 class="section-title">Encuadre de la solicitud</h4>
                     <p class="section-subtitle">Definí el carácter del pedido, su carátula y el nivel de prioridad.</p>
@@ -169,7 +168,6 @@
               <!-- SECCIÓN 02: Estimación de Puntos y Reglamento Respaldante -->
               <section class="form-section" aria-label="Estimación y sustento reglamentario">
                 <div class="section-heading">
-                  <span class="section-step tabular-nums">02</span>
                   <div>
                     <h4 class="section-title">Estimación y sustento reglamentario</h4>
                     <p class="section-subtitle">Indicá el puntaje estimado y vinculá al menos un artículo del Estatuto o Reglamento Interno.</p>
@@ -276,7 +274,6 @@
               <section class="form-section" aria-label="Socios involucrados">
                 <div class="section-heading d-flex justify-content-between align-items-start">
                   <div class="d-flex align-items-start">
-                    <span class="section-step tabular-nums">03</span>
                     <div>
                       <h4 class="section-title">Socios involucrados <span class="required-mark">*</span></h4>
                       <p class="section-subtitle">Buscá por legajo, apellido o nombre y agregá uno o más socios al expediente.</p>
@@ -341,7 +338,6 @@
                 <mat-expansion-panel class="anexo-expansion-panel" [expanded]="anexoExpandido">
                   <mat-expansion-panel-header>
                     <mat-panel-title class="font-weight-bold text-dark d-flex align-items-center">
-                      <span class="section-step section-step-sm tabular-nums mr-2">04</span>
                       <mat-icon class="mr-2 text-secondary align-middle">note_add</mat-icon>
                       <span>Detalles adicionales / Hoja de anexo</span>
                     </mat-panel-title>
@@ -603,6 +599,8 @@
 <div class="modal-reglamentos-backdrop"
      *ngIf="modalReglamentosAbierto"
      (click)="cerrarModalReglamentos()"
+     (keydown.escape)="cerrarModalReglamentos()"
+     tabindex="-1"
      role="dialog"
      aria-modal="true"
      aria-labelledby="modal-reglamentos-title">
@@ -657,7 +655,8 @@
 
       <div class="search-box-modal mt-2">
         <i class="material-icons search-icon">search</i>
-        <input type="text"
+        <input #modalSearchInput
+               type="text"
                class="form-control search-input-modal"
                placeholder="Buscar por número de artículo, inciso, sección o palabras clave..."
                [(ngModel)]="filtroReglamentos">
