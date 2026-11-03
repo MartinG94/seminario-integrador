@@ -11,8 +11,10 @@ Criterios de Aceptación verificados:
 
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 import pytest
+from django.conf import settings
 
 from ranking.domain.threshold_alerts import (
     ActoAprobado,
@@ -20,12 +22,16 @@ from ranking.domain.threshold_alerts import (
     AlertaSanitizer,
     EstadoDespachoAlerta,
     FaltaActoAprobadoError,
+    InternalAlertRepository,
     PrivacyViolationError,
     RegistroAlerta,
     ThresholdAlertEngine,
+    ThresholdAlertNotificationService,
     TipoAlerta,
     TipoCruce,
     UmbralConfig,
+    get_default_from_email,
+    resolver_destinatarios_alerta_critica,
 )
 
 
@@ -49,9 +55,9 @@ def acto_aprobado_oficial() -> ActoAprobado:
     return ActoAprobado(
         codigo="RES-CD-2026-004",
         destinatarios=[
-            "cd@aveit.utn.edu.ar",
-            "fiscalizadora@aveit.utn.edu.ar",
-            "tribunal@aveit.utn.edu.ar",
+            "cd@aveit.test",
+            "fiscalizadora@aveit.test",
+            "tribunal@aveit.test",
         ],
         accion_autorizada="REVOCACION_ALTA_ASOCIATIVA_ART_93",
         fecha_aprobacion=datetime(2026, 10, 1, 10, 0),
@@ -180,7 +186,7 @@ class TestCruceCriticoCA1:
 
 
 class TestActoAprobadoCA2:
-    """Verifica cumplimiento estricto del acto aprobado o bloqueo explícito sin invención."""
+    """Verifica resolución de destinatarios oficiales y acción reglamentaria (CA2)."""
 
     def test_con_acto_aprobado_despacha_con_destinatarios_y_accion_oficiales(
         self, config_defecto: UmbralConfig, acto_aprobado_oficial: ActoAprobado
@@ -194,18 +200,21 @@ class TestActoAprobadoCA2:
             saldo_nuevo=Decimal("-10.0"),
             config=config_defecto,
             resolver_acto=resolver,
+            socio_email="imputado201@aveit.test",
         )
 
         alerta = res.alerta_generada
         assert alerta is not None
         assert alerta.estado_despacho == EstadoDespachoAlerta.DESPACHADA
-        assert alerta.destinatarios == acto_aprobado_oficial.destinatarios
+        assert "imputado201@aveit.test" in alerta.destinatarios
+        for d in acto_aprobado_oficial.destinatarios:
+            assert d in alerta.destinatarios
         assert alerta.accion_asociada == acto_aprobado_oficial.accion_autorizada
 
-    def test_sin_acto_aprobado_registra_bloqueo_y_no_inventa_destinatarios(
+    def test_sin_acto_aprobado_no_bloquea_y_resuelve_destinatarios_oficiales(
         self, config_defecto: UmbralConfig
     ) -> None:
-        """Sin acto aprobado, no inventa destinatarios y documenta el bloqueo normativo."""
+        """Sin acto aprobado, no bloquea: resuelve Socio, CD y Tribunal, con espera de acto CD."""
         resolver_vacio = ActoAprobadoResolver(None)
 
         res = ThresholdAlertEngine.evaluar_cruce(
@@ -213,25 +222,44 @@ class TestActoAprobadoCA2:
             saldo_anterior=Decimal("-5.0"),
             saldo_nuevo=Decimal("-10.0"),
             config=config_defecto,
+            socio_email="socio202@aveit.test",
             resolver_acto=resolver_vacio,
         )
 
         alerta = res.alerta_generada
         assert alerta is not None
-        assert alerta.estado_despacho == EstadoDespachoAlerta.BLOQUEADA_POR_FALTA_DE_ACTO_APROBADO
-        assert alerta.destinatarios == []
-        assert alerta.accion_asociada == "PENDIENTE_DEFINICION_ACTO_APROBADO"
-        assert "bloqueo_ca2" in alerta.metadata
+        assert alerta.estado_despacho == EstadoDespachoAlerta.DESPACHADA
+        assert alerta.destinatarios == [
+            "socio202@aveit.test",
+            getattr(settings, "CD_EMAIL", "cd@example.org"),
+            getattr(settings, "TRIBUNAL_EMAIL", "tribunal@example.org"),
+        ]
+        assert alerta.accion_asociada == "ESPERA_ACTO_RESOLUTIVO_CD"
+        assert alerta.baja_automatica_aplicada is False
+        assert alerta.metadata.get("canal") == "EMAIL_OUTBOX"
+        assert alerta.metadata.get("notificacion_in_app") is False
 
-    def test_intento_de_resolver_sin_acto_aprobado_lanza_error_concreto(self) -> None:
-        """La resolución directa sin acto aprobado falla de forma cerrada explicando qué falta."""
+    def test_resolver_destinatarios_sin_acto_aprobado_resuelve_directamente(self) -> None:
+        """Resolución sin acto aprobado retorna los 3 destinatarios y ESPERA_ACTO_RESOLUTIVO_CD."""
         resolver_vacio = ActoAprobadoResolver(None)
+        dests, accion = resolver_vacio.resolver_destinatario_y_accion(
+            socio_email="socio@aveit.test"
+        )
 
+        assert dests == [
+            "socio@aveit.test",
+            getattr(settings, "CD_EMAIL", "cd@example.org"),
+            getattr(settings, "TRIBUNAL_EMAIL", "tribunal@example.org"),
+        ]
+        assert accion == "ESPERA_ACTO_RESOLUTIVO_CD"
+
+    def test_resolver_con_forzar_acto_permite_validar_bloqueo_si_se_solicita(self) -> None:
+        """Si explícitamente se fuerza la exigencia de un acto, lanza FaltaActoAprobadoError."""
+        resolver_vacio = ActoAprobadoResolver(None)
         with pytest.raises(FaltaActoAprobadoError) as exc_info:
-            resolver_vacio.resolver_destinatario_y_accion()
+            resolver_vacio.resolver_destinatario_y_accion(forzar_acto=True)
 
         assert "No existe un acto aprobado registrado" in str(exc_info.value)
-        assert "CD/TD" in str(exc_info.value)
 
 
 # ==============================================================================
@@ -637,7 +665,6 @@ class TestCriterio7SinEnviosExternosNiBajas:
 
     def test_repositorio_interno_almacena_alertas_sin_despacho_externo(self) -> None:
         """InternalAlertRepository almacena y permite consultar el historial interno."""
-        from ranking.domain.threshold_alerts import InternalAlertRepository
 
         repo = InternalAlertRepository()
         assert repo.total() == 0
@@ -674,3 +701,115 @@ class TestCriterio7SinEnviosExternosNiBajas:
         )
         assert res.cruce == TipoCruce.SALIDA_ZONA_CRITICA
         assert len(hist) == 0
+
+
+# ==============================================================================
+# S5-06 Revision PR #72: Configuración de correos, Outbox y Reglas PO
+# ==============================================================================
+
+
+class TestConfiguracionCorreos:
+    """Verifica configuración de correos electrónicos en settings y helpers de resolución."""
+
+    def test_settings_email_defaults(self) -> None:
+        """Verifica los valores por defecto en settings.py según requerimiento del PO."""
+        assert getattr(settings, "DEFAULT_FROM_EMAIL") == "sistema@example.org"
+        assert getattr(settings, "CD_EMAIL") == "cd@example.org"
+        assert getattr(settings, "TRIBUNAL_EMAIL") == "tribunal@example.org"
+
+    def test_get_default_from_email(self) -> None:
+        """Verifica que get_default_from_email retorne el remitente configurado."""
+        expected_from = getattr(settings, "DEFAULT_FROM_EMAIL", "sistema@example.org")
+        assert get_default_from_email() == expected_from
+
+    def test_resolver_destinatarios_alerta_critica(self) -> None:
+        """Verifica la resolución de los tres destinatarios oficiales."""
+        dests = resolver_destinatarios_alerta_critica("imputado@aveit.test")
+        assert dests == [
+            "imputado@aveit.test",
+            getattr(settings, "CD_EMAIL", "cd@example.org"),
+            getattr(settings, "TRIBUNAL_EMAIL", "tribunal@example.org"),
+        ]
+
+    def test_resolver_destinatarios_alerta_critica_sin_email_socio(self) -> None:
+        """Si el socio no tiene email registrado, resuelve CD y Tribunal."""
+        dests = resolver_destinatarios_alerta_critica(None)
+        assert dests == [
+            getattr(settings, "CD_EMAIL", "cd@example.org"),
+            getattr(settings, "TRIBUNAL_EMAIL", "tribunal@example.org"),
+        ]
+
+
+class TestOutboxYDespachoNotificacion:
+    """Verifica que la notificación formal se realice por Outbox sin notificaciones in-app."""
+
+    def test_construir_payload_outbox_formato_y_metadatos(
+        self, config_defecto: UmbralConfig
+    ) -> None:
+        """Verifica que el payload de Outbox cumpla con metadatos, canal y privacidad."""
+        res = ThresholdAlertEngine.evaluar_cruce(
+            socio_id=901,
+            saldo_anterior=Decimal("-9.0"),
+            saldo_nuevo=Decimal("-10.0"),
+            config=config_defecto,
+            socio_email="socio901@aveit.test",
+        )
+        assert res.alerta_generada is not None
+        alerta = res.alerta_generada
+
+        payload = ThresholdAlertNotificationService.construir_payload_outbox(
+            alerta, socio_nombre="Juan Pérez"
+        )
+
+        assert payload["to"] == alerta.destinatarios
+        assert "Juan Pérez" in payload["body_text"]
+        assert "Art. 93" in payload["body_text"]
+        assert payload["metadata"]["canal"] == "EMAIL_OUTBOX"
+        assert payload["metadata"]["notificacion_in_app"] is False
+        expected_from = getattr(settings, "DEFAULT_FROM_EMAIL", "sistema@example.org")
+        assert payload["metadata"]["remitente"] == expected_from
+        assert payload["metadata"]["baja_automatica_aplicada"] is False
+        assert payload["idempotency_key"] == f"threshold-alert-critica-901-{alerta.id}"
+
+    @patch("notifications.services.EmailDispatcherService.dispatch")
+    @patch("notifications.services.EmailDispatcherService.create_or_get_outbox")
+    def test_despacho_outbox_con_mocks(
+        self,
+        mock_create: MagicMock,
+        mock_dispatch: MagicMock,
+        config_defecto: UmbralConfig,
+    ) -> None:
+        """Verifica que evaluar_cruce con despachar_outbox=True invoque el encolador y despacho."""
+        mock_outbox = MagicMock()
+        mock_create.return_value = (mock_outbox, True)
+        mock_dispatch.return_value = True
+
+        res = ThresholdAlertEngine.evaluar_cruce(
+            socio_id=902,
+            saldo_anterior=Decimal("-9.0"),
+            saldo_nuevo=Decimal("-10.5"),
+            config=config_defecto,
+            socio_email="socio902@aveit.test",
+            despachar_outbox=True,
+            socio_nombre="Lucía Gómez",
+        )
+
+        assert res.alerta_generada is not None
+        assert res.alerta_generada.envio_externo_realizado is True
+        mock_create.assert_called_once()
+        mock_dispatch.assert_called_once_with(mock_outbox)
+
+    def test_baja_automatica_aplicada_es_falso_y_sin_mutacion_padron(
+        self, config_defecto: UmbralConfig
+    ) -> None:
+        """Verifica que la alerta crítica garantice baja_automatica_aplicada=False."""
+        res = ThresholdAlertEngine.evaluar_cruce(
+            socio_id=903,
+            saldo_anterior=Decimal("-8.0"),
+            saldo_nuevo=Decimal("-12.0"),
+            config=config_defecto,
+            socio_email="socio903@aveit.test",
+        )
+        assert res.alerta_generada is not None
+        assert res.alerta_generada.baja_automatica_aplicada is False
+        assert res.alerta_generada.accion_asociada == "ESPERA_ACTO_RESOLUTIVO_CD"

@@ -11,9 +11,12 @@ from ranking.domain.threshold_alerts import (
     PrivacyViolationError,
     RegistroAlerta,
     ThresholdAlertEngine,
+    ThresholdAlertNotificationService,
     TipoAlerta,
     TipoCruce,
     UmbralConfig,
+    get_default_from_email,
+    resolver_destinatarios_alerta_critica,
 )
 
 __all__ = [
@@ -27,7 +30,10 @@ __all__ = [
     "PrivacyViolationError",
     "RegistroAlerta",
     "ThresholdAlertEngine",
+    "ThresholdAlertNotificationService",
     "TipoAlerta",
     "TipoCruce",
     "UmbralConfig",
+    "get_default_from_email",
+    "resolver_destinatarios_alerta_critica",
 ]
