@@ -226,6 +226,12 @@ class Expediente(models.Model):
         blank=True,
     )
     motivo = models.TextField()
+    titulo = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Título breve institucional del expediente.",
+    )
     puntos = models.DecimalField(max_digits=10, decimal_places=2, default=-1.0)
     estado = models.CharField(
         max_length=30,

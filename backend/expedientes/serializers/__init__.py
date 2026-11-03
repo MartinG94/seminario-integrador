@@ -1005,20 +1005,19 @@ class EmitirT01Serializer(serializers.Serializer):
             from expedientes.services.workflow_service import ExpedienteWorkflowService
 
             actor_name = getattr(solicitud.solicitante, "legajo", str(solicitud.solicitante_id))
-            try:
-                motivo_apertura = (
-                    solicitud.motivo or solicitud.titulo or "Apertura formal por Formulario T01"
-                )
-                expediente = ExpedienteWorkflowService.open_expediente(
-                    motivo=motivo_apertura,
-                    socio_ids=resolved_socio_ids,
-                    actor=f"SOLICITANTE_{actor_name}",
-                    urgencia=solicitud.urgencia,
-                    points=solicitud.puntos,
-                )
-                solicitud.expediente = expediente
-            except Exception:
-                logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
+            motivo_apertura = (
+                solicitud.motivo or solicitud.titulo or "Apertura formal por Formulario T01"
+            )
+            titulo_apertura = (solicitud.titulo or motivo_apertura).strip()
+            expediente = ExpedienteWorkflowService.open_expediente(
+                motivo=motivo_apertura,
+                titulo=titulo_apertura,
+                socio_ids=resolved_socio_ids,
+                actor=f"SOLICITANTE_{actor_name}",
+                urgencia=solicitud.urgencia,
+                points=solicitud.puntos,
+            )
+            solicitud.expediente = expediente
 
         solicitud.save()
         return solicitud
