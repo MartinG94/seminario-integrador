@@ -787,3 +787,29 @@ body.dark-edition, html.dark {
   background: var(--color-surface-card);
   color: var(--color-text-primary);
 }
+
+
+// ==========================================
+// 9. Bloqueo de Scroll Transversal en Modales
+// ==========================================
+body.modal-open-scroll-lock,
+html.modal-open-scroll-lock,
+.main-panel.modal-open-scroll-lock,
+.wrapper.modal-open-scroll-lock {
+  overflow: hidden !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  touch-action: none;
+}
+
+.modal-backdrop-custom,
+.modal-reglamentos-backdrop {
+  overscroll-behavior: contain !important;
+}
+
+.modal-dialog-custom,
+.modal-reglamentos-dialog,
+.modal-detalle-body,
+.modal-reglamentos-body {
+  overscroll-behavior: contain;
+}

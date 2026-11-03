@@ -17,6 +17,7 @@ import {
   parseReglamentosList,
   ReglamentoCiteView
 } from '../utils/reglamento-format.util';
+import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -81,7 +82,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private renderer: Renderer2,
     private notifications: NotificationService,
-    private expedienteApi: ExpedienteApiService
+    private expedienteApi: ExpedienteApiService,
+    private scrollLock: ModalScrollLockService
   ) {}
 
   ngOnInit(): void {
@@ -613,18 +615,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   private actualizarScrollBloqueo(): void {
     const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
-    const body = document.body;
-    const docElem = document.documentElement;
-    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
-
     if (estaAbierto) {
-      this.renderer.addClass(body, 'modal-open');
-      this.renderer.setStyle(body, 'overflow', 'hidden');
-      this.renderer.setStyle(docElem, 'overflow', 'hidden');
-      if (mainPanel) {
-        this.renderer.setStyle(mainPanel, 'overflow', 'hidden');
-      }
+      this.scrollLock.lock();
     } else {
+      this.scrollLock.reset();
       this.removerScrollBloqueo();
     }
   }

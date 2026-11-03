@@ -17,6 +17,7 @@ import { NotificationService, httpErrorMessage } from '../services/notification.
 import type { NivelUrgencia } from '../services/tribunal-data.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { formatCaseNumber } from '../utils/case-number.util';
+import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
 import {
   parseReglamentoCite,
   parseReglamentosList,
@@ -113,7 +114,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     private expedienteApi: ExpedienteApiService,
     public dialog: MatDialog,
     private notifications: NotificationService,
-    private renderer: Renderer2
+    private renderer: Renderer2,
+    private scrollLock: ModalScrollLockService
   ) {}
 
   ngOnInit(): void {
@@ -153,7 +155,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.actualizarScrollBloqueo(false);
+    this.scrollLock.reset();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -406,7 +408,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   abrirModalReglamentos(): void {
     if (this.estado === 'ISSUED') return;
     this.modalReglamentosAbierto = true;
-    this.actualizarScrollBloqueo(true);
+    this.scrollLock.lock();
     setTimeout(() => {
       if (this.modalSearchInput?.nativeElement) {
         this.modalSearchInput.nativeElement.focus();
@@ -416,23 +418,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   cerrarModalReglamentos(): void {
     this.modalReglamentosAbierto = false;
-    this.actualizarScrollBloqueo(false);
-  }
-
-  private actualizarScrollBloqueo(bloquear: boolean): void {
-    if (typeof document === 'undefined') return;
-    const panel = document.querySelector('.main-panel');
-    if (bloquear) {
-      this.renderer.addClass(document.body, 'modal-open-scroll-lock');
-      if (panel) {
-        this.renderer.addClass(panel, 'modal-open-scroll-lock');
-      }
-    } else {
-      this.renderer.removeClass(document.body, 'modal-open-scroll-lock');
-      if (panel) {
-        this.renderer.removeClass(panel, 'modal-open-scroll-lock');
-      }
-    }
+    this.scrollLock.unlock();
   }
 
   setFiltroDocumentoModal(doc: 'TODOS' | 'Reglamento Interno' | 'Estatuto'): void {
@@ -483,7 +469,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   resetearFormulario(): void {
-    this.actualizarScrollBloqueo(false);
+    this.scrollLock.reset();
     this.borradorId = null;
     this.estado = null;
     this.numeroExpediente = null;
