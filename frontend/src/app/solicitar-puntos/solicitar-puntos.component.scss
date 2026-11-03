@@ -705,6 +705,7 @@ $text-muted: #64748B;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overscroll-behavior: contain;
 }
 
 .modal-reglamentos-dialog {
@@ -1082,4 +1083,9 @@ $text-muted: #64748B;
     .catalogo-cite { color: #F8FAFC; }
     .catalogo-cuerpo { color: #CBD5E1; }
   }
+}
+
+:host ::ng-deep body.modal-open-scroll-lock,
+:host ::ng-deep .main-panel.modal-open-scroll-lock {
+  overflow: hidden !important;
 }

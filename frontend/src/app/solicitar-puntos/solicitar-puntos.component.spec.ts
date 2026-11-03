@@ -666,6 +666,21 @@ describe('SolicitarPuntosComponent', () => {
       component.toggleExpandirReglamentoForm(est1);
       expect(component.reglamentoExpandidoFormDetalle).toBeNull();
     });
+
+    it('activa el bloqueo de scroll al abrir el modal y lo remueve al cerrar o destruir', fakeAsync(() => {
+      component.abrirModalReglamentos();
+      expect(component.modalReglamentosAbierto).toBeTrue();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeTrue();
+
+      component.cerrarModalReglamentos();
+      expect(component.modalReglamentosAbierto).toBeFalse();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+
+      component.abrirModalReglamentos();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeTrue();
+      component.ngOnDestroy();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+    }));
   });
 });
 import { NotificationService } from '../services/notification.service';
