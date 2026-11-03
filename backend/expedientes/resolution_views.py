@@ -22,9 +22,7 @@ class ResolucionView(APIView):
 
     def get(self, request, expediente_id):
         resolucion = (
-            Resolucion.objects.filter(expediente_id=expediente_id)
-            .order_by("-version")
-            .first()
+            Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
         )
         if not resolucion:
             return Response(
@@ -52,9 +50,7 @@ class ResolucionView(APIView):
 
     def patch(self, request, expediente_id):
         resolucion = (
-            Resolucion.objects.filter(expediente_id=expediente_id)
-            .order_by("-version")
-            .first()
+            Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
         )
         if not resolucion:
             return Response(
@@ -77,9 +73,7 @@ class ResolucionEmitirView(APIView):
     @transaction.atomic
     def post(self, request, expediente_id):
         resolucion = (
-            Resolucion.objects.filter(expediente_id=expediente_id)
-            .order_by("-version")
-            .first()
+            Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
         )
         if not resolucion:
             return Response(
@@ -100,9 +94,7 @@ class ResolucionPreviewView(APIView):
 
     def get(self, request, expediente_id):
         resolucion = (
-            Resolucion.objects.filter(expediente_id=expediente_id)
-            .order_by("-version")
-            .first()
+            Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
         )
         if not resolucion:
             return Response(

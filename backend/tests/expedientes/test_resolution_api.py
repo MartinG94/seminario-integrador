@@ -35,12 +35,10 @@ def draft_payload() -> dict:
 def test_resolucion_requiere_autenticacion(api_client, causal_expediente):
     assert api_client.get(resolution_url(causal_expediente.pk)).status_code == 401
     assert (
-        api_client.post(resolution_url(causal_expediente.pk), {}, format="json").status_code
-        == 401
+        api_client.post(resolution_url(causal_expediente.pk), {}, format="json").status_code == 401
     )
     assert (
-        api_client.patch(resolution_url(causal_expediente.pk), {}, format="json").status_code
-        == 401
+        api_client.patch(resolution_url(causal_expediente.pk), {}, format="json").status_code == 401
     )
     assert api_client.post(emit_url(causal_expediente.pk), {}, format="json").status_code == 401
 
@@ -60,9 +58,7 @@ def test_creacion_toma_expediente_de_la_url_y_no_acepta_campos_derivados(
     causal_expediente, causal_vocal, authenticate
 ):
     client = authenticate(causal_vocal)
-    response = client.post(
-        resolution_url(causal_expediente.pk), draft_payload(), format="json"
-    )
+    response = client.post(resolution_url(causal_expediente.pk), draft_payload(), format="json")
 
     assert response.status_code == 201, response.data
     resolucion = Resolucion.objects.get(pk=response.data["id"])
@@ -82,14 +78,10 @@ def test_creacion_rechaza_segunda_resolucion_para_el_mismo_expediente(
 ):
     client = authenticate(causal_vocal)
     payload = draft_payload()
-    first_response = client.post(
-        resolution_url(causal_expediente.pk), payload, format="json"
-    )
+    first_response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
     assert first_response.status_code == 201
 
-    second_response = client.post(
-        resolution_url(causal_expediente.pk), payload, format="json"
-    )
+    second_response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
 
     assert second_response.status_code == 409
     assert Resolucion.objects.filter(expediente=causal_expediente).count() == 1
@@ -173,9 +165,7 @@ def test_emision_sin_dictamen_cerrado_devuelve_error_controlado(
         articulos_resolutivos="Artículo 1.",
         created_by=causal_vocal.user,
     )
-    response = authenticate(causal_vocal).post(
-        emit_url(causal_expediente.pk), {}, format="json"
-    )
+    response = authenticate(causal_vocal).post(emit_url(causal_expediente.pk), {}, format="json")
     assert response.status_code == 400
     assert "dictamen" in response.data
 
@@ -205,9 +195,7 @@ def test_emision_selecciona_la_version_mas_reciente(
         return resolucion
 
     monkeypatch.setattr("expedientes.resolution_views.emitir_resolucion", fake_emitir)
-    response = authenticate(causal_vocal).post(
-        emit_url(causal_expediente.pk), {}, format="json"
-    )
+    response = authenticate(causal_vocal).post(emit_url(causal_expediente.pk), {}, format="json")
 
     assert response.status_code == 200
     assert selected["id"] == latest.id

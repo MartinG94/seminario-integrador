@@ -1,4 +1,5 @@
 """Casos de uso transaccionales de resolución oficial."""
+
 import hashlib
 from decimal import Decimal
 
@@ -26,9 +27,7 @@ def emitir_resolucion(
     resolucion: Resolucion, emisor, provider: ClosedDecisionProvider
 ) -> Resolucion:
     resolucion = (
-        Resolucion.objects.select_for_update()
-        .select_related("expediente")
-        .get(pk=resolucion.pk)
+        Resolucion.objects.select_for_update().select_related("expediente").get(pk=resolucion.pk)
     )
     if resolucion.estado == EstadoResolucionEnum.ISSUED:
         raise ValidationError("La resolución ya fue emitida.")

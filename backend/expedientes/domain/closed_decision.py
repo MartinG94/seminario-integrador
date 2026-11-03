@@ -1,4 +1,5 @@
 """Contrato interno para consumir el dictamen cerrado de SCRUM-55."""
+
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
