@@ -396,6 +396,39 @@ export interface PlazoApelacionDTO {
   actualizado_por: string;
 }
 
+// --- Tribunal de la causa (S4-04, Spec 007) ---
+
+export type CondicionIntegrante = 'TITULAR' | 'SUPLENTE';
+
+export interface AsientoTribunalDTO {
+  anio_social: number;
+  socio_id: number | null;
+  nro_socio: number | null;
+  nombre: string;
+  grupo: string;
+  condicion: CondicionIntegrante | '';
+  firma: string;
+  reemplaza_a: string;
+}
+
+export interface IntegranteApartadoDTO {
+  socio_id: number;
+  nro_socio: number;
+  nombre: string;
+  anio_social: number;
+  condicion: CondicionIntegrante;
+}
+
+export interface ComposicionTribunalDTO {
+  estampada: boolean;
+  estampada_at: string | null;
+  asientos: AsientoTribunalDTO[];
+  apartados: IntegranteApartadoDTO[];
+  requiere_ad_hoc: boolean;
+  motivos_ad_hoc: string[];
+  usuario: { esta_involucrado: boolean };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -540,6 +573,7 @@ export class ExpedienteApiService {
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
+
   obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
     return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);
   }
@@ -560,6 +594,10 @@ export class ExpedienteApiService {
     return this.http.put<PlazoApelacionDTO>(`${this.apiUrl}/parametros/plazo-apelacion/`, {
       dias_habiles: diasHabiles
     });
+  }
+
+  obtenerComposicionTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
+    return this.http.get<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/`);
   }
 
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {

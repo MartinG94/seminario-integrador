@@ -399,7 +399,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             return next((d for d in descargos if d.socio_id == socio.pk), None)
 
         role = getattr(socio, "role", "")
-        # Si es TD/CD/Admin o staff y no es imputado personal en la causa, puede consultar los descargos
+        # Si es TD/CD/Admin o staff y no es imputado personal en la causa,
+        # puede consultar los descargos
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
@@ -422,7 +423,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         ):
             if socio is None:
                 return False
-            vigente = next((d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk), None)
+            vigente = next(
+                (d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk), None
+            )
             if vigente:
                 return True
             return bool(obj.descargo_presentado and obj.socio_id == socio.pk)
@@ -699,9 +702,7 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     """Payload de la decisión del miembro del TD sobre una causal T02."""
 
     decision = serializers.ChoiceField(choices=[(d.value, d.value) for d in CausalDecision])
-    puntaje_final = serializers.CharField(
-        required=False, allow_null=True, allow_blank=True
-    )
+    puntaje_final = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     fundamento = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -1043,6 +1044,13 @@ class EmitirT01Serializer(serializers.Serializer):
                 logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
 
         solicitud.save()
+        if solicitud.expediente_id:
+            from expedientes.services.tribunal_composition_service import (
+                TribunalCompositionService,
+            )
+
+            # El solicitante también es parte interesada (Art. 24 RPD).
+            TribunalCompositionService.notify_if_ad_hoc(solicitud.expediente)
         return solicitud
 
 

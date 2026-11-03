@@ -791,6 +791,42 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ---
 
+### 4.2.1. Dinámica Institucional de Promociones (Grupos vs. Años Sociales)
+
+* **Fundamento Histórico y Conceptual (Fundación 1965):**
+  En A.V.E.I.T. (fundada en 1965), la organización societaria opera bajo la dinámica de **promociones anuales fijas (Grupos)**, análoga a las promociones o cohortes de los colegios secundarios.
+  Cada socio ingresa formando parte de un **Grupo Social identitario (Gxx)** que conserva de por vida su número correlativo (ej. G58, G59, G60).
+  
+* **Relación Dinámica entre Año Calendario, Grupo y Año Social:**
+  El **Año Social (1.º a 6.º)** no es un atributo estático del socio, sino una posición relativa que avanza un año en cada ciclo lectivo anual.
+  Se estandariza la **fórmula canónica de cómputo temporal**:
+
+  \\text{Año Social} = (\\text{Año Actual} - 1962) - \\text{Número de Grupo}
+
+  \\text{Número de Grupo} = (\\text{Año Actual} - 1962) - \\text{Año Social}
+
+* **Composición y Categorías en el Ciclo Lectivo Vigente (2026):**
+  | Grupo | Año Social | Categoría Estatutaria | Estado y Rol Asociativo |
+  | :---: | :---: | :---: | :--- |
+  | **G58** | **6.º año social** | **Seniors mayores** | Máxima jerarquía activa estudiantil; preparan su viaje de estudios a Europa. Al año siguiente (2027) pasan a ser **Exviajeros**. |
+  | **G59** | **5.º año social** | **Seniors** | Socios con plenos derechos estatutarios, elegibles para Comisión Directiva y Tribunal de Disciplina. |
+  | **G60** | **4.º año social** | **Seniors** | Socios plenamente incorporados a subcomisiones y conducción asociativa. |
+  | **G61** | **3.er año social** | **Seniors** | Socios avanzados que completaron las obligaciones del ciclo inicial (Art. 4 Estatuto). |
+  | **G62** | **2.º año social** | **Juniors** | Etapa formativa institucional. |
+  | **G63** | **1.er año social** | **Juniors** | Promoción ingresante del ciclo actual. |
+
+* **Transición Anual de Ciclo (Avance de Cohortes):**
+  Al comenzar un nuevo ciclo institucional (ej. 2027):
+  - El grupo de 6.º año (**G58**) viaja por Europa y adquiere el estado de **Exviajeros** (año social 0 o pasivo).
+  - La promoción **G59** pasa a ser el 6.º año social.
+  - La promoción **G60** avanza a 5.º año social.
+  - La promoción **G61** avanza a 4.º año social.
+  - La promoción **G62** avanza a 3.er año social (ingresando al estamento Senior).
+  - La promoción **G63** avanza a 2.º año social.
+  - Ingresa la cohorte más joven como 1.er año social (**G64** en 2027).
+
+---
+
 ### 4.3. Ficha Técnica: `EstadoSocio`
 * **Patrón ASI:** Catálogo de Estados (State Pattern).
 * **Propósito:** Catálogo maestro de los estados posibles en el ciclo de vida de un socio en AVEIT.

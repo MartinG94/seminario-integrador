@@ -156,6 +156,17 @@ describe('ExpedienteApiService', () => {
     expect(versiones[0].numero).toBe(1);
   });
 
+  describe('Tribunal de la causa (S4-04)', () => {
+    const base = `${environment.apiUrl}/expedientes/12`;
+
+    it('consulta la composición de la causa', () => {
+      service.obtenerComposicionTribunal(12).subscribe(c => expect(c.asientos.length).toBe(3));
+      const req = http.expectOne(`${base}/composicion/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ asientos: [{}, {}, {}] });
+    });
+  });
+
   describe('apelación y adecuación del T01 (PB-02)', () => {
     const base = `${environment.apiUrl}/expedientes`;
 

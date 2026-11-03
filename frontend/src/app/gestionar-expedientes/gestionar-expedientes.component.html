@@ -340,6 +340,16 @@
       </div>
 
       <div class="card-body modal-detalle-body">
+        <div *ngIf="usuarioInvolucrado" class="alert alert-warning d-flex align-items-start banner-involucrado" role="alert">
+          <i class="material-icons mr-2" aria-hidden="true">warning</i>
+          <span><strong>Participación restringida:</strong> Sos parte interesada en este expediente (imputado o solicitante).
+            Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del Estatuto y Art. 24 del Reglamento Procesal.</span>
+        </div>
+        <!-- Caso crítico del Art. 95: se avisó a CD para convocar a Asamblea General (S4-04) -->
+        <p *ngIf="composicion?.requiere_ad_hoc" class="mt-3 small text-muted aviso-asamblea" role="status">
+          <i class="material-icons" aria-hidden="true" style="font-size: 16px; vertical-align: middle;">info</i>
+          Causa derivada a Comisión Directiva para su tratamiento en Asamblea General (Art. 95 del Estatuto).
+        </p>
         <div class="row metadatos-row">
           <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
           <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">

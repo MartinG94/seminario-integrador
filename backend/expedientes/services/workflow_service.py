@@ -16,6 +16,7 @@ from expedientes.models import (
     ExpedienteNumberSequence,
     UrgenciaExpedienteEnum,
 )
+from expedientes.services.tribunal_composition_service import TribunalCompositionService
 from socios.models import Socio
 
 
@@ -69,6 +70,7 @@ class ExpedienteWorkflowService:
             actor=actor,
             motivo=motivo.strip(),
         )
+        TribunalCompositionService.notify_if_ad_hoc(expediente)
         return expediente
 
     @classmethod
@@ -109,6 +111,10 @@ class ExpedienteWorkflowService:
                     )
                 }
             )
+
+        if estado_nuevo == EstadoExpedienteEnum.PENDIENTE_CORREOS:
+            # Adoptar la resolución estampa los responsables no involucrados (Art. 95).
+            TribunalCompositionService.stamp_for_resolution(expediente)
 
         estado_anterior = expediente.estado
         expediente.estado = estado_nuevo
