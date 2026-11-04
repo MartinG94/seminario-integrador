@@ -19,6 +19,7 @@ from expedientes.domain.descargo_rules import (
     descargo_text_too_long_message,
 )
 from expedientes.models import (
+    ConceptoExpedienteEnum,
     DecisionCausalDescargo,
     DecisionCausalEnum,
     DescargoExpediente,
@@ -222,6 +223,10 @@ def _serializar_socio_involucrado(
 
 
 def _obtener_titulo_expediente(obj: Expediente) -> str:
+    titulo_directo = getattr(obj, "titulo", None)
+    if titulo_directo and str(titulo_directo).strip():
+        return str(titulo_directo).strip()
+
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
         if solicitud and getattr(solicitud, "titulo", None) and solicitud.titulo.strip():
@@ -296,6 +301,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     reglamento_asociado = serializers.SerializerMethodField()
     reglamentos_respaldantes = serializers.SerializerMethodField()
     puntaje_solicitado = serializers.SerializerMethodField()
@@ -317,7 +323,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     evidencias = serializers.SerializerMethodField()
     descargos = serializers.SerializerMethodField()
     es_t01 = serializers.SerializerMethodField()
-    puntaje_solicitado = serializers.SerializerMethodField()
+    es_felicitacion = serializers.SerializerMethodField()
+    es_llamado = serializers.SerializerMethodField()
+    justificacion_aprobada = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -330,9 +338,14 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "reglamento_asociado",
             "reglamentos_respaldantes",
             "puntos",
+            "es_felicitacion",
+            "es_llamado",
+            "justificacion_aprobada",
             "estado",
             "urgencia",
             "urgencia_display",
+            "concepto",
+            "concepto_display",
             "socio_nombre",
             "socio_legajo",
             "creador",
@@ -358,6 +371,31 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "es_t01",
             "puntaje_solicitado",
         ]
+
+    def get_es_felicitacion(self, obj: Expediente) -> bool:
+        try:
+            return abs(float(obj.puntos) - 0.33) < 0.01
+        except (TypeError, ValueError):
+            return False
+
+    def get_es_llamado(self, obj: Expediente) -> bool:
+        try:
+            return abs(float(obj.puntos) - (-0.33)) < 0.01
+        except (TypeError, ValueError):
+            return False
+
+    def get_justificacion_aprobada(self, obj: Expediente) -> bool:
+        for d in obj.descargos.all():
+            for dec in d.decisiones_causal.all():
+                if dec.decision == DecisionCausalEnum.ACCEPTED:
+                    return True
+        if (
+            obj.descargo_presentado
+            and obj.estado == EstadoExpedienteEnum.EMITIDO
+            and obj.puntos < 0
+        ):
+            return True
+        return False
 
     def get_socio_nombre(self, obj: Expediente) -> str:
         return f"{obj.socio.first_name} {obj.socio.last_name}"
@@ -442,7 +480,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             if socio is None:
                 return False
             vigente = next(
-                (d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk), None
+                (d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk),
+                None,
             )
             if vigente:
                 return True
@@ -1115,6 +1154,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
@@ -1149,6 +1189,8 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "estado_display",
             "urgencia",
             "urgencia_display",
+            "concepto",
+            "concepto_display",
             "puntos",
             "created_at",
             "plazo_limite_at",
@@ -1207,9 +1249,17 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
 
 class UpdateUrgenciaExpedienteSerializer(serializers.Serializer):
-    """Payload para actualizar el nivel de urgencia de un expediente."""
+    """Payload para actualizar el nivel de urgencia o concepto de un expediente."""
 
-    urgencia = serializers.ChoiceField(choices=UrgenciaExpedienteEnum.choices)
+    urgencia = serializers.ChoiceField(choices=UrgenciaExpedienteEnum.choices, required=False)
+    concepto = serializers.ChoiceField(
+        choices=ConceptoExpedienteEnum.choices, required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        if "urgencia" not in attrs and "concepto" not in attrs:
+            raise serializers.ValidationError("Debe proporcionar al menos 'urgencia' o 'concepto'.")
+        return attrs
 
 
 class TransicionarExpedienteSerializer(serializers.Serializer):

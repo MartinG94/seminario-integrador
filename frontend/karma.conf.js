@@ -1,5 +1,4 @@
-// Karma configuration file, see link for more information
-// https://karma-runner.github.io/0.13/config/configuration-file.html
+process.env.CHROME_BIN = process.env.CHROME_BIN || '/usr/bin/chromium';
 
 module.exports = function (config) {
   config.set({
@@ -40,6 +39,10 @@ module.exports = function (config) {
     autoWatch: true,
     browsers: ['Chrome'],
     customLaunchers: {
+      ChromeHeadless: {
+        base: 'Chrome',
+        flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions', '--remote-debugging-port=9222']
+      },
       ChromeHeadlessNoSandbox: {
         base: 'Chrome',
         flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions', '--remote-debugging-port=9222']

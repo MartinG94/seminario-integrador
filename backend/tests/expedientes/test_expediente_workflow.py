@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 from expedientes.models import (
     CambioEstadoExpediente,
     ComposicionTribunal,
+    ConceptoExpedienteEnum,
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
@@ -379,6 +380,10 @@ class TestExpedienteWorkflow:
             EstadoExpedienteEnum.EMITIDO,
         ]
         for state in states:
+            if state == EstadoExpedienteEnum.EMITIDO:
+                Expediente.objects.filter(pk=created["id"]).update(
+                    concepto=ConceptoExpedienteEnum.CD
+                )
             response = api_client.post(
                 f"/api/v1/expedientes/{created['id']}/estado/",
                 {"estado": state, "motivo": f"Avance a {state}"},
