@@ -9,6 +9,7 @@ Implementa:
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -644,6 +645,11 @@ class SolicitudT01(models.Model):
         SANCTION = "SANCTION", "Sanción"
         MERIT = "MERIT", "Mérito"
 
+    class PuntajeEspecial(models.TextChoices):
+        NINGUNO = "", "Sin puntaje especial"
+        LLAMADO_ATENCION = "LLAMADO_ATENCION", "Llamado de Atención"
+        FELICITACION = "FELICITACION", "Felicitación"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.DRAFT)
     solicitante = models.ForeignKey("socios.Socio", on_delete=models.PROTECT)
@@ -659,6 +665,12 @@ class SolicitudT01(models.Model):
     titulo = models.CharField(max_length=255, blank=True, default="")
     causal = models.CharField(max_length=255, blank=True)
     puntos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    puntaje_especial = models.CharField(
+        max_length=20,
+        choices=PuntajeEspecial.choices,
+        blank=True,
+        default="",
+    )
     motivo = models.TextField(blank=True)
     razon = models.TextField(blank=True, default="")
     reglamentos_respaldantes = models.JSONField(default=list, blank=True)
@@ -698,6 +710,16 @@ class SolicitudT01(models.Model):
                 raise ValidationError({"puntos": "Una sanción debe tener puntos negativos."})
             if self.tipo_accion == self.TipoAccion.MERIT and self.puntos <= 0:
                 raise ValidationError({"puntos": "Un mérito debe tener puntos positivos."})
+        if self.puntaje_especial:
+            if self.puntaje_especial == self.PuntajeEspecial.LLAMADO_ATENCION:
+                if self.puntos != Decimal("-0.25") or self.tipo_accion != self.TipoAccion.SANCTION:
+                    msg = "Llamado de atención requiere puntos=-0.25 y tipo=SANCTION."
+                    raise ValidationError({"puntaje_especial": msg})
+            elif self.puntaje_especial == self.PuntajeEspecial.FELICITACION:
+                if self.puntos != Decimal("0.25") or self.tipo_accion != self.TipoAccion.MERIT:
+                    raise ValidationError(
+                        {"puntaje_especial": "Felicitación requiere puntos=0.25 y tipo=MERIT."}
+                    )
 
     def delete(self, *args, **kwargs):
         if self.estado == self.Estado.ISSUED:
@@ -709,6 +731,11 @@ class SolicitudT01(models.Model):
             previous = type(self).objects.filter(pk=self.pk).values("estado").first()
             if previous and previous["estado"] == self.Estado.ISSUED:
                 raise ValidationError("Una solicitud emitida es inmutable.")
+        if self.puntos == Decimal("-0.25") and not self.puntaje_especial:
+            self.puntaje_especial = self.PuntajeEspecial.LLAMADO_ATENCION
+        elif self.puntos == Decimal("0.25") and not self.puntaje_especial:
+            self.puntaje_especial = self.PuntajeEspecial.FELICITACION
+
         # Sincronización bidireccional retrocompatible
         if self.destinatarios_socios_ids and not self.destinatario_socio_id:
             self.destinatario_socio_id = self.destinatarios_socios_ids[0]
