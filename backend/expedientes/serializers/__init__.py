@@ -41,6 +41,7 @@ from expedientes.serializers.evento_serializers import (
     RegistroApercibimientoSerializer,
     ReportarAsistenciaSerializer,
 )
+from expedientes.serializers.reglamento_serializers import ArticuloReglamentoSerializer
 from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
 from padron.factory import get_padron_repository
@@ -303,6 +304,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     reglamento_asociado = serializers.SerializerMethodField()
     reglamentos_respaldantes = serializers.SerializerMethodField()
+    puntaje_solicitado = serializers.SerializerMethodField()
     descargo_presentado = serializers.SerializerMethodField()
     descargo_tipo = serializers.SerializerMethodField()
     descargo_causal = serializers.SerializerMethodField()
@@ -350,6 +352,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "solicitante",
             "socios",
             "cantidad_socios",
+            "puntaje_solicitado",
             "subcomision",
             "plazo_inicio_at",
             "plazo_limite_at",
@@ -366,6 +369,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "evidencias",
             "descargos",
             "es_t01",
+            "puntaje_solicitado",
         ]
 
     def get_es_felicitacion(self, obj: Expediente) -> bool:
@@ -418,6 +422,19 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
     def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
         return _obtener_reglamentos_respaldantes(obj)
+
+    def get_puntaje_solicitado(self, obj: Expediente) -> str | None:
+        if obj.puntos == Decimal("-0.25"):
+            return "LLAMADO_ATENCION"
+        if obj.puntos == Decimal("0.25"):
+            return "FELICITACION"
+        try:
+            solicitud = getattr(obj, "solicitud_t01", None)
+            if solicitud and solicitud.puntaje_especial:
+                return solicitud.puntaje_especial
+        except Exception:
+            pass
+        return None
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
         descargos = [d for d in obj.descargos.all() if d.es_vigente]
@@ -882,6 +899,10 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
         required=False,
         default=UrgenciaExpedienteEnum.NORMAL,
     )
+    tipo_accion = serializers.ChoiceField(
+        choices=SolicitudT01.TipoAccion.choices,
+        required=False,
+    )
 
     class Meta:
         model = SolicitudT01
@@ -922,8 +943,28 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if self.instance and self.instance.estado == SolicitudT01.Estado.ISSUED:
             raise serializers.ValidationError("Una solicitud emitida es inmutable.")
+        puntaje_esp = attrs.get("puntaje_especial", getattr(self.instance, "puntaje_especial", ""))
         puntos = attrs.get("puntos", getattr(self.instance, "puntos", None))
         accion = attrs.get("tipo_accion", getattr(self.instance, "tipo_accion", None))
+
+        if puntaje_esp:
+            if puntaje_esp == SolicitudT01.PuntajeEspecial.LLAMADO_ATENCION:
+                attrs["puntos"] = Decimal("-0.25")
+                attrs["tipo_accion"] = SolicitudT01.TipoAccion.SANCTION
+            elif puntaje_esp == SolicitudT01.PuntajeEspecial.FELICITACION:
+                attrs["puntos"] = Decimal("0.25")
+                attrs["tipo_accion"] = SolicitudT01.TipoAccion.MERIT
+            puntos = attrs["puntos"]
+            accion = attrs["tipo_accion"]
+        elif puntos == Decimal("-0.25"):
+            attrs["puntaje_especial"] = SolicitudT01.PuntajeEspecial.LLAMADO_ATENCION
+            attrs["tipo_accion"] = SolicitudT01.TipoAccion.SANCTION
+            accion = attrs["tipo_accion"]
+        elif puntos == Decimal("0.25"):
+            attrs["puntaje_especial"] = SolicitudT01.PuntajeEspecial.FELICITACION
+            attrs["tipo_accion"] = SolicitudT01.TipoAccion.MERIT
+            accion = attrs["tipo_accion"]
+
         if puntos is not None and accion:
             if accion == SolicitudT01.TipoAccion.SANCTION and puntos >= Decimal("0"):
                 raise serializers.ValidationError({"puntos": "La sanción debe ser negativa."})
@@ -1006,6 +1047,7 @@ class EmitirT01Serializer(serializers.Serializer):
             "urgencia": solicitud.urgencia,
             "causal": solicitud.causal,
             "puntos": str(solicitud.puntos),
+            "puntaje_especial": solicitud.puntaje_especial,
             "motivo": solicitud.motivo,
             "titulo": solicitud.titulo,
             "razon": solicitud.razon,
@@ -1068,22 +1110,28 @@ class EmitirT01Serializer(serializers.Serializer):
             from expedientes.services.workflow_service import ExpedienteWorkflowService
 
             actor_name = getattr(solicitud.solicitante, "legajo", str(solicitud.solicitante_id))
-            try:
-                motivo_apertura = (
-                    solicitud.motivo or solicitud.titulo or "Apertura formal por Formulario T01"
-                )
-                expediente = ExpedienteWorkflowService.open_expediente(
-                    motivo=motivo_apertura,
-                    socio_ids=resolved_socio_ids,
-                    actor=f"SOLICITANTE_{actor_name}",
-                    urgencia=solicitud.urgencia,
-                    points=solicitud.puntos,
-                )
-                solicitud.expediente = expediente
-            except Exception:
-                logger.exception("Error al abrir formalmente el expediente desde SolicitudT01")
+            motivo_apertura = (
+                solicitud.motivo or solicitud.titulo or "Apertura formal por Formulario T01"
+            )
+            titulo_apertura = (solicitud.titulo or motivo_apertura).strip()
+            expediente = ExpedienteWorkflowService.open_expediente(
+                motivo=motivo_apertura,
+                titulo=titulo_apertura,
+                socio_ids=resolved_socio_ids,
+                actor=f"SOLICITANTE_{actor_name}",
+                urgencia=solicitud.urgencia,
+                points=solicitud.puntos,
+            )
+            solicitud.expediente = expediente
 
         solicitud.save()
+        if solicitud.expediente_id:
+            from expedientes.services.tribunal_composition_service import (
+                TribunalCompositionService,
+            )
+
+            # El solicitante también es parte interesada (Art. 24 RPD).
+            TribunalCompositionService.notify_if_ad_hoc(solicitud.expediente)
         return solicitud
 
 
@@ -1101,6 +1149,8 @@ ALLOWED_TRANSITIONS: dict[str, list[str]] = {
 
 class BoardExpedienteSerializer(serializers.ModelSerializer):
     """Tarjeta compacta de expediente para el tablero Kanban del TD (S2-05 CA1 / S3-07)."""
+
+    puntaje_solicitado = serializers.SerializerMethodField()
 
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
@@ -1146,6 +1196,7 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "plazo_limite_at",
             "transiciones_permitidas",
             "cantidad_socios",
+            "puntaje_solicitado",
         ]
 
     def get_socio_nombre(self, obj: Expediente) -> str:
@@ -1179,6 +1230,19 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
 
     def get_reglamentos_respaldantes(self, obj: Expediente) -> list[str]:
         return _obtener_reglamentos_respaldantes(obj)
+
+    def get_puntaje_solicitado(self, obj: Expediente) -> str | None:
+        if obj.puntos == Decimal("-0.25"):
+            return "LLAMADO_ATENCION"
+        if obj.puntos == Decimal("0.25"):
+            return "FELICITACION"
+        try:
+            solicitud = getattr(obj, "solicitud_t01", None)
+            if solicitud and solicitud.puntaje_especial:
+                return solicitud.puntaje_especial
+        except Exception:
+            pass
+        return None
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])
@@ -1237,6 +1301,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             "estado",
             "tipo_accion",
             "puntos",
+            "puntaje_especial",
             "titulo",
             "motivo",
             "causal",
@@ -1412,6 +1477,7 @@ class CalcularPlazoSerializer(serializers.Serializer):
 
 
 __all__ = [
+    "ArticuloReglamentoSerializer",
     "AsistenciaEventoBulkUpdateSerializer",
     "AsistenciaEventoSerializer",
     "AsistenciaItemInputSerializer",

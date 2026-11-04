@@ -42,6 +42,7 @@ from expedientes.permissions import (
     CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
+    IsNotInvolvedInExpediente,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
@@ -89,11 +90,21 @@ from expedientes.services.t01_appeal_service import (
     T01AppealService,
     T01AppealStateError,
 )
+from expedientes.services.tribunal_composition_service import (
+    TribunalCompositionError,
+    TribunalCompositionNotFound,
+    TribunalCompositionService,
+)
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
     EventoInstitucionalViewSet,
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
+)
+from expedientes.views.reglamento_views import (
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
+    ReglamentosVigentesView,
 )
 from expedientes.views.reportes_views import (
     ReportesExportCSVView,
@@ -180,7 +191,7 @@ class ExpedienteCollectionView(APIView):
 
 
 class TransicionExpedienteView(APIView):
-    permission_classes = [CanTransitionExpedientes]
+    permission_classes = [CanTransitionExpedientes, IsNotInvolvedInExpediente]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = TransicionExpedienteSerializer(data=request.data)
@@ -730,7 +741,11 @@ class DecisionCausalView(APIView):
 
     def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
-            return [permissions.IsAuthenticated(), CanResolveCausal()]
+            return [
+                permissions.IsAuthenticated(),
+                CanResolveCausal(),
+                IsNotInvolvedInExpediente(),
+            ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
     def get(self, request: Request, pk: int, descargo_id: int) -> Response:
@@ -762,6 +777,24 @@ class DecisionCausalView(APIView):
         except CausalResolutionValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
+def _composition_error_response(exc: TribunalCompositionError) -> Response:
+    if isinstance(exc, TribunalCompositionNotFound):
+        raise NotFound(str(exc)) from exc
+    return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ComposicionTribunalView(APIView):
+    """Responsables del Tribunal que interviene en la causa (S4-04): TD, CD y Administrador."""
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def get(self, request: Request, pk: int) -> Response:
+        try:
+            return Response(TribunalCompositionService.describe(pk, request.user))
+        except TribunalCompositionError as exc:
+            return _composition_error_response(exc)
 
 
 def _t01_error_response(exc: T01AppealError) -> Response:
@@ -978,15 +1011,6 @@ REGLAMENTOS_VIGENTES = (
 )
 
 
-class ReglamentosVigentesView(APIView):
-    """Lista de reglamentos institucionales vigentes para respaldar un T01."""
-
-    permission_classes = (CanCreateT01,)
-
-    def get(self, request):
-        return Response({"reglamentos": list(REGLAMENTOS_VIGENTES)})
-
-
 class SolicitudT01CreateView(APIView):
     permission_classes = (CanCreateT01,)
 
@@ -1072,7 +1096,11 @@ class TransicionarExpedienteView(APIView):
     Delega estrictamente en ExpedienteWorkflowService.transition().
     """
 
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         # Aceptar tanto to_status/justificacion como estado/motivo

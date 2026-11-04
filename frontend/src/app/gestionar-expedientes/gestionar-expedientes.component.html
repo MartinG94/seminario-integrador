@@ -318,8 +318,19 @@
 </div>
 
 <!-- Modal 1: Detalle Completo del Expediente -->
-<div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom">
-  <div class="modal-dialog-custom modal-dialog-tribunal">
+<div *ngIf="modalDetalleAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card modal-detalle-card" *ngIf="expedienteSeleccionado">
       <!-- Cabecera del Modal 1 -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
@@ -339,7 +350,17 @@
         </button>
       </div>
 
-      <div class="card-body modal-detalle-body">
+      <div class="card-body modal-detalle-body" tabindex="-1">
+        <div *ngIf="usuarioInvolucrado" class="alert alert-warning d-flex align-items-start banner-involucrado" role="alert">
+          <i class="material-icons mr-2" aria-hidden="true">warning</i>
+          <span><strong>Participación restringida:</strong> Sos parte interesada en este expediente (imputado o solicitante).
+            Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del Estatuto y Art. 24 del Reglamento Procesal.</span>
+        </div>
+        <!-- Caso crítico del Art. 95: se avisó a CD para convocar a Asamblea General (S4-04) -->
+        <p *ngIf="composicion?.requiere_ad_hoc" class="mt-3 small text-muted aviso-asamblea" role="status">
+          <i class="material-icons" aria-hidden="true" style="font-size: 16px; vertical-align: middle;">info</i>
+          Causa derivada a Comisión Directiva para su tratamiento en Asamblea General (Art. 95 del Estatuto).
+        </p>
         <div class="row metadatos-row">
           <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
           <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
@@ -393,28 +414,16 @@
             </div>
           </div>
 
-          <!-- Fila 3: Sección Reglamentación -->
+          <!-- Fila 3: Sección Reglamentación (Tabla Normativa) -->
           <div class="col-12 mb-3">
-            <span class="text-muted small font-weight-bold d-block mb-1">Reglamentación:</span>
-            <div class="reglamentacion-box p-2 rounded border">
-              <ng-container *ngIf="getReglamentosSustento(expedienteSeleccionado) as reglamentos">
-                <div *ngIf="reglamentos.length === 1">
-                  <span class="font-weight-bold text-primary">{{reglamentos[0]}}</span>
-                </div>
-                <div *ngIf="reglamentos.length > 1">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span class="font-weight-bold text-primary">{{reglamentos[0]}} ({{reglamentos.length}} reglamentos)</span>
-                    <button type="button" class="btn btn-sm btn-link p-0 text-primary toggle-reglamento-btn" (click)="toggleReglamentacion()">
-                      {{reglamentacionExpandida ? 'Ocultar detalle' : 'Ver detalle reglamentario'}}
-                    </button>
-                  </div>
-                  <ul *ngIf="reglamentacionExpandida" class="list-unstyled mt-2 mb-0 pl-2 border-top pt-2">
-                    <li *ngFor="let reg of reglamentos" class="text-dark small py-1">
-                      &bull; {{reg}}
-                    </li>
-                  </ul>
-                </div>
-              </ng-container>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted small font-weight-bold">Reglamentación:</span>
+            </div>
+            <div class="reglamentacion-box">
+              <app-tabla-reglamentos
+                *ngIf="getReglamentosSustentoCitas(expedienteSeleccionado) as citas"
+                [articulos]="citas">
+              </app-tabla-reglamentos>
             </div>
           </div>
 
@@ -534,14 +543,25 @@
 </div>
 
 <!-- Modal 2: Emitir Resolución -->
-<div *ngIf="modalVotacionAbierto" class="modal-backdrop-custom">
-  <div class="modal-dialog-custom">
+<div *ngIf="modalVotacionAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-warning">
         <h4 class="card-title">Emitir Resolución</h4>
         <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <div class="alert alert-warning">
           <i class="material-icons" style="vertical-align: middle;">info</i>
           <span>La resolución exige mayoría absoluta del cuerpo colegiado (&ge; 2/3 de votos favorables).</span>
@@ -560,6 +580,62 @@
           <label class="font-weight-bold text-dark">Vistos y Considerandos Institucionales:</label>
           <textarea class="form-control" rows="3" [(ngModel)]="considerandosTexto"></textarea>
         </div>
+
+        <!-- Reglamentos / Artículos respaldantes del dictamen -->
+        <div class="form-group mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="font-weight-bold text-dark mb-0">
+              Reglamentos / Artículos respaldantes del dictamen:
+            </label>
+            <span class="badge badge-info" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
+              {{ reglamentosSeleccionadosResolucion.length }} {{ reglamentosSeleccionadosResolucion.length === 1 ? 'artículo seleccionado' : 'artículos seleccionados' }}
+            </span>
+          </div>
+
+          <!-- Buscador reactivo para reglamentos del dictamen -->
+          <div class="input-group mb-2">
+            <div class="input-group-prepend">
+              <span class="input-group-text"><i class="material-icons">search</i></span>
+            </div>
+            <input type="text"
+                   class="form-control"
+                   placeholder="Buscar artículos o incisos vigentes para respaldar el dictamen..."
+                   [(ngModel)]="filtroReglamentosResolucion">
+            <div class="input-group-append" *ngIf="filtroReglamentosResolucion">
+              <button class="btn btn-outline-secondary" type="button" (click)="filtroReglamentosResolucion = ''" title="Limpiar filtro">
+                <i class="material-icons" style="font-size: 16px;">clear</i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Badges de artículos seleccionados con opción para remover -->
+          <div class="d-flex flex-wrap align-items-center mb-2" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
+            <span *ngFor="let reg of reglamentosSeleccionadosResolucion" 
+                  class="badge badge-info mr-1 mb-1 p-2 d-inline-flex align-items-center text-wrap" 
+                  style="font-size: 0.85rem; max-width: 100%;">
+              <span>{{ reg }}</span>
+              <button type="button" 
+                      class="btn btn-link text-white p-0 ml-1" 
+                      (click)="removerReglamentoResolucion(reg)" 
+                      title="Quitar artículo">
+                <i class="material-icons" style="font-size: 14px; vertical-align: middle;">close</i>
+              </button>
+            </span>
+          </div>
+
+          <!-- Selector múltiple de artículos vigentes -->
+          <select class="form-control"
+                  multiple
+                  [(ngModel)]="reglamentosSeleccionadosResolucion"
+                  style="min-height: 110px;">
+            <option *ngFor="let reg of reglamentosResolucionFiltrados" [ngValue]="reg">
+              {{ reg }}
+            </option>
+          </select>
+          <small class="form-text text-muted">
+            Mantené presionado Ctrl (o Cmd) para seleccionar o deseleccionar varios artículos e incisos.
+          </small>
+        </div>
       </div>
       <div class="card-footer d-flex justify-content-end gap-2">
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cancelar</button>
@@ -572,14 +648,25 @@
 </div>
 
 <!-- Modal 3: Firmar Resolución -->
-<div *ngIf="modalFirmaAbierto" class="modal-backdrop-custom">
-  <div class="modal-dialog-custom">
+<div *ngIf="modalFirmaAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-success">
         <h4 class="card-title">Firmar Resolución</h4>
         <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <div class="alert alert-info">
           <i class="material-icons" style="vertical-align: middle;">lock</i>
           <span>La resolución aprobada requiere la firma sucesiva de los 3 miembros del Tribunal. Se generará sello temporal criptográfico SHA-256.</span>
@@ -615,14 +702,25 @@
 </div>
 
 <!-- Modal 4: Socios Involucrados (S3-08) -->
-<div *ngIf="modalSociosAbierto" class="modal-backdrop-custom">
-  <div class="modal-dialog-custom">
+<div *ngIf="modalSociosAbierto"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info">
         <h4 class="card-title">Socios Involucrados</h4>
         <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}}</p>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <p class="text-muted small mb-3">
           Socios involucrados en el expediente <strong>{{formatCaseNumber(expedienteSeleccionado.numero)}}</strong>:
         </p>
@@ -655,8 +753,19 @@
 </div>
 
 <!-- Modal 5: Ver Resolución Oficial (Lectura) -->
-<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom modal-resolucion-backdrop">
-  <div class="modal-dialog-custom modal-dialog-tribunal">
+<div *ngIf="modalResolucionAbierto"
+     class="modal-backdrop-custom modal-resolucion-backdrop"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info d-flex justify-content-between align-items-center">
         <h4 class="card-title mb-0">Resolución Oficial — {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
@@ -664,7 +773,7 @@
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <div class="alert alert-info py-2">
           <i class="material-icons" style="vertical-align: middle;">verified</i>
           <span>Resolución firme debidamente emitida y registrada por el Tribunal de Disciplina.</span>
@@ -697,8 +806,19 @@
 </div>
 
 <!-- Modal 6: Ver Descargo Individual -->
-<div *ngIf="modalDescargoAbierto" class="modal-backdrop-custom modal-descargo-backdrop">
-  <div class="modal-dialog-custom modal-dialog-tribunal">
+<div *ngIf="modalDescargoAbierto"
+     class="modal-backdrop-custom modal-descargo-backdrop"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModales()"
+     (keydown.escape)="cerrarModales()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="involucradoSeleccionado && involucradoSeleccionado.descargo as desc">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <h4 class="card-title mb-0 font-weight-bold text-white">
@@ -712,7 +832,7 @@
         </button>
       </div>
 
-      <div class="card-body">
+      <div class="card-body" tabindex="-1">
         <!-- Metadatos del descargo -->
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
           <div>
@@ -805,7 +925,7 @@
           </div>
 
           <div class="mb-3 text-muted small">
-            Puntaje solicitado: <strong class="text-dark">{{expedienteSeleccionado?.puntos || 0}} pts</strong>
+            Puntaje solicitado: <strong class="text-dark">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</strong>
           </div>
 
           <div class="form-group mb-0">

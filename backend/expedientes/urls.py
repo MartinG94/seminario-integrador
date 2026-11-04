@@ -4,10 +4,13 @@ from rest_framework.routers import DefaultRouter
 from expedientes.views import (
     AdecuacionT01View,
     ApelacionT01View,
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
     CaseNotificationAuditView,
+    ComposicionTribunalView,
     DecisionCausalView,
     DescargoVersionesView,
     DispatchCaseOpeningView,
@@ -73,6 +76,16 @@ urlpatterns = [
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
     ),
+    path(
+        "reglamentos/articulos/",
+        ArticuloReglamentoListCreateView.as_view(),
+        name="articulos-reglamento-list-create",
+    ),
+    path(
+        "reglamentos/articulos/<int:pk>/",
+        ArticuloReglamentoDetailView.as_view(),
+        name="articulos-reglamento-detail",
+    ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
     path("reportes/resumen/", ReportesResumenView.as_view(), name="reportes-resumen"),
     path(
@@ -99,6 +112,11 @@ urlpatterns = [
         "<int:pk>/descargos/<int:descargo_id>/decisiones/",
         DecisionCausalView.as_view(),
         name="descargo-decisiones-causal",
+    ),
+    path(
+        "<int:pk>/composicion/",
+        ComposicionTribunalView.as_view(),
+        name="composicion-tribunal",
     ),
     path(
         "<int:pk>/descargo/versiones/",

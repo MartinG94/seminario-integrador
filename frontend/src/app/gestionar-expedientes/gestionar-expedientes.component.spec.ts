@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -16,6 +17,7 @@ import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gesti
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
 import {
+  ComposicionTribunalDTO,
   DecisionCausalDTO,
   DescargoDetalleDTO,
   ExpedienteApiService,
@@ -30,6 +32,7 @@ describe('GestionarExpedientesComponent', () => {
   let dataService: TribunalDataService;
   let httpMock: HttpTestingController;
   let notifications: jasmine.SpyObj<NotificationService>;
+  let expedienteApi: ExpedienteApiService;
 
   const mockBoardResponse: BoardResponseDTO = {
     columns: [
@@ -47,6 +50,7 @@ describe('GestionarExpedientesComponent', () => {
     await TestBed.configureTestingModule({
       imports: [
         CommonModule,
+        ComponentsModule,
         HttpClientTestingModule,
         FormsModule,
         RouterTestingModule,
@@ -71,8 +75,15 @@ describe('GestionarExpedientesComponent', () => {
     authService = TestBed.inject(AuthService);
     dataService = TestBed.inject(TribunalDataService);
     httpMock = TestBed.inject(HttpTestingController);
+    expedienteApi = TestBed.inject(ExpedienteApiService);
 
-    // Mockear la respuesta inicial del tablero
+    // Mockear reglamentos vigentes y tablero inicial
+    spyOn(expedienteApi, 'listarReglamentos').and.returnValue(of({
+      reglamentos: [
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
+        'Estatuto - Art. 25: Deberes y obligaciones de los socios'
+      ]
+    }));
     spyOn(dataService, 'obtenerTablero').and.returnValue(of(mockBoardResponse));
 
     fixture.detectChanges();
@@ -1264,6 +1275,18 @@ describe('GestionarExpedientesComponent', () => {
       api = TestBed.inject(ExpedienteApiService);
       router = TestBed.inject(Router);
       spyOn(authService, 'tieneRol').and.returnValue(true);
+      // Generar y firmar la resolución esperan los responsables calculados (inhibición, S4-04).
+      const composicionLibre: ComposicionTribunalDTO = {
+        estampada: false,
+        estampada_at: null,
+        asientos: [],
+        apartados: [],
+        requiere_ad_hoc: false,
+        motivos_ad_hoc: [],
+        usuario: { esta_involucrado: false }
+      };
+      spyOn(api, 'obtenerComposicionTribunal').and.returnValue(of(composicionLibre));
+      component.composicion = composicionLibre;
     });
 
     it('debe renderizar la cabecera con Exp: <n>/<YYYY>, título centrado y botón de cierre', () => {
@@ -1308,19 +1331,9 @@ describe('GestionarExpedientesComponent', () => {
       expect(motivoBox).toBeTruthy();
       expect(motivoBox.textContent).toContain('Inasistencia no justificada a reunión plenaria');
 
-      // Reglamentación múltiple con toggle
-      const toggleBtn = modal.querySelector('.toggle-reglamento-btn');
-      expect(toggleBtn).toBeTruthy();
-      expect(component.reglamentacionExpandida).toBeFalse();
-
-      toggleBtn.click();
-      fixture.detectChanges();
-      expect(component.reglamentacionExpandida).toBeTrue();
-      expect(modal.textContent).toContain('Reglamento General de Miembros');
-
-      toggleBtn.click();
-      fixture.detectChanges();
-      expect(component.reglamentacionExpandida).toBeFalse();
+      // Reglamentación múltiple (tabla de reglamentos o recuadro normativo)
+      const tablaReg = modal.querySelector('app-tabla-reglamentos, .reglamentacion-box');
+      expect(tablaReg).toBeTruthy();
     });
 
     it('debe mostrar tabla de involucrados con 6 columnas y formatear nombres y grupos', () => {
@@ -1575,6 +1588,130 @@ describe('GestionarExpedientesComponent', () => {
     });
 
   });
+  describe('Tribunal de la causa: inhibición, suplencia y Asamblea (S4-04)', () => {
+    let api: ExpedienteApiService;
+
+    const expediente = {
+      id: '12',
+      numero: 'EXP-0012/2026',
+      socio: 'Ana Pérez',
+      legajo: '76001',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia',
+      fechaCreacion: '2026-10-01',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1
+    } as Expediente;
+
+    const composicion = (cambios: Partial<ComposicionTribunalDTO> = {}): ComposicionTribunalDTO => ({
+      estampada: false,
+      estampada_at: null,
+      asientos: [
+        { anio_social: 4, socio_id: 1, nro_socio: 81004, nombre: 'Giuliano Toselli', grupo: 'G57', condicion: 'TITULAR', firma: '81004 - Giuliano Toselli - G57', reemplaza_a: '' },
+        { anio_social: 5, socio_id: 4, nro_socio: 82005, nombre: 'Abril Gusella', grupo: 'G58', condicion: 'SUPLENTE', firma: '82005 - Abril Gusella - G58 (Sup.)', reemplaza_a: 'Catalina Cerda (N° 81005)' },
+        { anio_social: 6, socio_id: 5, nro_socio: 81006, nombre: 'Candela Moreno', grupo: 'G59', condicion: 'TITULAR', firma: '81006 - Candela Moreno - G59', reemplaza_a: '' }
+      ],
+      apartados: [
+        { socio_id: 3, nro_socio: 81005, nombre: 'Catalina Cerda', anio_social: 5, condicion: 'TITULAR' }
+      ],
+      requiere_ad_hoc: false,
+      motivos_ad_hoc: [],
+      usuario: { esta_involucrado: false },
+      ...cambios
+    });
+
+    const casoCritico = (cambios: Partial<ComposicionTribunalDTO> = {}) => composicion({
+      requiere_ad_hoc: true,
+      motivos_ad_hoc: ['El titular y el suplente del 5.º año están involucrados en la causa (Art. 95 del Estatuto).'],
+      ...cambios
+    });
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(
+        of({ id: 12, numero: 'EXP-0012/2026', estado: 'revision_resolucion', socios: [], descargos: [] })
+      );
+    });
+
+    function abrirComo(rol: string, dto: ComposicionTribunalDTO = composicion()): void {
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+      spyOn(api, 'obtenerComposicionTribunal').and.returnValue(of(dto));
+      component.abrirDetalle(expediente);
+      fixture.detectChanges();
+    }
+
+    const compiled = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+    it('no muestra el panel de responsables ni alertas de integrantes faltantes', () => {
+      abrirComo('TD');
+
+      expect(api.obtenerComposicionTribunal).toHaveBeenCalledWith('12');
+      expect(compiled().querySelector('.panel-composicion')).toBeNull();
+      expect(compiled().textContent).not.toContain('Responsables del Tribunal');
+      expect(compiled().textContent).not.toContain('Falta el suplente');
+    });
+
+    it('no ofrece trámites manuales de apartamiento, ad hoc ni constitución', () => {
+      abrirComo('TD');
+      expect(compiled().querySelector('.btn-apartarme')).toBeNull();
+      expect(compiled().querySelector('.designacion-ad-hoc')).toBeNull();
+      expect(compiled().querySelector('.btn-constituir')).toBeNull();
+    });
+
+    it('un socio sin rol de autoridad no consulta la composición', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(false);
+      spyOn(api, 'obtenerComposicionTribunal');
+      component.abrirDetalle(expediente);
+      expect(api.obtenerComposicionTribunal).not.toHaveBeenCalled();
+    });
+
+    it('avisa si no se pudo cargar la composición', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      spyOn(api, 'obtenerComposicionTribunal').and.returnValue(throwError(() => ({ status: 500 })));
+      component.abrirDetalle(expediente);
+      expect(notifications.error).toHaveBeenCalled();
+      expect(component.composicion).toBeNull();
+    });
+
+    describe('inhibición de involucrados (Art. 95 y Art. 24 RPD)', () => {
+      it('muestra el banner y oculta decisión de justificativos y transición', () => {
+        abrirComo('TD', composicion({ usuario: { esta_involucrado: true } }));
+
+        const banner = compiled().querySelector('.banner-involucrado');
+        expect(banner?.textContent).toContain('Participación restringida');
+        expect(banner?.textContent).toContain('Tu lugar lo ocupa automáticamente tu suplente');
+        expect(component.puedeEvaluarJustificaciones).toBeFalse();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
+        expect(component.puedeGenerarResolucion).toBeFalse();
+        expect(compiled().querySelector('.btn-generar-resolucion')).toBeNull();
+      });
+
+      it('un miembro no involucrado puede evaluar y resolver', () => {
+        abrirComo('TD');
+        expect(compiled().querySelector('.banner-involucrado')).toBeNull();
+        expect(component.puedeEvaluarJustificaciones).toBeTrue();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
+      });
+    });
+
+    describe('Casos críticos del Art. 95', () => {
+      it('muestra el aviso de derivación a Asamblea sin inmovilizar la causa ni pedir un acta', () => {
+        // Decisión del PO (31/10/2026): la Asamblea designa integrantes con rol TD por fuera del sistema.
+        abrirComo('TD', casoCritico());
+        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Asamblea General');
+        expect(compiled().querySelector('.panel-composicion')).toBeNull();
+        expect(compiled().querySelector('input[type="file"]#acta-asamblea')).toBeNull();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
+      });
+
+      it('sin caso crítico no muestra el aviso', () => {
+        abrirComo('TD');
+        expect(compiled().querySelector('.aviso-asamblea')).toBeNull();
+      });
+    });
+  });
 
   describe('Escala discreta de puntajes, llamados, felicitaciones y bloqueo de edición', () => {
     const expEnRevision: Expediente = {
@@ -1686,6 +1823,254 @@ describe('GestionarExpedientesComponent', () => {
       } as any;
       expect(component.getPuntajeFinalInvolucradoDisplay(filaNumPos)).toBe('+1.5');
     });
+  });
+
+  describe('Resolución y reglamentos respaldantes vigentes (Milestone 5)', () => {
+    const crearExpConReglamentos = (): Expediente => ({
+      id: 'EXP-100',
+      numero: 'EXP-0100/2026',
+      socio: 'Lucas Gómez',
+      legajo: '75001',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia a jornada técnica',
+      fechaCreacion: '2026-03-15',
+      estado: 'revision_resolucion',
+      horasRestantes: 48,
+      tipo: 'falta',
+      puntos: -1,
+      reglamentosRespaldantes: [
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'
+      ]
+    });
+
+    it('llama a listarReglamentos() al iniciar y carga reglamentos disponibles', () => {
+      expect(expedienteApi.listarReglamentos).toHaveBeenCalled();
+      expect(component.reglamentosDisponibles.length).toBe(2);
+      expect(component.reglamentosDisponibles[0]).toContain('Reglamento Interno - Art. 12');
+    });
+
+    it('inicializa reglamentosSeleccionadosResolucion con los reglamentos previos al abrir modal de votación', () => {
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+
+      expect(component.modalVotacionAbierto).toBeTrue();
+      expect(component.expedienteSeleccionado).toBe(exp);
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'
+      ]);
+      expect(component.filtroReglamentosResolucion).toBe('');
+    });
+
+    it('inicializa reglamentosSeleccionadosResolucion como array vacío si el expediente no tiene reglamentos previos', () => {
+      const expSinReg = { ...crearExpConReglamentos(), reglamentosRespaldantes: undefined, reglamentos_respaldantes: undefined };
+      component.abrirModalVotacion(expSinReg);
+
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+    });
+
+    it('permite filtrar artículos por texto en el modal de resolución sin deseleccionar los elegidos', () => {
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.filtroReglamentosResolucion = 'Estatuto';
+
+      const filtrados = component.reglamentosResolucionFiltrados;
+      expect(filtrados).toContain('Estatuto - Art. 25: Deberes y obligaciones de los socios');
+      expect(filtrados).toContain('Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión');
+    });
+
+    it('permite alternar y remover artículos de la resolución en el modal', () => {
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      const nuevoArt = 'Estatuto - Art. 25: Deberes y obligaciones de los socios';
+
+      component.toggleReglamentoResolucion(nuevoArt);
+      expect(component.reglamentosSeleccionadosResolucion).toContain(nuevoArt);
+
+      component.removerReglamentoResolucion('Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión');
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([nuevoArt]);
+    });
+
+    it('actualiza los reglamentos respaldantes en el expediente y emite votación en confirmarVotacion', () => {
+      spyOn(dataService, 'votarDictamen').and.callThrough();
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = [
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
+        'Estatuto - Art. 25: Deberes y obligaciones de los socios'
+      ];
+
+      component.confirmarVotacion();
+
+      expect(exp.reglamentosRespaldantes).toEqual([
+        'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
+        'Estatuto - Art. 25: Deberes y obligaciones de los socios'
+      ]);
+      expect(dataService.votarDictamen).toHaveBeenCalledWith(
+        'EXP-100',
+        component.votosJueces,
+        component.considerandosTexto
+      );
+      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Dictamen votado'));
+      expect(component.modalVotacionAbierto).toBeFalse();
+      expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+    });
+
+    it('getReglamentosSustento preserva intactas las citas históricas aunque un artículo subyacente se dé de baja', () => {
+      const expHistorico: Expediente = {
+        id: 'EXP-HIST',
+        numero: 'EXP-0001/2025',
+        socio: 'Socio Histórico',
+        legajo: '70001',
+        subcomision: 'Mantenimiento',
+        motivo: 'Falta histórica',
+        fechaCreacion: '2025-04-10',
+        estado: 'emitido',
+        horasRestantes: 0,
+        tipo: 'falta',
+        puntos: -2,
+        reglamentosRespaldantes: [
+          'Reglamento Interno 2024 - Art. 8 Inc. b (Dado de baja lógica posteriormente)'
+        ]
+      };
+
+      const resultado = component.getReglamentosSustento(expHistorico);
+      expect(resultado).toEqual([
+        'Reglamento Interno 2024 - Art. 8 Inc. b (Dado de baja lógica posteriormente)'
+      ]);
+    });
+
+    it('getReglamentosSustento devuelve el reglamento asociado o valor predeterminado como fallback seguro', () => {
+      const expConAsociado: Expediente = {
+        id: 'EXP-2',
+        numero: 'EXP-0002/2026',
+        socio: 'Socio Test',
+        legajo: '70002',
+        subcomision: 'GVP',
+        motivo: 'Motivo prueba',
+        fechaCreacion: '2026-01-01',
+        estado: 'creado',
+        horasRestantes: 72,
+        tipo: 'falta',
+        puntos: -1,
+        reglamentoAsociado: 'Reglamento Interno - Art. 50'
+      };
+
+      expect(component.getReglamentosSustento(expConAsociado)).toEqual(['Reglamento Interno - Art. 50']);
+      expect(component.getReglamentosSustento(null)).toEqual(['Reglamento Procesal Disciplinario 2026']);
+    });
+
+    it('renderiza chips compactos con cita corta y despliega el texto completo al hacer clic en el modal de detalle', () => {
+      const expMulti: Expediente = {
+        ...crearExpConReglamentos(),
+        reglamentosRespaldantes: [
+          'Estatuto - Art. 14 Inc. a: Deber de asistir a las asambleas.',
+          'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión.'
+        ]
+      };
+      component.abrirDetalle(expMulti);
+      fixture.detectChanges();
+
+      const citas = component.getReglamentosSustentoCitas(expMulti);
+      expect(citas.map(c => c.citaCorta)).toEqual([
+        'Estatuto · Art. 14 Inc. a',
+        'Reglamento Interno · Art. 12'
+      ]);
+
+      component.toggleExpandirChipReglamento(expMulti.reglamentosRespaldantes![0]);
+      fixture.detectChanges();
+      expect(component.reglamentoExpandidoDetalle?.cuerpo).toContain('Deber de asistir a las asambleas.');
+    });
+  });
+
+  describe('Interacción accesible, bloqueo de scroll y foco en modales de expedientes', () => {
+    let expEjemplo: Expediente;
+
+    beforeEach(() => {
+      expEjemplo = {
+        id: 'EXP-10',
+        numero: 'EXP-0010/2026',
+        socio: 'Juan Perez',
+        legajo: '12345',
+        subcomision: 'GVP',
+        motivo: 'Falta disciplinaria',
+        fechaCreacion: '2026-03-01',
+        estado: 'creado',
+        horasRestantes: 72,
+        tipo: 'falta',
+        puntos: -1
+      };
+    });
+
+    it('transfiere el foco al modal al abrirse y lo restaura al elemento disparador al cerrarse', fakeAsync(() => {
+      const botonDisparador = document.createElement('button');
+      document.body.appendChild(botonDisparador);
+      botonDisparador.focus();
+      expect(document.activeElement).toBe(botonDisparador);
+
+      component.abrirDetalle(expEjemplo);
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalDetalleAbierto).toBeTrue();
+      const dialogEl = fixture.nativeElement.querySelector('.modal-dialog-custom') as HTMLElement;
+      expect(dialogEl).toBeTruthy();
+      expect(document.activeElement === dialogEl || dialogEl.contains(document.activeElement)).toBeTrue();
+
+      component.cerrarModales();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(document.activeElement).toBe(botonDisparador);
+      botonDisparador.remove();
+    }));
+
+    it('cierra el modal al hacer clic en el backdrop y permanece abierto al hacer clic dentro del diálogo', fakeAsync(() => {
+      component.abrirDetalle(expEjemplo);
+      fixture.detectChanges();
+      tick();
+
+      const dialogEl = fixture.nativeElement.querySelector('.modal-dialog-custom') as HTMLElement;
+      expect(dialogEl).toBeTruthy();
+      dialogEl.click();
+      fixture.detectChanges();
+      expect(component.modalDetalleAbierto).toBeTrue();
+
+      const backdropEl = fixture.nativeElement.querySelector('.modal-backdrop-custom') as HTMLElement;
+      expect(backdropEl).toBeTruthy();
+      backdropEl.click();
+      fixture.detectChanges();
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+    }));
+
+    it('cierra el modal al presionar Escape y desplaza el cuerpo al presionar flechas', fakeAsync(() => {
+      component.abrirDetalle(expEjemplo);
+      fixture.detectChanges();
+      tick();
+
+      const cardBody = fixture.nativeElement.querySelector('.modal-detalle-body') as HTMLElement;
+      if (cardBody) {
+        let scrollPos = 50;
+        Object.defineProperty(cardBody, 'scrollTop', {
+          get: () => scrollPos,
+          set: (v: number) => { scrollPos = v; },
+          configurable: true
+        });
+        cardBody.scrollTop = 50;
+        const downEv = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+        component.onModalKeydown(downEv);
+        expect(cardBody.scrollTop).toBe(90);
+
+        const upEv = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+        component.onModalKeydown(upEv);
+        expect(cardBody.scrollTop).toBe(50);
+      }
+
+      const escEv = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      component.onModalKeydown(escEv);
+      expect(component.modalDetalleAbierto).toBeFalse();
+    }));
   });
 
 });

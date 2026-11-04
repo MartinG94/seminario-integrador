@@ -1,0 +1,66 @@
+<div class="tabla-reglamentos-container" [class.tabla-compacta]="compacta">
+  <div class="table-responsive" *ngIf="articulos && articulos.length > 0; else emptyState">
+    <table class="table table-sm table-reglamentos-normativa align-middle mb-0">
+      <thead>
+        <tr>
+          <th class="th-documento" scope="col">Documento</th>
+          <th class="th-articulo text-center" scope="col">Art.</th>
+          <th class="th-inciso text-center" scope="col">Inc.</th>
+          <th class="th-cuerpo" scope="col">Cuerpo</th>
+          <th class="th-accion text-right" scope="col" *ngIf="editable">Quitar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let art of articulos; trackBy: trackByRaw" class="fila-articulo">
+          <!-- Documento -->
+          <td class="td-documento">
+            <span class="badge-documento"
+                  [class.badge-doc-estatuto]="art.documento === 'Estatuto'"
+                  [class.badge-doc-interno]="art.documento === 'Reglamento Interno'"
+                  [class.badge-doc-normativa]="art.documento === 'Normativa'">
+              <i class="material-icons badge-doc-icon">
+                {{ art.documento === 'Estatuto' ? 'account_balance' : (art.documento === 'Reglamento Interno' ? 'gavel' : 'menu_book') }}
+              </i>
+              <span class="badge-doc-text">{{ art.documento }}</span>
+            </span>
+          </td>
+
+          <!-- Art. -->
+          <td class="td-articulo text-center tabular-nums font-weight-bold">
+            {{ art.articulo }}
+          </td>
+
+          <!-- Inc. -->
+          <td class="td-inciso text-center tabular-nums">
+            {{ art.inciso }}
+          </td>
+
+          <!-- Cuerpo -->
+          <td class="td-cuerpo">
+            <div class="cuerpo-normativo-text text-dark" [title]="art.cuerpo">
+              {{ art.cuerpo || 'Sin texto normativo cargado' }}
+            </div>
+          </td>
+
+          <!-- Acción Quitar (Editable) -->
+          <td class="td-accion text-right text-nowrap" *ngIf="editable">
+            <button type="button"
+                    class="btn-quitar-art"
+                    (click)="onRemover(art.raw)"
+                    title="Quitar artículo reglamentario"
+                    aria-label="Quitar artículo reglamentario">
+              <i class="material-icons">delete_outline</i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #emptyState>
+    <div class="empty-reglamentos-state p-3 text-center text-muted">
+      <i class="material-icons empty-icon mb-1">menu_book</i>
+      <div class="empty-text small">{{ emptyMessage }}</div>
+    </div>
+  </ng-template>
+</div>

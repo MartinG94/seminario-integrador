@@ -36,6 +36,8 @@ export interface BoardCaseDTO {
   urgencia?: NivelUrgencia;
   urgencia_display?: string;
   puntos: number;
+  puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+  puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   motivo: string;
   titulo?: string;
   razon?: string;
@@ -98,6 +100,9 @@ export interface Expediente {
   esFelicitacion?: boolean;
   esLlamado?: boolean;
   justificacionAprobada?: boolean;
+  puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+  puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+
   cantidadSocios?: number;
   sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;
@@ -569,6 +574,8 @@ export class TribunalDataService {
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',
       puntos: Number(c.puntos),
+      puntaje_solicitado: c.puntaje_solicitado || null,
+      puntajeSolicitado: c.puntaje_solicitado || null,
       cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
       sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
       plazoLimiteAt: c.plazo_limite_at || undefined

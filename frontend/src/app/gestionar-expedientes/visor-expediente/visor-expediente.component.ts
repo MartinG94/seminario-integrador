@@ -16,6 +16,11 @@ import {
 } from '../../services/expediente-api.service';
 import { NotificationService } from '../../services/notification.service';
 import { NivelUrgencia } from '../../services/tribunal-data.service';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../../utils/reglamento-format.util';
 
 @Component({
   selector: 'app-visor-expediente',
@@ -28,6 +33,20 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
   cargando = true;
   errorCarga: string | null = null;
   anexoExpandido = false;
+  reglamentoExpandido: string | null = null;
+
+  get reglamentosCitas(): ReglamentoCiteView[] {
+    return parseReglamentosList(this.visorData?.reglamentos_respaldantes);
+  }
+
+  get reglamentoExpandidoDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandido) return null;
+    return parseReglamentoCite(this.reglamentoExpandido);
+  }
+
+  toggleExpandirReglamento(raw: string): void {
+    this.reglamentoExpandido = this.reglamentoExpandido === raw ? null : raw;
+  }
 
   // Clasificación de concepto institucional (SCRUM-63)
   catalogoConceptos = CATALOGO_CONCEPTOS_EXPEDIENTE;

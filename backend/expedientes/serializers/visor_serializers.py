@@ -114,7 +114,7 @@ def cargar_mapa_grupos() -> dict[str, str]:
 
 
 def obtener_responsables_td() -> list[dict[str, Any]]:
-    """Devuelve la composición canónica oficial de los 3 vocales del TD con cohorte Gxx."""
+    """Devuelve la composición canónica oficial de los 3 miembros del TD con cohorte Gxx."""
     vocales = list(
         Socio.objects.filter(role=Role.TD, is_enabled=True)
         .select_related("subcomision")
@@ -259,7 +259,7 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
             }
         )
 
-    # 4. Decisiones tomadas por vocales sobre causales T02 (S4-02)
+    # 4. Decisiones tomadas por miembros del TD sobre causales T02 (S4-02)
     for dec in expediente.decisiones_causal.all():
         autor_fmt = formatear_actor(dec.autor_legajo)
         fundamento_txt = dec.fundamento or "Sin observaciones"
