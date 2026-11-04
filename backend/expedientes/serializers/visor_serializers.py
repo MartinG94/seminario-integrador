@@ -406,6 +406,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
     reglamentos_respaldantes = serializers.SerializerMethodField()
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     fecha_solicitud = serializers.DateTimeField(source="created_at", read_only=True)
     solicitante = serializers.SerializerMethodField()
     anexo = serializers.SerializerMethodField()
@@ -434,6 +435,8 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             "estado_display",
             "urgencia",
             "urgencia_display",
+            "concepto",
+            "concepto_display",
             "fecha_solicitud",
             "created_at",
             "solicitante",

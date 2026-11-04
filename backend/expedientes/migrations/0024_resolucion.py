@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [("expedientes", "0022_merge_20261103_2119")]
+    dependencies = [("expedientes", "0023_expediente_clasificacion_concepto")]
     operations = [
         migrations.CreateModel(
             name="Resolucion",

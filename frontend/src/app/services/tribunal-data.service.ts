@@ -97,8 +97,12 @@ export interface Expediente {
   horasRestantes: number;
   tipo: 'falta' | 'merito';
   puntos: number;
+  esFelicitacion?: boolean;
+  esLlamado?: boolean;
+  justificacionAprobada?: boolean;
   puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+
   cantidadSocios?: number;
   sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;

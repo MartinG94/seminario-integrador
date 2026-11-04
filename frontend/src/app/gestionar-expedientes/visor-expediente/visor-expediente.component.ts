@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 
 import { AuthService } from '../../services/auth.service';
 import {
+  CATALOGO_CONCEPTOS_EXPEDIENTE,
   DecisionCausal,
   DescargoVisorDTO,
   EvidenciaVisorDTO,
@@ -46,6 +47,10 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
   toggleExpandirReglamento(raw: string): void {
     this.reglamentoExpandido = this.reglamentoExpandido === raw ? null : raw;
   }
+
+  // Clasificación de concepto institucional (SCRUM-63)
+  catalogoConceptos = CATALOGO_CONCEPTOS_EXPEDIENTE;
+  actualizandoConcepto = false;
 
   // Modal para resolución de causal T02 (integración S4-02)
   modalCausalAbierto = false;
@@ -276,6 +281,47 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
 
   get esVocalTd(): boolean {
     return this.auth.tieneRol('TD', 'ADMIN');
+  }
+
+  get isTribunalOrAdmin(): boolean {
+    return this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  get expediente(): ExpedienteVisorData | null {
+    return this.visorData;
+  }
+
+  actualizarConcepto(nuevoConcepto: string | null): void {
+    if (!this.expedienteId || !this.visorData || this.actualizandoConcepto) return;
+    this.actualizandoConcepto = true;
+
+    this.expedienteApi
+      .actualizarConceptoExpediente(this.expedienteId, nuevoConcepto)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.actualizandoConcepto = false;
+          if (this.visorData) {
+            this.visorData.concepto = nuevoConcepto;
+            const match = this.catalogoConceptos.find((c) => c.codigo === nuevoConcepto);
+            this.visorData.concepto_display =
+              res?.concepto_display || (match ? match.nombre : nuevoConcepto || '');
+          }
+          this.notifications.showSuccess(
+            'Concepto institucional actualizado correctamente.',
+            'Tribunal de Disciplina'
+          );
+        },
+        error: (err) => {
+          this.actualizandoConcepto = false;
+          const msg =
+            err.error?.detail ||
+            err.error?.concepto?.[0] ||
+            err.error?.error ||
+            'No se pudo actualizar el concepto del expediente.';
+          this.notifications.showError(msg);
+        },
+      });
   }
 
   formatBytes(bytes: number): string {
