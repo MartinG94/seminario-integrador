@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -154,6 +155,7 @@ describe('SolicitarPuntosComponent', () => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
       imports: [
+        ComponentsModule,
         FormsModule,
         ReactiveFormsModule,
         MatAutocompleteModule,
@@ -389,11 +391,23 @@ describe('SolicitarPuntosComponent', () => {
     component.titulo = 'Título de prueba';
     component.agregarSocio(component.socios[0]);
     component.razon = 'Motivo de prueba';
+    component.reglamentosSeleccionados = ['Estatuto - Art. 14: Deberes de los socios'];
     component.emitirT01();
     expect(expediente.emitir).toHaveBeenCalledWith('draft-1');
     expect(component.estado).toBe('ISSUED');
     expect(component.numeroExpediente).toBe('T01-2026-1');
     expect(notifications.success).toHaveBeenCalledWith('Expediente creado: T01-2026-1.');
+  });
+
+  it('valida que se seleccione como mínimo un artículo de algún reglamento antes de emitir', () => {
+    component.titulo = 'Título de prueba';
+    component.agregarSocio(component.socios[0]);
+    component.razon = 'Motivo de prueba';
+    component.reglamentosSeleccionados = [];
+    component.emitirT01();
+    expect(notifications.error).toHaveBeenCalledOnceWith('Seleccioná al menos un artículo del reglamento respaldante.');
+    expect(expediente.crearBorrador).not.toHaveBeenCalled();
+    expect(expediente.emitir).not.toHaveBeenCalled();
   });
 
   it('muestra errores del backend', () => {
@@ -485,6 +499,50 @@ describe('SolicitarPuntosComponent', () => {
     expect(window.scrollTo).toHaveBeenCalled();
   });
 
+  it('ajusta los puntos con las flechas y deriva el tipo de acción del signo', () => {
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.tipoAccion).toBe('SANCTION');
+
+    component.decrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-1.5);
+
+    component.puntosSeleccionados = -0.5;
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-0.25);
+    expect(component.puntosTexto).toBe('Llamado de Atención');
+    expect(component.tipoAccion).toBe('SANCTION');
+
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(0.25);
+    expect(component.puntosTexto).toBe('Felicitación');
+    expect(component.tipoAccion).toBe('MERIT');
+
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(0.5);
+    expect(component.puntosTexto).toBe('+0.5 pts');
+  });
+
+  it('respeta los límites de la escala de puntos y no permite 0', () => {
+    component.puntosSeleccionados = -3;
+    expect(component.puedeDecrementarPuntos).toBeFalse();
+    component.decrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-3);
+
+    component.puntosSeleccionados = 3;
+    expect(component.puedeIncrementarPuntos).toBeFalse();
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(3);
+    expect(component.escalaPuntos).not.toContain(0);
+  });
+
+  it('bloquea las flechas de puntos en solicitudes emitidas', () => {
+    component.estado = 'ISSUED';
+    component.puntosSeleccionados = -1;
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.puedeIncrementarPuntos).toBeFalse();
+  });
+
   it('conmuta correctamente entre pestañas (nueva solicitud y solicitudes creadas)', () => {
     expect(component.tabActiva).toBe('nueva');
     component.setTab('creadas');
@@ -521,15 +579,12 @@ describe('SolicitarPuntosComponent', () => {
     expect(expediente.listarMisSolicitudes).toHaveBeenCalled();
   });
 
-  it('abre el diálogo de detalle al presionar abrirDetalle sobre una solicitud emitida', () => {
+  it('abre el modal de detalle al presionar abrirDetalle sobre una solicitud emitida', () => {
     const emitida = mockSolicitudes[1];
     component.abrirDetalle(emitida);
 
-    expect(dialog.open).toHaveBeenCalledWith(SolicitudDetalleDialogComponent, {
-      width: '100%',
-      maxWidth: '750px',
-      data: emitida,
-    });
+    expect(component.modalDetalleAbierto).toBeTrue();
+    expect(component.solicitudSeleccionada).toBe(emitida);
   });
 
   it('retorna clases semánticas de badge conformes a DESIGN.md', () => {
@@ -553,6 +608,331 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.obtenerTextoInvolucrados({ ...mockSolicitudes[0], involucrados: [] })).toBe('Sin socios asignados');
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[0])).toBe('Prueba, Ana');
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[1])).toBe('Prueba, Ana (+1)');
+  });
+
+  describe('ordenamiento y tabla interactiva de solicitudes creadas (PB-04 / SCRUM-75)', () => {
+    it('alterna el orden ascendente/descendente al hacer clic en la misma columna y cambia columna en caso contrario', () => {
+      component.columnaOrden = 'numero';
+      component.ordenAscendente = true;
+
+      component.cambiarOrden('numero');
+      expect(component.columnaOrden).toBe('numero');
+      expect(component.ordenAscendente).toBeFalse();
+      expect(component.getIconoOrden('numero')).toBe('arrow_downward');
+
+      component.cambiarOrden('numero');
+      expect(component.ordenAscendente).toBeTrue();
+      expect(component.getIconoOrden('numero')).toBe('arrow_upward');
+
+      component.cambiarOrden('titulo');
+      expect(component.columnaOrden).toBe('titulo');
+      expect(component.ordenAscendente).toBeTrue();
+      expect(component.getIconoOrden('numero')).toBe('swap_vert');
+      expect(component.getIconoOrden('titulo')).toBe('arrow_upward');
+    });
+
+    it('ordena correctamente por número, título, involucrados, fecha, puntos, urgencia y estado', () => {
+      component.misSolicitudes = [
+        {
+          ...mockSolicitudes[0],
+          id: '1',
+          numero: 'T01-002',
+          numero_expediente: '2/2026',
+          titulo: 'B - Falta a reunión',
+          involucrados: [mockSociosInvolucrados[0]],
+          fecha: '2026-05-10T10:00:00Z',
+          puntos: -1,
+          urgencia: 'normal',
+          estado_procesal: 'creado'
+        },
+        {
+          ...mockSolicitudes[1],
+          id: '2',
+          numero: 'T01-001',
+          numero_expediente: '1/2026',
+          titulo: 'A - Felicitación aniversario',
+          involucrados: [mockSociosInvolucrados[0], mockSociosInvolucrados[1]],
+          fecha: '2026-06-01T10:00:00Z',
+          puntos: 2,
+          urgencia: 'urgente',
+          estado_procesal: 'emitido'
+        }
+      ];
+
+      // Orden por número asc
+      component.columnaOrden = 'numero';
+      component.ordenAscendente = true;
+      let ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].numero_expediente).toBe('1/2026');
+      expect(ordenadas[1].numero_expediente).toBe('2/2026');
+
+      // Orden por título asc
+      component.columnaOrden = 'titulo';
+      component.ordenAscendente = true;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].titulo).toContain('A -');
+      expect(ordenadas[1].titulo).toContain('B -');
+
+      // Orden por involucrados asc y desc
+      component.columnaOrden = 'involucrados';
+      component.ordenAscendente = true;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].involucrados.length).toBe(1);
+      component.ordenAscendente = false;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].involucrados.length).toBe(2);
+
+      // Orden por puntos asc
+      component.columnaOrden = 'puntos';
+      component.ordenAscendente = true;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].puntos).toBe(-1);
+      expect(ordenadas[1].puntos).toBe(2);
+
+      // Orden por urgencia desc (urgente > normal)
+      component.columnaOrden = 'urgencia';
+      component.ordenAscendente = false;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].urgencia).toBe('urgente');
+    });
+
+    it('abre detalle al presionar Enter o Espacio en onTableKeyDown', () => {
+      spyOn(component, 'abrirDetalle');
+      const sol = mockSolicitudes[0];
+
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+      component.onTableKeyDown(enterEvent, sol);
+      expect(component.abrirDetalle).toHaveBeenCalledWith(sol);
+
+      const spaceEvent = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
+      component.onTableKeyDown(spaceEvent, sol);
+      expect(component.abrirDetalle).toHaveBeenCalledTimes(2);
+    });
+
+    it('renderiza el encabezado sin la columna Creador y abre detalle al hacer click en fila u ojito', () => {
+      component.tabActiva = 'creadas';
+      component.cargandoSolicitudes = false;
+      component.failedToLoadRequests = false;
+      component.misSolicitudes = [...mockSolicitudes];
+      fixture.detectChanges();
+
+      const thElements = fixture.nativeElement.querySelectorAll('.explorer-table-container thead th');
+      const headerTexts = Array.from(thElements).map((el: any) => el.textContent.trim());
+      
+      // Debe contener EXP, TÍTULO, INVOLUCRADOS, FECHA, PUNTOS, URGENCIA, ESTADO, ACCIONES
+      expect(headerTexts.some((t: string) => t.includes('Exp.'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Título'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Involucrados'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Fecha'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Puntos'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Urgencia'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Estado'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Acciones'))).toBeTrue();
+
+      // Mandato explícito: NO debe contener columna Creador
+      expect(headerTexts.some((t: string) => t.toLowerCase().includes('creador'))).toBeFalse();
+
+      // Clic en la fila debe disparar abrirDetalle
+      spyOn(component, 'abrirDetalle');
+      const rows = fixture.nativeElement.querySelectorAll('.explorer-table-container tbody tr');
+      expect(rows.length).toBeGreaterThan(0);
+      (rows[0] as HTMLElement).click();
+      expect(component.abrirDetalle).toHaveBeenCalledWith(component.misSolicitudesOrdenadas[0]);
+
+      // Clic en el botón ojito
+      const ojitoBtn = rows[0].querySelector('.btn-just-icon') as HTMLElement;
+      expect(ojitoBtn).toBeTruthy();
+      ojitoBtn.click();
+      expect(component.abrirDetalle).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('selección y filtrado de reglamentos vigentes (Milestone 5)', () => {
+    it('carga articulos y reglamentos vigentes desde el backend en ngOnInit', () => {
+      expect(expediente.listarReglamentos).toHaveBeenCalled();
+      expect(component.reglamentosDisponibles).toEqual(['Estatuto AVEIT Reforma 2026']);
+    });
+
+    it('permite filtrar la lista de reglamentos por término de búsqueda', () => {
+      component.reglamentosDisponibles = [
+        'Reglamento Interno - Art. 10: Inconducta en reuniones',
+        'Reglamento Interno - Art. 12: Inasistencia a asambleas',
+        'Estatuto - Art. 25: Deberes societarios'
+      ];
+      component.filtroReglamentos = 'Art. 12';
+      expect(component.reglamentosFiltrados).toEqual([
+        'Reglamento Interno - Art. 12: Inasistencia a asambleas'
+      ]);
+
+      component.filtroReglamentos = 'Estatuto';
+      expect(component.reglamentosFiltrados).toEqual([
+        'Estatuto - Art. 25: Deberes societarios'
+      ]);
+    });
+
+    it('conserva los reglamentos ya seleccionados en la lista aunque no coincidan con la búsqueda activa', () => {
+      component.reglamentosDisponibles = [
+        'Reglamento Interno - Art. 10: Inconducta en reuniones',
+        'Reglamento Interno - Art. 12: Inasistencia a asambleas',
+        'Estatuto - Art. 25: Deberes societarios'
+      ];
+      component.reglamentosSeleccionados = ['Estatuto - Art. 25: Deberes societarios'];
+      component.filtroReglamentos = 'Art. 10';
+
+      const filtrados = component.reglamentosFiltrados;
+      expect(filtrados).toContain('Reglamento Interno - Art. 10: Inconducta en reuniones');
+      expect(filtrados).toContain('Estatuto - Art. 25: Deberes societarios');
+    });
+
+    it('permite alternar, remover y limpiar reglamentos seleccionados', () => {
+      const art1 = 'Reglamento Interno - Art. 10';
+      const art2 = 'Estatuto - Art. 25';
+
+      component.toggleReglamento(art1);
+      expect(component.reglamentosSeleccionados).toEqual([art1]);
+
+      component.toggleReglamento(art2);
+      expect(component.reglamentosSeleccionados).toEqual([art1, art2]);
+
+      component.removerReglamento(art1);
+      expect(component.reglamentosSeleccionados).toEqual([art2]);
+
+      component.limpiarReglamentos();
+      expect(component.reglamentosSeleccionados).toEqual([]);
+    });
+
+    it('limpia el filtro y la selección al resetear el formulario', () => {
+      component.filtroReglamentos = 'búsqueda';
+      component.reglamentosSeleccionados = ['Reglamento Interno - Art. 10'];
+      component.resetearFormulario();
+
+      expect(component.filtroReglamentos).toBe('');
+      expect(component.reglamentosSeleccionados).toEqual([]);
+    });
+
+    it('permite combinar artículos del Estatuto y del Reglamento Interno en el catálogo modal y desplegar su texto completo desde los chips', () => {
+      const est1 = 'Estatuto - Art. 14 Inc. a: Es deber de todo socio activo asistir a las asambleas.';
+      const est2 = 'Estatuto - Art. 25: Obligaciones generales del socio.';
+      const reg1 = 'Reglamento Interno - Art. 5: Puntualidad en reuniones de subcomisión.';
+      component.reglamentosDisponibles = [est1, est2, reg1];
+
+      component.abrirModalReglamentos();
+      expect(component.modalReglamentosAbierto).toBeTrue();
+
+      component.setFiltroDocumentoModal('Estatuto');
+      expect(component.articulosModalFiltrados.map(i => i.raw)).toEqual([est1, est2]);
+
+      component.toggleReglamento(est1);
+      component.toggleReglamento(est2);
+      component.setFiltroDocumentoModal('Reglamento Interno');
+      expect(component.articulosModalFiltrados.map(i => i.raw)).toEqual([reg1]);
+      component.toggleReglamento(reg1);
+
+      expect(component.contarSeleccionadosPorDocumento('Estatuto')).toBe(2);
+      expect(component.contarSeleccionadosPorDocumento('Reglamento Interno')).toBe(1);
+      expect(component.reglamentosSeleccionadosCitas.map(c => c.citaCorta)).toEqual([
+        'Estatuto · Art. 14 Inc. a',
+        'Estatuto · Art. 25',
+        'Reglamento Interno · Art. 5'
+      ]);
+
+      component.cerrarModalReglamentos();
+      expect(component.modalReglamentosAbierto).toBeFalse();
+
+      component.toggleExpandirReglamentoForm(est1);
+      expect(component.reglamentoExpandidoFormDetalle?.citaCorta).toBe('Estatuto · Art. 14 Inc. a');
+      expect(component.reglamentoExpandidoFormDetalle?.cuerpo).toContain('Es deber de todo socio activo');
+
+      component.toggleExpandirReglamentoForm(est1);
+      expect(component.reglamentoExpandidoFormDetalle).toBeNull();
+    });
+
+    it('activa el bloqueo de scroll al abrir el modal y lo remueve al cerrar o destruir', fakeAsync(() => {
+      component.abrirModalReglamentos();
+      tick();
+      expect(component.modalReglamentosAbierto).toBeTrue();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeTrue();
+
+      component.cerrarModalReglamentos();
+      tick();
+      expect(component.modalReglamentosAbierto).toBeFalse();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+
+      component.abrirModalReglamentos();
+      tick();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeTrue();
+      component.ngOnDestroy();
+      expect(document.body.classList.contains('modal-open-scroll-lock')).toBeFalse();
+    }));
+
+    it('transfiere el foco al modal y buscador al abrirse y lo restaura al cerrarse', fakeAsync(() => {
+      const botonDisparador = document.createElement('button');
+      document.body.appendChild(botonDisparador);
+      botonDisparador.focus();
+      expect(document.activeElement).toBe(botonDisparador);
+
+      component.abrirModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalReglamentosAbierto).toBeTrue();
+      expect(component.modalSearchInput?.nativeElement).toBeTruthy();
+      expect(document.activeElement).toBe(component.modalSearchInput!.nativeElement);
+
+      component.cerrarModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.modalReglamentosAbierto).toBeFalse();
+      expect(document.activeElement).toBe(botonDisparador);
+      botonDisparador.remove();
+    }));
+
+    it('cierra el modal al hacer clic en el backdrop y permanece abierto al hacer clic dentro del diálogo', fakeAsync(() => {
+      component.abrirModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      const dialogEl = fixture.nativeElement.querySelector('.modal-reglamentos-dialog') as HTMLElement;
+      expect(dialogEl).toBeTruthy();
+      dialogEl.click();
+      fixture.detectChanges();
+      expect(component.modalReglamentosAbierto).toBeTrue();
+
+      const backdropEl = fixture.nativeElement.querySelector('.modal-reglamentos-backdrop') as HTMLElement;
+      expect(backdropEl).toBeTruthy();
+      backdropEl.click();
+      fixture.detectChanges();
+      expect(component.modalReglamentosAbierto).toBeFalse();
+    }));
+
+    it('cierra el modal de reglamentos al presionar Escape y desplaza el cuerpo con teclas de flecha', fakeAsync(() => {
+      component.abrirModalReglamentos();
+      fixture.detectChanges();
+      tick();
+
+      const bodyEl = component.modalReglamentosBody?.nativeElement;
+      if (bodyEl) {
+        let scrollValue = 100;
+        Object.defineProperty(bodyEl, 'scrollTop', {
+          get: () => scrollValue,
+          set: (v: number) => { scrollValue = v; },
+          configurable: true
+        });
+        bodyEl.scrollTop = 100;
+        const downEvent = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+        component.onModalReglamentosKeydown(downEvent);
+        expect(bodyEl.scrollTop).toBe(140);
+
+        const upEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+        component.onModalReglamentosKeydown(upEvent);
+        expect(bodyEl.scrollTop).toBe(100);
+      }
+
+      const escEvent = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      component.onModalReglamentosKeydown(escEvent);
+      expect(component.modalReglamentosAbierto).toBeFalse();
+    }));
   });
 });
 import { NotificationService } from '../services/notification.service';

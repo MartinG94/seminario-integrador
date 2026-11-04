@@ -13,7 +13,7 @@
   align-items: center;
   justify-content: center;
   padding: 30px 20px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .modal-dialog-custom {
@@ -24,9 +24,14 @@
   flex-direction: column;
   margin: auto;
 
+  &:focus {
+    outline: none;
+  }
+
   > .card {
     margin: 0;
     max-height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -35,6 +40,10 @@
       overflow-y: auto;
       flex: 1 1 auto;
       max-height: calc(100vh - 200px);
+
+      &:focus {
+        outline: none;
+      }
     }
 
     > [class*="card-header-"] {
@@ -58,6 +67,31 @@
 .kanban-card-mat:focus {
   outline: 2px solid var(--color-border-focus, #{$aveit-cyan});
   outline-offset: 2px;
+}
+
+.table thead th,
+.table-mat thead th {
+  white-space: nowrap !important;
+  vertical-align: middle;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap !important;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  i.material-icons {
+    display: inline-block;
+    vertical-align: text-bottom;
+    font-size: 16px;
+    margin-left: 4px;
+    line-height: 1;
+  }
 }
 
 table.table-mat tbody tr:focus {
@@ -277,6 +311,184 @@ table.table-mat tbody tr:focus {
 
 
 
+// Modal de Detalle Rediseñado (SCRUM-70 / Boceto PO)
+.modal-dialog-tribunal {
+  max-width: 860px !important;
+
+  .modal-detalle-card {
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-badge-exp {
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .modal-titulo-central {
+    h4 {
+      font-size: 16px;
+      line-height: 1.3;
+    }
+  }
+
+  .btn-close-modal {
+    color: #ffffff;
+    opacity: 0.85;
+    transition: opacity 0.2s ease-in-out;
+    line-height: 1;
+
+    &:hover,
+    &:focus {
+      opacity: 1;
+      outline: none;
+    }
+
+    .material-icons {
+      font-size: 22px;
+    }
+  }
+
+  .modal-detalle-body {
+    padding: 24px 28px;
+
+    .metadatos-row {
+      margin-bottom: 12px;
+    }
+
+    .metadatos-inline-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+
+      > div {
+        margin-right: 36px;
+        margin-bottom: 8px;
+
+        &:last-child {
+          margin-right: 0;
+        }
+      }
+
+      .metadato-label {
+        margin-right: 12px !important;
+        white-space: nowrap;
+      }
+    }
+
+    .reglamentacion-box {
+      background-color: var(--color-surface, #F8FAFC);
+      border: 1px solid var(--color-border-main, #E2E8F0);
+
+      .toggle-reglamento-btn {
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+    }
+
+    .motivo-box {
+      background-color: var(--color-surface, #F8FAFC);
+      border: 1px solid var(--color-border-main, #E2E8F0);
+      border-radius: 10px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--color-text-main, #1E293B);
+    }
+
+    .seccion-involucrados {
+      background-color: var(--color-surface, #F8FAFC);
+      border: 1px solid var(--color-border-main, #E2E8F0);
+      border-radius: 10px;
+
+      .tabla-involucrados {
+        th {
+          color: var(--color-text-secondary, #64748B);
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          border-bottom: 2px solid var(--color-border-main, #E2E8F0);
+        }
+
+        td {
+          vertical-align: middle;
+          font-size: 13px;
+          padding: 11px 14px;
+          border-top: 1px solid var(--color-border-main, #E2E8F0);
+        }
+
+        .estado-descargo-badge {
+          display: inline-block;
+          font-size: 12.5px;
+        }
+
+        .btn-ver-descargo {
+          font-size: 11px;
+          padding: 4px 8px;
+          border-radius: 4px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+
+          .material-icons {
+            font-size: 14px;
+          }
+        }
+      }
+    }
+  }
+
+  .card-footer {
+    padding: 12px 20px;
+    background-color: var(--color-surface, #F8FAFC);
+    border-top: 1px solid var(--color-border-main, #E2E8F0);
+
+    button {
+      margin-left: 8px;
+    }
+  }
+}
+
+// Soporte de modo oscuro institucional
+body.dark-edition,
+.dark {
+  .modal-dialog-tribunal {
+    .modal-detalle-card {
+      background-color: #1E293B;
+      color: #F8FAFC;
+    }
+
+    .modal-detalle-body {
+      .reglamentacion-box,
+      .motivo-box,
+      .seccion-involucrados {
+        background-color: #0F172A;
+        border-color: #334155;
+        color: #F8FAFC;
+      }
+
+      .tabla-involucrados {
+        th {
+          color: #94A3B8;
+          border-bottom-color: #334155;
+        }
+        td {
+          border-top-color: #334155;
+          color: #E2E8F0;
+        }
+      }
+    }
+
+    .card-footer {
+      background-color: #0F172A;
+      border-top-color: #334155;
+    }
+  }
+}
+
 // Evaluación de justificaciones T02 (S4-02)
 .tabla-involucrados th {
   color: var(--color-text-secondary);
@@ -311,5 +523,217 @@ table.table-mat tbody tr:focus {
 
   textarea:focus-visible {
     outline: 2px solid var(--color-border-focus);
+  }
+}
+
+// Apelación y adecuación del T01 (PB-02)
+.panel-t01 {
+  .seccion-titulo {
+    color: var(--color-primary);
+    font-family: var(--font-subtitle);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: none;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+
+// Evaluación y ratificación de puntaje en descargo individual (Modal 6)
+.seccion-evaluacion-descargo {
+  background-color: var(--color-surface, #F8FAFC);
+  border: 1px solid var(--color-border-main, #E2E8F0);
+
+  .input-puntaje-final {
+    max-width: 120px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
+.btn-guardar-volver,
+.btn-volver {
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+// Estilos del stepper de escala discreta de puntaje
+.input-group-stepper {
+  display: flex;
+  align-items: stretch;
+  max-width: 220px;
+
+  .btn-stepper-dec,
+  .btn-stepper-inc {
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--color-border-main, #CBD5E1);
+    background-color: #FFFFFF;
+    color: var(--color-text-main, #334155);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-surface, #F1F5F9);
+      color: var(--color-primary, #0284C7);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .select-puntaje-escala {
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-color: var(--color-border-main, #CBD5E1);
+    background-color: #FFFFFF;
+
+    &:disabled {
+      background-color: var(--color-surface, #F8FAFC);
+      color: var(--color-text-muted, #64748B);
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Badges semánticos para escala de puntajes
+.badge-sancion {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-advertencia {
+  background-color: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FCD34D;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-neutro {
+  background-color: #E2E8F0;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-felicitacion {
+  background-color: #E0E7FF;
+  color: #4338CA;
+  border: 1px solid #A5B4FC;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.badge-premio {
+  background-color: #DCFCE7;
+  color: #16A34A;
+  border: 1px solid #86EFAC;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+
+// Chips de Reglamentos Respaldantes en Modal de Detalle
+.reglamento-chips-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reglamento-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background-color: #FFFFFF;
+  color: #151846;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+
+  &:hover {
+    border-color: #151846;
+    background-color: #F8FAFC;
+  }
+
+  &.chip-estatuto {
+    border-color: rgba(21, 24, 70, 0.28);
+    background-color: rgba(21, 24, 70, 0.06);
+    color: #151846;
+  }
+
+  &.chip-interno {
+    border-color: rgba(0, 131, 143, 0.35);
+    background-color: rgba(0, 151, 167, 0.08);
+    color: #006064;
+  }
+
+  &.chip-expanded {
+    border-color: #151846;
+    box-shadow: 0 0 0 2px rgba(110, 157, 220, 0.35);
+  }
+
+  .chip-doc-icon,
+  .chip-chevron {
+    font-size: 14px;
+    line-height: 1;
+  }
+}
+
+.reglamento-expanded-reader {
+  border: 1px solid #CBD5E1;
+  border-left: 4px solid #151846;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  padding: 10px 14px;
+
+  .reader-cite {
+    font-size: 0.82rem;
+    color: #151846;
+  }
+
+  .reader-close-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    color: #64748B;
+    cursor: pointer;
+    display: inline-flex;
+
+    i.material-icons {
+      font-size: 16px;
+    }
+  }
+
+  .reader-body {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #334155;
+    white-space: pre-wrap;
   }
 }

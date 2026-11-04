@@ -93,26 +93,39 @@ class EvidenceService:
         user: Any,
         ip_address: str | None = None,
         user_agent: str = "",
+        accion: str = "descarga",
     ) -> AuditoriaDescargaEvidencia:
         """
         Asienta una entrada inmutable en la tabla de auditoría de descargas (CA4)
         y registra el evento en el log de auditoría del sistema.
+        Diferencia entre consulta en visor y descarga formal a disco.
         """
         username = getattr(user, "username", "ANON")
         socio = getattr(user, "socio", None)
         rol = socio.role if socio else (Role.ADMIN if user.is_staff else "DESCONOCIDO")
 
+        action_name = (
+            "consulta" if accion.lower() in ["ver", "consulta", "visualizar"] else "descarga"
+        )
+
         # Registrar también en el módulo de auditoría de seguridad
         audit.log_access_granted(
             identifier=username,
             role=rol,
-            resource=f"evidencia:{evidencia.id}",
+            resource=f"evidencia:{evidencia.id}:{action_name}",
         )
+
+        prefix = "[CONSULTA] " if action_name == "consulta" else "[DESCARGA] "
+        ua_clean = user_agent or ""
+        if not ua_clean.startswith(("[CONSULTA]", "[DESCARGA]")):
+            ua_formatted = f"{prefix}{ua_clean}"[:500]
+        else:
+            ua_formatted = ua_clean[:500]
 
         return AuditoriaDescargaEvidencia.objects.create(
             evidencia=evidencia,
             usuario=username,
             rol=rol,
             ip_address=ip_address,
-            user_agent=user_agent[:500] if user_agent else "",
+            user_agent=ua_formatted,
         )

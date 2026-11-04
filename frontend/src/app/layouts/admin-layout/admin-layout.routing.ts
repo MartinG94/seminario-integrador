@@ -3,6 +3,8 @@ import { Routes } from '@angular/router';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
+import { VisorExpedienteComponent } from '../../gestionar-expedientes/visor-expediente/visor-expediente.component';
+
 import { ReportesComponent } from '../../reportes/reportes.component';
 import { RankingSociosComponent } from '../../ranking-socios/ranking-socios.component';
 import { SolicitarPuntosComponent } from '../../solicitar-puntos/solicitar-puntos.component';
@@ -20,16 +22,19 @@ import { CalendarioInstitucionalComponent } from '../../calendario-institucional
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
-    { 
-      path: 'reglamentos',            
+    { path: 'reglamentos',            component: ReglamentosComponent },
+    { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
+    { path: 'gestionar-expedientes/:id/visor', component: VisorExpedienteComponent, canActivate: [TribunalGuard] },
+    {
+      path: 'gestionar-expedientes/:id/descargo/:socioId',
       component: EnDesarrolloComponent,
+      canActivate: [TribunalGuard],
       data: {
-        titulo: 'Reglamentos',
-        descripcion: 'Consulta del Estatuto Social, el Reglamento Interno de Disciplina y el Reglamento Procesal Disciplinario 2026.',
-        icono: 'construction'
+        titulo: 'Ver Descargo',
+        descripcion: 'Visualización y resolución individual del descargo.',
+        icono: 'description'
       }
     },
-    { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
     { path: 'calendario-institucional', component: CalendarioInstitucionalComponent },
     { 
       path: 'reportes',               

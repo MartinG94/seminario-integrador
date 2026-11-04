@@ -318,6 +318,24 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 11.1 Sprint 4 — Desglose Atómico: S4-01 / SCRUM-51 (Visor Autorizado de Expedientes y Evidencia Probatoria)
+
+> **Spec de Referencia:** [`specs/007-visor-expediente-evidencia/spec.md`](specs/007-visor-expediente-evidencia/spec.md)  
+> **Plan Técnico:** [`specs/007-visor-expediente-evidencia/plan.md`](specs/007-visor-expediente-evidencia/plan.md)  
+> **Tareas:** [`specs/007-visor-expediente-evidencia/tasks.md`](specs/007-visor-expediente-evidencia/tasks.md)
+
+- [x] **TS4-01.1 Modelo y Migración de Auditoría de Consulta (Backend TDD):** Implementar modelo `AuditoriaConsultaExpediente` inmutable en `backend/expedientes/models.py` y migración `0017_auditoria_consulta_expediente.py` dependiente de `0016`.
+- [x] **TS4-01.2 Serializador Visor, Verificación SHA-256 y Protección Médica (Backend TDD):** Implementar `ExpedienteVisorSerializer` con cabecera TD, los 3 jueces con grupo Gxx, timeline cronológico, verificación de integridad SHA-256, enmascaramiento de datos médicos para terceros y rotulado de "Plazo vencido sin descargo".
+- [x] **TS4-01.3 Endpoint REST Visor con Auditoría Automática (Backend TDD):** Implementar `ExpedienteVisorView` en `backend/expedientes/views/visor_views.py` protegido con `IsImputadoOrTribunal` y registro inmutable en base de datos.
+- [x] **TS4-01.4 Suite de Tests Backend (`test_visor_expediente.py`):** Cobertura completa de CA1, CA2, CA3 y CA4.
+- [x] **TS4-01.5 Servicio Frontend y DTOs (`ExpedienteApiService`):** Declarar interfaces tipadas y método `obtenerVisorExpediente` en `frontend/src/app/services/expediente-api.service.ts`.
+- [x] **TS4-01.6 Componente Frontend `VisorExpedienteComponent` (Angular):** Crear vista de pantalla completa con cabecera canónica TD, 3 jueces con cohorte Gxx, acordeón T01, tabla de involucrados con evidencias e integridad SHA-256, rotulado de plazo vencido, timeline vertical y botón de retorno.
+- [x] **TS4-01.7 Enrutamiento y Botones de Acceso en Gestión:** Registrar ruta en `admin-layout.routing.ts`, declarar en `admin-layout.module.ts`, e incorporar botón "Sustanciar / Visor" en tabla y Kanban de `gestionar-expedientes`.
+- [x] **TS4-01.8 Suite de Tests Frontend (`visor-expediente.component.spec.ts`):** Tests unitarios en Karma/Jasmine para la vista dedicada.
+- [x] **TS4-01.9 Verificación Integral y Consistencia PO:** Chequeo estricto contra `notasPO.md` y preparación de instrucciones manuales para el usuario en bash.
+
+---
+
 ## 12. Sprint 3 — Desglose Atómico: SCRUM-84 (Apertura y Cierre Sprint en Documentación)
 
 > **Tarea Metodológica:** SCRUM-84: Apertura y Cierre de Sprint 3 en Documentación (Definición de Producto y Seguimiento de Proyecto).  
@@ -334,7 +352,42 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 13. Instrucciones para la Actualización de este Archivo
+## 13. Sprint 4 — Desglose Atómico: PB-02 (Tramitar Apelación y Adecuación del T01)
+
+> **Spec de Referencia:** [`specs/008-apelacion-adecuacion-t01/spec.md`](specs/008-apelacion-adecuacion-t01/spec.md)  
+> **Plan Técnico:** [`specs/008-apelacion-adecuacion-t01/plan.md`](specs/008-apelacion-adecuacion-t01/plan.md)  
+> **Tareas:** [`specs/008-apelacion-adecuacion-t01/tasks.md`](specs/008-apelacion-adecuacion-t01/tasks.md)
+
+- [x] **TPB-02.1 Dominio de apelación y adecuación [TDD]:** Plazo de 1 a 30 días hábiles, texto de apelación, cambios de puntos e involucrados, agravamiento y socios afectados.
+- [x] **TPB-02.2 Modelos inmutables y migración [TDD]:** `ParametroPlazoApelacion`, `PeriodoApelacion`, `ApelacionT01` y `AdecuacionT01` sólo-inserción (migración `0017`).
+- [x] **TPB-02.3 Plazo parametrizado y períodos por socio [TDD]:** Apertura con el parámetro vigente al entrar a `justificando` y vencimiento según el último período abierto.
+- [x] **TPB-02.4 Servicio de apelación y adecuación [TDD]:** Apelación versionada con constancia por mail, rechazo de T02/T03 en T01, adecuación con mail de motivos y nuevo período aprobado por el TD.
+- [x] **TPB-02.5 Endpoints REST y permisos [TDD]:** Parámetro del plazo, apelación, adecuación e historial del T01.
+- [x] **TPB-02.6 Servicio frontend y DTOs [TDD]:** Métodos en `ExpedienteApiService`.
+- [x] **TPB-02.7 Apelación en "Mis Expedientes":** "Apelar"/"Editar apelación" en lugar del justificativo T02/T03, plazo propio y adecuaciones comunicadas.
+- [x] **TPB-02.8 Debate y adecuación en el detalle del TD:** Apelaciones por socio, formulario con autocompletado de socios, nuevo plazo opcional e historial.
+- [x] **TPB-02.9 Parámetro del plazo en "Calendario Institucional":** Consulta para TD, CD y Administración; edición para TD y Administración.
+- [x] **TPB-02.10 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build y control contra `notasPO.md`.
+- [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:** Cabecera Exp: <n>/<YYYY> + título, metadatos, sección Reglamentación, caja Motivo, tabla Involucrados y justificaciones (6 columnas con Leído/No Leído/Sin descargo, Puntaje Final y acción Ver Descargo) y validación de botones (Generar Resolución, Firmar Resolución, Ver Resolución).
+
+## 14. Sprint 4 — Desglose Atómico: S4-04 / SCRUM-54 (Gestionar Apartamiento y Suplencia conforme al Estatuto)
+
+> **Spec de Referencia:** [`specs/007-apartamiento-suplencia/spec.md`](specs/007-apartamiento-suplencia/spec.md)  
+> **Plan Técnico:** [`specs/007-apartamiento-suplencia/plan.md`](specs/007-apartamiento-suplencia/plan.md)  
+> **Tareas:** [`specs/007-apartamiento-suplencia/tasks.md`](specs/007-apartamiento-suplencia/tasks.md)
+
+- [x] **TS4-04.1 Dominio de composición [TDD]:** Nómina 3 + 3 por 4.º, 5.º y 6.º año, incompatibilidad de cargos, apartamiento automático, suplencia y Casos A/B del Art. 95.
+- [x] **TS4-04.2 Nómina desde el padrón legado [TDD]:** Lectura de `socio_lista.idTipoSocio` (10 Titular, 11 Suplente); año social derivado del grupo con `(Año Actual - 1962) - Número de Grupo` (revisión del PO, 25/10/2026), sin tablas nuevas de integrantes.
+- [x] **TS4-04.3 Modelos inmutables y migración [TDD]:** `ComposicionTribunal` e `IntegranteComposicion` sólo-inserción (migración `0019`).
+- [x] **TS4-04.4 Servicio de aplicación [TDD]:** Involucrados (imputados y solicitante), estampado de los asientos disponibles y aviso a CD por Outbox en Casos A/B, sin inmovilizar ni bloquear por nómina incompleta (decisión del PO, 31/10/2026).
+- [x] **TS4-04.5 Inhibición y endpoints REST [TDD]:** 403 a involucrados en decisiones y transiciones; `GET /composicion/`; sin endpoints de trámite manual ni carga de acta.
+- [x] **TS4-04.6 Servicio frontend y DTOs [TDD]:** Consulta de responsables en `ExpedienteApiService`.
+- [x] **TS4-04.7 Inhibición visible en el detalle:** Remoción total del panel "Responsables del Tribunal" y de las alertas de integrantes faltantes (revisión del PO, 25/10/2026); banner de participación restringida, acciones ocultas al involucrado, aviso sutil de causa derivada a Asamblea, sin carga de acta (decisión del PO, 31/10/2026).
+- [x] **TS4-04.8 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build de producción y control contra `notasPO.md` y la revisión del PO sobre el PR #63.
+
+---
+
+## 14. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

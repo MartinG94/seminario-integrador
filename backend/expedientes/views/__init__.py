@@ -29,19 +29,25 @@ from expedientes.models import (
     Expediente,
     Holiday,
     OperacionDescargoEnum,
+    ParametroPlazoApelacion,
     SolicitudT01,
     UrgenciaExpedienteEnum,
 )
 from expedientes.permissions import (
+    CanAdjustT01,
     CanCreateT01,
+    CanManageAppealDeadline,
     CanManageCalendar,
     CanOpenExpedientes,
     CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
+    IsNotInvolvedInExpediente,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
+    AdecuarT01Serializer,
+    ApelarT01Serializer,
     AperturaExpedienteSerializer,
     CalcularPlazoSerializer,
     CalendarQuerySerializer,
@@ -52,8 +58,10 @@ from expedientes.serializers import (
     EmitirT01Serializer,
     EvidenciaMetadataSerializer,
     ExpedienteListSerializer,
+    ExpedienteResumenSerializer,
     HolidaySerializer,
     MisSolicitudesT01Serializer,
+    PlazoApelacionSerializer,
     PresentarDescargoSerializer,
     RegistrarDecisionCausalSerializer,
     SolicitudT01Serializer,
@@ -75,12 +83,30 @@ from expedientes.services.opening_notification_service import (
     MissingSocioEmailError,
     OpeningNotificationService,
 )
+from expedientes.services.t01_appeal_service import (
+    T01AppealError,
+    T01AppealForbidden,
+    T01AppealNotFound,
+    T01AppealService,
+    T01AppealStateError,
+)
+from expedientes.services.tribunal_composition_service import (
+    TribunalCompositionError,
+    TribunalCompositionNotFound,
+    TribunalCompositionService,
+)
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
     EventoInstitucionalViewSet,
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.reglamento_views import (
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
+    ReglamentosVigentesView,
+)
+from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
 
@@ -96,7 +122,25 @@ EXPEDIENTE_LIST_PREFETCH = (
     "descargos__socio",
     "descargos__decisiones_causal__autor",
     "evidencias__socio",
+    "solicitud_t01",
 )
+
+
+def filter_expedientes_by_legajo(queryset, legajo: str):
+    """Filtra expedientes asociados a un legajo como titular o socio implicado."""
+    padron_user_ids = SocioEstudio.objects.filter(
+        nroLegajo=legajo,
+        socio__user_id__isnull=False,
+    ).values("socio__user_id")
+    local_socio_ids = Socio.objects.filter(
+        user_id__in=padron_user_ids,
+    ).values("pk")
+    return queryset.filter(
+        Q(socio__legajo=legajo)
+        | Q(socios__legajo=legajo)
+        | Q(socio_id__in=local_socio_ids)
+        | Q(socios__id__in=local_socio_ids)
+    ).distinct()
 
 
 class ExpedienteCollectionView(APIView):
@@ -114,20 +158,7 @@ class ExpedienteCollectionView(APIView):
         # de los socios involucrados/adicionales.
         legajo = request.query_params.get("legajo")
         if legajo is not None and legajo.strip():
-            legajo = legajo.strip()
-            padron_user_ids = SocioEstudio.objects.filter(
-                nroLegajo=legajo,
-                socio__user_id__isnull=False,
-            ).values("socio__user_id")
-            local_socio_ids = Socio.objects.filter(
-                user_id__in=padron_user_ids,
-            ).values("pk")
-            queryset = queryset.filter(
-                Q(socio__legajo=legajo)
-                | Q(socios__legajo=legajo)
-                | Q(socio_id__in=local_socio_ids)
-                | Q(socios__id__in=local_socio_ids)
-            ).distinct()
+            queryset = filter_expedientes_by_legajo(queryset, legajo.strip())
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -156,7 +187,7 @@ class ExpedienteCollectionView(APIView):
 
 
 class TransicionExpedienteView(APIView):
-    permission_classes = [CanTransitionExpedientes]
+    permission_classes = [CanTransitionExpedientes, IsNotInvolvedInExpediente]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = TransicionExpedienteSerializer(data=request.data)
@@ -198,7 +229,32 @@ class MisExpedientesView(APIView):
             .select_related("socio", "socio__subcomision")
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
         )
-        serializer = ExpedienteListSerializer(queryset, many=True, context={"request": request})
+        serializer = ExpedienteListSerializer(
+            queryset, many=True, context={"request": request, "es_mis_expedientes": True}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ExpedientesPorSocioView(APIView):
+    """
+    Endpoint GET /api/v1/expedientes/por-socio/?legajo=<legajo>
+    Consulta de solo lectura de expedientes de un socio para cualquier usuario autenticado.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        legajo = request.query_params.get("legajo")
+        if not legajo or not legajo.strip():
+            return Response(
+                {"error": "El parámetro 'legajo' es obligatorio."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        legajo = legajo.strip()
+        queryset = Expediente.objects.select_related("solicitud_t01").order_by("-created_at")
+        queryset = filter_expedientes_by_legajo(queryset, legajo)
+        serializer = ExpedienteResumenSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -220,6 +276,14 @@ class PresentarDescargoView(APIView):
         socio = getattr(request.user, "socio", None)
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
+
+        # En los T01 la apelación reemplaza al descargo T02/T03 (PB-02).
+        es_involucrado = Expediente.objects.filter(Q(socio=socio) | Q(socios=socio), pk=pk).exists()
+        if es_involucrado and SolicitudT01.objects.filter(expediente_id=pk).exists():
+            return Response(
+                {"detail": "Este expediente se originó en un T01: presentá tu apelación."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer = PresentarDescargoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -597,12 +661,14 @@ class EvidenciaDownloadView(APIView):
         else:
             ip_address = request.META.get("REMOTE_ADDR")
         user_agent = request.META.get("HTTP_USER_AGENT", "")
+        accion = request.query_params.get("accion", "descarga")
 
         EvidenceService.record_download_audit(
             evidencia=evidencia,
             user=request.user,
             ip_address=ip_address,
             user_agent=user_agent,
+            accion=accion,
         )
 
         response = HttpResponse(evidencia.contenido_blob, content_type=evidencia.mime_type)
@@ -671,7 +737,11 @@ class DecisionCausalView(APIView):
 
     def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
-            return [permissions.IsAuthenticated(), CanResolveCausal()]
+            return [
+                permissions.IsAuthenticated(),
+                CanResolveCausal(),
+                IsNotInvolvedInExpediente(),
+            ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
     def get(self, request: Request, pk: int, descargo_id: int) -> Response:
@@ -694,6 +764,7 @@ class DecisionCausalView(APIView):
                 fundamento=data["fundamento"],
                 evidencia_ids=data.get("evidencia_ids"),
                 user=request.user,
+                puntaje_final=data.get("puntaje_final"),
             )
         except CausalResolutionNotFound as exc:
             raise NotFound(str(exc)) from exc
@@ -702,6 +773,131 @@ class DecisionCausalView(APIView):
         except CausalResolutionValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
+def _composition_error_response(exc: TribunalCompositionError) -> Response:
+    if isinstance(exc, TribunalCompositionNotFound):
+        raise NotFound(str(exc)) from exc
+    return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ComposicionTribunalView(APIView):
+    """Responsables del Tribunal que interviene en la causa (S4-04): TD, CD y Administrador."""
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def get(self, request: Request, pk: int) -> Response:
+        try:
+            return Response(TribunalCompositionService.describe(pk, request.user))
+        except TribunalCompositionError as exc:
+            return _composition_error_response(exc)
+
+
+def _t01_error_response(exc: T01AppealError) -> Response:
+    if isinstance(exc, T01AppealNotFound):
+        raise NotFound(str(exc)) from exc
+    if isinstance(exc, T01AppealForbidden):
+        raise PermissionDenied(str(exc)) from exc
+    code = (
+        status.HTTP_409_CONFLICT
+        if isinstance(exc, T01AppealStateError)
+        else status.HTTP_400_BAD_REQUEST
+    )
+    return Response({"detail": str(exc)}, status=code)
+
+
+class PlazoApelacionView(APIView):
+    """Plazo de apelación del T01 en días hábiles (PB-02, CA1).
+
+    - GET: TD, CD y Administración.
+    - PUT: TD y Administración; registra un nuevo valor sin alterar períodos abiertos.
+    """
+
+    def get_permissions(self) -> list[permissions.BasePermission]:
+        if self.request.method == "PUT":
+            return [permissions.IsAuthenticated(), CanManageAppealDeadline()]
+        return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
+
+    @staticmethod
+    def _payload() -> dict:
+        ultimo = ParametroPlazoApelacion.objects.select_related("autor").first()
+        return {
+            "dias_habiles": ParametroPlazoApelacion.vigente(),
+            "actualizado_at": ultimo.created_at if ultimo else None,
+            "actualizado_por": ultimo.autor.get_username() if ultimo and ultimo.autor else "",
+        }
+
+    def get(self, request: Request) -> Response:
+        return Response(self._payload())
+
+    def put(self, request: Request) -> Response:
+        serializer = PlazoApelacionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            T01AppealService.set_business_days(
+                dias_habiles=serializer.validated_data["dias_habiles"], user=request.user
+            )
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
+        return Response(self._payload())
+
+
+class ApelacionT01View(APIView):
+    """El socio involucrado apela el T01 dentro de su plazo (PB-02, OP 20)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        serializer = ApelarT01Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            T01AppealService.present_appeal(
+                expediente_id=pk, user=request.user, texto=serializer.validated_data["texto"]
+            )
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
+        return Response(
+            T01AppealService.history(expediente_id=pk, user=request.user),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdecuacionT01View(APIView):
+    """El TD adecúa puntos e involucrados con motivos (PB-02, OP 30)."""
+
+    permission_classes = [permissions.IsAuthenticated, CanAdjustT01]
+
+    def post(self, request: Request, pk: int) -> Response:
+        serializer = AdecuarT01Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            T01AppealService.adjust(
+                expediente_id=pk,
+                user=request.user,
+                puntos=data["puntos"],
+                socio_ids=data["socios"],
+                motivos=data["motivos"],
+                reabrir_plazo=data["reabrir_plazo"],
+            )
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
+        return Response(
+            T01AppealService.history(expediente_id=pk, user=request.user),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class HistorialT01View(APIView):
+    """Trazabilidad del T01: original, períodos, apelaciones y adecuaciones (PB-02, CA4)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request, pk: int) -> Response:
+        try:
+            return Response(T01AppealService.history(expediente_id=pk, user=request.user))
+        except T01AppealError as exc:
+            return _t01_error_response(exc)
 
 
 # Backward-compatible alias for existing imports
@@ -762,7 +958,10 @@ class ExpedienteDetailView(APIView):
             )
 
         self.check_object_permissions(request, expediente)
-        serializer = ExpedienteListSerializer(expediente, context={"request": request})
+        es_mis = request.query_params.get("origen") == "mis_expedientes"
+        serializer = ExpedienteListSerializer(
+            expediente, context={"request": request, "es_mis_expedientes": es_mis}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request, pk: int) -> Response:
@@ -799,15 +998,6 @@ REGLAMENTOS_VIGENTES = (
     "Reglamento Procesal Disciplinario 2026",
     "Reglamento Interno de Disciplina",
 )
-
-
-class ReglamentosVigentesView(APIView):
-    """Lista de reglamentos institucionales vigentes para respaldar un T01."""
-
-    permission_classes = (CanCreateT01,)
-
-    def get(self, request):
-        return Response({"reglamentos": list(REGLAMENTOS_VIGENTES)})
 
 
 class SolicitudT01CreateView(APIView):
@@ -895,7 +1085,11 @@ class TransicionarExpedienteView(APIView):
     Delega estrictamente en ExpedienteWorkflowService.transition().
     """
 
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         # Aceptar tanto to_status/justificacion como estado/motivo
@@ -1070,7 +1264,13 @@ class CalcularPlazoView(APIView):
 
 
 __all__ = [
+    "ArticuloReglamentoDetailView",
+    "ArticuloReglamentoListCreateView",
     "EventoInstitucionalViewSet",
+    "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
+    "ReglamentosVigentesView",
     "SocioApercibimientosView",
+    "ExpedienteVisorView",
+    "filter_expedientes_by_legajo",
 ]

@@ -44,6 +44,8 @@ describe('SidebarComponent', () => {
   });
 
   it('incluye Reportes & Balance y Eventos & Asistencia en el menú de Tribunal', () => {
+    const authService = TestBed.inject(AuthService);
+    spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
     component.actualizarMenu();
     const titulos = component.menuItems.map(m => m.title);
     expect(titulos).toContain('Reportes & Balance');

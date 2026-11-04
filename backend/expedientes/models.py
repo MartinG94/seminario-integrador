@@ -9,6 +9,7 @@ Implementa:
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -226,6 +227,12 @@ class Expediente(models.Model):
         blank=True,
     )
     motivo = models.TextField()
+    titulo = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Título breve institucional del expediente.",
+    )
     puntos = models.DecimalField(max_digits=10, decimal_places=2, default=-1.0)
     estado = models.CharField(
         max_length=30,
@@ -306,7 +313,12 @@ class Expediente(models.Model):
             return self.plazo_limite_at
         provider = holiday_provider if holiday_provider is not None else DbHolidayProvider()
 
-        limite = compute_business_deadline(
+        from expedientes.services.t01_appeal_service import T01AppealService
+
+        # En los T01 el plazo de apelación es el parámetro vigente, por socio (PB-02).
+        limite = T01AppealService.open_initial_periods(
+            self, fecha_hora_inicio
+        ) or compute_business_deadline(
             start_at=fecha_hora_inicio,
             business_days=dias_habiles,
             holiday_provider=provider,
@@ -525,6 +537,39 @@ class AuditoriaDescargaEvidencia(models.Model):
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
+class AuditoriaConsultaExpediente(models.Model):
+    """Pista de auditoría inmutable de consultas en el visor autorizado (CA3)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.CASCADE,
+        related_name="consultas_auditadas",
+        db_index=True,
+    )
+    usuario = models.CharField(max_length=150)
+    legajo = models.CharField(max_length=50, blank=True)
+    rol = models.CharField(max_length=50)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_consulta"
+        ordering = ["-fecha_hora"]
+
+    def __str__(self) -> str:
+        return f"Consulta {self.expediente.numero} por {self.usuario} ({self.fecha_hora})"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Los registros de auditoría de consulta son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Los registros de auditoría de consulta no pueden eliminarse.")
+
+
 class DecisionCausalEnum(models.TextChoices):
     """Resultado de la valoración de una causal tipificada T02 (S4-02)."""
 
@@ -591,6 +636,88 @@ class DecisionCausalDescargo(models.Model):
         raise ValidationError("Una decisión registrada no puede eliminarse.")
 
 
+class CondicionIntegranteEnum(models.TextChoices):
+    """Condición con la que un socio integra el cuerpo de una causa (Arts. 92 y 95)."""
+
+    TITULAR = "TITULAR", "Titular"
+    SUPLENTE = "SUPLENTE", "Suplente"
+
+
+class InsertOnlyModel(models.Model):
+    """Registro sólo-inserción: no admite modificación ni eliminación (CA4, S4-04)."""
+
+    immutable_message = "El registro es inmutable."
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError(self.immutable_message)
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(self.immutable_message)
+
+
+class ComposicionTribunal(InsertOnlyModel):
+    """Cuerpo efectivo del Tribunal, estampado al adoptar la resolución (S4-04, CA4).
+
+    La composición se calcula en tiempo real mientras la causa se tramita y se congela
+    al pasar a `Pendiente de firma y envío`, junto con los integrantes apartados.
+    """
+
+    immutable_message = "La composición estampada del Tribunal es inmutable."
+
+    expediente = models.OneToOneField(
+        Expediente, on_delete=models.PROTECT, related_name="composicion_tribunal"
+    )
+    apartados = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_composicion_tribunal"
+        verbose_name = "Composición del Tribunal"
+        verbose_name_plural = "Composiciones del Tribunal"
+
+
+class IntegranteComposicion(InsertOnlyModel):
+    """Integrante efectivo de un cuerpo estampado, con copia para el pie de firma."""
+
+    immutable_message = "La composición estampada del Tribunal es inmutable."
+
+    composicion = models.ForeignKey(
+        ComposicionTribunal, on_delete=models.PROTECT, related_name="integrantes"
+    )
+    anio_social = models.PositiveSmallIntegerField()
+    socio = models.ForeignKey("socios.Socio", on_delete=models.PROTECT, related_name="+")
+    condicion = models.CharField(max_length=10, choices=CondicionIntegranteEnum.choices)
+    nro_socio = models.PositiveIntegerField()
+    nombre_completo = models.CharField(max_length=200)
+    grupo = models.CharField(max_length=10, blank=True)
+    reemplaza_a = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = "expedientes_integrante_composicion"
+        ordering = ["anio_social"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["composicion", "anio_social"], name="unique_integrante_per_anio"
+            )
+        ]
+
+    @property
+    def firma(self) -> str:
+        """Pie de firma canónico: `[N° de Socio] - [Nombre] - [Gxx] [(Sup.)]` (notasPO §4)."""
+        partes = [str(self.nro_socio), self.nombre_completo]
+        if self.grupo:
+            partes.append(self.grupo)
+        firma = " - ".join(partes)
+        if self.condicion == CondicionIntegranteEnum.SUPLENTE:
+            firma += " (Sup.)"
+        return firma
+
+
 class SolicitudT01(models.Model):
     class Estado(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"
@@ -599,6 +726,11 @@ class SolicitudT01(models.Model):
     class TipoAccion(models.TextChoices):
         SANCTION = "SANCTION", "Sanción"
         MERIT = "MERIT", "Mérito"
+
+    class PuntajeEspecial(models.TextChoices):
+        NINGUNO = "", "Sin puntaje especial"
+        LLAMADO_ATENCION = "LLAMADO_ATENCION", "Llamado de Atención"
+        FELICITACION = "FELICITACION", "Felicitación"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.DRAFT)
@@ -615,6 +747,12 @@ class SolicitudT01(models.Model):
     titulo = models.CharField(max_length=255, blank=True, default="")
     causal = models.CharField(max_length=255, blank=True)
     puntos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    puntaje_especial = models.CharField(
+        max_length=20,
+        choices=PuntajeEspecial.choices,
+        blank=True,
+        default="",
+    )
     motivo = models.TextField(blank=True)
     razon = models.TextField(blank=True, default="")
     reglamentos_respaldantes = models.JSONField(default=list, blank=True)
@@ -654,6 +792,16 @@ class SolicitudT01(models.Model):
                 raise ValidationError({"puntos": "Una sanción debe tener puntos negativos."})
             if self.tipo_accion == self.TipoAccion.MERIT and self.puntos <= 0:
                 raise ValidationError({"puntos": "Un mérito debe tener puntos positivos."})
+        if self.puntaje_especial:
+            if self.puntaje_especial == self.PuntajeEspecial.LLAMADO_ATENCION:
+                if self.puntos != Decimal("-0.25") or self.tipo_accion != self.TipoAccion.SANCTION:
+                    msg = "Llamado de atención requiere puntos=-0.25 y tipo=SANCTION."
+                    raise ValidationError({"puntaje_especial": msg})
+            elif self.puntaje_especial == self.PuntajeEspecial.FELICITACION:
+                if self.puntos != Decimal("0.25") or self.tipo_accion != self.TipoAccion.MERIT:
+                    raise ValidationError(
+                        {"puntaje_especial": "Felicitación requiere puntos=0.25 y tipo=MERIT."}
+                    )
 
     def delete(self, *args, **kwargs):
         if self.estado == self.Estado.ISSUED:
@@ -665,6 +813,11 @@ class SolicitudT01(models.Model):
             previous = type(self).objects.filter(pk=self.pk).values("estado").first()
             if previous and previous["estado"] == self.Estado.ISSUED:
                 raise ValidationError("Una solicitud emitida es inmutable.")
+        if self.puntos == Decimal("-0.25") and not self.puntaje_especial:
+            self.puntaje_especial = self.PuntajeEspecial.LLAMADO_ATENCION
+        elif self.puntos == Decimal("0.25") and not self.puntaje_especial:
+            self.puntaje_especial = self.PuntajeEspecial.FELICITACION
+
         # Sincronización bidireccional retrocompatible
         if self.destinatarios_socios_ids and not self.destinatario_socio_id:
             self.destinatario_socio_id = self.destinatarios_socios_ids[0]
@@ -676,6 +829,128 @@ class SolicitudT01(models.Model):
             self.snapshots_destinatarios = [self.snapshot_destinatario]
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+# --- Apelación y adecuación del T01 (PB-02, Reglamento Procesal 2026, art. 14) ---
+
+
+class T01HistoryRecord(models.Model):
+    """Registro del historial del T01: sólo inserción, sin modificación ni eliminación (CA4)."""
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("El historial del T01 es inmutable.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("El historial del T01 no puede eliminarse.")
+
+
+class ParametroPlazoApelacion(T01HistoryRecord):
+    """Plazo de apelación del T01 en días hábiles; el vigente es el último registrado."""
+
+    DEFAULT_DIAS_HABILES = 5
+
+    dias_habiles = models.PositiveSmallIntegerField()
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_parametro_plazo_apelacion"
+        ordering = ["-created_at", "-id"]
+
+    @classmethod
+    def vigente(cls) -> int:
+        ultimo = cls.objects.order_by("-created_at", "-id").first()
+        return ultimo.dias_habiles if ultimo else cls.DEFAULT_DIAS_HABILES
+
+
+class OrigenPeriodoApelacionEnum(models.TextChoices):
+    APERTURA = "APERTURA", "Apertura del expediente"
+    ADECUACION = "ADECUACION", "Nuevo período por adecuación"
+
+
+class AdecuacionT01(T01HistoryRecord):
+    """Versión de la adecuación de puntos e involucrados decidida en el debate (OP 30)."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="adecuaciones_t01"
+    )
+    version = models.PositiveIntegerField()
+    puntos_anteriores = models.DecimalField(max_digits=10, decimal_places=2)
+    puntos_nuevos = models.DecimalField(max_digits=10, decimal_places=2)
+    socios_anteriores = models.JSONField(default=list)
+    socios_nuevos = models.JSONField(default=list)
+    motivos = models.TextField()
+    reabre_plazo = models.BooleanField(default=False)
+    socios_con_nuevo_plazo = models.JSONField(default=list, blank=True)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    autor_legajo = models.CharField(max_length=20)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_adecuacion_t01"
+        ordering = ["version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "version"], name="unique_adecuacion_t01_version"
+            )
+        ]
+
+
+class PeriodoApelacion(T01HistoryRecord):
+    """Período de apelación de un socio, con el plazo congelado al abrirse (CA1/CA5)."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="periodos_apelacion"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="periodos_apelacion"
+    )
+    origen = models.CharField(max_length=12, choices=OrigenPeriodoApelacionEnum.choices)
+    adecuacion = models.ForeignKey(
+        AdecuacionT01,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="periodos_abiertos",
+    )
+    dias_habiles = models.PositiveSmallIntegerField()
+    inicio_at = models.DateTimeField()
+    limite_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_periodo_apelacion"
+        ordering = ["created_at", "id"]
+
+
+class ApelacionT01(T01HistoryRecord):
+    """Versión de la apelación de un socio involucrado en un T01 (OP 20)."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="apelaciones_t01"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="apelaciones_t01"
+    )
+    numero = models.PositiveIntegerField()
+    texto = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        db_table = "expedientes_apelacion_t01"
+        ordering = ["socio_id", "numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "socio", "numero"], name="unique_apelacion_t01_version"
+            )
+        ]
 
 
 class CategoriaEventoEnum(models.TextChoices):
@@ -1359,3 +1634,161 @@ class Resolucion(models.Model):
 Reunion = EventoInstitucional
 AsistenciaReunion = AsistenciaEvento
 RegistroApercibimiento = AtencionFelicitacion
+
+
+class TipoReglamentoEnum(models.TextChoices):
+    """Tipos de reglamentos institucionales oficiales."""
+
+    REGLAMENTO_INTERNO = "Reglamento Interno", "Reglamento Interno"
+    ESTATUTO = "Estatuto", "Estatuto"
+
+
+class ArticuloReglamento(models.Model):
+    """Artículo o inciso de un cuerpo normativo institucional (Reglamento Interno o Estatuto).
+
+    Mapeado a la tabla preexistente 'tribunal_reglamento' del esquema legado,
+    extendida con soporte de baja lógica (activo) y campos de trazabilidad.
+    """
+
+    id = models.AutoField(primary_key=True, db_column="idReglamento")
+    titulo = models.CharField(
+        max_length=45,
+        choices=TipoReglamentoEnum.choices,
+        db_column="titulo",
+        db_index=True,
+    )
+    seccion = models.IntegerField(default=1, db_column="seccion")
+    articulo = models.IntegerField(db_column="articulo", db_index=True)
+    inciso = models.CharField(max_length=11, default="-", db_column="inciso")
+    descripcion = models.TextField(db_column="descripcion")
+    activo = models.BooleanField(default=True, db_column="activo", db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="articulos_reglamento_creados",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="articulos_reglamento_modificados",
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="articulos_reglamento_eliminados",
+    )
+
+    @property
+    def cita_corta(self) -> str:
+        """Cita reglamentaria corta normalizada."""
+        if self.inciso == "-":
+            return f"{self.titulo} - Art. {self.articulo}"
+        return f"{self.titulo} - Art. {self.articulo} Inc. {self.inciso}"
+
+    @property
+    def cita_completa(self) -> str:
+        """Cita reglamentaria con fragmento del cuerpo para selectores."""
+        desc = (self.descripcion or "").strip()
+        if len(desc) > 120:
+            preview = f"{desc[:120]}..."
+        else:
+            preview = desc
+        return f"{self.cita_corta}: {preview}" if preview else self.cita_corta
+
+    @property
+    def cuerpo(self) -> str:
+        """Alias de descripcion para ergonomía semántica."""
+        return self.descripcion
+
+    @cuerpo.setter
+    def cuerpo(self, value: str) -> None:
+        self.descripcion = value
+
+    def clean(self) -> None:
+        super().clean()
+        if self.activo:
+            qs = ArticuloReglamento.objects.filter(
+                titulo=self.titulo,
+                articulo=self.articulo,
+                inciso=self.inciso,
+                activo=True,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(f"Ya existe un artículo activo para {self.cita_corta}.")
+
+    class Meta:
+        db_table = "tribunal_reglamento"
+        ordering = ["articulo", "inciso"]
+        verbose_name = "Artículo de Reglamento"
+        verbose_name_plural = "Artículos de Reglamento"
+
+    def __str__(self) -> str:
+        return self.cita_corta
+
+
+class OperacionAuditoriaReglamentoEnum(models.TextChoices):
+    """Operaciones registradas en la auditoría inmutable de reglamentos."""
+
+    CREADO = "CREADO", "Creado"
+    MODIFICADO = "MODIFICADO", "Modificado"
+    ELIMINADO = "ELIMINADO", "Eliminado"
+
+
+class AuditoriaArticuloReglamento(models.Model):
+    """Registro inmutable de auditoría para creaciones, modificaciones y bajas de artículos."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    articulo_reglamento = models.ForeignKey(
+        ArticuloReglamento,
+        on_delete=models.PROTECT,
+        related_name="auditorias",
+    )
+    operacion = models.CharField(
+        max_length=15,
+        choices=OperacionAuditoriaReglamentoEnum.choices,
+        db_index=True,
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    usuario_username = models.CharField(max_length=150)
+    legajo = models.CharField(max_length=50, blank=True)
+    rol = models.CharField(max_length=50, blank=True)
+    datos_anteriores = models.JSONField(null=True, blank=True)
+    datos_nuevos = models.JSONField(null=True, blank=True)
+    fecha_hora = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_auditoria_reglamento"
+        ordering = ["-fecha_hora"]
+        verbose_name = "Auditoría de Artículo de Reglamento"
+        verbose_name_plural = "Auditorías de Artículos de Reglamento"
+
+    def __str__(self) -> str:
+        return (
+            f"Auditoria {self.operacion} sobre {self.articulo_reglamento_id} "
+            f"por {self.usuario_username} ({self.fecha_hora})"
+        )
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Los registros de auditoría de reglamentos son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Los registros de auditoría de reglamentos no pueden eliminarse.")

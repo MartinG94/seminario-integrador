@@ -36,12 +36,15 @@ export interface BoardCaseDTO {
   urgencia?: NivelUrgencia;
   urgencia_display?: string;
   puntos: number;
+  puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+  puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   motivo: string;
   titulo?: string;
   razon?: string;
   creador?: string;
   solicitante?: string;
   reglamento_asociado?: string;
+  reglamentos_respaldantes?: string[];
   created_at: string;
   plazo_limite_at: string | null;
   transiciones_permitidas: EstadoExpediente[];
@@ -83,6 +86,8 @@ export interface Expediente {
   solicitante?: string;
   reglamento_asociado?: string;
   reglamentoAsociado?: string;
+  reglamentos_respaldantes?: string[];
+  reglamentosRespaldantes?: string[];
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;
@@ -92,10 +97,14 @@ export interface Expediente {
   horasRestantes: number;
   tipo: 'falta' | 'merito';
   puntos: number;
+  puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+  puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   cantidadSocios?: number;
   sociosInvolucrados?: SocioInvolucrado[];
   plazoInicioAt?: string;
   plazoLimiteAt?: string;
+  /** Originado en un T01: se apela en lugar de presentar T02/T03 (PB-02). */
+  esT01?: boolean;
   descargoPresentado?: boolean;
   descargo?: {
     tipo: 'T02_CERTIFICADO' | 'T03_EXTRAORDINARIO';
@@ -549,6 +558,9 @@ export class TribunalDataService {
       creador: c.creador || '',
       solicitante: c.solicitante || c.creador || '',
       reglamento_asociado: c.reglamento_asociado || '',
+      reglamentoAsociado: c.reglamento_asociado || '',
+      reglamentos_respaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
+      reglamentosRespaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
       fechaCreacion: c.created_at || '',
       estado: c.estado,
       estadoDisplay: c.estado_display,
@@ -558,6 +570,8 @@ export class TribunalDataService {
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',
       puntos: Number(c.puntos),
+      puntaje_solicitado: c.puntaje_solicitado || null,
+      puntajeSolicitado: c.puntaje_solicitado || null,
       cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
       sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
       plazoLimiteAt: c.plazo_limite_at || undefined

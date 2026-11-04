@@ -1,8 +1,24 @@
 <div class="main-content calendar-page">
   <div class="container-fluid">
-    <div class="card">
-      <div class="card-header card-header-primary calendar-heading">
-        <h3 class="card-title">Calendario institucional</h3>
+    <div class="card card-nav-tabs shadow-sm">
+      <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+        <div class="nav-tabs-wrapper">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link active" href="javascript:void(0)" role="tab">
+                <i class="material-icons">calendar_month</i> CALENDARIO Y FERIADOS
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" (click)="openSimulation()" href="javascript:void(0)" role="tab">
+                <i class="material-icons">calculate</i> SIMULAR PLAZO
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="text-white-50 d-none d-md-block small">
+          <span>Cómputo reglamentario de plazos procesales y feriados societarios</span>
+        </div>
       </div>
       <div class="card-body">
         <div class="calendar-toolbar">
@@ -35,6 +51,29 @@
             </button>
           </div>
         </div>
+
+        <section *ngIf="appealDeadline" class="appeal-deadline" aria-labelledby="appeal-deadline-title">
+          <h4 id="appeal-deadline-title" class="appeal-deadline-title">Plazo de apelación del T01</h4>
+          <div class="appeal-deadline-row">
+            <ng-container *ngIf="canEditAppealDeadline; else appealDeadlineReadOnly">
+              <label for="appeal-deadline-days">Días hábiles</label>
+              <input id="appeal-deadline-days" type="number" min="1" max="30" class="form-control appeal-deadline-input"
+                [(ngModel)]="appealDeadlineDraft" aria-describedby="appeal-deadline-help">
+              <button type="button" mat-raised-button class="btn btn-primary btn-save-appeal-deadline"
+                [disabled]="savingAppealDeadline || appealDeadlineDraft === appealDeadline.dias_habiles"
+                (click)="saveAppealDeadline()">Guardar</button>
+            </ng-container>
+            <ng-template #appealDeadlineReadOnly>
+              <span class="appeal-deadline-value">{{ appealDeadline.dias_habiles }} días hábiles</span>
+            </ng-template>
+          </div>
+          <p id="appeal-deadline-help" class="appeal-deadline-help">
+            Rige para los períodos que se abran desde ahora; no cambia los que ya están en curso.
+            <ng-container *ngIf="appealDeadline.actualizado_por">
+              Último cambio: {{ appealDeadline.actualizado_por }}, {{ appealDeadline.actualizado_at | date:'dd/MM/yyyy HH:mm' }}.
+            </ng-container>
+          </p>
+        </section>
 
         <form *ngIf="showHolidayForm" id="create-holiday-form" class="holiday-form"
           (ngSubmit)="saveHoliday()" #holidayForm="ngForm" aria-label="Crear feriado">

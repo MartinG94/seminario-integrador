@@ -1,6 +1,8 @@
 """Servicio de aplicación para resolver causales T02 con fundamento trazable (S4-02)."""
 
 from collections.abc import Iterable, Sequence
+from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from django.db import transaction
@@ -12,6 +14,13 @@ from expedientes.domain.causal_resolution import (
     suggested_decision,
     validate_decision,
 )
+from expedientes.domain.puntaje_especial import (
+    RANK as PUNTAJE_ESPECIAL_RANK,
+)
+from expedientes.domain.puntaje_especial import (
+    PuntajeEspecial,
+    parse_puntaje_especial,
+)
 from expedientes.models import (
     DecisionCausalDescargo,
     DescargoExpediente,
@@ -20,6 +29,7 @@ from expedientes.models import (
     Expediente,
     TipoDescargoEnum,
 )
+from expedientes.services.warning_accumulation_service import WarningAccumulationService
 
 DECIDABLE_STATES = (
     EstadoExpedienteEnum.REVISION_RESOLUCION,
@@ -113,6 +123,7 @@ class CausalResolutionService:
         fundamento: str,
         evidencia_ids: Sequence[UUID] | None,
         user,
+        puntaje_final: Any = None,
     ) -> DecisionCausalDescargo:
         expediente = Expediente.objects.select_for_update().filter(pk=expediente_id).first()
         if expediente is None:
@@ -143,6 +154,78 @@ class CausalResolutionService:
 
         suggested = suggested_decision(has_current_evidence=bool(current))
         fundamento = fundamento.strip()
+
+        # Regla de negocio y cálculo de puntaje final / llamado de atención / felicitación
+        puntos_pedido = expediente.puntos if expediente.puntos is not None else Decimal("0")
+        pedido_dec = Decimal(str(puntos_pedido))
+        final_snapshot_val = None
+
+        ultima_decision = (
+            DecisionCausalDescargo.objects.filter(descargo=descargo).order_by("-version").first()
+        )
+        prev_snapshot_val = None
+        if ultima_decision and ultima_decision.descargo_snapshot:
+            prev_snapshot_val = ultima_decision.descargo_snapshot.get("puntaje_final")
+
+        especial_previo = parse_puntaje_especial(prev_snapshot_val)
+        especial_nuevo = parse_puntaje_especial(puntaje_final)
+
+        if puntaje_final is not None and str(puntaje_final).strip():
+            if especial_nuevo == PuntajeEspecial.LLAMADO_ATENCION:
+                final_rank = PUNTAJE_ESPECIAL_RANK[PuntajeEspecial.LLAMADO_ATENCION]
+                final_snapshot_val = "LLAMADO_ATENCION"
+            elif especial_nuevo == PuntajeEspecial.FELICITACION:
+                final_rank = PUNTAJE_ESPECIAL_RANK[PuntajeEspecial.FELICITACION]
+                final_snapshot_val = "FELICITACION"
+            else:
+                final_rank = Decimal(str(puntaje_final).strip())
+                final_snapshot_val = float(final_rank)
+
+            if final_rank < pedido_dec:
+                if not fundamento or len(fundamento.strip()) < 10:
+                    raise CausalResolutionValidationError(
+                        "La fundamentación escrita es obligatoria cuando "
+                        "el puntaje final es menor al pedido original."
+                    )
+
+        if especial_nuevo != especial_previo:
+            actor_name = user.get_username() if user else "TRIBUNAL"
+            if especial_previo == PuntajeEspecial.LLAMADO_ATENCION:
+                WarningAccumulationService.revert_warning(
+                    socio_id=descargo.socio_id,
+                    actor=actor_name,
+                )
+            elif especial_previo == PuntajeEspecial.FELICITACION:
+                WarningAccumulationService.revert_felicitacion(
+                    socio_id=descargo.socio_id,
+                    actor=actor_name,
+                )
+
+            if especial_nuevo == PuntajeEspecial.LLAMADO_ATENCION:
+                motivo_llamado = (
+                    f"Llamado de atención en exp {expediente.numero}: {fundamento}"
+                    if fundamento
+                    else f"Llamado de atención en exp {expediente.numero} (Tribunal)"
+                )
+                WarningAccumulationService.register_warning(
+                    socio_id=descargo.socio_id,
+                    origen_tipo="EXPEDIENTE_TRIBUNAL",
+                    motivo=motivo_llamado,
+                    expediente_origen_id=expediente.id,
+                    actor=actor_name,
+                )
+            elif especial_nuevo == PuntajeEspecial.FELICITACION:
+                motivo_felic = (
+                    f"Felicitación en expediente {expediente.numero}: {fundamento}"
+                    if fundamento
+                    else f"Felicitación en expediente {expediente.numero} (Tribunal de Disciplina)"
+                )
+                WarningAccumulationService.register_felicitacion(
+                    socio_id=descargo.socio_id,
+                    motivo=motivo_felic,
+                    actor=actor_name,
+                )
+
         try:
             validate_decision(decision, suggested, fundamento)
         except CausalDecisionError as exc:
@@ -171,7 +254,11 @@ class CausalResolutionService:
                 }
                 for ev in valued
             ],
-            descargo_snapshot=_descargo_snapshot(descargo),
+            descargo_snapshot={
+                **_descargo_snapshot(descargo),
+                "puntaje_final": final_snapshot_val,
+                "fundamento_cambio_puntaje": fundamento,
+            },
             autor=user,
             autor_legajo=socio.legajo if socio else user.get_username(),
             autor_rol=socio.role if socio else "",

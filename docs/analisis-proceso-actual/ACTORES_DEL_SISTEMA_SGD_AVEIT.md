@@ -119,7 +119,7 @@ classDiagram
 
 ### ACT-01: Socio Ordinario
 * **Tipo de Actor:** Actor Humano Principal (Masa Societaria).
-* **Alcance y Agrupación:** Agrupa al padrón total de más de 500 socios con membresía vigente de AVEIT, integrando orgánicamente tanto a **Socios Pasivos (1º, 2º y 3º año social)** como a **Socios Activos (4º a 6º año social)** en su interacción base como miembros de la comunidad.
+* **Alcance y Agrupación:** Agrupa al padrón total de más de 500 socios con membresía vigente de AVEIT, integrando orgánicamente tanto a **Socios Juniors (1.º y 2.º año social - G63 y G62 en 2026)** como a **Socios Seniors (3.er a 6.º año social - G61 a G58 en 2026)** y a **Exviajeros**, conforme a la dinámica de promociones escolares fijas (Grupos Gxx desde 1965) y la fórmula canónica $\text{Año Social} = (\text{Año Actual} - 1962) - \text{Número de Grupo}$.
 * **Propósito con el Sistema:** Consultar su posición y saldo neto acumulado de puntos (+/-), revisar el estado procesal de sus trámites en "Mis Expedientes", recibir notificaciones fehacientes de causas y ejercer su derecho reglamentario a defensa mediante formularios digitales con prueba adjunta.
 * **Responsabilidades y Casos de Uso Clave:**
   1. Iniciar sesión en la aplicación web responsive mobile desde smartphones o PCs.

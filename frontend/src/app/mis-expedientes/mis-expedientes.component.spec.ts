@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +17,7 @@ describe('MisExpedientesComponent', () => {
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule, ComponentsModule],
       declarations: [MisExpedientesComponent],
       providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
     }).compileComponents();
@@ -232,7 +233,7 @@ describe('MisExpedientesComponent', () => {
       http.expectOne({ method: 'DELETE', url: `${apiUrl}/EXP-1/descargo/` }).flush({ detail: 'ok' });
       expect(eliminarSpy).toHaveBeenCalledWith('EXP-1', jasmine.any(Object));
       expect(notifications.info).toHaveBeenCalledWith(
-        'Descargo del expediente EXP-001/2026 retirado. Queda registrado en el historial.'
+        'Descargo del expediente 1/2026 retirado. Queda registrado en el historial.'
       );
     });
 
@@ -328,6 +329,57 @@ describe('MisExpedientesComponent', () => {
       component.cambiarOrden('motivo');
       expect(component.columnaOrden).toBe('motivo');
       expect(component.ordenAscendente).toBeTrue();
+    });
+
+    it('ordena por involucrados y urgencia', () => {
+      const exp1: Expediente = { ...mockExpedientes[0], cantidadSocios: 1, urgencia: 'normal' };
+      const exp2: Expediente = { ...mockExpedientes[1], cantidadSocios: 3, urgencia: 'urgente' };
+      component.misExpedientes = [exp1, exp2];
+
+      component.columnaOrden = 'involucrados';
+      component.ordenAscendente = true;
+      expect(component.expedientesOrdenados[0].numero).toBe(exp1.numero);
+
+      component.columnaOrden = 'urgencia';
+      component.ordenAscendente = true;
+      expect(component.expedientesOrdenados[0].numero).toBe(exp1.numero);
+    });
+
+    it('obtiene cantidad de involucrados correctamente', () => {
+      const expConSocios: any = { cantidadSocios: 4 };
+      expect(component.getCantidadInvolucrados(expConSocios)).toBe(4);
+
+      const expConArray: any = { sociosInvolucrados: [{}, {}] };
+      expect(component.getCantidadInvolucrados(expConArray)).toBe(2);
+
+      const expVacio: any = {};
+      expect(component.getCantidadInvolucrados(expVacio)).toBe(1);
+    });
+
+    it('obtiene badges y etiquetas de urgencia', () => {
+      expect(component.getUrgenciaLabel('urgente')).toBe('URGENTE');
+      expect(component.getUrgenciaLabel('baja')).toBe('BAJA');
+      expect(component.getUrgenciaLabel('normal')).toBe('NORMAL');
+
+      expect(component.getUrgenciaBadgeClass('urgente')).toContain('badge-mat-danger');
+      expect(component.getUrgenciaBadgeClass('normal')).toContain('badge-mat-info');
+
+      expect(component.getUrgenciaIcon('urgente')).toBe('priority_high');
+      expect(component.getUrgenciaIcon('baja')).toBe('arrow_downward');
+      expect(component.getUrgenciaIcon('normal')).toBe('remove');
+    });
+
+    it('maneja eventos de teclado en la fila de tabla', () => {
+      spyOn(component, 'abrirModalDetalle');
+      const exp = mockExpedientes[0];
+      const eventEnter = new KeyboardEvent('keydown', { key: 'Enter' });
+      const eventEscape = new KeyboardEvent('keydown', { key: 'Escape' });
+
+      component.onTableKeyDown(eventEnter, exp);
+      expect(component.abrirModalDetalle).toHaveBeenCalledWith(exp);
+
+      component.onTableKeyDown(eventEscape, exp);
+      expect(component.abrirModalDetalle).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -978,6 +1030,140 @@ describe('MisExpedientesComponent', () => {
       const mapeadoValido = (component as any).mapearExpedienteApi(rawValido);
       expect(mapeadoValido.descargo).toBeDefined();
       expect(mapeadoValido.descargo.texto).toBe('Presento constancia de examen');
+    });
+  });
+  describe('Apelación del T01 (PB-02)', () => {
+    const texto = 'No estuve presente en el laboratorio ese día; hay testigos.';
+    const futuro = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString();
+    const pasado = new Date(Date.now() - 3600 * 1000).toISOString();
+
+    const expT01 = {
+      id: '7',
+      numero: 'EXP-0701/2026',
+      socio: 'Ana Pérez',
+      legajo: '78002',
+      subcomision: 'Cómputos',
+      motivo: 'Uso indebido del laboratorio',
+      fechaCreacion: '2026-10-20',
+      estado: 'justificando',
+      horasRestantes: 72,
+      tipo: 'falta',
+      puntos: -2,
+      plazoLimiteAt: futuro,
+      esT01: true
+    } as Expediente;
+
+    const historial = (limite = futuro, apelaciones: any[] = []) => ({
+      es_t01: true,
+      estado: 'justificando',
+      plazo_dias_vigente: 5,
+      puntos_vigentes: '-2.00',
+      involucrados: [],
+      original: null,
+      periodos: [{ socio_id: 3, socio: 'Ana Pérez', origen: 'APERTURA', dias_habiles: 5, inicio_at: pasado, limite_at: limite, abierto: limite === futuro }],
+      apelaciones,
+      adecuaciones: [{
+        version: 1, puntos_anteriores: '-2.00', puntos_nuevos: '-1.50', socios_anteriores: [], socios_nuevos: [],
+        motivos: 'El debate atenuó la gravedad de la falta.', reabre_plazo: false, socios_con_nuevo_plazo: [],
+        autor_legajo: '78100', created_at: pasado
+      }]
+    });
+
+    function abrir(h = historial()): void {
+      component.abrirModalDetalle(expT01);
+      http.expectOne(`${apiUrl}/7/t01/historial/`).flush(h);
+      http.match(`${apiUrl}/7/`).forEach(r => r.flush({ id: 7, numero: 'EXP-0701/2026', estado: 'justificando', es_t01: true, plazo_limite_at: futuro }));
+      fixture.detectChanges();
+    }
+
+    it('mapea el origen T01 desde la API', () => {
+      expect((component as any).mapearExpedienteApi({ id: 1, es_t01: true }).esT01).toBeTrue();
+      expect((component as any).mapearExpedienteApi({ id: 2 }).esT01).toBeFalse();
+    });
+
+    it('muestra la apelación en lugar del justificativo T02/T03 y no consulta versiones de descargo', () => {
+      abrir();
+      http.expectNone(`${apiUrl}/7/descargo/versiones/`);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.seccion-apelacion')).toBeTruthy();
+      expect(compiled.textContent).not.toContain('Añadir Justificativo');
+      expect(compiled.querySelector('.btn-apelar')?.textContent).toContain('Apelar');
+      expect(compiled.querySelector('.adecuacion-t01')?.textContent).toContain('-2.00 → -1.50');
+    });
+
+    it('exige un texto mínimo antes de enviar', () => {
+      abrir();
+      component.abrirApelacion();
+      component.textoApelacion = 'No fui yo';
+      component.enviarApelacion();
+      http.expectNone(`${apiUrl}/7/apelacion/`);
+      expect(notifications.error).toHaveBeenCalledWith('Escribí tu apelación con al menos 20 caracteres.');
+    });
+
+    it('envía la apelación y muestra la versión registrada', () => {
+      abrir();
+      component.abrirApelacion();
+      component.textoApelacion = `  ${texto}  `;
+      component.enviarApelacion();
+
+      const req = http.expectOne(`${apiUrl}/7/apelacion/`);
+      expect(req.request.body).toEqual({ texto });
+      req.flush(historial(futuro, [{ socio_id: 3, socio: 'Ana Pérez', numero: 1, texto, created_at: pasado }]));
+      fixture.detectChanges();
+
+      expect(component.apelacionAbierta).toBeFalse();
+      expect(component.ultimaApelacion?.numero).toBe(1);
+      expect(notifications.success).toHaveBeenCalledWith('Apelación registrada. Te enviamos la constancia por mail.');
+      expect(fixture.nativeElement.querySelector('.btn-apelar').textContent).toContain('Editar apelación');
+    });
+
+    it('con el plazo vencido no permite apelar', () => {
+      abrir(historial(pasado));
+      expect(component.puedeApelar).toBeFalse();
+      expect(fixture.nativeElement.querySelector('.btn-apelar')).toBeNull();
+    });
+
+    it('informa el rechazo del servidor', () => {
+      abrir();
+      component.abrirApelacion();
+      component.textoApelacion = texto;
+      component.enviarApelacion();
+      http.expectOne(`${apiUrl}/7/apelacion/`).flush({ detail: 'Tu plazo de apelación venció.' }, { status: 409, statusText: 'Conflict' });
+      expect(notifications.error).toHaveBeenCalled();
+      expect(component.enviandoApelacion).toBeFalse();
+    });
+
+    it('mapea reglamentos_respaldantes desde la API y los renderiza como chips interactivos en el modal de detalle', () => {
+      const rawApi = {
+        id: 88,
+        numero: 'EXP-0088/2026',
+        socio_nombre: 'Ana Pérez',
+        socio_legajo: '777',
+        motivo: 'Inasistencia a plenaria',
+        estado: 'justificando',
+        puntos: -1,
+        reglamentos_respaldantes: [
+          'Estatuto - Art. 14 Inc. a: Es deber de todo socio activo asistir a las asambleas.',
+          'Reglamento Interno - Art. 12: Sanciones por inasistencia injustificada.'
+        ]
+      };
+      const mapeado = (component as any).mapearExpedienteApi(rawApi);
+      expect(mapeado.reglamentos_respaldantes.length).toBe(2);
+
+      component.expedienteDetalle = mapeado;
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const rows = compiled.querySelectorAll('.table-reglamentos-normativa tbody tr');
+      expect(rows.length).toBe(2);
+      expect(rows[0].querySelector('.td-documento')?.textContent).toContain('Estatuto');
+      expect(rows[0].querySelector('.td-articulo')?.textContent?.trim()).toBe('14');
+      expect(rows[0].querySelector('.td-inciso')?.textContent?.trim()).toBe('a');
+      expect(rows[0].querySelector('.td-cuerpo')?.textContent).toContain('Es deber de todo socio activo asistir a las asambleas.');
+
+      expect(rows[1].querySelector('.td-documento')?.textContent).toContain('Reglamento Interno');
+      expect(rows[1].querySelector('.td-articulo')?.textContent?.trim()).toBe('12');
     });
   });
 });
