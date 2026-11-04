@@ -5,7 +5,11 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework import status
 
-from expedientes.models import ComposicionTribunal, EstadoExpedienteEnum
+from expedientes.models import (
+    ComposicionTribunal,
+    ConceptoExpedienteEnum,
+    EstadoExpedienteEnum,
+)
 from expedientes.services.tribunal_composition_service import TribunalCompositionService
 from expedientes.services.tribunal_roster import CARGO_TITULAR_TD
 from socios.models import Role
@@ -79,6 +83,8 @@ def test_flujo_e2e_asamblea_computos_resolucion_desasignacion(
     assert resp_trans.status_code == status.HTTP_200_OK
 
     # PASO 6: Emisión del expediente
+    causal_expediente.concepto = ConceptoExpedienteEnum.CD
+    causal_expediente.save(update_fields=["concepto"])
     resp_emitir = api_client.post(
         f"/api/v1/expedientes/{causal_expediente.pk}/transicionar/",
         {"to_status": EstadoExpedienteEnum.EMITIDO},
