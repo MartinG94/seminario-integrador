@@ -67,7 +67,7 @@ La decisión final es un entregable de Sprint 1 y requiere aprobación del respo
 | Categorías sociales | Decisión de Product Owner del 08/09/2026 y Estatuto 2026, art. 3 | La denominación canónica es Pasivo para 1.º–3.º (equivalente anterior: Junior) y Activo para 4.º–6.º (equivalente anterior: Senior). La vigencia de cuenta/membresía es un concepto separado. |
 | Composición del TD | Estatuto 2026, arts. 92 y 95 | Tres titulares y tres suplentes, con un titular y un suplente por cada grupo Activo. Debe modelarse el apartamiento y la sustitución estatutaria. |
 | Recusación | Estatuto 2026, art. 93 | Los miembros no pueden ser recusados. El backlog anterior hablaba de “recusaciones”; se reemplaza por apartamiento/conflicto y suplencia. |
-| Mayoría | Estatuto 2026, art. 96 | Decisiones por mayoría absoluta; para el cuerpo ordinario de tres titulares, dos votos afirmativos. Los casos ad hoc deben derivar la mayoría de su composición efectiva. |
+| Resolución y Puntaje | Estatuto 2026, art. 96 / Directiva PO `07/10/2026` | Por directiva del PO y del TD (`07/10/2026`), se descarta la interfaz compleja de votación nominal paso a paso (`SCRUM-55`); el Tribunal redacta la resolución en un editor unificado (`VISTO / CONSIDERANDO / SE RESUELVE`) fijando directamente el puntaje final por socio (`SCRUM-56`) y estampando al menos 3 firmas colegiadas con identificación de Grupo Social (`Gxx`) y condición (`Titular`/`Suplente`). |
 | Estados | Reglamento Procesal 2026, art. 12 | Son exactamente seis: Creado; período para justificaciones; justificaciones en revisión; espera de resolución; pendiente de correos; emitido. La UI actual consolida cinco. |
 | T01 y anexo | Reglamento Procesal 2026, art. 16 bis | El anexo puede acompañar al T01; no es obligatorio en todos los casos. |
 | T02/T03 | Reglamento Procesal 2026, arts. 17 y 18 | T02 es tipificado y estructurado; T03 cubre causales extraordinarias no previstas y requiere valoración fundada/precedentes. |
@@ -114,7 +114,7 @@ La decisión final es un entregable de Sprint 1 y requiere aprobación del respo
 | 1 | 20 | 0 | Integración, identidad, padrón, ranking y búsqueda sobre datos reales/representativos. |
 | 2 | 18 | 0 | Apertura T01, competencias, notificación y máquina de seis estados. |
 | 3 | 19 | 0 | Plazos hábiles, T02/T03, evidencia y origen de sanciones. |
-| 4 | 22 | 0 | Revisión, conflicto/suplencias, voto nominal y resolución. |
+| 4 | 19 | 0 | Revisión, conflicto/suplencias, apelación T01 y editor unificado de resolución oficial con puntaje directo por socio (sin votación nominal). |
 | 5 | 20 | 0 | Firma, emisión, libro mayor, portal y alertas. |
 | 6 | 21 | 3 | Balance, reconciliación, calidad, staging y homologación; jurisprudencia como stretch. |
 | **Total** | **120** | **3** | Pronóstico inicial; reestimar tras Sprint 1. |

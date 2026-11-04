@@ -6,8 +6,8 @@
 **Equipo de Proyecto:** Grupo Nº 04  
 **Product Owner:** Diego Gabriel Sánchez (Nº Socio: 87414)  
 **Scrum Master:** Lucas Martín Guillén (Nº Socio: 85194)  
-**Iteración:** Sprint 3 (08/10/2026 al 20/10/2026)  
-**Documento Fuente:** Complemento operativo para el Plan de Proyecto / Definición de Producto en Google Drive
+**Iteración:** Sprint 3 (`07/10/2026 al 20/10/2026` — 14 días corridos / 10 días hábiles; alineación PO/TD el `07/10` e inicio de ejecución en Jira el `08/10`)  
+**Documento Fuente:** Actualización integral de la Definición del Producto, Casos de Uso, Modelos y Trazabilidad Normativa-Técnica (sincronizado con `PLAN_DE_PROYECTO_SGD_AVEIT.md`, `ERS-SGD-AVEIT.md`, `MODELO_DOMINIO_SGD_AVEIT.md` y `BPMN_Proceso_Operativo_Tribunal.md`)
 
 ---
 
@@ -80,9 +80,14 @@ Habiendo alcanzado en el Sprint 2 la apertura de expedientes con numeración cor
    * *Precondición:* Usuario con rol directivo o de administración.
    * *Flujo Principal:* Convocatoria a reunión ordinaria/extraordinaria con al menos 2 días hábiles de anticipación. Registro de asistencias presentes/ausentes con motivo obligatorio por ausente. Cierre de nómina dentro de las 72 horas hábiles; el motor procesa inasistencias y consolida apercibimientos acumulados aplicando la regla 3:1 mediante transacciones inmutables.
 
-4. **CU-14: Graduar Urgencia de Causa Disciplinaria:**
+4. **CU-14: Graduar Urgencia de Causa Disciplinaria y Visualizar Detalle Canónico:**
    * *Actor Principal:* Tribunal de Disciplina / Solicitante Calificado.
-   * *Flujo Principal:* Durante la apertura o mediante actualización posterior en el tablero, la autoridad asigna la urgencia de la causa (`Baja`, `Normal`, `Urgente`). El sistema proyecta la distinción visual en las tarjetas Kanban (borde rojo semántico) y habilita el filtrado por prioridad.
+   * *Flujo Principal:* Durante la apertura o mediante actualización posterior en el tablero, la autoridad asigna la urgencia de la causa (`Baja`, `Normal`, `Urgente`). El sistema proyecta la distinción visual en las tarjetas Kanban (borde rojo semántico), habilita el filtrado por prioridad y expone en la Sala TD la vista canónica del expediente con Cabecera, Responsables 1, 2 y 3 identificados por Grupo Social (`Gxx`), reglamentos e imputados (`RF-16`, `RF-18`).
+
+5. **CU-02 (Actualizado por Directiva PO `07/10/2026`): Sustanciar Expediente, Emitir Resolución Colegiada Directa y Firmar con Grupo Social:**
+   * *Actor Principal:* Miembro del Tribunal de Disciplina (`ACT-02`).
+   * *Precondición:* Expediente en estado `PARA_RESOLVER` (*En revisión y resolución*) y firmantes habilitados sin conflicto de interés (`RN-08`).
+   * *Flujo Principal Redefinido:* Habiendo revisado las justificaciones T02/T03 y evidencias en el visor unificado, el Tribunal prescinde de pantallas intermedias de votación nominal paso a paso y redacta directamente la resolución en el **Editor Unificado (`VISTO / CONSIDERANDO / SE RESUELVE`)**, fijando de forma directa el **puntaje final resuelto (+/- o apercibimiento) para cada socio involucrado**. A continuación, al menos **tres (3) miembros habilitados del TD** suscriben la **Firma Colegiada Digital** consignando obligatoriamente su **Grupo Social (`Gxx`)** y su condición (**Titular** o **Suplente**), transicionando el expediente a `RESUELTO` e impactando de forma atómica e inmutable en el libro mayor.
 
 ---
 
@@ -105,6 +110,15 @@ Durante el transcurso del Sprint 3 se formalizaron las conclusiones de las reuni
 5. **Inmutabilidad de la Regla de Acumulación 3:1:**
    - Se ratifica de manera estricta que los llamados de atención y las felicitaciones no aplican descuentos fraccionarios directos (ni ±0,33 ni ±0,5). Se gestionan en un libro mayor transaccional donde cada **tres (3) acumulados consolidan un (1) punto neto** (+1 o -1 respectivamente).
 
+> [!IMPORTANT]
+> **Actualización Transversal de la Definición General del Producto y sus Artefactos:**
+> Con el objetivo de mantener una consistencia 100% libre de contradicciones entre las decisiones institucionales del Tribunal y el diseño global del sistema, el reemplazo de la votación nominal paso a paso por el **Editor Unificado de Resolución (`VISTO / CONSIDERANDO / SE RESUELVE`) con puntaje final por socio y firma colegiada con Grupo Social (`Gxx`)** ha sido propagado e impactado directamente en todos los artefactos fundacionales del repositorio:
+> - **Definición General del Producto y Alcance:** [`PLAN_DE_PROYECTO_SGD_AVEIT.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/gestion-proyecto/PLAN_DE_PROYECTO_SGD_AVEIT.md) (Secciones 4.1, 6, 6.1, 7 `RF-09`/`RF-10`/`RF-11`, 8 y 9 `RN-06`/`RN-07`), [`constitution.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/constitution.md) y [`TPI_Estudio_Inicial_SGD_AVEIT.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/analisis-proceso-actual/TPI_Estudio_Inicial_SGD_AVEIT.md).
+> - **Especificación de Requerimientos (ERS):** [`ERS-SGD-AVEIT.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/especificaciones/ERS-SGD-AVEIT.md) (`STK-01`, `RF-08`, `RF-09`, `RF-10`, `RF-15`, `RF-18`, `RN-04`, `RN-05`, `RN-06`) y [`ERS_Especificacion_Requerimientos_Tribunal.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/especificaciones/ERS_Especificacion_Requerimientos_Tribunal.md) (`RF-05`, `RN-08` a `RN-11`).
+> - **Historias de Usuario y Backlog:** [`Seguimiento de Proyecto.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/gestion-proyecto/Seguimiento%20de%20Proyecto.md) (Calendario Maestro, Product Backlog `US-12` y `US-13`, User Story Mapping y Refinamiento hacia `SCRUM-56`).
+> - **Casos de Uso y Actores:** `CU-02` y ficha del actor `ACT-02 (Miembro de TD)` en [`ACTORES_DEL_SISTEMA_SGD_AVEIT.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md).
+> - **Modelo de Dominio y Proceso Operativo BPMN:** Eliminación de la clase `VotoNominal` y métodos de quórum/mayoría individual, e incorporación de `grupoSocialRepresentado` y `condicionFirmante` en `FirmaColegiada` dentro de [`MODELO_DOMINIO_SGD_AVEIT.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/especificaciones/MODELO_DOMINIO_SGD_AVEIT.md); y sustitución de las tareas de votación nominal por redacción resolutiva directa en [`BPMN_Proceso_Operativo_Tribunal.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/analisis-proceso-actual/BPMN_Proceso_Operativo_Tribunal.md).
+
 ---
 
 ### 2.2. Estado del Catálogo de Requerimientos al Cierre del Sprint 3
@@ -122,56 +136,89 @@ Durante el transcurso del Sprint 3 se formalizaron las conclusiones de las reuni
 | **I+D Asistencia IA (Laya)** | **100% Completado** | PR #55 (`SCRUM-76`) integrado a `main`. Documento técnico de viabilidad de SLMs locales entregado a CD, TD y Cómputos. |
 | **Padrón y Seed Data MySQL (G57 a G60)** | **100% Completado** | Poblamiento de base de datos (`SCRUM-77`) con cohortes reales y casos testigo para testing de integración. |
 
+#### 2.2.1. Precisión sobre la Evidencia de Pruebas Automatizadas (Permisos, Vencimientos y Transacciones)
+
+> [!NOTE]
+> **Subsanación de limitaciones de entorno y superación de la validación estática:**
+> Si bien durante el hito intermedio inicial de la `PR #49` se había dejado constancia en [`UAT-PR49-calendario.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/gestion-proyecto/UAT-PR49-calendario.md) de una limitación momentánea de conectividad local con el motor MySQL en un entorno sandbox aislado, dicha restricción fue **completamente subsanada** mediante la orquestación contenerizada del stack (`docker compose`) y el poblamiento del padrón en base de datos (`SCRUM-77`). Al cierre del Sprint 3, la declaración del **100% de cumplimiento (36/36 SP)** se sustenta en la **ejecución dinámica real y satisfactoria de 812 pruebas automatizadas en backend (`pytest`) y más de 260 pruebas unitarias en frontend (`Karma/Jasmine`) con 0 errores**, cubriendo de forma exhaustiva los tres ejes críticos del dominio:
+
+| Eje Crítico Evaluado | Suites de Pruebas Automatizadas (Backend `pytest` y Frontend `Karma`) | Escenarios y Reglas Reglamentarias Verificadas Dinámicamente | Resultado de Ejecución |
+| :--- | :--- | :--- | :---: |
+| **1. Permisos, Segregación de Roles (RBAC) y Reserva de Datos Sensibles** | • `backend/tests/test_rbac.py`<br>• `backend/tests/expedientes/test_opening_permissions.py`<br>• `backend/tests/expedientes/test_evidence_api.py`<br>• `backend/tests/expedientes/test_visor_expediente.py`<br>• `backend/tests/expedientes/test_calendar_api.py`<br>• `backend/tests/expedientes/test_eventos_api.py`<br>• `frontend/src/app/services/tribunal.guard.spec.ts` | • **Aislamiento por objeto (`IsImputadoOrTribunal`):** Rechazo estricto con `HTTP 403 Forbidden` cuando un socio ajeno o un miembro de Comisión Directiva intenta acceder o descargar evidencias médicas/psicológicas de un descargo (Art. 27 RG — *Zero-Leakage*).<br>• **Competencias de apertura (Arts. 21 a 26 RP):** Bloqueo de solicitudes T01 fuera de jurisdicción de subcomisión o auto-solicitudes.<br>• **Gobernanza de Calendario y Eventos (`CanManageCalendar`, `IsComisionDirectivaOrAdmin`):** Solo lectura para socios regulares y escritura auditada para autoridades. | **PASSED (100%)**<br>*(0 fallos)* |
+| **2. Vencimientos, Cómputo de Plazos Hábiles y Preclusión** | • `backend/tests/expedientes/test_business_calendar.py`<br>• `backend/tests/expedientes/test_deadline_enforcement.py`<br>• `backend/tests/expedientes/test_api_descargo.py`<br>• `backend/tests/expedientes/test_descargo_rules.py`<br>• `backend/tests/expedientes/test_evento_services.py`<br>• `backend/tests/expedientes/test_t01_appeal_periods.py`<br>• `frontend/src/app/mis-expedientes/mis-expedientes.component.spec.ts` | • **Cómputo de 5 días hábiles AVEIT:** Exclusión exacta de sábados, domingos y feriados institucionales (`CalendarDay`) y recálculo ante nuevos feriados sobre expedientes `EMPLAZADO`.<br>• **Protección *Buzzer-Beater* y Preclusión:** Admisión `HTTP 200/201` cuando `now <= plazo_limite_at` y bloqueo irreversible `HTTP 409 Conflict` microsegundos después del vencimiento.<br>• **Plazos de Eventos (`SCRUM-50`):** Exigencia de **2 días hábiles de preaviso** para agendar reuniones (Art. 28.1.e RG) y ventana de **72 horas posteriores** para el cierre de asistencia sin disparo prematuro de ausencias. | **PASSED (100%)**<br>*(0 fallos)* |
+| **3. Transacciones, Concurrencia e Inmutabilidad Contable / Documental** | • `backend/tests/expedientes/test_apercibimientos_consolidation.py`<br>• `backend/tests/expedientes/test_qa_e2e_eventos_sanciones.py`<br>• `backend/tests/expedientes/test_adversarial_challenger.py`<br>• `backend/tests/expedientes/test_expediente_workflow.py`<br>• `backend/tests/expedientes/test_descargo_version_models.py`<br>• `backend/tests/expedientes/test_descargo_versions_api.py`<br>• `backend/tests/expedientes/test_causal_resolution_service.py` | • **Consolidación Atómica 3:1 y Cero `UPDATE` Manual:** Ejecución bajo `transaction.atomic()` con bloqueo pesimista `select_for_update()`. Verifica que al 3er apercibimiento se marque `consolidado=True` y se inserte un asiento inmutable de `-1.0 punto` en el libro mayor sin modificar saldos manualmente.<br>• **Concurrencia en Numeración y Estados:** Prevención de condiciones de carrera en numeración correlativa (`EXP-YYYY-NNNN`) y transiciones de los 6 estados procesales.<br>• **Versionado *Append-Only* (`DescargoVersion`):** Preservación inalterable de versiones previas ante ampliaciones dentro de término y auditoría de retiro lógico. | **PASSED (100%)**<br>*(0 fallos)* |
+
 ---
 
-### 2.3. Matriz de Trazabilidad Bidireccional (Actualizada al Hito IOC)
+### 2.3. Matriz de Trazabilidad Bidireccional de Extremo a Extremo (Normativa ↔ Requerimiento ↔ CU ↔ Historia ↔ Prueba ↔ Resultado)
+
+Para verificar de forma auditable la trazabilidad completa desde el marco normativo y las directivas del Product Owner hasta el producto de software efectivamente construido y probado en `main`, se presenta la tabla maestra de trazabilidad bidireccional del incremento:
+
+| Fuente Normativa / Directiva PO | Requerimiento (`RF`) y Regla (`RN`) | Caso de Uso (`CU`) | Historia Implementada (Jira / Código / PR) | Componente Construido (Backend / Frontend) | Suite de Prueba Automatizada Correspondiente | Resultado |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: |
+| **Art. 12 inc. b y Art. 14 RP; Circular 001/2026** | **RF-14:** Calendario Institucional de Días Hábiles<br>(`RN-02`, `RN-03`) | **CU-06:** Configurar Calendario Institucional y Feriados | **`SCRUM-49`** (`US-S3-01`)<br>PR #49 integrado a `main` | `CalendarDay`, `BusinessCalendarService`, `CalendarioInstitucionalComponent` | • `tests/expedientes/test_business_calendar.py`<br>• `tests/expedientes/test_calendar_api.py`<br>• `tests/expedientes/test_calendar_models.py`<br>• `calendario-institucional.component.spec.ts` | **PASSED**<br>*(100% Verde)* |
+| **Art. 95 Estatuto; Art. 24 y 28.1.e RG; PO `07/10/2026`** | **RF-17:** Eventos, Asistencias y Sanciones 3:1<br>(`RN-08`, `RN-11`, `RN-15`) | **CU-13:** Gestionar Reuniones, Actividades y Cierre de Asistencias | **`SCRUM-50`** (`US-S3-06`)<br>PR #56 integrado a `main` | `EventoInstitucional`, `AttendanceStrategy`, `WarningConsolidationService`, `EventosAsistenciaComponent` | • `tests/expedientes/test_eventos_api.py`<br>• `tests/expedientes/test_evento_services.py`<br>• `tests/expedientes/test_apercibimientos_consolidation.py`<br>• `tests/expedientes/test_qa_e2e_eventos_sanciones.py`<br>• `eventos-asistencia.component.spec.ts` | **PASSED**<br>*(100% Verde)* |
+| **Art. 12 inc. b, Art. 16 bis y Art. 17 RP** | **RF-08:** Presentación de Formulario T02 y Resolución Causal<br>(`RN-02`, `RN-03`, `RN-05`) | **CU-05** (`CU-01`): Presentar Descargo Tipificado / Extraordinario | **`SCRUM-52`** (`US-S3-02`) y **`SCRUM-83`** (`S3-10`)<br>PR #58 y PR #59 en `main` | `DescargoSubmissionService`, `CausalResolutionService`, `MisExpedientesComponent` | • `tests/expedientes/test_api_descargo.py`<br>• `tests/expedientes/test_deadline_enforcement.py`<br>• `tests/expedientes/test_causal_resolution_api.py`<br>• `tests/expedientes/test_causal_resolution_service.py`<br>• `mis-expedientes.component.spec.ts` | **PASSED**<br>*(100% Verde)* |
+| **Art. 16 bis y Art. 18 RP** | **RF-09:** Descargo Extraordinario T03, Versionado y Retiro<br>(`RN-02`, `RN-04`, `RN-06`) | **CU-05** (`CU-01`): Presentar Descargo Tipificado / Extraordinario | **`SCRUM-52`** (`US-S3-03`)<br>PR #58 integrado a `main` | `DescargoVersion` (*append-only*), endpoint de retiro lógico auditado | • `tests/expedientes/test_descargo_rules.py`<br>• `tests/expedientes/test_descargo_retiro.py`<br>• `tests/expedientes/test_descargo_versions_api.py`<br>• `tests/expedientes/test_descargo_version_models.py` | **PASSED**<br>*(100% Verde)* |
+| **Art. 16 bis RP; Art. 27 RG; Ley 25.326** | **RF-10:** Custodia Digital de Evidencia Probatoria Protegida<br>(`RN-05`, `RN-11`) | **CU-05** (`CU-01`) y **CU-02**: Custodia y Sustanciación Probatoria | **`SCRUM-69`** (`US-S3-04`)<br>PR #53 integrado a `main` | `EvidenceUploadService`, `EvidenceValidator` (*magic bytes*), `IsImputadoOrTribunal` | • `tests/expedientes/test_evidence_api.py`<br>• `tests/expedientes/test_evidence_service.py`<br>• `tests/expedientes/test_evidence_validator.py`<br>• `tests/expedientes/test_evidence_models.py` | **PASSED**<br>*(100% Verde)* |
+| **Directiva PO `07/10/2026`; Art. 12 RP** | **RF-16:** Clasificación e Indicador Visual de Urgencia en Causas<br>(`RN-03`, `RN-04`) | **CU-14:** Graduar Urgencia de Causa Disciplinaria | **`SCRUM-78`** (`S3-05`) y **`SCRUM-79`** (`S3-06`)<br>PR #50 y PR #57 en `main` | Campo `urgencia` en `Expediente`, filtros y badges en `GestionarExpedientesComponent` | • `tests/expedientes/test_urgencia.py`<br>• `tests/expedientes/test_board_api.py`<br>• `tests/expedientes/test_expedientes_por_socio.py`<br>• `gestionar-expedientes.component.spec.ts` | **PASSED**<br>*(100% Verde)* |
+| **Directiva PO `07/10/2026` (Formato Imagen 2 TD)** | **RF-18:** Detalle Oficial del Expediente en Sala TD<br>(`RN-04`, `RN-06`) | **CU-02** y **CU-14**: Sustanciar Expediente y Visualizar Detalle Canónico | **`SCRUM-81`** (`S3-08`)<br>PR #60 integrado a `main` | `VisorExpedienteSerializer`, `VisorExpedienteComponent` (Responsables 1-3 con `Gxx`) | • `tests/expedientes/test_visor_expediente.py`<br>• `tests/expedientes/test_case_detail_api.py`<br>• `visor-expediente.component.spec.ts` | **PASSED**<br>*(100% Verde)* |
+| **Arts. 16, 16 bis, 21 a 26 RP; Art. 96 Estatuto** | **RF-01, RF-14 ( General )**: Solicitud T01 Grupal + Anexo y Ranking Anidado<br>(`RN-01`, `RN-07`, `RN-10`) | **CU-03** (Iniciar T01) y **CU-04** (Consultar Ranking y Legajo) | **`SCRUM-80`** (`S3-07`) y **`SCRUM-82`** (`S3-09`)<br>PR #51 y PR #52 en `main` | `SolicitarPuntosComponent`, `RankingSociosComponent`, `ExpedientesSocioDialogComponent` | • `tests/expedientes/test_opening_api.py`<br>• `tests/expedientes/test_mis_solicitudes.py`<br>• `tests/test_ranking_api.py`<br>• `ranking-socios.component.spec.ts`<br>• `solicitar-puntos.component.spec.ts` | **PASSED**<br>*(100% Verde)* |
 
 ```mermaid
 flowchart LR
-    subgraph Normativa ["Normativa AVEIT"]
-        Estatuto["Estatuto 2026 (Art. 95)"]
-        RegProc["Reglamento Procesal (Arts. 12 y 16 bis)"]
+    subgraph Normativa ["Normativa AVEIT y Directivas PO"]
+        Estatuto["Estatuto 2026 (Arts. 95-96)"]
+        RegProc["Reg. Procesal (Arts. 12, 14, 16 bis)"]
         NotasPO["Directivas PO (07/10/2026)"]
     end
 
-    subgraph Requerimientos ["Definición de Producto"]
-        RF08["RF-08: T02 Tipificado"]
-        RF09["RF-09: T03 Extraordinario"]
-        RF10["RF-10: Evidencias Seguras"]
-        RF14["RF-14: Calendario Hábiles"]
+    subgraph Requerimientos ["Definición de Producto (RF)"]
+        RF08["RF-08: T02 y Resolución Causal"]
+        RF09["RF-09: T03 y Versionado"]
+        RF10["RF-10: Evidencias Seguras RBAC"]
+        RF14["RF-14: Calendario Días Hábiles"]
         RF16["RF-16: Clasificador Urgencia"]
-        RF17["RF-17: Asistencias y Sanciones"]
-        RF18["RF-18: Sala TD y Resolución"]
+        RF17["RF-17: Eventos y Regla 3:1"]
+        RF18["RF-18: Sala TD y Resolución Directa"]
     end
 
-    subgraph CasosDeUso ["Casos de Uso del Sistema"]
+    subgraph CasosDeUso ["Casos de Uso (CU)"]
+        CU02["CU-02: Sustanciar y Emitir Resolución"]
         CU05["CU-05: Presentar Descargo"]
         CU06["CU-06: Configurar Calendario"]
         CU13["CU-13: Gestionar Reuniones"]
-        CU14["CU-14: Graduar Urgencia"]
+        CU14["CU-14: Graduar Urgencia y Detalle"]
     end
 
-    RegProc --> RF08
-    RegProc --> RF09
-    RegProc --> RF10
-    RegProc --> RF14
-    NotasPO --> RF16
-    Estatuto --> RF17
-    NotasPO --> RF18
+    subgraph HistoriasYTests ["Historias Jira y Suites en Verde (812 Pytest / 260+ Karma)"]
+        H_Desc["SCRUM-52 / SCRUM-83 +SCRUM-69 (PASSED)"]
+        H_Cal["SCRUM-49 (PASSED)"]
+        H_Ev["SCRUM-50 (PASSED)"]
+        H_TD["SCRUM-78 / SCRUM-79 / SCRUM-81 (PASSED)"]
+    end
 
-    RF08 --> CU05
-    RF09 --> CU05
-    RF10 --> CU05
+    RegProc --> RF08 & RF09 & RF10 & RF14
+    NotasPO --> RF16 & RF18
+    Estatuto --> RF17
+
+    RF08 & RF09 & RF10 --> CU05
+    RF10 & RF18 --> CU02
     RF14 --> CU06
     RF17 --> CU13
-    RF16 --> CU14
+    RF16 & RF18 --> CU14
+
+    CU05 --> H_Desc
+    CU06 --> H_Cal
+    CU13 --> H_Ev
+    CU02 & CU14 --> H_TD
 ```
 
 ---
 
 ### 2.4. Release Plan y Transición hacia el Sprint 4
 
-Al concluir el Sprint 3 con el **100% del alcance completado e integrado en `main` (36/36 Story Points — 14 de 14 ítems en estado *Finalizado*)**, la plataforma SGD-AVEIT alcanza una madurez funcional sólida que habilita el inicio formal de la fase de **Sustanciación y Resolución Colegiada (Sprint 4: 22/10 al 03/11, 19 Story Points comprometidos)**:
+Al concluir el Sprint 3 con el **100% del alcance completado e integrado en `main` (36/36 Story Points — 14 de 14 ítems en estado *Finalizado*)**, la plataforma SGD-AVEIT alcanza una madurez funcional sólida que habilita el inicio formal de la fase de **Sustanciación y Resolución Colegiada (Sprint 4: `21/10/2026 al 03/11/2026` — 14 días corridos / 10 días hábiles; cierre administrativo en Jira el `22/10`, 19 Story Points comprometidos)**:
 
 * **Sprint 4 (`SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56` y `SCRUM-70`):**
   * **`SCRUM-51` (S4-01 - 5 SP):** Visor autorizado unificado para revisar cronológicamente T01, T02/T03 y evidencias probatorias con auditoría de consultas sensibles.
