@@ -295,5 +295,63 @@ describe('ExpedienteApiService', () => {
       req.flush({ dias_habiles: 7 });
     });
   });
+
+  describe('Resolución Oficial (US S5-01 / SCRUM-56)', () => {
+    const base = `${environment.apiUrl}/expedientes/15/resolucion`;
+
+    it('obtiene la resolución de un expediente', () => {
+      service.obtenerResolucion(15).subscribe(res => {
+        expect(res.estado).toBe('DRAFT');
+        expect(res.articulos_resolutivos).toContain('ARTÍCULO 1°');
+      });
+      const req = http.expectOne(`${base}/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ id: 1, estado: 'DRAFT', articulos_resolutivos: 'ARTÍCULO 1°...' });
+    });
+
+    it('crea una resolución oficial en borrador', () => {
+      const payload = {
+        vistos: 'VISTO...',
+        considerandos: 'CONSIDERANDO...',
+        articulos_resolutivos: 'ARTÍCULO 1°...'
+      };
+      service.crearResolucion(15, payload).subscribe(res => {
+        expect(res.id).toBe(2);
+      });
+      const req = http.expectOne(`${base}/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(payload);
+      req.flush({ id: 2, ...payload, estado: 'DRAFT' });
+    });
+
+    it('actualiza parcialmente una resolución existente', () => {
+      service.actualizarResolucion(15, { considerandos: 'Nuevos considerandos...' }).subscribe(res => {
+        expect(res.considerandos).toBe('Nuevos considerandos...');
+      });
+      const req = http.expectOne(`${base}/`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ considerandos: 'Nuevos considerandos...' });
+      req.flush({ id: 2, considerandos: 'Nuevos considerandos...', estado: 'DRAFT' });
+    });
+
+    it('emite la resolución oficial', () => {
+      service.emitirResolucionOficial(15).subscribe(res => {
+        expect(res.estado).toBe('ISSUED');
+      });
+      const req = http.expectOne(`${base}/emitir/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({ id: 2, estado: 'ISSUED' });
+    });
+
+    it('descarga el preview en PDF de la resolución', () => {
+      service.descargarPreviewResolucionPdf(15).subscribe(blob => {
+        expect(blob).toBeTruthy();
+      });
+      const req = http.expectOne(`${base}/preview/`);
+      expect(req.request.method).toBe('GET');
+      req.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+    });
+  });
 });
 

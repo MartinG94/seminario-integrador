@@ -200,6 +200,35 @@ export interface RegistrarDecisionCausalPayload {
   puntaje_final?: number | string | null;
 }
 
+export interface ResolucionOficialDTO {
+  id: number;
+  expediente: number;
+  version: number;
+  plantilla_version: string;
+  estado: 'DRAFT' | 'ISSUED';
+  numero_expediente_snapshot?: string;
+  identificador_resolucion?: string;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+  puntos_finales?: Record<string, unknown> | null;
+  medidas?: unknown[] | null;
+  firmantes_td?: string[];
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+  issued_by?: number;
+  issued_at?: string | null;
+  contenido_hash?: string;
+}
+
+export interface GuardarResolucionPayload {
+  plantilla_version?: string;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+}
+
 export interface DescargoDetalleDTO {
   id: number;
   socio_id: number;
@@ -675,6 +704,26 @@ export class ExpedienteApiService {
 
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {
     return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
+  }
+
+  obtenerResolucion(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.get<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`);
+  }
+
+  crearResolucion(expedienteId: number | string, payload: GuardarResolucionPayload): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`, payload);
+  }
+
+  actualizarResolucion(expedienteId: number | string, payload: Partial<GuardarResolucionPayload>): Observable<ResolucionOficialDTO> {
+    return this.http.patch<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`, payload);
+  }
+
+  emitirResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/emitir/`, {});
+  }
+
+  descargarPreviewResolucionPdf(expedienteId: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/resolucion/preview/`, { responseType: 'blob' });
   }
 }
 

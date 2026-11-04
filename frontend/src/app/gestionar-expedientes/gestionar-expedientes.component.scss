@@ -737,3 +737,91 @@ body.dark-edition,
     white-space: pre-wrap;
   }
 }
+
+// Estilos del Formulario y Vista Previa de Resolución Oficial (SCRUM-56 / PR #67)
+.modal-dialog-lg {
+  max-width: 860px !important;
+}
+
+.seccion-resolucion {
+  background-color: var(--color-surface, #F8FAFC);
+  border: 1px solid var(--color-border-main, #E2E8F0);
+  border-radius: 8px;
+  padding: 16px;
+
+  .tabla-puntajes-consolidados {
+    background-color: #FFFFFF;
+
+    th {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-muted, #64748B);
+    }
+
+    td {
+      font-size: 0.85rem;
+      vertical-align: middle;
+    }
+  }
+
+  .select-agregar-reglamento {
+    font-size: 0.85rem;
+    border-color: var(--color-border-main, #CBD5E1);
+  }
+}
+
+.resolucion-oficial-preview {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border-main, #CBD5E1);
+  border-radius: 8px;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--color-text-main, #1E293B);
+
+  .resolucion-header {
+    border-bottom: 2px solid var(--color-primary, #{$aveit-navy});
+
+    .letter-spacing-1 {
+      letter-spacing: 1px;
+    }
+  }
+
+  .resolucion-cuerpo {
+    font-size: 0.9rem;
+    line-height: 1.6;
+
+    .text-pre-line {
+      white-space: pre-line;
+      font-size: 0.875rem;
+    }
+
+    .border-left {
+      border-left: 3px solid var(--color-border-main, #CBD5E1) !important;
+    }
+
+    .border-left.border-primary {
+      border-left-color: var(--color-primary, #{$aveit-navy}) !important;
+    }
+  }
+
+  .resolucion-pie-firmas {
+    border-top: 1px solid var(--color-border-main, #CBD5E1);
+
+    .firma-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .linea-firma {
+      width: 140px;
+      height: 1px;
+      background-color: var(--color-text-main, #334155);
+    }
+
+    .smaller {
+      font-size: 0.75rem;
+    }
+  }
+}

@@ -1,9 +1,13 @@
 from rest_framework import serializers
 
 from expedientes.models import Resolucion
+from expedientes.services.resolution_service import obtener_firmantes_td_por_anio_social
 
 
 class ResolucionSerializer(serializers.ModelSerializer):
+    identificador_resolucion = serializers.SerializerMethodField()
+    firmantes_td = serializers.SerializerMethodField()
+
     class Meta:
         model = Resolucion
         fields = (
@@ -13,6 +17,8 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "plantilla_version",
             "estado",
             "numero_expediente_snapshot",
+            "identificador_resolucion",
+            "firmantes_td",
             "vistos",
             "considerandos",
             "articulos_resolutivos",
@@ -30,6 +36,8 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "version",
             "estado",
             "numero_expediente_snapshot",
+            "identificador_resolucion",
+            "firmantes_td",
             "puntos_finales",
             "medidas",
             "created_by",
@@ -39,3 +47,11 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "issued_at",
             "contenido_hash",
         )
+
+    def get_identificador_resolucion(self, obj: Resolucion) -> str:
+        numero = obj.numero_expediente_snapshot or (obj.expediente.numero if obj.expediente else "")
+        raw = numero.replace("EXP-", "").strip()
+        return f"RESOLUCIÓN {raw}"
+
+    def get_firmantes_td(self, obj: Resolucion) -> list[str]:
+        return obtener_firmantes_td_por_anio_social()

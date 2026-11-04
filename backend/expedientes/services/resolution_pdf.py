@@ -8,16 +8,16 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
+from expedientes.services.resolution_service import obtener_firmantes_td_por_anio_social
+
 
 def _paragraph_text(value: object) -> str:
     """Escapa texto de dominio y conserva sus saltos de línea."""
-
     return escape(str(value or "")).replace("\n", "<br/>")
 
 
 def build_resolution_preview_pdf(resolucion) -> bytes:
-    """Construye el PDF de previsualización usando únicamente la resolución."""
-
+    """Construye el PDF de previsualización institucional de la resolución."""
     output = BytesIO()
     document = SimpleDocTemplate(
         output,
@@ -31,14 +31,27 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
     styles = getSampleStyleSheet()
     title_style = styles["Title"]
     title_style.alignment = TA_CENTER
-    story = [Paragraph("RESOLUCIÓN", title_style), Spacer(1, 12)]
+
+    story = [
+        Paragraph("TRIBUNAL DE DISCIPLINA — A.V.E.I.T. (UTN FRC)", styles["Heading3"]),
+        Spacer(1, 6),
+        Paragraph("RESOLUCIÓN", title_style),
+        Spacer(1, 12),
+    ]
 
     if resolucion.estado == "DRAFT":
         story.append(Paragraph("BORRADOR - SIN VALIDEZ OFICIAL", styles["Heading2"]))
         story.append(Spacer(1, 10))
 
+    raw_numero = (resolucion.numero_expediente_snapshot or "").replace("EXP-", "").strip()
+    identificador_res = f"RESOLUCIÓN {raw_numero}" if raw_numero else "RESOLUCIÓN"
+
     story.extend(
         [
+            Paragraph(
+                f"Identificación: {_paragraph_text(identificador_res)}",
+                styles["Normal"],
+            ),
             Paragraph(
                 f"Expediente: {_paragraph_text(resolucion.numero_expediente_snapshot)}",
                 styles["Normal"],
@@ -58,9 +71,16 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
             Paragraph("CONSIDERANDOS", styles["Heading2"]),
             Paragraph(_paragraph_text(resolucion.considerandos), styles["BodyText"]),
             Spacer(1, 10),
-            Paragraph("ARTÍCULOS RESOLUTIVOS", styles["Heading2"]),
+            Paragraph("SE RESUELVE — ARTÍCULOS RESOLUTIVOS", styles["Heading2"]),
             Paragraph(_paragraph_text(resolucion.articulos_resolutivos), styles["BodyText"]),
+            Spacer(1, 20),
+            Paragraph("TRIBUNAL DE DISCIPLINA — FIRMANTES", styles["Heading3"]),
+            Spacer(1, 8),
         ]
     )
+
+    for firmante in obtener_firmantes_td_por_anio_social():
+        story.append(Paragraph(_paragraph_text(firmante), styles["Normal"]))
+
     document.build(story)
     return output.getvalue()

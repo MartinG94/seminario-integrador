@@ -116,10 +116,29 @@ export interface Expediente {
   };
   evidencias?: any[];
   logsDescargo?: LogJustificativo[];
+  vistos?: string;
+  considerandos?: string;
+  seResuelve?: string;
+  numeroResolucion?: string;
+  fechaResolucion?: string;
   votacion?: {
-    votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
+    votos?: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
+    vistos?: string;
     considerandos?: string;
+    seResuelve?: string;
+    numeroResolucion?: string;
+    fechaResolucion?: string;
     aprobado?: boolean;
+  };
+  resolucion?: {
+    vistos?: string;
+    considerandos?: string;
+    seResuelve?: string;
+    numeroResolucion?: string;
+    fechaResolucion?: string;
+    emitida?: boolean;
+    hashCriptografico?: string;
+    firmantes?: string[];
   };
   firmas?: {
     juecesFirmantes: string[];
@@ -263,7 +282,7 @@ export class TribunalDataService {
         aprobado: true
       },
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)'],
+        juecesFirmantes: ['11239 - Giuliano Toselli - G57', '11737 - Catalina Cerda Gallego - G58'],
         hashCriptografico: '',
         timestamp: ''
       }
@@ -288,7 +307,7 @@ export class TribunalDataService {
         { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541', grupo: '60', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Presidente TD', 'Miembro Titular 1', 'Miembro Titular 2'],
+        juecesFirmantes: ['11239 - Giuliano Toselli - G57', '11737 - Catalina Cerda Gallego - G58', '11735 - Candela Moreno Migliore - G59'],
         hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
         timestamp: '2026-02-22 18:30:12'
       }
@@ -333,7 +352,7 @@ export class TribunalDataService {
         { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
+        juecesFirmantes: ['11239 - Giuliano Toselli - G57'],
         hashCriptografico: '',
         timestamp: ''
       }
@@ -358,7 +377,7 @@ export class TribunalDataService {
         { id: '5', nombre: 'Axel René Villegas', legajo: '403655', grupo: '59', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)', 'Ing. Rossi (Miembro Titular)'],
+        juecesFirmantes: ['11239 - Giuliano Toselli - G57', '11737 - Catalina Cerda Gallego - G58', '11735 - Candela Moreno Migliore - G59'],
         hashCriptografico: 'sha256-abc123789fed456',
         timestamp: '2026-03-05 11:20:00'
       }
@@ -684,25 +703,49 @@ export class TribunalDataService {
   votarDictamen(
     expedienteId: string, 
     votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' }, 
-    considerandos: string
+    considerandos: string,
+    resolucionData?: {
+      vistos?: string;
+      considerandos?: string;
+      seResuelve?: string;
+      numeroResolucion?: string;
+      fechaResolucion?: string;
+    }
   ): boolean {
     const current = this.expedientesSubject.value;
     const index = current.findIndex(e => e.id === expedienteId);
     if (index === -1) return false;
 
     const exp = { ...current[index] };
-    const favorables = Object.values(votos).filter(v => v === 'FAVORABLE').length;
     const quorumn = Object.keys(votos).length;
-    const aprobado = quorumn >= 2 && favorables >= 2;
+    const favorables = Object.values(votos).filter(v => v === 'FAVORABLE').length;
+    // Si no hay votos nominales (nueva resolución oficial colegiada) o quorum alcanzado, aprobado es true
+    const aprobado = quorumn === 0 ? true : (quorumn >= 2 && favorables >= 2);
+
+    const vistos = resolucionData?.vistos || exp.vistos || '';
+    const considerandosFinal = resolucionData?.considerandos || considerandos || exp.considerandos || '';
+    const seResuelve = resolucionData?.seResuelve || exp.seResuelve || '';
+    const numeroResolucion = resolucionData?.numeroResolucion || exp.numeroResolucion || exp.numero;
+    const fechaResolucion = resolucionData?.fechaResolucion || exp.fechaResolucion || new Date().toISOString();
+
+    exp.vistos = vistos;
+    exp.considerandos = considerandosFinal;
+    exp.seResuelve = seResuelve;
+    exp.numeroResolucion = numeroResolucion;
+    exp.fechaResolucion = fechaResolucion;
 
     exp.votacion = {
       votos,
-      considerandos,
+      considerandos: considerandosFinal,
+      vistos,
+      seResuelve,
+      numeroResolucion,
+      fechaResolucion,
       aprobado
     };
 
     if (aprobado) {
-      exp.estado = 'pendiente_correos';
+      exp.estado = 'pendiente_firma';
       exp.firmas = {
         juecesFirmantes: [],
         hashCriptografico: '',
@@ -714,6 +757,19 @@ export class TribunalDataService {
     newArr[index] = exp;
     this.expedientesSubject.next(newArr);
     return true;
+  }
+
+  generarResolucionOficial(
+    expedienteId: string,
+    datos: {
+      vistos: string;
+      considerandos: string;
+      seResuelve: string;
+      numeroResolucion?: string;
+      fechaResolucion?: string;
+    }
+  ): boolean {
+    return this.votarDictamen(expedienteId, {}, datos.considerandos, datos);
   }
 
   firmarResolucion(expedienteId: string, juezFirmante: string): { completo: boolean; exp?: Expediente } {

@@ -351,16 +351,6 @@
       </div>
 
       <div class="card-body modal-detalle-body" tabindex="-1">
-        <div *ngIf="usuarioInvolucrado" class="alert alert-warning d-flex align-items-start banner-involucrado" role="alert">
-          <i class="material-icons mr-2" aria-hidden="true">warning</i>
-          <span><strong>Participación restringida:</strong> Sos parte interesada en este expediente (imputado o solicitante).
-            Tu lugar lo ocupa automáticamente tu suplente conforme al Art. 95 del Estatuto y Art. 24 del Reglamento Procesal.</span>
-        </div>
-        <!-- Caso crítico del Art. 95: se avisó a CD para convocar a Asamblea General (S4-04) -->
-        <p *ngIf="composicion?.requiere_ad_hoc" class="mt-3 small text-muted aviso-asamblea" role="status">
-          <i class="material-icons" aria-hidden="true" style="font-size: 16px; vertical-align: middle;">info</i>
-          Causa derivada a Comisión Directiva para su tratamiento en Asamblea General (Art. 95 del Estatuto).
-        </p>
         <div class="row metadatos-row">
           <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
           <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
@@ -542,9 +532,9 @@
   </div>
 </div>
 
-<!-- Modal 2: Emitir Resolución -->
+<!-- Modal 2: Generar Resolución Oficial -->
 <div *ngIf="modalVotacionAbierto"
-     class="modal-backdrop-custom"
+     class="modal-backdrop-custom modal-resolucion-backdrop"
      role="dialog"
      aria-modal="true"
      tabindex="-1"
@@ -552,95 +542,249 @@
      (keydown.escape)="cerrarModales()"
      (wheel)="$event.stopPropagation()"
      (touchmove)="$event.stopPropagation()">
-  <div class="modal-dialog-custom"
+  <div class="modal-dialog-custom modal-dialog-tribunal modal-dialog-lg"
        tabindex="-1"
        (click)="$event.stopPropagation()"
        (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
-      <div class="card-header card-header-warning">
-        <h4 class="card-title">Emitir Resolución</h4>
-        <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}</p>
+      <div class="card-header card-header-warning d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="card-title font-weight-bold text-white mb-0">Generar Resolución Oficial</h4>
+          <p class="card-category text-white-50 mb-0">
+            Expediente: {{formatCaseNumber(expedienteSeleccionado.numero)}} &bull; {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}
+          </p>
+        </div>
+        <button type="button" class="btn btn-link text-white p-1 m-0 btn-close-modal" (click)="cerrarModales()" aria-label="Cerrar modal">
+          <i class="material-icons">close</i>
+        </button>
       </div>
-      <div class="card-body" tabindex="-1">
-        <div class="alert alert-warning">
-          <i class="material-icons" style="vertical-align: middle;">info</i>
-          <span>La resolución exige mayoría absoluta del cuerpo colegiado (&ge; 2/3 de votos favorables).</span>
-        </div>
 
-        <div class="form-group mb-3" *ngFor="let juez of juecesDisponibles">
-          <label class="font-weight-bold text-dark">{{juez}}:</label>
-          <select class="form-control" [(ngModel)]="votosJueces[juez]">
-            <option value="FAVORABLE">Voto Favorable (Admite descargo / Aplica mérito)</option>
-            <option value="DESFAVORABLE">Voto Desfavorable (Rechaza descargo / Aplica sanción)</option>
-            <option value="ABSTENCION">Abstención Fundada</option>
-          </select>
-        </div>
+      <div class="card-body modal-detalle-body" tabindex="-1">
 
-        <div class="form-group mt-3">
-          <label class="font-weight-bold text-dark">Vistos y Considerandos Institucionales:</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="considerandosTexto"></textarea>
-        </div>
-
-        <!-- Reglamentos / Artículos respaldantes del dictamen -->
-        <div class="form-group mt-3">
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <label class="font-weight-bold text-dark mb-0">
-              Reglamentos / Artículos respaldantes del dictamen:
-            </label>
-            <span class="badge badge-info" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
-              {{ reglamentosSeleccionadosResolucion.length }} {{ reglamentosSeleccionadosResolucion.length === 1 ? 'artículo seleccionado' : 'artículos seleccionados' }}
-            </span>
+        <!-- Sección 1: Puntajes Finales Consolidados por Socio (Solo Lectura) -->
+        <section class="seccion-resolucion mb-4" aria-labelledby="titulo-puntajes-consolidados">
+          <h5 id="titulo-puntajes-consolidados" class="font-weight-bold text-dark mb-2 d-flex align-items-center">
+            <i class="material-icons text-warning mr-1" style="font-size: 20px;">assessment</i>
+            1. Puntajes Finales Consolidados por Socio (Evaluación TD)
+          </h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 tabla-puntajes-consolidados border">
+              <thead class="bg-light">
+                <tr>
+                  <th scope="col" class="font-weight-bold">N° de Socio</th>
+                  <th scope="col" class="font-weight-bold">Nombre y Apellido</th>
+                  <th scope="col" class="font-weight-bold">Grupo</th>
+                  <th scope="col" class="font-weight-bold">Estado de Descargo</th>
+                  <th scope="col" class="font-weight-bold">Puntaje Final Consolidado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let fila of involucradosJustificacion">
+                  <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
+                  <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
+                  <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
+                  <td class="estado-descargo-cell">
+                    <span class="estado-descargo-badge" [ngClass]="{
+                            'text-success font-weight-bold': getEstadoDescargo(fila) === 'Leído',
+                            'text-warning font-weight-bold': getEstadoDescargo(fila) === 'No Leído',
+                            'text-muted': getEstadoDescargo(fila) === 'Sin descargo'
+                          }">{{getEstadoDescargo(fila)}}</span>
+                  </td>
+                  <td class="font-weight-bold puntaje-final-cell">
+                    {{getPuntajeFinalInvolucradoDisplay(fila)}}
+                  </td>
+                </tr>
+                <tr *ngIf="involucradosJustificacion.length === 0">
+                  <td class="font-weight-bold legajo-cell">{{expedienteSeleccionado.legajo || '—'}}</td>
+                  <td class="nombre-cell">{{expedienteSeleccionado.socio}}</td>
+                  <td class="grupo-cell">—</td>
+                  <td class="estado-descargo-cell text-muted">Evaluado</td>
+                  <td class="font-weight-bold puntaje-final-cell">{{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-
-          <!-- Buscador reactivo para reglamentos del dictamen -->
-          <div class="input-group mb-2">
-            <div class="input-group-prepend">
-              <span class="input-group-text"><i class="material-icons">search</i></span>
-            </div>
-            <input type="text"
-                   class="form-control"
-                   placeholder="Buscar artículos o incisos vigentes para respaldar el dictamen..."
-                   [(ngModel)]="filtroReglamentosResolucion">
-            <div class="input-group-append" *ngIf="filtroReglamentosResolucion">
-              <button class="btn btn-outline-secondary" type="button" (click)="filtroReglamentosResolucion = ''" title="Limpiar filtro">
-                <i class="material-icons" style="font-size: 16px;">clear</i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Badges de artículos seleccionados con opción para remover -->
-          <div class="d-flex flex-wrap align-items-center mb-2" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
-            <span *ngFor="let reg of reglamentosSeleccionadosResolucion" 
-                  class="badge badge-info mr-1 mb-1 p-2 d-inline-flex align-items-center text-wrap" 
-                  style="font-size: 0.85rem; max-width: 100%;">
-              <span>{{ reg }}</span>
-              <button type="button" 
-                      class="btn btn-link text-white p-0 ml-1" 
-                      (click)="removerReglamentoResolucion(reg)" 
-                      title="Quitar artículo">
-                <i class="material-icons" style="font-size: 14px; vertical-align: middle;">close</i>
-              </button>
-            </span>
-          </div>
-
-          <!-- Selector múltiple de artículos vigentes -->
-          <select class="form-control"
-                  multiple
-                  [(ngModel)]="reglamentosSeleccionadosResolucion"
-                  style="min-height: 110px;">
-            <option *ngFor="let reg of reglamentosResolucionFiltrados" [ngValue]="reg">
-              {{ reg }}
-            </option>
-          </select>
-          <small class="form-text text-muted">
-            Mantené presionado Ctrl (o Cmd) para seleccionar o deseleccionar varios artículos e incisos.
+          <small class="text-muted d-block mt-1">
+            * Los puntajes finales fijados individualmente por el Tribunal de Disciplina alimentan de forma automática la parte resolutiva.
           </small>
-        </div>
+        </section>
+
+        <!-- Sección 2: Reglamentos / Artículos respaldantes de la resolución -->
+        <section class="seccion-resolucion mb-4" aria-labelledby="titulo-normas-respaldo">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 id="titulo-normas-respaldo" class="font-weight-bold text-dark mb-0 d-flex align-items-center">
+              <i class="material-icons text-primary mr-1" style="font-size: 20px;">gavel</i>
+              2. Reglamentos y Artículos Respaldantes
+            </h5>
+            <span class="badge badge-info" *ngIf="reglamentosSeleccionadosResolucion.length > 0">
+              {{ reglamentosSeleccionadosResolucion.length }} {{ reglamentosSeleccionadosResolucion.length === 1 ? 'artículo' : 'artículos' }}
+            </span>
+          </div>
+
+          <!-- Buscador reactivo y selector para agregar normas vigentes -->
+          <div class="row align-items-center mb-2">
+            <div class="col-md-7 mb-2 mb-md-0">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text"><i class="material-icons">search</i></span>
+                </div>
+                <input type="text"
+                       class="form-control"
+                       placeholder="Filtrar artículos vigentes..."
+                       [(ngModel)]="filtroReglamentosResolucion">
+                <div class="input-group-append" *ngIf="filtroReglamentosResolucion">
+                  <button class="btn btn-outline-secondary" type="button" (click)="filtroReglamentosResolucion = ''" title="Limpiar filtro">
+                    <i class="material-icons" style="font-size: 16px;">clear</i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-5">
+              <select class="form-control select-agregar-reglamento"
+                      (change)="agregarReglamentoResolucion($any($event.target).value); $any($event.target).value = ''">
+                <option value="" disabled selected>+ Agregar artículo respaldante...</option>
+                <option *ngFor="let reg of reglamentosResolucionFiltrados" [value]="reg">
+                  {{ reg }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Componente tabla de reglamentos seleccionados -->
+          <div class="reglamentacion-box">
+            <app-tabla-reglamentos
+              [articulos]="reglamentosResolucionCitas"
+              [editable]="true"
+              (remover)="removerReglamentoResolucion($event)">
+            </app-tabla-reglamentos>
+          </div>
+        </section>
+
+        <!-- Sección 3: Redacción de la Resolución Oficial (3 bloques estructurados) -->
+        <section class="seccion-resolucion mb-4" aria-labelledby="titulo-redaccion-resolucion">
+          <h5 id="titulo-redaccion-resolucion" class="font-weight-bold text-dark mb-2 d-flex align-items-center">
+            <i class="material-icons text-info mr-1" style="font-size: 20px;">edit_note</i>
+            3. Redacción del Documento Resolutivo
+          </h5>
+
+          <!-- Bloque VISTO -->
+          <div class="form-group mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="font-weight-bold text-dark mb-0" for="vistosTexto">VISTO:</label>
+              <button type="button" class="btn btn-link btn-sm p-0 text-muted" (click)="vistosTexto = construirVistosPorDefecto()" title="Regenerar texto por defecto">
+                <i class="material-icons" style="font-size: 14px; vertical-align: middle;">autorenew</i> Restaurar Visto
+              </button>
+            </div>
+            <textarea id="vistosTexto"
+                      class="form-control font-monospace"
+                      rows="4"
+                      [(ngModel)]="vistosTexto"
+                      placeholder="Ingrese los antecedentes, expedientes y reglamentaciones normativas (VISTO)..."></textarea>
+          </div>
+
+          <!-- Bloque CONSIDERANDO -->
+          <div class="form-group mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="font-weight-bold text-dark mb-0" for="considerandosTexto">CONSIDERANDO:</label>
+              <button type="button" class="btn btn-link btn-sm p-0 text-muted" (click)="considerandosTexto = construirConsiderandosPorDefecto(expedienteSeleccionado)" title="Regenerar texto por defecto">
+                <i class="material-icons" style="font-size: 14px; vertical-align: middle;">autorenew</i> Restaurar Considerando
+              </button>
+            </div>
+            <textarea id="considerandosTexto"
+                      class="form-control font-monospace"
+                      rows="4"
+                      [(ngModel)]="considerandosTexto"
+                      placeholder="Ingrese los fundamentos de hecho y de derecho que motivan el dictamen (CONSIDERANDO)..."></textarea>
+          </div>
+
+          <!-- Bloque SE RESUELVE -->
+          <div class="form-group mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="font-weight-bold text-dark mb-0" for="seResuelveTexto">SE RESUELVE:</label>
+              <button type="button" class="btn btn-link btn-sm p-0 text-muted" (click)="seResuelveTexto = construirSeResuelvePorDefecto(expedienteSeleccionado)" title="Regenerar texto por defecto">
+                <i class="material-icons" style="font-size: 14px; vertical-align: middle;">autorenew</i> Restaurar Se Resuelve
+              </button>
+            </div>
+            <textarea id="seResuelveTexto"
+                      class="form-control font-monospace"
+                      rows="5"
+                      [(ngModel)]="seResuelveTexto"
+                      placeholder="Ingrese los artículos resolutivos dispositivos con sus puntajes (SE RESUELVE)..."></textarea>
+          </div>
+        </section>
+
+        <!-- Sección 4: Vista Previa del Documento Oficial -->
+        <section class="seccion-resolucion mb-2" aria-labelledby="titulo-vista-previa-resolucion">
+          <h5 id="titulo-vista-previa-resolucion" class="font-weight-bold text-dark mb-2 d-flex align-items-center">
+            <i class="material-icons text-success mr-1" style="font-size: 20px;">preview</i>
+            4. Vista Previa del Documento Oficial
+          </h5>
+
+          <div class="resolucion-oficial-preview p-4 bg-white rounded border shadow-sm">
+            <!-- Membrete institucional -->
+            <div class="text-center pb-3 border-bottom mb-3 resolucion-header">
+              <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                <i class="material-icons text-primary" style="font-size: 28px;">account_balance</i>
+                <h5 class="mb-0 font-weight-bold text-dark letter-spacing-1">
+                  TRIBUNAL DE DISCIPLINA — A.V.E.I.T. (UTN FRC)
+                </h5>
+              </div>
+              <div class="small text-muted font-weight-bold text-uppercase">
+                Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos
+              </div>
+              <div class="h6 font-weight-bold text-dark mt-2 mb-1">
+                RESOLUCIÓN {{formatCaseNumber(expedienteSeleccionado.numero)}}
+              </div>
+              <div class="small text-muted">
+                Ref: Expediente {{formatCaseNumber(expedienteSeleccionado.numero)}} — {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}} &bull; {{fechaResolucionTexto}}
+              </div>
+            </div>
+
+            <!-- Cuerpo del documento -->
+            <div class="resolucion-cuerpo mb-4">
+              <div class="mb-3">
+                <strong class="d-block text-dark mb-1">VISTO:</strong>
+                <div class="text-justify text-muted pl-3 border-left text-pre-line">{{vistosTexto}}</div>
+              </div>
+              <div class="mb-3">
+                <strong class="d-block text-dark mb-1">CONSIDERANDO:</strong>
+                <div class="text-justify text-muted pl-3 border-left text-pre-line">{{considerandosTexto}}</div>
+              </div>
+              <div class="mb-3">
+                <strong class="d-block text-dark mb-1">SE RESUELVE:</strong>
+                <div class="text-justify text-dark pl-3 border-left border-primary text-pre-line font-weight-500">{{seResuelveTexto}}</div>
+              </div>
+            </div>
+
+            <!-- Pie de Firma del Tribunal (3 Años Sociales: 4.º, 5.º y 6.º) -->
+            <div class="resolucion-pie-firmas pt-3 border-top mt-4">
+              <div class="text-center text-muted small font-weight-bold mb-3 text-uppercase">
+                Cuerpo Colegiado del Tribunal de Disciplina
+              </div>
+              <div class="row text-center">
+                <div class="col-md-4 mb-3 mb-md-0 firma-col" *ngFor="let item of firmantesPieResolucion">
+                  <div class="linea-firma mx-auto mb-2"></div>
+                  <div class="font-weight-bold text-dark small">{{item.firma}}</div>
+                  <div class="text-muted smaller">{{item.etiquetaAnio}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
-      <div class="card-footer d-flex justify-content-end gap-2">
-        <button mat-button class="btn btn-default" (click)="cerrarModales()">Cancelar</button>
-        <button mat-raised-button class="btn btn-warning" (click)="confirmarVotacion()">
-          <i class="material-icons" style="font-size: 16px;">gavel</i> Emitir Votación y Registrar
+
+      <div class="card-footer d-flex justify-content-end align-items-center gap-2">
+        <button mat-button type="button" class="btn btn-default" (click)="cerrarModales()" [disabled]="guardandoResolucion">
+          Cancelar
+        </button>
+        <button mat-raised-button 
+                type="button" 
+                class="btn btn-warning btn-confirmar-resolucion d-inline-flex align-items-center" 
+                [disabled]="guardandoResolucion"
+                (click)="confirmarVotacion()">
+          <i class="material-icons" style="font-size: 16px;">gavel</i>
+          <span class="ml-1">{{guardandoResolucion ? 'Generando...' : 'Generar Resolución Oficial'}}</span>
         </button>
       </div>
     </div>
@@ -762,43 +906,101 @@
      (keydown.escape)="cerrarModales()"
      (wheel)="$event.stopPropagation()"
      (touchmove)="$event.stopPropagation()">
-  <div class="modal-dialog-custom modal-dialog-tribunal"
+  <div class="modal-dialog-custom modal-dialog-tribunal modal-dialog-lg"
        tabindex="-1"
        (click)="$event.stopPropagation()"
        (keydown)="onModalKeydown($event)">
     <div class="card" *ngIf="expedienteSeleccionado">
       <div class="card-header card-header-info d-flex justify-content-between align-items-center">
-        <h4 class="card-title mb-0">Resolución Oficial — {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
-        <button type="button" class="btn btn-link text-white p-1 m-0" (click)="cerrarModales()" aria-label="Cerrar modal">
+        <div>
+          <h4 class="card-title font-weight-bold text-white mb-0">Resolución Oficial — {{formatCaseNumber(expedienteSeleccionado.numero)}}</h4>
+          <p class="card-category text-white-50 mb-0">
+            Documento Institucional Colegiado Perfeccionado
+          </p>
+        </div>
+        <button type="button" class="btn btn-link text-white p-1 m-0 btn-close-modal" (click)="cerrarModales()" aria-label="Cerrar modal">
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="card-body" tabindex="-1">
-        <div class="alert alert-info py-2">
+
+      <div class="card-body modal-detalle-body" tabindex="-1">
+        <div class="alert alert-info py-2 d-flex align-items-center gap-2 mb-3">
           <i class="material-icons" style="vertical-align: middle;">verified</i>
-          <span>Resolución firme debidamente emitida y registrada por el Tribunal de Disciplina.</span>
+          <span>Resolución firme debidamente emitida y registrada por el Tribunal de Disciplina de A.V.E.I.T.</span>
         </div>
-        <div class="mb-3">
-          <strong>Título / Motivo:</strong> {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}}
-        </div>
-        <div class="mb-3" *ngIf="expedienteSeleccionado.votacion">
-          <h6 class="font-weight-bold">Considerandos:</h6>
-          <p class="p-2 bg-light rounded border text-muted">{{expedienteSeleccionado.votacion.considerandos}}</p>
-        </div>
-        <div *ngIf="expedienteSeleccionado.firmas && expedienteSeleccionado.firmas.juecesFirmantes.length > 0" class="p-3 bg-light rounded border">
-          <h6 class="font-weight-bold text-dark mb-2">Firmas Digitales Registradas:</h6>
-          <ul class="list-unstyled mb-0">
-            <li *ngFor="let firmante of expedienteSeleccionado.firmas.juecesFirmantes" class="text-success font-weight-bold">
-              &check; {{firmante}}
-            </li>
-          </ul>
-          <div *ngIf="expedienteSeleccionado.firmas.hashCriptografico" class="small text-muted mt-2">
-            <div><strong>Hash SHA-256:</strong> <code>{{expedienteSeleccionado.firmas.hashCriptografico}}</code></div>
-            <div><strong>Sellado Temporal:</strong> {{expedienteSeleccionado.firmas.timestamp}}</div>
+
+        <div class="resolucion-oficial-preview p-4 bg-white rounded border shadow-sm">
+          <!-- Membrete institucional -->
+          <div class="text-center pb-3 border-bottom mb-3 resolucion-header">
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+              <i class="material-icons text-primary" style="font-size: 28px;">account_balance</i>
+              <h5 class="mb-0 font-weight-bold text-dark letter-spacing-1">
+                TRIBUNAL DE DISCIPLINA — A.V.E.I.T. (UTN FRC)
+              </h5>
+            </div>
+            <div class="small text-muted font-weight-bold text-uppercase">
+              Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos
+            </div>
+            <div class="h6 font-weight-bold text-dark mt-2 mb-1">
+              {{expedienteSeleccionado.numeroResolucion || ('RESOLUCIÓN ' + formatCaseNumber(expedienteSeleccionado.numero))}}
+            </div>
+            <div class="small text-muted">
+              Ref: Expediente {{formatCaseNumber(expedienteSeleccionado.numero)}} — {{expedienteSeleccionado.titulo || expedienteSeleccionado.motivo}} &bull; {{expedienteSeleccionado.fechaResolucion || fechaResolucionTexto}}
+            </div>
+          </div>
+
+          <!-- Cuerpo del documento -->
+          <div class="resolucion-cuerpo mb-4">
+            <div class="mb-3">
+              <strong class="d-block text-dark mb-1">VISTO:</strong>
+              <div class="text-justify text-muted pl-3 border-left text-pre-line">
+                {{expedienteSeleccionado.vistos || expedienteSeleccionado.votacion?.vistos || 'Sin visto registrado.'}}
+              </div>
+            </div>
+            <div class="mb-3">
+              <strong class="d-block text-dark mb-1">CONSIDERANDO:</strong>
+              <div class="text-justify text-muted pl-3 border-left text-pre-line">
+                {{expedienteSeleccionado.considerandos || expedienteSeleccionado.votacion?.considerandos || 'Sin considerandos registrados.'}}
+              </div>
+            </div>
+            <div class="mb-3">
+              <strong class="d-block text-dark mb-1">SE RESUELVE:</strong>
+              <div class="text-justify text-dark pl-3 border-left border-primary text-pre-line font-weight-500">
+                {{expedienteSeleccionado.seResuelve || expedienteSeleccionado.votacion?.seResuelve || 'Sin parte resolutiva registrada.'}}
+              </div>
+            </div>
+          </div>
+
+          <!-- Pie de Firma del Tribunal (3 Años Sociales: 4.º, 5.º y 6.º) -->
+          <div class="resolucion-pie-firmas pt-3 border-top mt-4">
+            <div class="text-center text-muted small font-weight-bold mb-3 text-uppercase">
+              Firmantes Registrados por Año Social
+            </div>
+            <div class="row text-center">
+              <div class="col-md-4 mb-3 mb-md-0 firma-col" *ngFor="let item of firmantesPieResolucion">
+                <div class="linea-firma mx-auto mb-2"></div>
+                <div class="font-weight-bold text-dark small">{{item.firma}}</div>
+                <div class="text-muted smaller">{{item.etiquetaAnio}}</div>
+              </div>
+            </div>
+
+            <!-- Sellado criptográfico -->
+            <div *ngIf="expedienteSeleccionado.firmas && expedienteSeleccionado.firmas.hashCriptografico" class="mt-4 p-2 bg-light rounded border small text-muted text-center">
+              <div><strong>Hash de Integridad (SHA-256):</strong> <code>{{expedienteSeleccionado.firmas.hashCriptografico}}</code></div>
+              <div *ngIf="expedienteSeleccionado.firmas.timestamp"><strong>Fecha y Hora de Sellado:</strong> {{expedienteSeleccionado.firmas.timestamp}}</div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="card-footer d-flex justify-content-end">
+
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <button mat-raised-button 
+                type="button" 
+                class="btn btn-outline-primary btn-descargar-pdf d-inline-flex align-items-center"
+                (click)="descargarPdfResolucion()">
+          <i class="material-icons" style="font-size: 16px;">picture_as_pdf</i>
+          <span class="ml-1">Descargar PDF Oficial</span>
+        </button>
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>

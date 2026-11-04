@@ -120,13 +120,13 @@ describe('GestionarExpedientesComponent', () => {
     expect(component.columnasKanbanVisibles[0].estado).toBe('justificando');
   });
 
-  it('puedeVotarOFirmar debe ser true para miembros del Tribunal (TD) o ADMIN', () => {
+  it('puedeVotarOFirmar debe ser true únicamente para miembros con rol TD', () => {
     spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
     expect(component.puedeVotarOFirmar).toBeTrue();
   });
 
-  it('puedeVotarOFirmar debe ser false para CD u otros roles que solo tienen permisos de supervisión', () => {
-    spyOn(authService, 'tieneRol').and.callFake((...roles) => !roles.includes('TD') && !roles.includes('ADMIN'));
+  it('puedeVotarOFirmar debe ser false para CD, ADMIN u otros roles sin rol TD', () => {
+    spyOn(authService, 'tieneRol').and.callFake((...roles) => !roles.includes('TD'));
     expect(component.puedeVotarOFirmar).toBeFalse();
   });
 
@@ -532,7 +532,7 @@ describe('GestionarExpedientesComponent', () => {
         ['Ana', 'Pérez', '59'], ['Bruno', 'Díaz', '60'], ['Carla', 'Gómez', '61']
       ]);
       expect(filas.map(f => component.estadoJustificacion(f))).toEqual([
-        'Pendiente de evaluación', 'Extraordinaria (T03)', 'Sin justificación'
+        'Pendiente de evaluación', 'Pendiente de evaluación', 'Sin justificación'
       ]);
     });
 
@@ -726,6 +726,7 @@ describe('GestionarExpedientesComponent', () => {
 
     beforeEach(() => {
       api = TestBed.inject(ExpedienteApiService);
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
       filaPrueba = {
         socioId: 10,
         legajo: '74907',
@@ -1675,20 +1676,18 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.composicion).toBeNull();
     });
 
-    describe('inhibición de involucrados (Art. 95 y Art. 24 RPD)', () => {
-      it('muestra el banner y oculta decisión de justificativos y transición', () => {
+    describe('Autorización transversal por rol TD (sin bloqueos por usuarioInvolucrado ni banner)', () => {
+      it('no muestra el banner de inhibición y cualquier usuario con rol TD puede evaluar y resolver', () => {
         abrirComo('TD', composicion({ usuario: { esta_involucrado: true } }));
 
         const banner = compiled().querySelector('.banner-involucrado');
-        expect(banner?.textContent).toContain('Participación restringida');
-        expect(banner?.textContent).toContain('Tu lugar lo ocupa automáticamente tu suplente');
-        expect(component.puedeEvaluarJustificaciones).toBeFalse();
-        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
-        expect(component.puedeGenerarResolucion).toBeFalse();
-        expect(compiled().querySelector('.btn-generar-resolucion')).toBeNull();
+        expect(banner).toBeNull();
+        expect(component.usuarioInvolucrado).toBeFalse();
+        expect(component.puedeEvaluarJustificaciones).toBeTrue();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
       });
 
-      it('un miembro no involucrado puede evaluar y resolver', () => {
+      it('un usuario con rol TD puede evaluar y resolver', () => {
         abrirComo('TD');
         expect(compiled().querySelector('.banner-involucrado')).toBeNull();
         expect(component.puedeEvaluarJustificaciones).toBeTrue();
@@ -1697,10 +1696,8 @@ describe('GestionarExpedientesComponent', () => {
     });
 
     describe('Casos críticos del Art. 95', () => {
-      it('muestra el aviso de derivación a Asamblea sin inmovilizar la causa ni pedir un acta', () => {
-        // Decisión del PO (31/10/2026): la Asamblea designa integrantes con rol TD por fuera del sistema.
+      it('no renderiza paneles ni inputs de acta y mantiene puedeResolverExpedienteSeleccionado activo para TD', () => {
         abrirComo('TD', casoCritico());
-        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Asamblea General');
         expect(compiled().querySelector('.panel-composicion')).toBeNull();
         expect(compiled().querySelector('input[type="file"]#acta-asamblea')).toBeNull();
         expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
@@ -1714,6 +1711,8 @@ describe('GestionarExpedientesComponent', () => {
   });
 
   describe('Escala discreta de puntajes, llamados, felicitaciones y bloqueo de edición', () => {
+    let tieneRolSpy: jasmine.Spy;
+
     const expEnRevision: Expediente = {
       id: '12',
       numero: 'EXP-012/2026',
@@ -1730,7 +1729,11 @@ describe('GestionarExpedientesComponent', () => {
       titulo: 'En etapa probatoria'
     } as any;
 
-    it('solo permite modificar puntaje si el expediente está En Revisión (revision_resolucion o espera_resolucion)', () => {
+    beforeEach(() => {
+      tieneRolSpy = spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
+    });
+
+    it('solo permite modificar puntaje a usuarios con rol TD y si el expediente está En Revisión (revision_resolucion o espera_resolucion)', () => {
       component.expedienteSeleccionado = expEnRevision;
       expect(component.puedeModificarPuntaje).toBeTrue();
 
@@ -1738,6 +1741,10 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.puedeModificarPuntaje).toBeTrue();
 
       component.expedienteSeleccionado = expEnTramite;
+      expect(component.puedeModificarPuntaje).toBeFalse();
+
+      tieneRolSpy.and.returnValue(false);
+      component.expedienteSeleccionado = expEnRevision;
       expect(component.puedeModificarPuntaje).toBeFalse();
     });
 
@@ -1897,7 +1904,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.reglamentosSeleccionadosResolucion).toEqual([nuevoArt]);
     });
 
-    it('actualiza los reglamentos respaldantes en el expediente y emite votación en confirmarVotacion', () => {
+    it('actualiza los reglamentos respaldantes y persiste la resolución pasando a pendiente_firma en confirmarVotacion', () => {
       spyOn(dataService, 'votarDictamen').and.callThrough();
       const exp = crearExpConReglamentos();
       component.abrirModalVotacion(exp);
@@ -1905,6 +1912,9 @@ describe('GestionarExpedientesComponent', () => {
         'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
         'Estatuto - Art. 25: Deberes y obligaciones de los socios'
       ];
+      component.vistosTexto = 'VISTO: actuaciones y reglamentos.';
+      component.considerandosTexto = 'CONSIDERANDO: mérito de la causa.';
+      component.seResuelveTexto = 'SE RESUELVE: aplicar sanción correspondiente.';
 
       component.confirmarVotacion();
 
@@ -1915,11 +1925,82 @@ describe('GestionarExpedientesComponent', () => {
       expect(dataService.votarDictamen).toHaveBeenCalledWith(
         'EXP-100',
         component.votosJueces,
-        component.considerandosTexto
+        component.considerandosTexto,
+        jasmine.objectContaining({
+          vistos: 'VISTO: actuaciones y reglamentos.',
+          considerandos: 'CONSIDERANDO: mérito de la causa.',
+          seResuelve: 'SE RESUELVE: aplicar sanción correspondiente.'
+        })
       );
-      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Dictamen votado'));
+      expect(exp.estado).toBe('pendiente_firma');
+      expect(exp.vistos).toBe('VISTO: actuaciones y reglamentos.');
+      expect(exp.seResuelve).toBe('SE RESUELVE: aplicar sanción correspondiente.');
+      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Resolución oficial generada con éxito'));
       expect(component.modalVotacionAbierto).toBeFalse();
       expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+    });
+
+    it('impide generar la resolución si alguno de los bloques VISTO, CONSIDERANDO o SE RESUELVE está vacío', () => {
+      spyOn(dataService, 'votarDictamen');
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.vistosTexto = '   ';
+      component.considerandosTexto = 'Considerandos válidos';
+      component.seResuelveTexto = 'Se resuelve válido';
+
+      component.confirmarVotacion();
+
+      expect(notifications.warning).toHaveBeenCalledWith(
+        'Todos los bloques (VISTO, CONSIDERANDO y SE RESUELVE) son obligatorios.'
+      );
+      expect(dataService.votarDictamen).not.toHaveBeenCalled();
+      expect(component.modalVotacionAbierto).toBeTrue();
+    });
+
+    it('Modal 2 no renderiza selectores de votación nominal ni alerta de 2/3, sino tabla de puntajes consolidados, bloques y 3 firmantes por año social', () => {
+      const exp = crearExpConReglamentos();
+      component.involucradosJustificacion = [
+        {
+          socioId: 10,
+          legajo: '75001',
+          nombre: 'Lucas',
+          apellido: 'Gómez',
+          grupo: '59',
+          descargo: { id: 1, tipo: 'T02_CERTIFICADO', leido: true, puntaje_ratificado: -1.0 } as any
+        }
+      ];
+      component.abrirModalVotacion(exp);
+      fixture.detectChanges();
+
+      const modalEl = fixture.nativeElement.querySelector('.modal-backdrop-custom');
+      expect(modalEl).toBeTruthy();
+
+      // No debe contener la alerta de mayoría calificada de 2/3
+      expect(modalEl.textContent).not.toContain('mayoría absoluta del cuerpo colegiado');
+      expect(modalEl.textContent).not.toContain('2/3');
+
+      // Debe contener la tabla de puntajes finales consolidados
+      const tablaPuntajes = modalEl.querySelector('.tabla-puntajes-consolidados');
+      expect(tablaPuntajes).toBeTruthy();
+      expect(tablaPuntajes.textContent).toContain('Lucas Gómez');
+      expect(tablaPuntajes.textContent).toContain('-1');
+
+      // Debe contener los 3 textareas para VISTO, CONSIDERANDO y SE RESUELVE
+      expect(modalEl.querySelector('textarea#vistosTexto')).toBeTruthy();
+      expect(modalEl.querySelector('textarea#considerandosTexto')).toBeTruthy();
+      expect(modalEl.querySelector('textarea#seResuelveTexto')).toBeTruthy();
+
+      // Debe contener la vista previa con el pie de 3 firmantes por año social
+      const pieFirmas = modalEl.querySelector('.resolucion-pie-firmas');
+      expect(pieFirmas).toBeTruthy();
+      const columnasFirma = pieFirmas.querySelectorAll('.firma-col');
+      expect(columnasFirma.length).toBe(3);
+      expect(pieFirmas.textContent).toContain('4.º Año Social');
+      expect(pieFirmas.textContent).toContain('5.º Año Social');
+      expect(pieFirmas.textContent).toContain('6.º Año Social');
+      expect(pieFirmas.textContent).toContain('11735 - Candela Moreno Migliore - G59');
+      expect(pieFirmas.textContent).toContain('11737 - Catalina Cerda Gallego - G58');
+      expect(pieFirmas.textContent).toContain('11239 - Giuliano Toselli - G57');
     });
 
     it('getReglamentosSustento preserva intactas las citas históricas aunque un artículo subyacente se dé de baja', () => {

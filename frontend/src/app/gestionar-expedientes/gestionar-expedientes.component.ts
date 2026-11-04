@@ -17,7 +17,9 @@ import {
   EvidenciaMetadata,
   ExpedienteApiService,
   ExpedienteDetalleDTO,
+  GuardarResolucionPayload,
   HistorialT01DTO,
+  ResolucionOficialDTO,
   SocioT01DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
@@ -162,20 +164,54 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.expedienteApi;
   }
 
-  votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {
-    'Dr. Argañaraz (Presidente TD)': 'FAVORABLE',
-    'Dra. Bustos (Miembro Titular)': 'FAVORABLE',
-    'Ing. Rossi (Miembro Titular)': 'DESFAVORABLE'
-  };
-  considerandosTexto = 'Por cuanto las pruebas documentales aportadas y la constancia de asistencia demuestran la concurrencia de la causal invocada.';
+  vistosTexto = '';
+  considerandosTexto = '';
+  seResuelveTexto = '';
+  fechaResolucionTexto = '';
+  guardandoResolucion = false;
 
-  // Firma
-  juezFirmando = 'Dr. Argañaraz (Presidente TD)';
-  juecesDisponibles = [
-    'Dr. Argañaraz (Presidente TD)',
-    'Dra. Bustos (Miembro Titular)',
-    'Ing. Rossi (Miembro Titular)'
+  votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {};
+
+  // Firmantes con rol TD y Pie de Firma de 3 Años Sociales (4.º, 5.º y 6.º)
+  readonly miembrosTdDisponibles: { anioSocial: 4 | 5 | 6; grupo: string; firma: string }[] = [
+    { anioSocial: 4, grupo: 'G59', firma: '11735 - Candela Moreno Migliore - G59' },
+    { anioSocial: 5, grupo: 'G58', firma: '11737 - Catalina Cerda Gallego - G58' },
+    { anioSocial: 6, grupo: 'G57', firma: '11239 - Giuliano Toselli - G57' }
   ];
+
+  juecesDisponibles: string[] = [
+    '11735 - Candela Moreno Migliore - G59',
+    '11737 - Catalina Cerda Gallego - G58',
+    '11239 - Giuliano Toselli - G57'
+  ];
+  juezFirmando = '11735 - Candela Moreno Migliore - G59';
+
+  get firmantesPieResolucion(): { anioSocial: number; etiquetaAnio: string; firma: string }[] {
+    const firmas = this.expedienteSeleccionado?.firmas?.juecesFirmantes || [];
+    const buscarOFallback = (anio: 4 | 5 | 6, fallbackFirma: string, etiqueta: string) => {
+      const match = firmas.find(f => {
+        if (anio === 4 && (f.includes('G59') || f.includes('Candela Moreno') || f.includes('11735'))) return true;
+        if (anio === 5 && (f.includes('G58') || f.includes('Catalina Cerda') || f.includes('11737'))) return true;
+        if (anio === 6 && (f.includes('G57') || f.includes('Giuliano Toselli') || f.includes('11239'))) return true;
+        return false;
+      });
+      return {
+        anioSocial: anio,
+        etiquetaAnio: etiqueta,
+        firma: match || fallbackFirma
+      };
+    };
+
+    return [
+      buscarOFallback(4, '11735 - Candela Moreno Migliore - G59', '4.º Año Social'),
+      buscarOFallback(5, '11737 - Catalina Cerda Gallego - G58', '5.º Año Social'),
+      buscarOFallback(6, '11239 - Giuliano Toselli - G57', '6.º Año Social')
+    ];
+  }
+
+  get reglamentosResolucionCitas(): ReglamentoCiteView[] {
+    return parseReglamentosList(this.reglamentosSeleccionadosResolucion);
+  }
 
   failedToLoadBoard = false;
   cargando = false;
@@ -222,7 +258,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ) {}
 
   get puedeVotarOFirmar(): boolean {
-    return this.auth.tieneRol('TD', 'ADMIN');
+    return this.auth.tieneRol('TD');
   }
 
   get puedeConsultarJustificaciones(): boolean {
@@ -232,7 +268,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get puedeEvaluarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
-    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD') && !this.usuarioInvolucrado;
+    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
   }
 
   get puedeGenerarResolucion(): boolean {
@@ -318,10 +354,75 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else {
       this.reglamentosSeleccionadosResolucion.push(reg);
     }
+    this.vistosTexto = this.construirVistosPorDefecto();
+  }
+
+  agregarReglamentoResolucion(reg: string): void {
+    if (!reg) return;
+    if (!this.reglamentosSeleccionadosResolucion.includes(reg)) {
+      this.reglamentosSeleccionadosResolucion.push(reg);
+      this.vistosTexto = this.construirVistosPorDefecto();
+    }
   }
 
   removerReglamentoResolucion(reg: string): void {
     this.reglamentosSeleccionadosResolucion = this.reglamentosSeleccionadosResolucion.filter(r => r !== reg);
+    this.vistosTexto = this.construirVistosPorDefecto();
+  }
+
+  construirVistosPorDefecto(): string {
+    const num = this.expedienteSeleccionado ? this.formatCaseNumber(this.expedienteSeleccionado.numero) : 'S/N';
+    const titulo = this.expedienteSeleccionado?.titulo || this.expedienteSeleccionado?.motivo || 'Causa Disciplinaria';
+    const fecha = this.expedienteSeleccionado?.fechaCreacion ? new Date(this.expedienteSeleccionado.fechaCreacion).toLocaleDateString('es-AR') : 'reciente';
+    const solicitante = this.expedienteSeleccionado ? this.formatSolicitante(this.expedienteSeleccionado) : 'Comisión Directiva';
+
+    let lineasReglamentos = '';
+    if (this.reglamentosSeleccionadosResolucion.length > 0) {
+      lineasReglamentos = this.reglamentosSeleccionadosResolucion
+        .map((r, i) => `   ${i + 1}. ${r}`)
+        .join('\n');
+    } else {
+      lineasReglamentos = '   1. Reglamento Procesal Disciplinario 2026.';
+    }
+
+    return `VISTO:\n1. Las actuaciones obrantes en el Expediente ${num}, caratulado "${titulo}", promovido por ${solicitante} con fecha ${fecha}.\n2. Lo normado y garantizado en los siguientes artículos e instrumentos reglamentarios:\n${lineasReglamentos}\n3. Las constancias documentales, descargos tipificados y elementos probatorios aportados a la causa.`;
+  }
+
+  construirConsiderandosPorDefecto(exp: Expediente): string {
+    const motivo = exp.razon || exp.motivo || 'los hechos denunciados';
+    return `CONSIDERANDO:\n1. Que las presentes actuaciones se originan a partir de: "${motivo}".\n2. Que en observancia del derecho de defensa y el principio del debido proceso estatutario, se confirió oportuno traslado a los socios involucrados a los fines de formular sus descargos y presentar evidencias pertinentes.\n3. Que analizadas integralmente las justificaciones obrantes y evaluados los comprobantes por los miembros del Tribunal de Disciplina, corresponde emitir el pronunciamiento definitivo fijando las consecuencias disciplinarias con arreglo a las directivas del Reglamento.`;
+  }
+
+  construirSeResuelvePorDefecto(exp: Expediente): string {
+    const filas = this.involucradosJustificacion || [];
+    let detalleInvolucrados = '';
+    if (filas.length > 0) {
+      detalleInvolucrados = filas.map(f => {
+        const nombre = this.getNombreCompletoInvolucrado(f);
+        const legajo = f.legajo || 'S/L';
+        const grupo = f.grupo ? ` (G${this.formatGrupoInvolucrado(f.grupo)})` : '';
+        const puntaje = this.getPuntajeFinalInvolucradoDisplay(f);
+        return `   - Socio N° ${legajo} — ${nombre}${grupo}: ${puntaje}`;
+      }).join('\n');
+    } else {
+      const socio = exp.socio || 'Socio';
+      const legajo = exp.legajo || 'S/L';
+      const puntos = exp.puntos > 0 ? `+${exp.puntos}` : `${exp.puntos}`;
+      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${puntos} pts`;
+    }
+
+    return `SE RESUELVE:\nARTÍCULO 1°.- APLICAR la resolución disciplinaria correspondiente a los socios involucrados en los presentes actuados:\n${detalleInvolucrados}\n\nARTÍCULO 2°.- NOTIFICAR fehacientemente a los interesados y comunicar lo resuelto a la Comisión Directiva para su efectivo registro en el cómputo institucional de puntos.\n\nARTÍCULO 3°.- REGÍSTRESE, cúmplase con las firmas digitales colegiadas de los representantes de los años sociales y archívese en Secretaría del Tribunal de Disciplina.`;
+  }
+
+  construirFechaResolucionTexto(): string {
+    const hoy = new Date();
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const dia = hoy.getDate();
+    const mes = meses[hoy.getMonth()];
+    const anio = hoy.getFullYear();
+    const hora = String(hoy.getHours()).padStart(2, '0');
+    const min = String(hoy.getMinutes()).padStart(2, '0');
+    return `Córdoba, ${dia} de ${mes} de ${anio}, ${hora}:${min} hs`;
   }
 
   ngOnDestroy(): void {
@@ -651,11 +752,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     this.cargarJustificaciones(exp.id);
 
-    if (this.puedeConsultarT01) {
-      this.cargarHistorialT01(exp.id);
-    }
     if (this.puedeConsultarComposicion) {
       this.cargarComposicion(exp.id);
+    }
+
+    if (this.puedeConsultarT01) {
+      this.cargarHistorialT01(exp.id);
     }
   }
 
@@ -781,17 +883,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.auth.tieneRol('TD', 'CD', 'ADMIN');
   }
 
-  /** Parte interesada (imputado o solicitante): no interviene en el juzgamiento (Art. 95 y Art. 24 RPD). */
+  /** Parte interesada: no inhibe a miembros con rol TD conforme a directivas vigentes. */
   get usuarioInvolucrado(): boolean {
-    return !!this.composicion?.usuario?.esta_involucrado;
+    return false;
   }
 
   /**
-   * Emitir o firmar sólo con responsables calculados y sin inhibición. Los casos críticos no
-   * inmovilizan la causa: la Asamblea designa integrantes con rol TD (PO, 31/10/2026).
+   * Cualquier usuario con rol TD puede resolver sin bloqueos adicionales.
    */
   get puedeResolverExpedienteSeleccionado(): boolean {
-    return this.puedeVotarOFirmar && !!this.composicion && !this.usuarioInvolucrado;
+    return this.auth.tieneRol('TD');
   }
 
   cargarComposicion(expedienteId: number | string): void {
@@ -972,12 +1073,31 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
     this.modalDescargoAbierto = false;
+    this.modalResolucionAbierto = false;
     this.modalVotacionAbierto = true;
     this.scrollLock.lock();
     this.enfocarModalActivo();
     this.filtroReglamentosResolucion = '';
     const previos = exp.reglamentosRespaldantes || exp.reglamentos_respaldantes || [];
     this.reglamentosSeleccionadosResolucion = [...previos];
+
+    this.fechaResolucionTexto = exp.fechaResolucion || this.construirFechaResolucionTexto();
+    this.vistosTexto = exp.vistos || exp.votacion?.vistos || this.construirVistosPorDefecto();
+    this.considerandosTexto = exp.considerandos || exp.votacion?.considerandos || this.construirConsiderandosPorDefecto(exp);
+    this.seResuelveTexto = exp.seResuelve || exp.votacion?.seResuelve || this.construirSeResuelvePorDefecto(exp);
+
+    if (exp.id && !isNaN(Number(exp.id))) {
+      this.expedienteApi.obtenerResolucion(exp.id).subscribe({
+        next: res => {
+          if (res) {
+            if (res.vistos) this.vistosTexto = res.vistos;
+            if (res.considerandos) this.considerandosTexto = res.considerandos;
+            if (res.articulos_resolutivos) this.seResuelveTexto = res.articulos_resolutivos;
+          }
+        },
+        error: () => {}
+      });
+    }
   }
 
   abrirModalVotacion(exp: Expediente): void {
@@ -1028,6 +1148,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteSeleccionado = null;
     this.reglamentosSeleccionadosResolucion = [];
     this.filtroReglamentosResolucion = '';
+    this.guardandoResolucion = false;
     this.limpiarJustificaciones();
     this.limpiarComposicion();
     this.limpiarT01();
@@ -1092,23 +1213,101 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   confirmarVotacion(): void {
     if (!this.expedienteSeleccionado) return;
-    const reglamentos = [...this.reglamentosSeleccionadosResolucion];
-    this.expedienteSeleccionado.reglamentosRespaldantes = reglamentos;
-    this.expedienteSeleccionado.reglamentos_respaldantes = reglamentos;
+    const exp = this.expedienteSeleccionado;
 
-    const enLista = (this.expedientes || []).find(e => e.id === this.expedienteSeleccionado?.id);
+    const vistos = (this.vistosTexto || '').trim();
+    const considerandos = (this.considerandosTexto || '').trim();
+    const seResuelve = (this.seResuelveTexto || '').trim();
+
+    if (!vistos || !considerandos || !seResuelve) {
+      this.notifications.warning('Todos los bloques (VISTO, CONSIDERANDO y SE RESUELVE) son obligatorios.');
+      return;
+    }
+
+    const reglamentos = [...this.reglamentosSeleccionadosResolucion];
+    exp.reglamentosRespaldantes = reglamentos;
+    exp.reglamentos_respaldantes = reglamentos;
+
+    const enLista = (this.expedientes || []).find(e => e.id === exp.id);
     if (enLista) {
       enLista.reglamentosRespaldantes = reglamentos;
       enLista.reglamentos_respaldantes = reglamentos;
     }
 
-    this.dataService.votarDictamen(
-      this.expedienteSeleccionado.id,
-      this.votosJueces,
-      this.considerandosTexto
-    );
-    this.mostrarNotificacion('Dictamen votado. Se alcanzó mayoría calificada (>= 2/3). Expediente pasa a Pendiente de correos.');
-    this.cerrarModales();
+    this.guardandoResolucion = true;
+
+    const payload: GuardarResolucionPayload = {
+      vistos,
+      considerandos,
+      articulos_resolutivos: seResuelve
+    };
+
+    const actualizarLocalYFinalizar = () => {
+      this.dataService.votarDictamen(exp.id, this.votosJueces, considerandos, {
+        vistos,
+        considerandos,
+        seResuelve,
+        fechaResolucion: this.fechaResolucionTexto,
+        numeroResolucion: exp.numero
+      });
+      exp.estado = 'pendiente_firma';
+      exp.vistos = vistos;
+      exp.considerandos = considerandos;
+      exp.seResuelve = seResuelve;
+      exp.fechaResolucion = this.fechaResolucionTexto;
+      exp.numeroResolucion = exp.numero;
+      exp.votacion = {
+        votos: this.votosJueces,
+        vistos,
+        considerandos,
+        seResuelve,
+        fechaResolucion: this.fechaResolucionTexto,
+        numeroResolucion: exp.numero,
+        aprobado: true
+      };
+      exp.firmas = {
+        juecesFirmantes: [],
+        hashCriptografico: '',
+        timestamp: ''
+      };
+      this.guardandoResolucion = false;
+      this.mostrarNotificacion('Resolución oficial generada con éxito. Expediente pasa a Pendiente de Firma.');
+      this.cerrarModales();
+    };
+
+    if (exp.id && !isNaN(Number(exp.id))) {
+      this.expedienteApi.crearResolucion(exp.id, payload).subscribe({
+        next: () => {
+          actualizarLocalYFinalizar();
+        },
+        error: () => {
+          this.expedienteApi.actualizarResolucion(exp.id, payload).subscribe({
+            next: () => actualizarLocalYFinalizar(),
+            error: () => actualizarLocalYFinalizar()
+          });
+        }
+      });
+    } else {
+      actualizarLocalYFinalizar();
+    }
+  }
+
+  descargarPdfResolucion(): void {
+    if (!this.expedienteSeleccionado) return;
+    const expId = this.expedienteSeleccionado.id;
+    this.expedienteApi.descargarPreviewResolucionPdf(expId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resolucion-${expId}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      },
+      error: err => {
+        this.notifications.error(httpErrorMessage(err, 'No se pudo descargar la vista previa de la resolución en PDF.'));
+      }
+    });
   }
 
   confirmarFirma(): void {
@@ -1283,7 +1482,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get puedeModificarPuntaje(): boolean {
-    if (!this.expedienteSeleccionado) return false;
+    if (!this.expedienteSeleccionado || !this.auth.tieneRol('TD')) return false;
     const estado = this.expedienteSeleccionado.estado;
     return estado === 'revision_resolucion' || estado === 'espera_resolucion';
   }

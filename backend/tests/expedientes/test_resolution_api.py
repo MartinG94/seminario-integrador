@@ -156,6 +156,8 @@ def test_patch_no_modifica_resolucion_emitida(causal_expediente, causal_vocal, a
 def test_emision_sin_dictamen_cerrado_devuelve_error_controlado(
     causal_expediente, causal_vocal, authenticate
 ):
+    causal_expediente.estado = "creado"
+    causal_expediente.save(update_fields=["estado"])
     Resolucion.objects.create(
         expediente=causal_expediente,
         plantilla_version="v1",
@@ -199,3 +201,54 @@ def test_emision_selecciona_la_version_mas_reciente(
 
     assert response.status_code == 200
     assert selected["id"] == latest.id
+
+
+@pytest.mark.django_db
+def test_resolucion_serializer_campos_identificador_y_firmantes(
+    causal_expediente, causal_vocal, authenticate
+):
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    response = authenticate(causal_vocal).get(resolution_url(causal_expediente.pk))
+    assert response.status_code == 200
+    assert (
+        response.data["identificador_resolucion"]
+        == f"RESOLUCIÓN {causal_expediente.numero.replace('EXP-', '')}"
+    )
+    assert isinstance(response.data["firmantes_td"], list)
+    assert len(response.data["firmantes_td"]) == 3
+
+
+@pytest.mark.django_db
+def test_emision_end_to_end_con_consolidated_decision_provider(
+    causal_expediente, causal_vocal, authenticate
+):
+    causal_expediente.estado = "espera_resolucion"
+    causal_expediente.puntos = Decimal("-3.00")
+    causal_expediente.save()
+
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerandos de prueba.",
+        articulos_resolutivos="Artículo 1: sanción.",
+        created_by=causal_vocal.user,
+    )
+    response = authenticate(causal_vocal).post(emit_url(causal_expediente.pk), {}, format="json")
+    assert response.status_code == 200
+    assert response.data["estado"] == "ISSUED"
+    assert Decimal(str(response.data["puntos_finales"])) == Decimal("-3.00")
+    assert (
+        response.data["identificador_resolucion"]
+        == f"RESOLUCIÓN {causal_expediente.numero.replace('EXP-', '')}"
+    )
+    assert len(response.data["firmantes_td"]) == 3

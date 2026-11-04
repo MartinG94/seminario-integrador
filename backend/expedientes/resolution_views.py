@@ -12,7 +12,7 @@ from expedientes.resolution_serializers import ResolucionSerializer
 from expedientes.services.resolution_pdf import build_resolution_preview_pdf
 from expedientes.services.resolution_service import (
     DictamenNoCerradoError,
-    UnavailableClosedDecisionProvider,
+    ExpedienteConsolidatedDecisionProvider,
     emitir_resolucion,
 )
 
@@ -82,7 +82,7 @@ class ResolucionEmitirView(APIView):
             )
         try:
             emitida = emitir_resolucion(
-                resolucion, request.user, UnavailableClosedDecisionProvider()
+                resolucion, request.user, ExpedienteConsolidatedDecisionProvider()
             )
         except DictamenNoCerradoError as exc:
             raise DRFValidationError({"dictamen": str(exc)}) from exc

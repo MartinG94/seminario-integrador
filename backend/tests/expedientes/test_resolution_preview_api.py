@@ -148,3 +148,26 @@ def test_preview_preserva_texto_extenso_en_varias_paginas(
     assert resolucion.estado == "DRAFT"
     assert resolucion.issued_at == issued_at
     assert resolucion.contenido_hash == contenido_hash
+
+
+@pytest.mark.django_db
+def test_preview_incluye_membrete_identificacion_y_firmantes(
+    causal_expediente, causal_vocal, authenticate
+):
+    create_resolution(
+        causal_expediente,
+        causal_vocal.user,
+        vistos="Vistos institucionales.",
+        considerandos="Considerandos institucionales.",
+        articulos_resolutivos="Artículo 1: resuelto.",
+    )
+
+    response = authenticate(causal_vocal).get(preview_url(causal_expediente.pk))
+
+    assert response.status_code == 200
+    text = extract_pdf_text(response)
+    assert "TRIBUNAL DE DISCIPLINA — A.V.E.I.T. (UTN FRC)" in text
+    assert "RESOLUCIÓN" in text
+    assert "SE RESUELVE — ARTÍCULOS RESOLUTIVOS" in text
+    assert "TRIBUNAL DE DISCIPLINA — FIRMANTES" in text
+    assert "Candela Moreno Migliore" in text or "G59" in text
