@@ -1,4 +1,4 @@
-# TASK.md — Hoja de Ruta y Tareas del Proyecto SGD-AVEIT
+# `TASK.md` — Hoja de Ruta y Tareas del Proyecto SGD-AVEIT
 
 Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **Spec-Driven Development (SDD)**. Articula el cronograma macro por Sprints con el desglose granular atómico de tareas verificables (`<30 minutos`).
 
@@ -11,10 +11,10 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 | **Sprint 0** | 18/08 al 08/09 | **Fundacional:** Relevamiento, Anteproyecto, ERS, BPMN, Arquitectura, Acuerdos de Trabajo, Prototipado UX y Gobernanza SDD. | — | **Completado** |
 | **Sprint 1** | 09/09 al 22/09 | **Walking Skeleton:** Autenticación JWT, Roles RBAC, Padrón institucional, Ranking oficial de puntos y Legajo de socio. | `SCRUM-34` a `SCRUM-39` (20 SP) | **Completado (20 SP)** |
 | **Sprint 2** | 23/09 al 06/10 | **Expedientes, Notificaciones y Monitoreo:** Formulario T01 multi-socio, competencias (Arts. 21-26), Outbox email, Tablero 6 Estados y Mis Solicitudes T01. | `SCRUM-40` a `SCRUM-44`, `SCRUM-75` (23 SP) | **Completado (23 SP)** |
-| **Sprint 3** | 08/10 al 20/10 | **Descargos, Evidencias, Calendario y Asistencias:** Formularios T02 y T03 con adjuntos protegidos, calendario de días hábiles, urgencia, asistencias, detalle Sala TD y resolución T02. | `SCRUM-45` a `SCRUM-50`, `SCRUM-52`, `SCRUM-76` a `SCRUM-84` (36 SP) | **Completado (36 SP)** |
-| **Sprint 4** | 22/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **En Curso (Activo)** |
-| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | Planificado |
-| **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | Planificado |
+| **Sprint 3** | 07/10 al 20/10 | **Descargos, Evidencias, Calendario y Asistencias:** Formularios T02 y T03 con adjuntos protegidos, calendario de días hábiles, urgencia, asistencias, detalle Sala TD y resolución T02. | `SCRUM-45` a `SCRUM-50`, `SCRUM-52`, `SCRUM-76` a `SCRUM-84` (36 SP) | **Completado (36 SP)** |
+| **Sprint 4** | 21/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **Completado (19 SP)** |
+| **Sprint 5** | 04/11 al 18/11 | **Sprint 5 Consolidado (Fusión Sprint 5 y 6):** Emisión oficial, sumatoria transaccional inmutable (cero UPDATE en MySQL), balance Art. 137, portal imputados, alertas y homologación. | `SCRUM-57` a `SCRUM-68`, `SCRUM-85` (44 SP) | **En Curso (Activo)** |
+| **Sprint 6** | — | **Fusionado con Sprint 5:** Consolidado operativamente a partir del 04/11/2026 para acortar tiempos y anticipar la finalización del proyecto. | — | **Fusionado en S5** |
 
 ---
 
@@ -31,7 +31,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **T0.5 Catálogo de Actores y Matriz RBAC:** Caracterización de los 7 actores clave del sistema (5 humanos y 2 automatizados).  
       *Hecho cuando:* `docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md` finalizado.
 - [x] **T0.6 Acuerdos de Trabajo y Gobernanza Ágil:** Definición de Sprints de 14 días, Definition of Ready (DoR), Definition of Done (DoD) y Product Backlog estimado en Story Points.  
-      *Hecho cuando:* `docs/gestion-proyecto/Seguimiento de Proyecto.md` y `docs/gestion-proyecto/PLAN_DE_PROYECTO_SGD_AVEIT.md` aprobados por Cátedra.
+      *Hecho cuando:* ``docs/gestion-proyecto/Seguimiento de Proyecto.md`` y ``docs/gestion-proyecto/PLAN_DE_PROYECTO_SGD_AVEIT.md`` aprobados por Cátedra.
 - [x] **T0.7 Prototipos y Sistema de Diseño:** Formalización de tokens de diseño AVEIT y maquetación de pantallas preliminares.  
       *Hecho cuando:* `DESIGN.md` creado y prototipos interactivos en `prototipos/` operativos.
 - [x] **T0.8 Gobernanza SDD y Dockerización:** Configuración del estándar Spec-Driven Development de MoureDev, `AGENTS.md`, `constitution.md` y `docker-compose.yml`.  
@@ -324,7 +324,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 > **Plan Técnico:** [`specs/007-visor-expediente-evidencia/plan.md`](specs/007-visor-expediente-evidencia/plan.md)  
 > **Tareas:** [`specs/007-visor-expediente-evidencia/tasks.md`](specs/007-visor-expediente-evidencia/tasks.md)
 
-- [x] **TS4-01.1 Modelo y Migración de Auditoría de Consulta (Backend TDD):** Implementar modelo `AuditoriaConsultaExpediente` inmutable en `backend/expedientes/models.py` y migración `0017_auditoria_consulta_expediente.py` dependiente de `0016`.
+- [x] **TS4-01.1 Modelo y Migración de Auditoría de Consulta (Backend TDD):** Implementar modelo ``AuditoriaConsultaExpediente`` inmutable en `backend/expedientes/models.py` y migración `0017_auditoria_consulta_expediente.py` dependiente de `0016`.
 - [x] **TS4-01.2 Serializador Visor, Verificación SHA-256 y Protección Médica (Backend TDD):** Implementar `ExpedienteVisorSerializer` con cabecera TD, los 3 jueces con grupo Gxx, timeline cronológico, verificación de integridad SHA-256, enmascaramiento de datos médicos para terceros y rotulado de "Plazo vencido sin descargo".
 - [x] **TS4-01.3 Endpoint REST Visor con Auditoría Automática (Backend TDD):** Implementar `ExpedienteVisorView` en `backend/expedientes/views/visor_views.py` protegido con `IsImputadoOrTribunal` y registro inmutable en base de datos.
 - [x] **TS4-01.4 Suite de Tests Backend (`test_visor_expediente.py`):** Cobertura completa de CA1, CA2, CA3 y CA4.
@@ -340,15 +340,15 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 > **Tarea Metodológica:** SCRUM-84: Apertura y Cierre de Sprint 3 en Documentación (Definición de Producto y Seguimiento de Proyecto).  
 > **Responsable:** Lucas Martín Guillén (Scrum Master).  
-> **Criterios de Aceptación:** CA1 (Formalización de S3 Apertura y Cierre en `docs/gestion-proyecto/DEFINICION_DE_PRODUCTO_S3_APERTURA_Y_CIERRE.md`), CA2 (Actualización de Sección 2.6 en `docs/gestion-proyecto/Seguimiento de Proyecto.md` con métricas reales, DoD e incremento demostrado), CA3 (Retrospectiva del Sprint 3 con técnica Barco de Vela y plan de acción para Sprint 4), CA4 (Formato listo para copiar y pegar en los documentos de Google Drive compartidos con Cátedra).
+> **Criterios de Aceptación:** CA1 (Formalización de S3 Apertura y Cierre en `docs/gestion-proyecto/DEFINICION_DE_PRODUCTO_S3_APERTURA_Y_CIERRE.md`), CA2 (Actualización de Sección 2.6 en ``docs/gestion-proyecto/Seguimiento de Proyecto.md`` con métricas reales, DoD e incremento demostrado), CA3 (Retrospectiva del Sprint 3 con técnica Barco de Vela y plan de acción para Sprint 4), CA4 (Formato listo para copiar y pegar en los documentos de Google Drive compartidos con Cátedra).
 
 - [x] **TS3-84.1 Documentación S3 Apertura en Definición de Producto:** Formalización de objetivos, requerimientos funcionales (`RF-08`, `RF-09`, `RF-10`, `RF-14`, `RF-16`, `RF-17`, `RF-18`), criterios EARS/Gherkin y casos de uso impactados (`CU-05`, `CU-06`, `CU-13`, `CU-14`).
 - [x] **TS3-84.2 Documentación S3 Cierre en Definición de Producto:** Formalización de directivas del PO del 07/10/2026 (simplificación de votación en Sala TD, firmas con grupo Gxx y suplencias, formato canónico VISTO-CONSIDERANDO-RESUELVE, cambio terminológico a Revisores de Cuentas, regla 3:1 de apercibimientos inmutable), matriz de trazabilidad y Release Plan a Sprint 4.
-- [x] **TS3-84.3 Documentación S3 Apertura en Seguimiento de Proyecto:** Planificación y Sprint Backlog con 36 Story Points y 14 ítems en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.6.1).
-- [x] **TS3-84.4 Documentación S3 Cierre en Seguimiento de Proyecto:** Resultado final del sprint con desglose de 36 SP finalizados (14/14 ítems mergeados en `main`), 0% Carry-over, DoD 100% verificado, incremento tangible y enlaces a PRs en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.6.2).
-- [x] **TS3-84.5 Retrospectiva y Mejora Continua de Sprint 3:** Sailboat Retrospective con vientos, anclas, rocas y plan de acción concreto (A1: integración continua y control UTF-8; A2: foco en visor unificado y editor de resoluciones sin votación nominal) en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.6.3).
+- [x] **TS3-84.3 Documentación S3 Apertura en Seguimiento de Proyecto:** Planificación y Sprint Backlog con 36 Story Points y 14 ítems en ``docs/gestion-proyecto/Seguimiento de Proyecto.md`` (Sección 2.6.1).
+- [x] **TS3-84.4 Documentación S3 Cierre en Seguimiento de Proyecto:** Resultado final del sprint con desglose de 36 SP finalizados (14/14 ítems mergeados en `main`), 0% Carry-over, DoD 100% verificado, incremento tangible y enlaces a PRs en ``docs/gestion-proyecto/Seguimiento de Proyecto.md`` (Sección 2.6.2).
+- [x] **TS3-84.5 Retrospectiva y Mejora Continua de Sprint 3:** Sailboat Retrospective con vientos, anclas, rocas y plan de acción concreto (A1: integración continua y control UTF-8; A2: foco en visor unificado y editor de resoluciones sin votación nominal) en ``docs/gestion-proyecto/Seguimiento de Proyecto.md`` (Sección 2.6.3).
 - [x] **TS3-84.6 Entrega de Bloques para Google Drive:** Archivo `docs/gestion-proyecto/DEFINICION_DE_PRODUCTO_S3_APERTURA_Y_CIERRE.md` generado en Markdown limpio para volcado inmediato en Google Drive ("ctrl+C, ctrl+V").
-- [x] **TS3-84.7 Apertura de Sprint 4 en Seguimiento de Proyecto:** Documentación de la planificación y Sprint Backlog activo de Sprint 4 (`SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56` y `SCRUM-70` — 19 SP) sincronizada con Jira en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.7.1).
+- [x] **TS3-84.7 Apertura de Sprint 4 en Seguimiento de Proyecto:** Documentación de la planificación y Sprint Backlog activo de Sprint 4 (`SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56` y `SCRUM-70` — 19 SP) sincronizada con Jira en ``docs/gestion-proyecto/Seguimiento de Proyecto.md`` (Sección 2.7.1).
 
 ---
 
@@ -384,6 +384,26 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS4-04.6 Servicio frontend y DTOs [TDD]:** Consulta de responsables en `ExpedienteApiService`.
 - [x] **TS4-04.7 Inhibición visible en el detalle:** Remoción total del panel "Responsables del Tribunal" y de las alertas de integrantes faltantes (revisión del PO, 25/10/2026); banner de participación restringida, acciones ocultas al involucrado, aviso sutil de causa derivada a Asamblea, sin carga de acta (decisión del PO, 31/10/2026).
 - [x] **TS4-04.8 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build de producción y control contra `notasPO.md` y la revisión del PO sobre el PR #63.
+
+---
+
+## 15. Sprint 4 — Desglose Atómico: S4-01, S4-03 y S4-06 (Visor, Valoración T03 y Resolución Oficial)
+
+- [x] **TS4-51.1 Visor Autorizado y Cronología Procesal:** Integración del visor cronológico unificado con metadatos de expediente, T01, T02/T03 y documentos probatorios adjuntos (`SCRUM-51`).
+- [x] **TS4-51.2 Custodia y Aislamiento Médico Zero-Leakage:** Blindaje RBAC por objeto denegando acceso a certificados médicos a terceros y CD con HTTP 403, registrando eventos en `AuditoriaConsultaExpediente`.
+- [x] **TS4-53.1 Dominio y Modelado de Valoración T03:** Modelo `ValoracionT03` append-only con resultado (`ADMITIDO_TOTAL`, `ADMITIDO_PARCIAL`, `DESESTIMADO`), fundamentación obligatoria y vinculación de precedentes (`SCRUM-53` / PR #71).
+- [x] **TS4-53.2 Reserva de Valoración Frente al Imputado:** Ocultamiento estricto de la fundamentación jurídica frente al socio imputado hasta la emisión formal de la resolución.
+- [x] **TS4-56.1 Editor Unificado de Resolución sin Votación Nominal:** Plantilla canónica versionada (`VISTO`, `CONSIDERANDO`, `SE RESUELVE`) con fijación directa del puntaje final neto aplicado por socio (`SCRUM-56` / PR #67).
+- [x] **TS4-56.2 Previsualización PDF en Memoria:** Endpoint de preview PDF en borrador con ReportLab sin mutaciones en base de datos ni exposición de anexos sensibles.
+
+## 16. Sprint 5 Consolidado — Desglose Atómico: SCRUM-85 (Documentación de Cierre Sprint 4 y Apertura Sprint 5/6 Fusionado)
+
+- [x] **TS5-85.1 Definición de Producto S4 Apertura y Cierre:** Elaboración integral de `docs/gestion-proyecto/DEFINICION_DE_PRODUCTO_S4_APERTURA_Y_CIERRE.md` con requerimientos funcionales (RF-11, RF-12, RF-13, RF-15, RF-19), criterios EARS/Gherkin, matriz de trazabilidad bidireccional y desglose de evidencia de tests.
+- [x] **TS5-85.2 Cierre de Sprint 4 en Seguimiento de Proyecto:** Formalización de resultados finales (19/19 SP completados, 0% carry-over) y retrospectiva Barco de Vela (Sailboat) en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.7.2 y 2.7.3).
+- [x] **TS5-85.3 Apertura del Sprint 5 Consolidado (Fusión S5+S6):** Planificación formal de la iteración fusionada del 04/11 al 18/11/2026 con 44 SP (8 SP ya adelantados en PR #70 y PR #72 + 36 SP netos), Sprint Goal y desglose de tareas en `docs/gestion-proyecto/Seguimiento de Proyecto.md` (Sección 2.8.1).
+- [x] **TS5-85.4 Sincronización y Reorganización de Backlog en Jira:** Actualización de `docs/gestion-proyecto/ANALISIS_INTEGRAL_BACKLOG_JIRA.md` incorporando la Sección 12 con justificación de la fusión, padrón de incidencias `SCRUM-76` a `SCRUM-85` y calendario definitivo.
+- [x] **TS5-85.5 Actualización del Plan de Proyecto:** Incorporación de la versión 2.2.0 y actualización del diagrama Gantt de hitos y fases en `docs/gestion-proyecto/PLAN_DE_PROYECTO_SGD_AVEIT.md`.
+- [x] **TS5-85.6 Sincronización de Gobernanza `TASK.md`:** Actualización del Roadmap Macro y desglose atómico en `TASK.md`.
 
 ---
 

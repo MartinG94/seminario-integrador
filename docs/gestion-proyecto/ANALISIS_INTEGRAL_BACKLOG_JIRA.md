@@ -67,7 +67,7 @@ La decisión final es un entregable de Sprint 1 y requiere aprobación del respo
 | Categorías sociales | Decisión de Product Owner del 08/09/2026 y Estatuto 2026, art. 3 | La denominación canónica es Pasivo para 1.º–3.º (equivalente anterior: Junior) y Activo para 4.º–6.º (equivalente anterior: Senior). La vigencia de cuenta/membresía es un concepto separado. |
 | Composición del TD | Estatuto 2026, arts. 92 y 95 | Tres titulares y tres suplentes, con un titular y un suplente por cada grupo Activo. Debe modelarse el apartamiento y la sustitución estatutaria. |
 | Recusación | Estatuto 2026, art. 93 | Los miembros no pueden ser recusados. El backlog anterior hablaba de “recusaciones”; se reemplaza por apartamiento/conflicto y suplencia. |
-| Mayoría | Estatuto 2026, art. 96 | Decisiones por mayoría absoluta; para el cuerpo ordinario de tres titulares, dos votos afirmativos. Los casos ad hoc deben derivar la mayoría de su composición efectiva. |
+| Resolución y Puntaje | Estatuto 2026, art. 96 / Directiva PO `07/10/2026` | Por directiva del PO y del TD (`07/10/2026`), se descarta la interfaz compleja de votación nominal paso a paso (`SCRUM-55`); el Tribunal redacta la resolución en un editor unificado (`VISTO / CONSIDERANDO / SE RESUELVE`) fijando directamente el puntaje final por socio (`SCRUM-56`) y estampando al menos 3 firmas colegiadas con identificación de Grupo Social (`Gxx`) y condición (`Titular`/`Suplente`). |
 | Estados | Reglamento Procesal 2026, art. 12 | Son exactamente seis: Creado; período para justificaciones; justificaciones en revisión; espera de resolución; pendiente de correos; emitido. La UI actual consolida cinco. |
 | T01 y anexo | Reglamento Procesal 2026, art. 16 bis | El anexo puede acompañar al T01; no es obligatorio en todos los casos. |
 | T02/T03 | Reglamento Procesal 2026, arts. 17 y 18 | T02 es tipificado y estructurado; T03 cubre causales extraordinarias no previstas y requiere valoración fundada/precedentes. |
@@ -114,7 +114,7 @@ La decisión final es un entregable de Sprint 1 y requiere aprobación del respo
 | 1 | 20 | 0 | Integración, identidad, padrón, ranking y búsqueda sobre datos reales/representativos. |
 | 2 | 18 | 0 | Apertura T01, competencias, notificación y máquina de seis estados. |
 | 3 | 19 | 0 | Plazos hábiles, T02/T03, evidencia y origen de sanciones. |
-| 4 | 22 | 0 | Revisión, conflicto/suplencias, voto nominal y resolución. |
+| 4 | 19 | 0 | Revisión, conflicto/suplencias, apelación T01 y editor unificado de resolución oficial con puntaje directo por socio (sin votación nominal). |
 | 5 | 20 | 0 | Firma, emisión, libro mayor, portal y alertas. |
 | 6 | 21 | 3 | Balance, reconciliación, calidad, staging y homologación; jurisprudencia como stretch. |
 | **Total** | **120** | **3** | Pronóstico inicial; reestimar tras Sprint 1. |
@@ -173,3 +173,29 @@ La jerarquía, descripción, prioridad, estimación, etiquetas y vínculo con é
 | SCRUM Sprint 6 | 18/11/2026–01/12/2026 | 6 | 24, incluidos 3 puntos *stretch* |
 
 La comprobación final `project = SCRUM ORDER BY key ASC` devuelve `44 de 44`, y el backlog sin sprint contiene únicamente las tres historias `PB` por 13 puntos.
+
+
+## 12. Reorganización del Backlog: Fusión de Sprint 5 y Sprint 6 (04/11/2026)
+
+Con fecha **04/11/2026**, tras la finalización exitosa del **Sprint 4** (cumplimiento del 100% de los 19 SP comprometidos con la integración del visor autorizado, valoración de T03 por sana crítica, apartamientos y suplencias estatutarias, editor unificado de resoluciones oficiales sin votación nominal y apelación del T01), el Product Owner (**Diego Gabriel Sánchez**) y el Scrum Master (**Lucas Martín Guillén**) dispusieron la **fusión operativa del Sprint 5 y el Sprint 6 en una única iteración final de cierre: el Sprint 5 Consolidado (`04/11/2026 al 18/11/2026`)**.
+
+### 12.1. Justificación y Viabilidad del Sprint Fusionado
+
+1. **Acortamiento de Plazos y Mitigación de Overhead:** La división previa entre Sprint 5 y Sprint 6 implicaba una sobrecarga de ceremonias administrativas y revisiones que demoraba la puesta en producción y el cierre del ciclo lectivo. La fusión permite unificar los objetivos de entrega y finalizar el proyecto a mediados de noviembre de 2026.
+2. **Capitalización de Adelantos Realizados:** La fusión es técnicamente factible gracias a que el equipo adelantó durante el Sprint 4 dos capacidades medulares originalmente calendarizadas para las iteraciones 5 y 6:
+   - **`SCRUM-63` (S6-01 — 5 SP / PR #70):** Módulo de Reportes Institucionales y Balance Cuatrimestral por Subcomisión (Art. 137) con 4 pestañas analíticas, cálculo de tiempo de vida promedio, gráficos semafóricos comparativos y exportación CSV con BOM.
+   - **`SCRUM-62` (S5-06 — 3 SP / PR #72):** Motor `ThresholdAlertEngine` para detección de cruces de saldo hacia el umbral crítico de -10 puntos y política preventiva configurable en -7 puntos.
+3. **Evolución del Padrón de Incidencias en Jira (`SCRUM-76` a `SCRUM-85`):**
+   - Refinamiento de Sprint 3: `SCRUM-76` (I+D Laya), `SCRUM-77` (Seed MySQL G57-G60), `SCRUM-78` (Urgencia), `SCRUM-79` (Socios múltiples), `SCRUM-80` (T01 Grupo y Anexo), `SCRUM-81` (Sala TD Imagen 2), `SCRUM-82` (Ranking anidado), `SCRUM-83` (T02 tipificado y plazos), `SCRUM-84` (Documentación S3 Apertura y Cierre).
+   - Gobernanza de S4/S5: `SCRUM-85` (Documentación de Cierre Sprint 4 y Apertura Sprint 5/6 Fusionado).
+
+### 12.2. Calendario y Velocidad Definitiva de Sprints
+
+| Sprint | Fechas Canónicas | Estado | Actividades Jira | Puntos Comprometidos / Logrados |
+|---|---|:---:|---:|---:|
+| **SCRUM Sprint 1** | 09/09/2026–22/09/2026 | **Finalizado (100%)** | 6 | 20 SP (20 logrados) |
+| **SCRUM Sprint 2** | 23/09/2026–06/10/2026 | **Finalizado (100%)** | 6 | 23 SP (23 logrados) |
+| **SCRUM Sprint 3** | 07/10/2026–20/10/2026 | **Finalizado (100%)** | 14 | 36 SP (36 logrados) |
+| **SCRUM Sprint 4** | 21/10/2026–03/11/2026 | **Finalizado (100%)** | 5 | 19 SP (19 logrados) |
+| **SCRUM Sprint 5 Consolidado (Fusión S5+S6)** | 04/11/2026–18/11/2026 | **En Curso (Activo)** | 13 | 44 SP (8 ya construidos + 36 en ejecución) |
+| **Total Proyecto** | **09/09/2026–18/11/2026** | **En Cierre** | **44 ítems** | **142 SP acumulados** |
