@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 
 from expedientes.models import (
     CambioEstadoExpediente,
+    ComposicionTribunal,
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
@@ -359,7 +360,7 @@ class TestExpedienteWorkflow:
         assert change.fecha_hora
 
     def test_workflow_accepts_exactly_the_six_sequential_states(
-        self, api_client: APIClient, make_socio
+        self, api_client: APIClient, make_socio, tribunal_nomina
     ) -> None:
         tribunal = make_socio(legajo="71014", role=Role.TD)
         member = make_socio(legajo="71015")
@@ -386,6 +387,9 @@ class TestExpedienteWorkflow:
             assert response.status_code == status.HTTP_200_OK
             if state == EstadoExpedienteEnum.JUSTIFICANDO:
                 _expire_deadline(created["id"])
+
+        # Adoptar la resolución estampa los responsables del Tribunal (S4-04, CA4).
+        assert ComposicionTribunal.objects.get(expediente_id=created["id"]).integrantes.count() == 3
 
         response = api_client.post(
             f"/api/v1/expedientes/{created['id']}/estado/",

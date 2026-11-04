@@ -446,6 +446,39 @@ export interface GuardarArticuloReglamentoPayload {
   seccion?: number;
 }
 
+// --- Tribunal de la causa (S4-04, Spec 007) ---
+
+export type CondicionIntegrante = 'TITULAR' | 'SUPLENTE';
+
+export interface AsientoTribunalDTO {
+  anio_social: number;
+  socio_id: number | null;
+  nro_socio: number | null;
+  nombre: string;
+  grupo: string;
+  condicion: CondicionIntegrante | '';
+  firma: string;
+  reemplaza_a: string;
+}
+
+export interface IntegranteApartadoDTO {
+  socio_id: number;
+  nro_socio: number;
+  nombre: string;
+  anio_social: number;
+  condicion: CondicionIntegrante;
+}
+
+export interface ComposicionTribunalDTO {
+  estampada: boolean;
+  estampada_at: string | null;
+  asientos: AsientoTribunalDTO[];
+  apartados: IntegranteApartadoDTO[];
+  requiere_ad_hoc: boolean;
+  motivos_ad_hoc: string[];
+  usuario: { esta_involucrado: boolean };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -588,8 +621,9 @@ export class ExpedienteApiService {
     return this.http.delete(`${this.apiUrl}/${expedienteId}/descargo/`);
   }
 
-  obtenerDetalleExpediente(expedienteId: number | string): Observable<ExpedienteDetalleDTO> {
-    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/`);
+  obtenerDetalleExpediente(expedienteId: number | string, origen?: string): Observable<ExpedienteDetalleDTO> {
+    const params = origen ? `?origen=${encodeURIComponent(origen)}` : '';
+    return this.http.get<ExpedienteDetalleDTO>(`${this.apiUrl}/${expedienteId}/${params}`);
   }
 
   listarDecisionesCausal(expedienteId: number | string, descargoId: number): Observable<DecisionCausalDTO[]> {
@@ -612,6 +646,7 @@ export class ExpedienteApiService {
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
+
   obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
     return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);
   }
@@ -632,6 +667,10 @@ export class ExpedienteApiService {
     return this.http.put<PlazoApelacionDTO>(`${this.apiUrl}/parametros/plazo-apelacion/`, {
       dias_habiles: diasHabiles
     });
+  }
+
+  obtenerComposicionTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
+    return this.http.get<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/`);
   }
 
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {

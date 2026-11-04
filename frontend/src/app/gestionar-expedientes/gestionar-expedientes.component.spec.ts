@@ -17,6 +17,7 @@ import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gesti
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
 import {
+  ComposicionTribunalDTO,
   DecisionCausalDTO,
   DescargoDetalleDTO,
   ExpedienteApiService,
@@ -1274,6 +1275,18 @@ describe('GestionarExpedientesComponent', () => {
       api = TestBed.inject(ExpedienteApiService);
       router = TestBed.inject(Router);
       spyOn(authService, 'tieneRol').and.returnValue(true);
+      // Generar y firmar la resolución esperan los responsables calculados (inhibición, S4-04).
+      const composicionLibre: ComposicionTribunalDTO = {
+        estampada: false,
+        estampada_at: null,
+        asientos: [],
+        apartados: [],
+        requiere_ad_hoc: false,
+        motivos_ad_hoc: [],
+        usuario: { esta_involucrado: false }
+      };
+      spyOn(api, 'obtenerComposicionTribunal').and.returnValue(of(composicionLibre));
+      component.composicion = composicionLibre;
     });
 
     it('debe renderizar la cabecera con Exp: <n>/<YYYY>, título centrado y botón de cierre', () => {
@@ -1574,6 +1587,130 @@ describe('GestionarExpedientesComponent', () => {
       expect(btnVisor).toBeNull();
     });
 
+  });
+  describe('Tribunal de la causa: inhibición, suplencia y Asamblea (S4-04)', () => {
+    let api: ExpedienteApiService;
+
+    const expediente = {
+      id: '12',
+      numero: 'EXP-0012/2026',
+      socio: 'Ana Pérez',
+      legajo: '76001',
+      subcomision: 'Cómputos',
+      motivo: 'Inasistencia',
+      fechaCreacion: '2026-10-01',
+      estado: 'revision_resolucion',
+      horasRestantes: 0,
+      tipo: 'falta',
+      puntos: -1
+    } as Expediente;
+
+    const composicion = (cambios: Partial<ComposicionTribunalDTO> = {}): ComposicionTribunalDTO => ({
+      estampada: false,
+      estampada_at: null,
+      asientos: [
+        { anio_social: 4, socio_id: 1, nro_socio: 81004, nombre: 'Giuliano Toselli', grupo: 'G57', condicion: 'TITULAR', firma: '81004 - Giuliano Toselli - G57', reemplaza_a: '' },
+        { anio_social: 5, socio_id: 4, nro_socio: 82005, nombre: 'Abril Gusella', grupo: 'G58', condicion: 'SUPLENTE', firma: '82005 - Abril Gusella - G58 (Sup.)', reemplaza_a: 'Catalina Cerda (N° 81005)' },
+        { anio_social: 6, socio_id: 5, nro_socio: 81006, nombre: 'Candela Moreno', grupo: 'G59', condicion: 'TITULAR', firma: '81006 - Candela Moreno - G59', reemplaza_a: '' }
+      ],
+      apartados: [
+        { socio_id: 3, nro_socio: 81005, nombre: 'Catalina Cerda', anio_social: 5, condicion: 'TITULAR' }
+      ],
+      requiere_ad_hoc: false,
+      motivos_ad_hoc: [],
+      usuario: { esta_involucrado: false },
+      ...cambios
+    });
+
+    const casoCritico = (cambios: Partial<ComposicionTribunalDTO> = {}) => composicion({
+      requiere_ad_hoc: true,
+      motivos_ad_hoc: ['El titular y el suplente del 5.º año están involucrados en la causa (Art. 95 del Estatuto).'],
+      ...cambios
+    });
+
+    beforeEach(() => {
+      api = TestBed.inject(ExpedienteApiService);
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(
+        of({ id: 12, numero: 'EXP-0012/2026', estado: 'revision_resolucion', socios: [], descargos: [] })
+      );
+    });
+
+    function abrirComo(rol: string, dto: ComposicionTribunalDTO = composicion()): void {
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+      spyOn(api, 'obtenerComposicionTribunal').and.returnValue(of(dto));
+      component.abrirDetalle(expediente);
+      fixture.detectChanges();
+    }
+
+    const compiled = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+    it('no muestra el panel de responsables ni alertas de integrantes faltantes', () => {
+      abrirComo('TD');
+
+      expect(api.obtenerComposicionTribunal).toHaveBeenCalledWith('12');
+      expect(compiled().querySelector('.panel-composicion')).toBeNull();
+      expect(compiled().textContent).not.toContain('Responsables del Tribunal');
+      expect(compiled().textContent).not.toContain('Falta el suplente');
+    });
+
+    it('no ofrece trámites manuales de apartamiento, ad hoc ni constitución', () => {
+      abrirComo('TD');
+      expect(compiled().querySelector('.btn-apartarme')).toBeNull();
+      expect(compiled().querySelector('.designacion-ad-hoc')).toBeNull();
+      expect(compiled().querySelector('.btn-constituir')).toBeNull();
+    });
+
+    it('un socio sin rol de autoridad no consulta la composición', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(false);
+      spyOn(api, 'obtenerComposicionTribunal');
+      component.abrirDetalle(expediente);
+      expect(api.obtenerComposicionTribunal).not.toHaveBeenCalled();
+    });
+
+    it('avisa si no se pudo cargar la composición', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      spyOn(api, 'obtenerComposicionTribunal').and.returnValue(throwError(() => ({ status: 500 })));
+      component.abrirDetalle(expediente);
+      expect(notifications.error).toHaveBeenCalled();
+      expect(component.composicion).toBeNull();
+    });
+
+    describe('inhibición de involucrados (Art. 95 y Art. 24 RPD)', () => {
+      it('muestra el banner y oculta decisión de justificativos y transición', () => {
+        abrirComo('TD', composicion({ usuario: { esta_involucrado: true } }));
+
+        const banner = compiled().querySelector('.banner-involucrado');
+        expect(banner?.textContent).toContain('Participación restringida');
+        expect(banner?.textContent).toContain('Tu lugar lo ocupa automáticamente tu suplente');
+        expect(component.puedeEvaluarJustificaciones).toBeFalse();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
+        expect(component.puedeGenerarResolucion).toBeFalse();
+        expect(compiled().querySelector('.btn-generar-resolucion')).toBeNull();
+      });
+
+      it('un miembro no involucrado puede evaluar y resolver', () => {
+        abrirComo('TD');
+        expect(compiled().querySelector('.banner-involucrado')).toBeNull();
+        expect(component.puedeEvaluarJustificaciones).toBeTrue();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
+      });
+    });
+
+    describe('Casos críticos del Art. 95', () => {
+      it('muestra el aviso de derivación a Asamblea sin inmovilizar la causa ni pedir un acta', () => {
+        // Decisión del PO (31/10/2026): la Asamblea designa integrantes con rol TD por fuera del sistema.
+        abrirComo('TD', casoCritico());
+        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Asamblea General');
+        expect(compiled().querySelector('.panel-composicion')).toBeNull();
+        expect(compiled().querySelector('input[type="file"]#acta-asamblea')).toBeNull();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
+      });
+
+      it('sin caso crítico no muestra el aviso', () => {
+        abrirComo('TD');
+        expect(compiled().querySelector('.aviso-asamblea')).toBeNull();
+      });
+    });
   });
 
   describe('Escala discreta de puntajes, llamados, felicitaciones y bloqueo de edición', () => {

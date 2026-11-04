@@ -407,8 +407,18 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             return descargos[0]
         user = getattr(request, "user", None)
         socio = getattr(user, "socio", None) if user else None
+
+        # En la vista de Mis Expedientes, o si el socio es uno de los imputados en la causa:
+        if self.context.get("es_mis_expedientes") or (
+            socio and (obj.socio_id == socio.pk or any(s.pk == socio.pk for s in obj.socios.all()))
+        ):
+            if socio is None:
+                return None
+            return next((d for d in descargos if d.socio_id == socio.pk), None)
+
         role = getattr(socio, "role", "")
-        # Si es TD/CD/Admin o staff, puede consultar los descargos de la causa
+        # Si es TD/CD/Admin o staff y no es imputado personal en la causa,
+        # puede consultar los descargos
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
@@ -424,6 +434,20 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         socio = getattr(user, "socio", None) if user else None
+
+        # En la vista de Mis Expedientes, o si el socio es uno de los imputados en la causa:
+        if self.context.get("es_mis_expedientes") or (
+            socio and (obj.socio_id == socio.pk or any(s.pk == socio.pk for s in obj.socios.all()))
+        ):
+            if socio is None:
+                return False
+            vigente = next(
+                (d for d in obj.descargos.all() if d.es_vigente and d.socio_id == socio.pk), None
+            )
+            if vigente:
+                return True
+            return bool(obj.descargo_presentado and obj.socio_id == socio.pk)
+
         role = getattr(socio, "role", "")
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
@@ -1062,6 +1086,13 @@ class EmitirT01Serializer(serializers.Serializer):
             solicitud.expediente = expediente
 
         solicitud.save()
+        if solicitud.expediente_id:
+            from expedientes.services.tribunal_composition_service import (
+                TribunalCompositionService,
+            )
+
+            # El solicitante también es parte interesada (Art. 24 RPD).
+            TribunalCompositionService.notify_if_ad_hoc(solicitud.expediente)
         return solicitud
 
 

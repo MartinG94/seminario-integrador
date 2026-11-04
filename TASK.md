@@ -370,6 +370,21 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TPB-02.10 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build y control contra `notasPO.md`.
 - [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:** Cabecera Exp: <n>/<YYYY> + título, metadatos, sección Reglamentación, caja Motivo, tabla Involucrados y justificaciones (6 columnas con Leído/No Leído/Sin descargo, Puntaje Final y acción Ver Descargo) y validación de botones (Generar Resolución, Firmar Resolución, Ver Resolución).
 
+## 14. Sprint 4 — Desglose Atómico: S4-04 / SCRUM-54 (Gestionar Apartamiento y Suplencia conforme al Estatuto)
+
+> **Spec de Referencia:** [`specs/007-apartamiento-suplencia/spec.md`](specs/007-apartamiento-suplencia/spec.md)  
+> **Plan Técnico:** [`specs/007-apartamiento-suplencia/plan.md`](specs/007-apartamiento-suplencia/plan.md)  
+> **Tareas:** [`specs/007-apartamiento-suplencia/tasks.md`](specs/007-apartamiento-suplencia/tasks.md)
+
+- [x] **TS4-04.1 Dominio de composición [TDD]:** Nómina 3 + 3 por 4.º, 5.º y 6.º año, incompatibilidad de cargos, apartamiento automático, suplencia y Casos A/B del Art. 95.
+- [x] **TS4-04.2 Nómina desde el padrón legado [TDD]:** Lectura de `socio_lista.idTipoSocio` (10 Titular, 11 Suplente); año social derivado del grupo con `(Año Actual - 1962) - Número de Grupo` (revisión del PO, 25/10/2026), sin tablas nuevas de integrantes.
+- [x] **TS4-04.3 Modelos inmutables y migración [TDD]:** `ComposicionTribunal` e `IntegranteComposicion` sólo-inserción (migración `0019`).
+- [x] **TS4-04.4 Servicio de aplicación [TDD]:** Involucrados (imputados y solicitante), estampado de los asientos disponibles y aviso a CD por Outbox en Casos A/B, sin inmovilizar ni bloquear por nómina incompleta (decisión del PO, 31/10/2026).
+- [x] **TS4-04.5 Inhibición y endpoints REST [TDD]:** 403 a involucrados en decisiones y transiciones; `GET /composicion/`; sin endpoints de trámite manual ni carga de acta.
+- [x] **TS4-04.6 Servicio frontend y DTOs [TDD]:** Consulta de responsables en `ExpedienteApiService`.
+- [x] **TS4-04.7 Inhibición visible en el detalle:** Remoción total del panel "Responsables del Tribunal" y de las alertas de integrantes faltantes (revisión del PO, 25/10/2026); banner de participación restringida, acciones ocultas al involucrado, aviso sutil de causa derivada a Asamblea, sin carga de acta (decisión del PO, 31/10/2026).
+- [x] **TS4-04.8 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build de producción y control contra `notasPO.md` y la revisión del PO sobre el PR #63.
+
 ---
 
 ## 14. Instrucciones para la Actualización de este Archivo

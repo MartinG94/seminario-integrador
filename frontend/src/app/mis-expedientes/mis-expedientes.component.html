@@ -406,13 +406,13 @@
           </ng-container>
 
           <ng-container *ngIf="!expedienteDetalle?.esT01 && expedienteDetalle?.estado === 'justificando'">
-            <!-- Si no tiene justificativo: botón Añadir -->
+            <!-- Si no tiene justificativo: botón Descargo -->
             <button *ngIf="!expedienteDetalle?.descargo && !esPlazoVencido(expedienteDetalle)" 
                     mat-raised-button 
                     color="primary" 
-                    class="btn btn-primary"
+                    class="btn btn-primary btn-descargo"
                     (click)="abrirModalDescargo(expedienteDetalle)">
-              <i class="material-icons" style="font-size: 16px;">add_circle</i> Añadir Justificativo
+              <i class="material-icons" style="font-size: 16px;">add_circle</i> Descargo
             </button>
 
             <!-- Si ya tiene justificativo: botones Editar y Eliminar -->

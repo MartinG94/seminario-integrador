@@ -9,6 +9,7 @@ import {
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
+  ComposicionTribunalDTO,
   ApelacionT01DTO,
   ArticuloReglamentoDTO,
   DecisionCausal,
@@ -187,6 +188,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
 
+  // Tribunal de la causa (S4-04): inhibición de involucrados y suplencia automática (Art. 95)
+  composicion: ComposicionTribunalDTO | null = null;
+  cargandoComposicion = false;
+
   // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
   readonly escalaPuntajes = ESCALA_PUNTAJES;
   opcionPuntajeFinal: string = '0.0';
@@ -227,11 +232,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get puedeEvaluarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
-    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD');
+    return !!estado && ESTADOS_DECISION_CAUSAL.includes(estado) && this.auth.tieneRol('TD') && !this.usuarioInvolucrado;
   }
 
   get puedeGenerarResolucion(): boolean {
-    if (!this.puedeVotarOFirmar || !this.expedienteSeleccionado) return false;
+    if (!this.puedeResolverExpedienteSeleccionado || !this.expedienteSeleccionado) return false;
     const enRevision =
       this.expedienteSeleccionado.estado === 'revision_resolucion' ||
       this.expedienteSeleccionado.estado === 'espera_resolucion';
@@ -250,7 +255,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get puedeFirmarResolucion(): boolean {
     return (
-      this.puedeVotarOFirmar &&
+      this.puedeResolverExpedienteSeleccionado &&
       this.expedienteSeleccionado?.estado === 'pendiente_firma'
     );
   }
@@ -622,6 +627,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.reglamentoExpandidoModal = null;
     this.limpiarJustificaciones();
     this.limpiarT01();
+    this.limpiarComposicion();
 
     if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
       this.involucradosJustificacion = exp.sociosInvolucrados.map(s => ({
@@ -647,6 +653,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     if (this.puedeConsultarT01) {
       this.cargarHistorialT01(exp.id);
+    }
+    if (this.puedeConsultarComposicion) {
+      this.cargarComposicion(exp.id);
     }
   }
 
@@ -766,6 +775,43 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  // --- Tribunal de la causa (S4-04) ---
+
+  get puedeConsultarComposicion(): boolean {
+    return this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  /** Parte interesada (imputado o solicitante): no interviene en el juzgamiento (Art. 95 y Art. 24 RPD). */
+  get usuarioInvolucrado(): boolean {
+    return !!this.composicion?.usuario?.esta_involucrado;
+  }
+
+  /**
+   * Emitir o firmar sólo con responsables calculados y sin inhibición. Los casos críticos no
+   * inmovilizan la causa: la Asamblea designa integrantes con rol TD (PO, 31/10/2026).
+   */
+  get puedeResolverExpedienteSeleccionado(): boolean {
+    return this.puedeVotarOFirmar && !!this.composicion && !this.usuarioInvolucrado;
+  }
+
+  cargarComposicion(expedienteId: number | string): void {
+    this.cargandoComposicion = true;
+    this.expedienteApi.obtenerComposicionTribunal(expedienteId).subscribe({
+      next: composicion => {
+        this.cargandoComposicion = false;
+        this.composicion = composicion;
+      },
+      error: err => {
+        this.cargandoComposicion = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la composición del Tribunal.'));
+      }
+    });
+  }
+
+  private limpiarComposicion(): void {
+    this.composicion = null;
+    this.cargandoComposicion = false;
+  }
 
   cargarJustificaciones(expedienteId: number | string): void {
     this.cargandoJustificaciones = true;
@@ -984,6 +1030,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.reglamentosSeleccionadosResolucion = [];
     this.filtroReglamentosResolucion = '';
     this.limpiarJustificaciones();
+    this.limpiarComposicion();
     this.limpiarT01();
     if (this.elementoFocoPrevio && typeof this.elementoFocoPrevio.focus === 'function') {
       this.elementoFocoPrevio.focus({ preventScroll: true });
@@ -1210,6 +1257,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   formatGrupoInvolucrado(grupo: string | undefined): string {
     if (!grupo || !grupo.trim()) return '—';
     return grupo.trim().replace(/^[Gg]/, '');
+  }
+
+  esSocioActual(fila: InvolucradoJustificacion): boolean {
+    const perfil = this.auth.getPerfil();
+    if (!perfil) return false;
+    const legajoActual = perfil.legajo ? String(perfil.legajo).trim() : '';
+    const legajoFila = fila.legajo ? String(fila.legajo).trim() : '';
+    return !!(legajoActual && legajoFila && legajoActual === legajoFila);
+  }
+
+  irAMisExpedientesParaDescargo(): void {
+    this.cerrarModales();
+    this.router.navigate(['/mis-expedientes']);
   }
 
   getEstadoDescargo(fila: InvolucradoJustificacion): 'Leído' | 'No Leído' | 'Sin descargo' {
