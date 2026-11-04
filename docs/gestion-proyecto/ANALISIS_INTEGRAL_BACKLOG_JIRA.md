@@ -173,3 +173,29 @@ La jerarquía, descripción, prioridad, estimación, etiquetas y vínculo con é
 | SCRUM Sprint 6 | 18/11/2026–01/12/2026 | 6 | 24, incluidos 3 puntos *stretch* |
 
 La comprobación final `project = SCRUM ORDER BY key ASC` devuelve `44 de 44`, y el backlog sin sprint contiene únicamente las tres historias `PB` por 13 puntos.
+
+
+## 12. Reorganización del Backlog: Fusión de Sprint 5 y Sprint 6 (04/11/2026)
+
+Con fecha **04/11/2026**, tras la finalización exitosa del **Sprint 4** (cumplimiento del 100% de los 19 SP comprometidos con la integración del visor autorizado, valoración de T03 por sana crítica, apartamientos y suplencias estatutarias, editor unificado de resoluciones oficiales sin votación nominal y apelación del T01), el Product Owner (**Diego Gabriel Sánchez**) y el Scrum Master (**Lucas Martín Guillén**) dispusieron la **fusión operativa del Sprint 5 y el Sprint 6 en una única iteración final de cierre: el Sprint 5 Consolidado (`04/11/2026 al 18/11/2026`)**.
+
+### 12.1. Justificación y Viabilidad del Sprint Fusionado
+
+1. **Acortamiento de Plazos y Mitigación de Overhead:** La división previa entre Sprint 5 y Sprint 6 implicaba una sobrecarga de ceremonias administrativas y revisiones que demoraba la puesta en producción y el cierre del ciclo lectivo. La fusión permite unificar los objetivos de entrega y finalizar el proyecto a mediados de noviembre de 2026.
+2. **Capitalización de Adelantos Realizados:** La fusión es técnicamente factible gracias a que el equipo adelantó durante el Sprint 4 dos capacidades medulares originalmente calendarizadas para las iteraciones 5 y 6:
+   - **`SCRUM-63` (S6-01 — 5 SP / PR #70):** Módulo de Reportes Institucionales y Balance Cuatrimestral por Subcomisión (Art. 137) con 4 pestañas analíticas, cálculo de tiempo de vida promedio, gráficos semafóricos comparativos y exportación CSV con BOM.
+   - **`SCRUM-62` (S5-06 — 3 SP / PR #72):** Motor `ThresholdAlertEngine` para detección de cruces de saldo hacia el umbral crítico de -10 puntos y política preventiva configurable en -7 puntos.
+3. **Evolución del Padrón de Incidencias en Jira (`SCRUM-76` a `SCRUM-85`):**
+   - Refinamiento de Sprint 3: `SCRUM-76` (I+D Laya), `SCRUM-77` (Seed MySQL G57-G60), `SCRUM-78` (Urgencia), `SCRUM-79` (Socios múltiples), `SCRUM-80` (T01 Grupo y Anexo), `SCRUM-81` (Sala TD Imagen 2), `SCRUM-82` (Ranking anidado), `SCRUM-83` (T02 tipificado y plazos), `SCRUM-84` (Documentación S3 Apertura y Cierre).
+   - Gobernanza de S4/S5: `SCRUM-85` (Documentación de Cierre Sprint 4 y Apertura Sprint 5/6 Fusionado).
+
+### 12.2. Calendario y Velocidad Definitiva de Sprints
+
+| Sprint | Fechas Canónicas | Estado | Actividades Jira | Puntos Comprometidos / Logrados |
+|---|---|:---:|---:|---:|
+| **SCRUM Sprint 1** | 09/09/2026–22/09/2026 | **Finalizado (100%)** | 6 | 20 SP (20 logrados) |
+| **SCRUM Sprint 2** | 23/09/2026–06/10/2026 | **Finalizado (100%)** | 6 | 23 SP (23 logrados) |
+| **SCRUM Sprint 3** | 07/10/2026–20/10/2026 | **Finalizado (100%)** | 14 | 36 SP (36 logrados) |
+| **SCRUM Sprint 4** | 21/10/2026–03/11/2026 | **Finalizado (100%)** | 5 | 19 SP (19 logrados) |
+| **SCRUM Sprint 5 Consolidado (Fusión S5+S6)** | 04/11/2026–18/11/2026 | **En Curso (Activo)** | 13 | 44 SP (8 ya construidos + 36 en ejecución) |
+| **Total Proyecto** | **09/09/2026–18/11/2026** | **En Cierre** | **44 ítems** | **142 SP acumulados** |

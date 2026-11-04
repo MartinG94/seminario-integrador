@@ -35,6 +35,7 @@
 | :---: | :---: | :--- | :--- |
 | **1.0.0** | 18/08/2026 | Equipo de Proyecto SGD-AVEIT | Elaboración inicial del Plan de Proyecto y alcances generales. |
 | **2.0.0** | 03/09/2026 | Equipo de Proyecto SGD-AVEIT | **Reestructuración y Adecuación Integral ante Observaciones de Cátedra:**<br>1. Incorporación de carátula formal, equipo y matriz de habilidades full-stack polivalentes con rotación.<br>2. Aplicación de `/systemClassifier`: taxonomía de sistemas de información (TPS, MIS, DSS, EIS) y articulación de Scrumban con hitos formales.<br>3. Aplicación de `/requirementsExtractor`: desglose granular de requerimientos funcionales (`RF-01` a `RF-15`), catálogo de reglas de negocio (`RN-01` a `RN-10`) con cálculo matemático exacto de saldos (erradicando 'cómputo algorítmico'), separación estricta de Requerimientos No Funcionales (ISO 25010) de Restricciones Tecnológicas (`RES`), y matriz de trazabilidad normativa bidireccional contra el Estatuto 2026 y reglamentos.<br>4. Aclaración conceptual de 'Firma Electrónica Interna / Aprobación Colegiada Autenticada', descartando compromisos con Ley 25.506 (Firma Digital con token/AC).<br>5. Reformulación de 'no UPDATE' como Requisito No Funcional de Integridad y Trazabilidad Transaccional del Saldo (triggers en MySQL + tabla de auditoría + lógica en backend).<br>6. Detalle operativo del marco Scrumban (cadencias Scrum quincenales, límites WIP en Jira, code review obligatoria por pares y métricas de flujo).<br>7. Aplicación de `/useCaseExtractor`: catálogo de casos de uso (`CU-01` a `CU-12`), especificación formal Cockburn en 2 columnas con postcondiciones duales y criterios BDD Gherkin, y análisis de robustez BCE. |
+| **2.2.0** | 04/11/2026 | Equipo de Proyecto SGD-AVEIT | **Cierre de Sprint 4, Hito IOC y Fusión de Sprint 5 y 6 (Sprint 5 Consolidado):**<br>1. Consolidación de la finalización del Sprint 4 al 100% (19 SP) integrando Sala TD, suplencias, apelación T01 y editor unificado de resoluciones.<br>2. Hito IOC (Initial Operational Capability) alcanzado el 04/11/2026.<br>3. Reestructuración del cronograma macro: fusión de Sprint 5 y Sprint 6 en el Sprint 5 Consolidado (04/11 al 18/11/2026) para acortar tiempos y culminar el proyecto con éxito.<br>4. Incorporación formal de las tareas de gobernanza SCRUM-85. |
 
 ---
 
@@ -557,12 +558,13 @@ gantt
     Sprint 1: Gobernanza, Padrón y RBAC      :done, 2026-09-09, 14d
     Sprint 2: Apertura T01 y Máquina Estados :done, 2026-09-23, 14d
     Sprint 3: Plazos, Descargos T02/T03 y 3:1:done, 2026-10-07, 14d
-    Sprint 4: Resolución Directa, Firma y Mayor:active, 2026-10-21, 14d
-    Hito IOC (Initial Operational Capability):milestone, 2026-11-04, 0d
-    section Fase 4: Transición
-    Pruebas Piloto con Tribunal y QA UAT     :2026-11-07, 14d
-    Capacitación y Entrega Final             :2026-11-21, 14d
-    Hito PR (Product Release Final)          :milestone, 2026-12-05, 0d
+    Sprint 4: Resolución Directa, Suplencias y Apelación :done, 2026-10-21, 14d
+    Hito IOC (Initial Operational Capability):milestone, done, 2026-11-04, 0d
+    section Fase 4: Transición y Cierre Consolidado
+    Sprint 5 Consolidado (Fusión S5+S6: Emisión, Mayor y Balances) :active, 2026-11-04, 14d
+    Pruebas Piloto y Homologación con Tribunal/Cómputos :2026-11-11, 7d
+    Capacitación, Transferencia y Entrega Final :2026-11-18, 0d
+    Hito PR (Product Release Final)          :milestone, 2026-11-18, 0d
 ```
 
 ### 13.1. Matriz de Gestión y Mitigación de Riesgos
