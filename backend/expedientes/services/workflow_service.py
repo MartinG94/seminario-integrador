@@ -45,6 +45,7 @@ class ExpedienteWorkflowService:
         actor: str,
         urgencia: str = UrgenciaExpedienteEnum.NORMAL,
         points: Decimal = Decimal("-1.0"),
+        titulo: str = "",
     ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de apertura es obligatorio."})
@@ -58,6 +59,7 @@ class ExpedienteWorkflowService:
             numero=cls.format_numero(ExpedienteNumberSequence.next_value(year), year),
             socio_id=socio_ids[0],
             motivo=motivo.strip(),
+            titulo=(titulo or motivo).strip()[:255],
             estado=EstadoExpedienteEnum.CREADO,
             urgencia=urgencia,
             puntos=points,

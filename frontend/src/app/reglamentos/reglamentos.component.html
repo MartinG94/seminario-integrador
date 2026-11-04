@@ -1,5 +1,216 @@
-<app-en-desarrollo
-  [titulo]="titulo"
-  [descripcion]="descripcion"
-  icono="construction">
-</app-en-desarrollo>
+<div class="main-content content">
+  <div class="container-fluid">
+
+    <div class="card card-nav-tabs shadow-sm mb-4">
+      <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
+        <div class="nav-tabs-wrapper">
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link"
+                 [class.active]="tabActiva === 'Reglamento Interno'"
+                 (click)="seleccionarPestana('Reglamento Interno')"
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">gavel</i> REGLAMENTO INTERNO
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 [class.active]="tabActiva === 'Estatuto'"
+                 (click)="seleccionarPestana('Estatuto')"
+                 href="javascript:void(0)"
+                 role="tab">
+                <i class="material-icons">account_balance</i> ESTATUTO
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="text-white-50 d-none d-md-block small">
+          Marco normativo y disciplinario institucional de AVEIT
+        </div>
+      </div>
+
+      <div class="card-body p-3">
+        <!-- Toolbar con Búsqueda Reactiva y Acción RBAC -->
+        <div class="toolbar d-flex flex-wrap align-items-center justify-content-between py-2 mb-3">
+          <div class="search-box flex-grow-1 mr-md-3 mb-2 mb-md-0">
+            <div class="input-group no-border mb-0">
+              <div class="input-group-prepend">
+                <span class="input-group-text"><i class="material-icons">search</i></span>
+              </div>
+              <input type="text"
+                     class="form-control"
+                     placeholder="Buscar por artículo, inciso o texto..."
+                     [(ngModel)]="busqueda"
+                     (ngModelChange)="onSearchChange()"
+                     aria-label="Buscar por artículo, inciso o texto...">
+            </div>
+          </div>
+
+          <div *ngIf="puedeGestionar()" class="actions-box">
+            <button mat-raised-button
+                    type="button"
+                    class="btn btn-primary btn-round d-flex align-items-center"
+                    (click)="abrirModalCrear()">
+              <i class="material-icons mr-1">add</i> Agregar artículo
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de Artículos -->
+        <div class="table-responsive">
+          <table class="table table-hover table-mat">
+            <thead class="text-primary">
+              <tr>
+                <th class="col-articulo">Artículo</th>
+                <th class="col-inciso text-center">Inciso</th>
+                <th class="col-cuerpo">Cuerpo</th>
+                <th *ngIf="puedeGestionar()" class="col-acciones text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let art of articulos">
+                <td class="col-articulo font-weight-bold tabular-nums">
+                  Art. {{ art.articulo }}
+                </td>
+                <td class="col-inciso text-center">
+                  {{ art.inciso }}
+                </td>
+                <td class="col-cuerpo cuerpo-texto">
+                  {{ art.cuerpo || art.descripcion }}
+                </td>
+                <td *ngIf="puedeGestionar()" class="col-acciones td-actions text-right">
+                  <button mat-icon-button
+                          type="button"
+                          class="btn btn-link btn-info btn-just-icon"
+                          matTooltip="Editar artículo"
+                          (click)="abrirModalEditar(art)">
+                    <i class="material-icons">edit</i>
+                  </button>
+                  <button mat-icon-button
+                          type="button"
+                          class="btn btn-link btn-danger btn-just-icon ml-1"
+                          matTooltip="Eliminar artículo"
+                          (click)="abrirModalEliminar(art)">
+                    <i class="material-icons">delete</i>
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="!cargando && articulos.length === 0">
+                <td [attr.colspan]="puedeGestionar() ? 4 : 3" class="text-center py-5 text-muted">
+                  <i class="material-icons d-block mb-2 text-muted" style="font-size: 40px; opacity: 0.5;">menu_book</i>
+                  No se encontraron artículos vigentes para este reglamento o criterio de búsqueda.
+                </td>
+              </tr>
+
+              <tr *ngIf="cargando">
+                <td [attr.colspan]="puedeGestionar() ? 4 : 3" class="text-center py-5 text-muted">
+                  <i class="material-icons d-block mb-2 text-primary" style="font-size: 36px;">refresh</i>
+                  Cargando artículos...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Creación / Edición de Artículo -->
+<div *ngIf="modalAbierto" class="modal-backdrop-custom" (click)="cerrarModal()">
+  <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
+    <div class="card border-0 shadow-lg">
+      <div class="card-header card-header-tabs-teal d-flex justify-content-between align-items-center py-3 px-4">
+        <h5 class="card-title text-white font-weight-bold mb-0 d-flex align-items-center">
+          <i class="material-icons mr-2">{{ modoEdicion ? 'edit' : 'add_circle' }}</i>
+          {{ modoEdicion ? 'Editar' : 'Agregar' }} Artículo — {{ tabActiva }}
+        </h5>
+        <button mat-icon-button type="button" class="btn btn-link text-white p-0 m-0" (click)="cerrarModal()" title="Cerrar">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      <div class="card-body py-4 px-4">
+        <form (ngSubmit)="guardarArticulo()">
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label for="input-articulo" class="form-label font-weight-bold">Artículo <span class="text-danger">*</span></label>
+              <input id="input-articulo"
+                     type="number"
+                     min="1"
+                     class="form-control"
+                     [(ngModel)]="articulo"
+                     name="articulo"
+                     placeholder="Ej: 14"
+                     required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="input-inciso" class="form-label font-weight-bold">Inciso <span class="text-muted small">(opcional)</span></label>
+              <input id="input-inciso"
+                     type="text"
+                     maxlength="11"
+                     class="form-control"
+                     [(ngModel)]="inciso"
+                     name="inciso"
+                     placeholder="Ej: a, 1, bis (o vacío)">
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label for="input-cuerpo" class="form-label font-weight-bold">Cuerpo <span class="text-danger">*</span></label>
+            <textarea id="input-cuerpo"
+                      class="form-control"
+                      rows="6"
+                      [(ngModel)]="cuerpo"
+                      name="cuerpo"
+                      placeholder="Texto completo del artículo..."
+                      required></textarea>
+          </div>
+        </form>
+      </div>
+
+      <div class="card-footer d-flex justify-content-end bg-light py-3 px-4">
+        <button mat-button type="button" class="btn btn-default mr-2" (click)="cerrarModal()">
+          Cancelar
+        </button>
+        <button mat-raised-button type="button" class="btn btn-primary" (click)="guardarArticulo()">
+          <i class="material-icons mr-1">save</i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmación de Eliminación (Baja Lógica) -->
+<div *ngIf="modalEliminarAbierto" class="modal-backdrop-custom modal-confirmacion-backdrop" (click)="cerrarModalEliminar()">
+  <div class="modal-dialog-custom modal-confirmacion-dialog" style="max-width: 520px;" (click)="$event.stopPropagation()">
+    <div class="card border-0 shadow-lg">
+      <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-3 px-4">
+        <h5 class="card-title text-white font-weight-bold mb-0 d-flex align-items-center">
+          <i class="material-icons mr-2">warning</i> Confirmar baja lógica
+        </h5>
+        <button mat-icon-button type="button" class="btn btn-link text-white p-0 m-0" (click)="cerrarModalEliminar()" title="Cerrar">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      <div class="card-body py-4 px-4">
+        <p class="text-dark mb-0" style="font-size: 15px; line-height: 1.6;">
+          ¿Confirmás la baja lógica del {{ articuloAEliminar?.cita_corta }} de {{ articuloAEliminar?.titulo }}? Ya no estará disponible para nuevos expedientes ni resoluciones, pero se conservará en los expedientes históricos.
+        </p>
+      </div>
+
+      <div class="card-footer d-flex justify-content-end bg-light py-3 px-4">
+        <button mat-button type="button" class="btn btn-default mr-2" (click)="cerrarModalEliminar()">
+          Cancelar
+        </button>
+        <button mat-raised-button type="button" class="btn btn-danger" (click)="confirmarEliminar()">
+          <i class="material-icons mr-1">delete_forever</i> Confirmar eliminación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

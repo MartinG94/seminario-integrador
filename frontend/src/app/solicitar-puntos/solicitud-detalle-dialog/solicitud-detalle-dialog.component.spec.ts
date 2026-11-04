@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../../components/components.module';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -49,6 +50,7 @@ describe('SolicitudDetalleDialogComponent', () => {
       declarations: [SolicitudDetalleDialogComponent],
       imports: [
         CommonModule,
+        ComponentsModule,
         MatIconModule,
         MatButtonModule,
         MatDialogModule,
@@ -155,5 +157,30 @@ describe('SolicitudDetalleDialogComponent', () => {
     expect(component.obtenerClaseEstado('rechazado')).toBe('badge-mat-danger');
     expect(component.obtenerClaseEstado('desestimado')).toBe('badge-mat-danger');
     expect(component.obtenerClaseEstado('otro')).toBe('badge-mat-info');
+  });
+
+  it('renderiza la tabla de reglamentos respaldantes con Documento, Art., Inc. y Cuerpo', () => {
+    component.solicitud = {
+      ...mockSolicitud,
+      reglamentos_respaldantes: [
+        'Estatuto - Art. 14 Inc. a: Deber de asistir a las asambleas ordinarias y extraordinarias.',
+        'Reglamento Interno - Art. 5: Puntualidad en reuniones de subcomisión.'
+      ]
+    };
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const rows = compiled.querySelectorAll('.table-reglamentos-normativa tbody tr');
+    expect(rows.length).toBe(2);
+    expect(rows[0].querySelector('.td-documento')?.textContent).toContain('Estatuto');
+    expect(rows[0].querySelector('.td-articulo')?.textContent?.trim()).toBe('14');
+    expect(rows[0].querySelector('.td-inciso')?.textContent?.trim()).toBe('a');
+    expect(rows[0].querySelector('.td-cuerpo')?.textContent).toContain(
+      'Deber de asistir a las asambleas ordinarias y extraordinarias.'
+    );
+
+    expect(rows[1].querySelector('.td-documento')?.textContent).toContain('Reglamento Interno');
+    expect(rows[1].querySelector('.td-articulo')?.textContent?.trim()).toBe('5');
+    expect(rows[1].querySelector('.td-inciso')?.textContent?.trim()).toBe('-');
   });
 });

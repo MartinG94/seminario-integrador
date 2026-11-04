@@ -54,60 +54,72 @@
               <table class="table table-hover table-mat">
                 <thead class="text-primary">
                   <th class="sortable-th" (click)="cambiarOrden('numero')" title="Ordenar por N° Expediente">
-                    Exp. <i class="material-icons">{{getIconoOrden('numero')}}</i>
+                    EXP. <i class="material-icons">{{getIconoOrden('numero')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('titulo')" title="Ordenar por Título">
-                    Título <i class="material-icons">{{getIconoOrden('titulo')}}</i>
+                    TÍTULO <i class="material-icons">{{getIconoOrden('titulo')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('involucrados')" title="Ordenar por Involucrados">
+                    INVOLUCRADOS <i class="material-icons">{{getIconoOrden('involucrados')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('fechaCreacion')" title="Ordenar por Fecha">
-                    Creado <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
+                    FECHA <i class="material-icons">{{getIconoOrden('fechaCreacion')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('puntos')" title="Ordenar por Puntos">
-                    Puntos <i class="material-icons">{{getIconoOrden('puntos')}}</i>
+                    PUNTOS <i class="material-icons">{{getIconoOrden('puntos')}}</i>
+                  </th>
+                  <th class="sortable-th" (click)="cambiarOrden('urgencia')" title="Ordenar por Urgencia">
+                    URGENCIA <i class="material-icons">{{getIconoOrden('urgencia')}}</i>
                   </th>
                   <th class="sortable-th" (click)="cambiarOrden('estado')" title="Ordenar por Estado">
-                    Estado <i class="material-icons">{{getIconoOrden('estado')}}</i>
+                    ESTADO <i class="material-icons">{{getIconoOrden('estado')}}</i>
                   </th>
-                  <th class="text-right">Acciones</th>
+                  <th class="text-right">ACCIONES</th>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let exp of expedientesOrdenados">
+                  <tr *ngFor="let exp of expedientesOrdenados"
+                      tabindex="0"
+                      role="row"
+                      [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ' - ' + (exp.titulo || exp.motivo)"
+                      (click)="abrirModalDetalle(exp)"
+                      (keydown)="onTableKeyDown($event, exp)"
+                      style="cursor: pointer;">
                     <td class="font-weight-bold text-dark">{{formatCaseNumber(exp.numero)}}</td>
-                    <td>
-                      <div class="font-weight-bold text-dark">{{exp.titulo || exp.motivo}}</div>
+                    <td style="max-width: 300px;">
+                      <div class="font-weight-bold text-dark text-truncate" [title]="exp.titulo || exp.motivo">
+                        {{exp.titulo || exp.motivo}}
+                      </div>
                     </td>
-                    <td>{{exp.fechaCreacion | date:'dd/MM/yyyy'}}</td>
+                    <td>{{getCantidadInvolucrados(exp)}}</td>
                     <td>
-                      <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
+                      <time [attr.datetime]="exp.fechaCreacion">{{exp.fechaCreacion | date:'dd/MM/yyyy'}}</time>
+                    </td>
+                    <td>
+                      <span class="font-weight-bold tabular-nums" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
                         {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
                       </span>
                     </td>
                     <td>
-                      <span class="badge-mat" [ngClass]="getEstadoBadgeClass(exp.estado, exp)">
-                        {{getEstadoLabel(exp.estado, exp)}}
+                      <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)">
+                        <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(exp.urgencia)}}</i>
+                        {{getUrgenciaLabel(exp.urgencia)}}
                       </span>
                     </td>
-                    <td class="text-right text-nowrap">
-                      <button *ngIf="exp.estado === 'justificando' && !exp.descargo && !esPlazoVencido(exp)"
-                              mat-raised-button
-                              class="btn btn-primary btn-sm mr-2 btn-descargo-tabla"
-                              (click)="abrirModalDescargo(exp)"
-                              title="Presentar Descargo">
-                        <i class="material-icons" style="font-size: 16px; vertical-align: middle;">add_circle</i> Descargo
-                      </button>
-                      <button *ngIf="exp.estado === 'justificando' && exp.descargo && !esPlazoVencido(exp)"
-                              mat-raised-button
-                              class="btn btn-warning btn-sm mr-2 btn-editar-descargo-tabla"
-                              (click)="abrirModalEditarDescargo(exp)"
-                              title="Editar Descargo">
-                        <i class="material-icons" style="font-size: 16px; vertical-align: middle;">edit</i> Descargo
-                      </button>
-                      <button mat-raised-button
-                              class="btn btn-info btn-sm"
-                              (click)="abrirModalDetalle(exp)"
-                              title="Ver Detalle y Gestionar Justificativo">
-                        <i class="material-icons" style="font-size: 16px; vertical-align: middle;">visibility</i> Ver
-                      </button>
+                    <td>
+                      <span class="badge-mat" [ngClass]="getEstadoBadgeClass(exp.estado, exp)">
+                        {{getEstadoLabel(exp.estado, exp) | uppercase}}
+                      </span>
+                    </td>
+                    <td class="td-actions text-right text-nowrap" (click)="$event.stopPropagation()">
+                      <div class="d-inline-flex align-items-center justify-content-end">
+                        <button mat-button
+                                type="button"
+                                class="btn btn-info btn-link btn-just-icon"
+                                (click)="abrirModalDetalle(exp)"
+                                aria-label="Ver Detalle">
+                          <i class="material-icons">visibility</i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -121,69 +133,105 @@
   </div>
 </div>
 
-<!-- Modal Ver Detalle del Expediente -->
-<div *ngIf="modalDetalleAbierto" class="modal-backdrop-custom" (click)="cerrarModalDetalle()" (wheel)="$event.stopPropagation()">
-  <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
-    <div class="card">
-      <div class="card-header card-header-info d-flex justify-content-between align-items-center">
-        <div>
-          <h4 class="card-title">Detalle del Expediente</h4>
-          <p class="card-category">{{formatCaseNumber(expedienteDetalle?.numero)}} &bull; Socio: {{socioActual}}</p>
+<!-- Modal Ver Detalle del Expediente (Estilo Tribunal Unificado) -->
+<div *ngIf="modalDetalleAbierto && expedienteDetalle"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModalDetalle()"
+     (keydown.escape)="cerrarModalDetalle()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()">
+    <div class="card modal-detalle-card">
+      <!-- Cabecera del Modal -->
+      <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+        <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
+          Exp: {{formatCaseNumber(expedienteDetalle.numero)}}
+        </span>
+        <div class="modal-titulo-central flex-grow-1 text-center px-3">
+          <h4 class="card-title mb-0 font-weight-bold text-white">
+            {{expedienteDetalle.titulo || expedienteDetalle.motivo || 'Detalle del Expediente'}}
+          </h4>
         </div>
-        <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModalDetalle()" title="Cerrar modal">
+        <button type="button" 
+                class="btn btn-link text-white p-1 m-0 btn-close-modal" 
+                (click)="cerrarModalDetalle()" 
+                aria-label="Cerrar modal">
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-borderless">
-            <tbody>
-              <tr>
-                <th style="width: 35%;" class="text-muted">N° de Expediente:</th>
-                <td class="font-weight-bold text-dark">{{formatCaseNumber(expedienteDetalle?.numero)}}</td>
-              </tr>
-              <tr>
-                <th class="text-muted">Razón:</th>
-                <td class="text-dark">{{expedienteDetalle?.razon || expedienteDetalle?.motivo}}</td>
-              </tr>
-              <tr>
-                <th class="text-muted">Solicitante:</th>
-                <td class="font-weight-bold text-dark">{{formatSolicitante(expedienteDetalle)}}</td>
-              </tr>
-              <tr>
-                <th class="text-muted">Creado:</th>
-                <td>{{expedienteDetalle?.fechaCreacion | date:'dd/MM/yyyy'}}</td>
-              </tr>
-              <tr>
-                <th class="text-muted">Puntos:</th>
-                <td>
-                  <span class="font-weight-bold" [ngClass]="(expedienteDetalle?.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
-                    {{(expedienteDetalle?.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle?.puntos}} pts
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <th class="text-muted">Estado:</th>
-                <td>
-                  <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteDetalle?.estado || '', expedienteDetalle || undefined)">
-                    {{expedienteDetalle ? getEstadoLabel(expedienteDetalle.estado, expedienteDetalle) : ''}}
-                  </span>
-                </td>
-              </tr>
-              <tr *ngIf="expedienteDetalle?.estado === 'justificando' && expedienteDetalle?.plazoLimiteAt">
-                <th class="text-muted">Vencimiento del Plazo:</th>
-                <td>
-                  <div class="font-weight-bold text-dark">
-                    {{expedienteDetalle ? getDeadlineLabel(expedienteDetalle) : ''}}
-                  </div>
-                  <div class="small text-muted mt-1">
-                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">timer</i>
-                    Tiempo restante: {{expedienteDetalle ? getCountdownLabel(expedienteDetalle) : ''}}
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+
+      <div class="card-body modal-detalle-body" tabindex="-1">
+        <div class="row metadatos-row">
+          <!-- Fila 1: Estado, Urgencia y Puntaje en una sola línea -->
+          <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Estado:</span>
+              <span class="badge-mat" [ngClass]="getEstadoBadgeClass(expedienteDetalle.estado, expedienteDetalle)">
+                {{getEstadoLabel(expedienteDetalle.estado, expedienteDetalle) | uppercase}}
+              </span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Urgencia:</span>
+              <span class="badge-mat" [ngClass]="getUrgenciaBadgeClass(expedienteDetalle.urgencia)">
+                <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteDetalle.urgencia)}}</i>
+                {{getUrgenciaLabel(expedienteDetalle.urgencia)}}
+              </span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje:</span>
+              <span class="font-weight-bold puntaje-solicitado-val" [ngClass]="(expedienteDetalle.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
+                {{(expedienteDetalle.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle.puntos}} pts
+              </span>
+            </div>
+          </div>
+
+          <!-- Fila 2: Fecha de Creación y Solicitante -->
+          <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Fecha de Creación:</span>
+              <span class="font-weight-bold text-dark">{{expedienteDetalle.fechaCreacion | date:'dd/MM/yyyy HH:mm'}}</span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Solicitante:</span>
+              <span class="text-dark font-weight-bold">{{formatSolicitante(expedienteDetalle)}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reglamentación Respaldante -->
+        <div class="mb-3" *ngIf="getReglamentosCitas(expedienteDetalle).length > 0">
+          <label class="text-muted small font-weight-bold d-block mb-2">Reglamentación:</label>
+          <app-tabla-reglamentos
+            [articulos]="getReglamentosCitas(expedienteDetalle)">
+          </app-tabla-reglamentos>
+        </div>
+
+        <!-- Motivo / Fundamentación -->
+        <div class="mb-3" *ngIf="expedienteDetalle.razon || expedienteDetalle.motivo">
+          <label class="text-muted small font-weight-bold d-block mb-1">Motivo / Fundamentación:</label>
+          <div class="p-3 bg-light rounded border text-dark" style="white-space: pre-wrap; word-break: break-word;">
+            {{expedienteDetalle.razon || expedienteDetalle.motivo}}
+          </div>
+        </div>
+
+        <!-- Plazo Restante si está en justificación -->
+        <div *ngIf="expedienteDetalle.estado === 'justificando' && expedienteDetalle.plazoLimiteAt" class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center justify-content-between">
+          <div>
+            <i class="material-icons mr-1" style="font-size: 16px; vertical-align: middle;">event</i>
+            <strong>{{getDeadlineLabel(expedienteDetalle)}}</strong>
+          </div>
+          <div class="small">
+            <i class="material-icons mr-1" style="font-size: 14px; vertical-align: middle;">timer</i>
+            Tiempo restante: <strong>{{getCountdownLabel(expedienteDetalle)}}</strong>
+          </div>
         </div>
 
         <!-- Apelación del T01 (PB-02, art. 14): reemplaza al justificativo T02/T03 -->

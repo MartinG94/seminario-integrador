@@ -115,11 +115,9 @@
                 <strong>{{ visorData.solicitante.display || visorData.solicitante.nombre }}</strong>
               </div>
               <div class="col-sm-6">
-                <span class="text-muted small d-block">Causal / Normativa Invocada:</span>
-                <div class="d-flex flex-wrap gap-1 mt-1">
-                  <span *ngFor="let reg of visorData.reglamentos_respaldantes" class="badge badge-secondary">
-                    {{ reg }}
-                  </span>
+                <span class="text-muted small d-block mb-1">Causal / Normativa Invocada:</span>
+                <div class="mt-1" *ngIf="reglamentosCitas && reglamentosCitas.length > 0">
+                  <app-tabla-reglamentos [articulos]="reglamentosCitas"></app-tabla-reglamentos>
                 </div>
               </div>
             </div>

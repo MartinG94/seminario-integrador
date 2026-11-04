@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../../components/components.module';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
@@ -188,7 +189,7 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     expedienteApiSpy.obtenerVisorExpediente.and.returnValue(of(mockVisorData));
 
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule, ComponentsModule],
       declarations: [VisorExpedienteComponent],
       providers: [
         { provide: ExpedienteApiService, useValue: expedienteApiSpy },

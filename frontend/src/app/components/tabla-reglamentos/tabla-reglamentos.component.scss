@@ -1,0 +1,216 @@
+.tabla-reglamentos-container {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-main, #e2e8f0);
+  background-color: var(--color-surface-card, #ffffff);
+
+  .table-responsive {
+    margin: 0;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+}
+
+.table-reglamentos-normativa {
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: collapse;
+
+  thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-border-main, #e2e8f0);
+    border-top: none;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  tbody tr.fila-articulo {
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background-color: #f8fafc;
+    }
+  }
+
+  tbody td {
+    padding: 8px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+}
+
+/* Anchos y alineaciones */
+.th-documento, .td-documento {
+  width: 175px;
+  min-width: 155px;
+}
+
+.th-articulo, .td-articulo {
+  width: 65px;
+  min-width: 60px;
+  color: var(--color-text-primary, #151846);
+}
+
+.th-inciso, .td-inciso {
+  width: 65px;
+  min-width: 60px;
+  color: #64748b;
+}
+
+.th-cuerpo, .td-cuerpo {
+  min-width: 260px;
+}
+
+.th-accion, .td-accion {
+  width: 60px;
+  min-width: 55px;
+}
+
+/* Badges de documento */
+.badge-documento {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  border: 1px solid transparent;
+
+  .badge-doc-icon {
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  &.badge-doc-estatuto {
+    background-color: #ebf3fa;
+    color: #151846;
+    border-color: #b3d3e4;
+  }
+
+  &.badge-doc-interno {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+  }
+
+  &.badge-doc-normativa {
+    background-color: #f1f5f9;
+    color: #334155;
+    border-color: #cbd5e1;
+  }
+}
+
+/* Cuerpo normativo */
+.cuerpo-normativo-text {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #1e293b;
+  max-height: 4.4em;
+  overflow-y: auto;
+  word-break: break-word;
+}
+
+/* Botón quitar */
+.btn-quitar-art {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  color: #ef4444;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  .material-icons {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background-color: #fee2e2;
+    color: #b91c1c;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ef4444;
+    outline-offset: 1px;
+  }
+}
+
+/* Modo compacto (para celdas de tablas principales como "Mis Solicitudes") */
+.tabla-compacta {
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
+
+  .table-responsive {
+    max-height: 160px;
+  }
+
+  .table-reglamentos-normativa {
+    thead th {
+      padding: 4px 6px;
+      font-size: 10px;
+    }
+
+    tbody td {
+      padding: 4px 6px;
+      font-size: 11.5px;
+    }
+  }
+
+  .th-documento, .td-documento {
+    width: 130px;
+    min-width: 120px;
+  }
+
+  .th-articulo, .td-articulo,
+  .th-inciso, .td-inciso {
+    width: 45px;
+    min-width: 40px;
+  }
+
+  .badge-documento {
+    padding: 2px 5px;
+    font-size: 10px;
+
+    .badge-doc-icon {
+      font-size: 11px;
+    }
+  }
+
+  .cuerpo-normativo-text {
+    font-size: 11px;
+    max-height: 3.2em;
+  }
+}
+
+/* Estado vacío */
+.empty-reglamentos-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  .empty-icon {
+    font-size: 24px;
+    opacity: 0.6;
+  }
+}

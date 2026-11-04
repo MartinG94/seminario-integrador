@@ -1,203 +1,220 @@
-<div class="main-content">
+<div class="main-content solicitar-puntos-view">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-11 col-lg-10 ml-auto mr-auto">
+      <div class="col-md-12">
 
         <!-- Card Principal con Pestañas estilo AVEIT -->
-        <div class="card card-nav-tabs">
-          <!-- Cabecera de Pestañas (Teal AVEIT) -->
+        <div class="card card-nav-tabs card-aveit-shell">
+          <!-- Cabecera de Pestañas (Teal / Institucional AVEIT) -->
           <div class="card-header card-header-tabs-teal d-flex flex-wrap align-items-center justify-content-between">
             <div class="nav-tabs-wrapper">
               <ul class="nav nav-tabs">
                 <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="tabActiva === 'nueva'" 
-                     (click)="setTab('nueva')" 
+                  <a class="nav-link"
+                     [class.active]="tabActiva === 'nueva'"
+                     (click)="setTab('nueva')"
                      href="javascript:void(0)"
                      role="tab">
                     <i class="material-icons">edit_calendar</i> NUEVA SOLICITUD
                   </a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" 
-                     [class.active]="tabActiva === 'creadas'" 
-                     (click)="setTab('creadas')" 
+                  <a class="nav-link"
+                     [class.active]="tabActiva === 'creadas'"
+                     (click)="setTab('creadas')"
                      href="javascript:void(0)"
                      role="tab">
                     <i class="material-icons">checklist</i> SOLICITUDES CREADAS
-                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="misSolicitudes.length > 0">
+                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2 tabular-nums" *ngIf="misSolicitudes.length > 0">
                       {{ misSolicitudes.length }}
                     </span>
                   </a>
                 </li>
               </ul>
             </div>
-            <div class="text-white-50 d-none d-md-block small">
+            <div class="text-white-50 d-none d-md-block small font-weight-bold">
               <span *ngIf="tabActiva === 'nueva'">Apertura de Solicitud T-01</span>
               <span *ngIf="tabActiva === 'creadas'">Seguimiento de Causas y Trámites</span>
             </div>
           </div>
 
-          <div class="card-body p-4">
+          <div class="card-body p-4 p-lg-5">
             <!-- ======================================================== -->
-            <!-- PESTAÑA 1: NUEVA SOLICITUD                               -->
+            <!-- PESTAÑA 1: NUEVA SOLICITUD (Flujo Vertical Limpio)        -->
             <!-- ======================================================== -->
-            <div *ngIf="tabActiva === 'nueva'">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="card-title text-dark font-weight-bold mb-0">
-                  {{ borradorId ? 'Continuar solicitud de T-01' : 'Crear solicitud de T-01' }}
-                </h3>
-                <span class="badge badge-info" *ngIf="borradorId">
+            <div *ngIf="tabActiva === 'nueva'" class="t01-form-flow">
+              <div class="form-top-header d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
+                <div>
+                  <h3 class="card-title text-dark font-weight-bold mb-0">
+                    {{ borradorId ? 'Continuar solicitud de expediente' : 'Generar solicitud de expediente' }}
+                  </h3>
+                </div>
+                <span class="badge-mat badge-mat-info" *ngIf="borradorId && estado !== 'ISSUED'">
                   Borrador en edición
                 </span>
               </div>
 
-              <div *ngIf="numeroExpediente" class="section-card">
-                Número de expediente emitido: <strong>{{ numeroExpediente }}</strong>
-                <button type="button" class="btn btn-primary" (click)="setTab('creadas')">
+              <div *ngIf="numeroExpediente" class="issued-banner d-flex flex-wrap align-items-center justify-content-between mb-4">
+                <div class="d-flex align-items-center">
+                  <i class="material-icons mr-2">verified</i>
+                  <span>Número de expediente emitido: <strong class="tabular-nums">{{ numeroExpediente }}</strong></span>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" (click)="setTab('creadas')">
                   Ver en Solicitudes Creadas
                 </button>
               </div>
 
-              <!-- 1. Elección: Sanción o Premio con Colores Vivos -->
-              <div class="section-card mb-4">
-                <label class="form-label-custom mb-2">1. Elegí si es una sanción o un premio:</label>
-                <div class="row">
-                  <div class="col-md-6 mb-2 mb-md-0">
-                    <div class="tipo-card tipo-card-sancion" 
-                         [class.active]="tipoAccion === 'SANCTION'" 
-                         [class.disabled]="estado === 'ISSUED'"
-                         (click)="estado !== 'ISSUED' && onTipoAccionChange('SANCTION')">
-                      <div class="d-flex align-items-center">
-                        <div class="tipo-icon-container">
-                          <i class="material-icons">gavel</i>
-                        </div>
-                        <div class="ml-3">
-                          <div class="tipo-title">Sanción disciplinaria</div>
-                          <div class="tipo-subtitle">Puntos negativos por falta o inconducta</div>
-                        </div>
-                        <div class="ml-auto">
-                          <span class="tipo-radio" [class.checked]="tipoAccion === 'SANCTION'"></span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="tipo-card tipo-card-premio" 
-                         [class.active]="tipoAccion === 'MERIT'" 
-                         [class.disabled]="estado === 'ISSUED'"
-                         (click)="estado !== 'ISSUED' && onTipoAccionChange('MERIT')">
-                      <div class="d-flex align-items-center">
-                        <div class="tipo-icon-container">
-                          <i class="material-icons">emoji_events</i>
-                        </div>
-                        <div class="ml-3">
-                          <div class="tipo-title">Premio / Reconocimiento</div>
-                          <div class="tipo-subtitle">Puntos positivos por mérito institucional</div>
-                        </div>
-                        <div class="ml-auto">
-                          <span class="tipo-radio" [class.checked]="tipoAccion === 'MERIT'"></span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 2. Título del T-01 -->
-              <div class="form-group mb-4">
-                <label class="form-label-custom">Título del T-01</label>
-                <input class="form-control" 
-                       placeholder="Ej. Falta a Reunion Virtual GVP 2026 / Reconocimiento Jornada Solidaria" 
-                       [(ngModel)]="titulo" 
-                       [disabled]="estado === 'ISSUED'">
-              </div>
-
-              <!-- 3. Razón del T-01 -->
-              <div class="form-group mb-4">
-                <label class="form-label-custom">Razón del T-01</label>
-                <textarea class="form-control" 
-                          rows="4" 
-                          placeholder="Describí los hechos y el motivo de la solicitud..." 
-                          [(ngModel)]="razon" 
-                          [disabled]="estado === 'ISSUED'"></textarea>
-              </div>
-
-              <fieldset class="urgency-field form-group mb-4" [disabled]="estado === 'ISSUED' || cargando">
-                <legend class="form-label-custom">Urgencia</legend>
-                <div class="urgency-options">
-                  <label class="urgency-choice urgency-choice-low">
-                    <input type="radio" name="urgency" value="baja" [(ngModel)]="urgency"
-                           [disabled]="estado === 'ISSUED' || cargando">
-                    <span class="urgency-choice-label">Baja</span>
-                  </label>
-                  <label class="urgency-choice urgency-choice-normal">
-                    <input type="radio" name="urgency" value="normal" [(ngModel)]="urgency"
-                           [disabled]="estado === 'ISSUED' || cargando">
-                    <span class="urgency-choice-label">Normal</span>
-                  </label>
-                  <label class="urgency-choice urgency-choice-urgent">
-                    <input type="radio" name="urgency" value="urgente" [(ngModel)]="urgency"
-                           [disabled]="estado === 'ISSUED' || cargando">
-                    <span class="urgency-choice-label">Urgente</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <!-- 4. Puntos y Reglamento -->
-              <div class="section-card mb-4">
-                <div class="row">
-                  <div class="col-md-6 form-group">
-                    <label class="form-label-custom">
-                      {{ tipoAccion === 'SANCTION' ? 'Sanción estimada' : 'Premio estimado' }}
+              <!-- SECCIÓN 01: Título y Razón -->
+              <section class="form-section" aria-label="Carátula y fundamento de la solicitud">
+                <div class="row align-items-start">
+                  <div class="col-12 form-group mb-3">
+                    <label class="form-label-custom" for="titulo-t01">
+                      Título del T-01 <span class="required-mark">*</span>
                     </label>
-                    <select class="form-control" [(ngModel)]="puntosSeleccionados" [disabled]="estado === 'ISSUED'">
-                      <option *ngFor="let escala of (tipoAccion === 'SANCTION' ? escalasSancion : escalasMerito)" [ngValue]="escala.valor">
-                        {{ escala.desc }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="col-md-6 form-group">
-                    <label class="form-label-custom">Causal reglamentaria (opcional)</label>
-                    <input class="form-control" 
-                           placeholder="Ej. Inasistencia injustificada / Desempeño sobresaliente" 
-                           [(ngModel)]="causal" 
+                    <input id="titulo-t01"
+                           class="form-control form-control-aveit"
+                           placeholder="Ej. Falta a Reunión Virtual GVP 2026 / Reconocimiento Jornada Solidaria"
+                           [(ngModel)]="titulo"
                            [disabled]="estado === 'ISSUED'">
                   </div>
                 </div>
 
-                <div class="form-group mt-2 mb-0">
-                  <label class="form-label-custom">Reglamento respaldante</label>
-                  <select class="form-control" 
-                          multiple 
-                          [(ngModel)]="reglamentosSeleccionados" 
-                          [disabled]="estado === 'ISSUED'" 
-                          style="min-height: 95px;">
-                    <option *ngFor="let reglamento of reglamentosDisponibles" [ngValue]="reglamento">
-                      {{ reglamento }}
-                    </option>
-                  </select>
-                  <small class="form-text text-muted">
-                    Podés elegir más de un artículo manteniendo presionado Ctrl (o Cmd).
-                  </small>
+                <div class="form-group mb-3">
+                  <label class="form-label-custom" for="razon-t01">
+                    Razón del T-01 <span class="required-mark">*</span>
+                  </label>
+                  <textarea id="razon-t01"
+                            class="form-control form-control-aveit"
+                            rows="4"
+                            placeholder="Describí con claridad los hechos y el fundamento de la solicitud..."
+                            [(ngModel)]="razon"
+                            [disabled]="estado === 'ISSUED'"></textarea>
                 </div>
-              </div>
+              </section>
 
-              <!-- 5. Socios Involucrados (1 a Muchos) -->
-              <div class="section-card mb-4">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <label class="form-label-custom mb-0">Socios involucrados</label>
-                  <span class="badge badge-info" *ngIf="sociosSeleccionados.length > 0">
+              <!-- SECCIÓN 02: Puntos y Reglamento Respaldante -->
+              <section class="form-section" aria-label="Puntos solicitados y reglamento respaldante">
+                <div class="row align-items-start">
+                  <div class="col-md-6 form-group mb-3">
+                    <label class="form-label-custom" id="puntos-solicitados-label">
+                      Puntos Solicitados <span class="required-mark">*</span>
+                    </label>
+                    <div class="d-flex align-items-center">
+                      <div class="input-group input-group-stepper" role="group" aria-labelledby="puntos-solicitados-label">
+                        <button type="button"
+                                class="btn-stepper btn-stepper-dec"
+                                (click)="decrementarPuntos()"
+                                [disabled]="!puedeDecrementarPuntos"
+                                aria-label="Disminuir puntos"
+                                title="Disminuir puntos">
+                          <i class="material-icons">arrow_downward</i>
+                        </button>
+                        <output class="stepper-value tabular-nums" aria-live="polite">{{ puntosTexto }}</output>
+                        <button type="button"
+                                class="btn-stepper btn-stepper-inc"
+                                (click)="incrementarPuntos()"
+                                [disabled]="!puedeIncrementarPuntos"
+                                aria-label="Aumentar puntos"
+                                title="Aumentar puntos">
+                          <i class="material-icons">arrow_upward</i>
+                        </button>
+                      </div>
+                      <span class="badge-mat ml-3" [ngClass]="tipoAccion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
+                        {{ tipoAccionTexto }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6 form-group mb-3">
+                    <fieldset class="urgency-field" [disabled]="estado === 'ISSUED' || cargando">
+                      <legend class="form-label-custom">Urgencia</legend>
+                      <div class="urgency-options">
+                        <label class="urgency-choice urgency-choice-low">
+                          <input type="radio" name="urgency" value="baja" [(ngModel)]="urgency"
+                                 [disabled]="estado === 'ISSUED' || cargando">
+                          <span class="urgency-choice-label">Baja</span>
+                        </label>
+                        <label class="urgency-choice urgency-choice-normal">
+                          <input type="radio" name="urgency" value="normal" [(ngModel)]="urgency"
+                                 [disabled]="estado === 'ISSUED' || cargando">
+                          <span class="urgency-choice-label">Normal</span>
+                        </label>
+                        <label class="urgency-choice urgency-choice-urgent">
+                          <input type="radio" name="urgency" value="urgente" [(ngModel)]="urgency"
+                                 [disabled]="estado === 'ISSUED' || cargando">
+                          <span class="urgency-choice-label">Urgente</span>
+                        </label>
+                      </div>
+                    </fieldset>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <!-- Reglamento(s) Respaldante en fila completa -->
+                  <div class="col-12 form-group mb-0">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label-custom mb-0">
+                        Seleccione el Reglamento(s) Respaldante <span class="required-mark">*</span>
+                      </label>
+                      <button type="button"
+                              class="btn-link-clear"
+                              *ngIf="estado !== 'ISSUED' && reglamentosSeleccionados.length > 1"
+                              (click)="limpiarReglamentos()">
+                        Limpiar selección
+                      </button>
+                    </div>
+
+                    <div class="reglamento-picker-trigger-row">
+                      <button type="button"
+                              class="btn-explorar-reglamentos"
+                              (click)="abrirModalReglamentos()"
+                              [disabled]="estado === 'ISSUED'">
+                        <span class="d-inline-flex align-items-center">
+                          <i class="material-icons mr-2">menu_book</i>
+                          <span>{{ reglamentosSeleccionados.length > 0 ? 'Agregar o quitar artículos reglamentarios' : 'Explorar y seleccionar artículos...' }}</span>
+                        </span>
+                        <span class="picker-count-pill tabular-nums" [class.has-items]="reglamentosSeleccionados.length > 0">
+                          {{ reglamentosSeleccionados.length }} {{ reglamentosSeleccionados.length === 1 ? 'artículo' : 'artículos' }}
+                        </span>
+                      </button>
+                    </div>
+
+                    <!-- Tabla de Reglamentos Seleccionados con Acción Quitar -->
+                    <div class="mt-2" *ngIf="reglamentosSeleccionadosCitas.length > 0">
+                      <app-tabla-reglamentos
+                        [articulos]="reglamentosSeleccionadosCitas"
+                        [editable]="estado !== 'ISSUED'"
+                        (remover)="removerReglamento($event)">
+                      </app-tabla-reglamentos>
+                    </div>
+
+                    <small class="form-text text-muted mt-1" *ngIf="reglamentosSeleccionados.length === 0">
+                      Obligatorio: seleccioná como mínimo un artículo del Estatuto o Reglamento Interno.
+                    </small>
+                  </div>
+                </div>
+              </section>
+
+              <!-- SECCIÓN 03: Socios Involucrados -->
+              <section class="form-section" aria-label="Socios involucrados">
+                <div class="section-heading d-flex justify-content-between align-items-start">
+                  <div class="d-flex align-items-start">
+                    <div>
+                      <h4 class="section-title">Socios involucrados <span class="required-mark">*</span></h4>
+                      <p class="section-subtitle">Buscá por legajo, apellido o nombre y agregá uno o más socios al expediente.</p>
+                    </div>
+                  </div>
+                  <span class="badge-mat badge-mat-info tabular-nums" *ngIf="sociosSeleccionados.length > 0">
                     {{ sociosSeleccionados.length }} {{ sociosSeleccionados.length === 1 ? 'socio' : 'socios' }}
                   </span>
                 </div>
 
-                <!-- Buscador reactivo (Select2 style) -->
+                <!-- Buscador reactivo (Select2 / Autocomplete) -->
                 <mat-form-field appearance="outline" class="w-100" *ngIf="estado !== 'ISSUED'">
                   <mat-label>Buscar socio por legajo, apellido o nombre</mat-label>
-                  <input matInput 
-                         [formControl]="socioBusqueda" 
-                         [matAutocomplete]="sociosAuto" 
+                  <input matInput
+                         [formControl]="socioBusqueda"
+                         [matAutocomplete]="sociosAuto"
                          placeholder="Escribí al menos 3 caracteres...">
                   <mat-icon matSuffix>person_search</mat-icon>
                   <mat-autocomplete #sociosAuto="matAutocomplete" (optionSelected)="agregarSocio($event.option.value)">
@@ -208,7 +225,7 @@
                 </mat-form-field>
 
                 <!-- Tabla de socios seleccionados -->
-                <div class="table-responsive mt-2" *ngIf="sociosSeleccionados.length > 0">
+                <div class="table-responsive mt-2 border rounded" *ngIf="sociosSeleccionados.length > 0">
                   <table class="table table-sm table-hover align-middle mb-0">
                     <thead class="thead-light">
                       <tr>
@@ -221,9 +238,9 @@
                     </thead>
                     <tbody>
                       <tr *ngFor="let s of sociosSeleccionados">
-                        <td><span class="badge badge-info font-weight-bold">{{ s.legajo || 'S/D' }}</span></td>
+                        <td><span class="badge-mat badge-mat-info tabular-nums">{{ s.legajo || 'S/D' }}</span></td>
                         <td class="font-weight-bold text-dark">{{ s.last_name }}, {{ s.first_name }}</td>
-                        <td>{{ s.grupo || 'S/D' }}</td>
+                        <td class="tabular-nums">{{ s.grupo || 'S/D' }}</td>
                         <td>{{ s.subcomision?.name || 'Sin subcomisión' }}</td>
                         <td class="text-right" *ngIf="estado !== 'ISSUED'">
                           <button mat-icon-button color="warn" type="button" (click)="eliminarSocio(s.socio_id)" title="Quitar socio">
@@ -235,69 +252,74 @@
                   </table>
                 </div>
 
-                <div class="alert alert-warning py-2 px-3 mt-2 mb-0" *ngIf="sociosSeleccionados.length === 0">
-                  <small>No hay socios añadidos aún. Buscá e incorporá al menos un socio involucrado.</small>
+                <div class="empty-socios-hint mt-2" *ngIf="sociosSeleccionados.length === 0">
+                  <i class="material-icons mr-2">person_add_alt</i>
+                  <span>No hay socios añadidos aún. Buscá e incorporá al menos un socio involucrado.</span>
                 </div>
-              </div>
+              </section>
 
-              <!-- 6. Hoja de Anexo / Detalles Adicionales (Opcional) -->
-              <mat-expansion-panel class="border-subtle mb-4" [expanded]="anexoExpandido">
-                <mat-expansion-panel-header>
-                  <mat-panel-title class="font-weight-bold text-dark">
-                    <mat-icon class="mr-2 text-secondary align-middle">note_add</mat-icon>
-                    Detalles adicionales / Hoja de anexo
-                  </mat-panel-title>
-                  <mat-panel-description>
-                    <span class="badge badge-secondary ml-2">Opcional</span>
-                  </mat-panel-description>
-                </mat-expansion-panel-header>
+              <!-- SECCIÓN 04: Hoja de Anexo / Detalles Adicionales (Opcional) -->
+              <section class="form-section border-bottom-0 pb-0 mb-3" aria-label="Hoja de anexo">
+                <mat-expansion-panel class="anexo-expansion-panel" [expanded]="anexoExpandido">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title class="font-weight-bold text-dark d-flex align-items-center">
+                      <mat-icon class="mr-2 text-secondary align-middle">note_add</mat-icon>
+                      <span>Detalles adicionales / Hoja de anexo</span>
+                    </mat-panel-title>
+                    <mat-panel-description class="justify-content-end">
+                      <span class="badge badge-secondary">Opcional</span>
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
 
-                <div class="p-2">
-                  <div class="row">
-                    <div class="col-md-4 form-group">
-                      <label class="form-label-custom">Fecha del hecho</label>
-                      <input type="date" class="form-control" [(ngModel)]="anexoFecha" [disabled]="estado === 'ISSUED'">
+                  <div class="pt-2">
+                    <div class="row">
+                      <div class="col-md-4 form-group">
+                        <label class="form-label-custom">Fecha del hecho</label>
+                        <input type="date" class="form-control form-control-aveit tabular-nums" [(ngModel)]="anexoFecha" [disabled]="estado === 'ISSUED'">
+                      </div>
+                      <div class="col-md-8 form-group">
+                        <label class="form-label-custom">Lugar o Evento del hecho</label>
+                        <input class="form-control form-control-aveit"
+                               placeholder="Ej. Sede AVEIT, Asamblea o evento institucional"
+                               [(ngModel)]="anexoLugar"
+                               [disabled]="estado === 'ISSUED'">
+                      </div>
                     </div>
-                    <div class="col-md-8 form-group">
-                      <label class="form-label-custom">Lugar o Evento del hecho</label>
-                      <input class="form-control" 
-                             placeholder="Ej. Sede AVEIT, Asamblea o evento institucional" 
-                             [(ngModel)]="anexoLugar" 
+                    <div class="form-group">
+                      <label class="form-label-custom">Testigos presenciales y participación</label>
+                      <input class="form-control form-control-aveit"
+                             placeholder="Indique quiénes fueron y cómo se involucraron o qué presenciaron"
+                             [(ngModel)]="anexoTestigos"
                              [disabled]="estado === 'ISSUED'">
                     </div>
+                    <div class="form-group mb-0">
+                      <label class="form-label-custom">Relato circunstanciado adicional</label>
+                      <textarea class="form-control form-control-aveit"
+                                rows="3"
+                                placeholder="Detalles adicionales sobre las circunstancias del hecho..."
+                                [(ngModel)]="anexoRelato"
+                                [disabled]="estado === 'ISSUED'"></textarea>
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label-custom">Testigos presenciales y participación</label>
-                    <input class="form-control" 
-                           placeholder="Indique quiénes fueron y cómo se involucraron o qué presenciaron" 
-                           [(ngModel)]="anexoTestigos" 
-                           [disabled]="estado === 'ISSUED'">
-                  </div>
-                  <div class="form-group mb-0">
-                    <label class="form-label-custom">Relato circunstanciado adicional</label>
-                    <textarea class="form-control" 
-                              rows="3" 
-                              placeholder="Detalles adicionales sobre las circunstancias del hecho..." 
-                              [(ngModel)]="anexoRelato" 
-                              [disabled]="estado === 'ISSUED'"></textarea>
-                  </div>
-                </div>
-              </mat-expansion-panel>
+                </mat-expansion-panel>
+              </section>
 
               <!-- Botones del Formulario -->
-              <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                <button mat-button class="btn btn-default" (click)="resetearFormulario()">Limpiar</button>
-                <div>
-                  <button mat-raised-button 
-                          class="btn btn-secondary mr-2" 
-                          (click)="guardarBorrador()" 
+              <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top">
+                <button mat-button type="button" class="btn btn-default" (click)="resetearFormulario()">Limpiar</button>
+                <div class="d-flex flex-wrap gap-2">
+                  <button mat-raised-button
+                          type="button"
+                          class="btn btn-secondary mr-2"
+                          (click)="guardarBorrador()"
                           [disabled]="cargando || estado === 'ISSUED'">
                     Guardar borrador
                   </button>
-                  <button mat-raised-button 
-                          color="primary" 
-                          class="btn btn-primary" 
-                          (click)="emitirT01()" 
+                  <button mat-raised-button
+                          type="button"
+                          color="primary"
+                          class="btn btn-primary"
+                          (click)="emitirT01()"
                           [disabled]="cargando || estado === 'ISSUED'">
                     <i class="material-icons mr-1">send</i> Crear Solicitud
                   </button>
@@ -353,122 +375,107 @@
 
               <!-- Tabla de Solicitudes Creadas estilo AVEIT -->
               <div class="explorer-table-container table-responsive" *ngIf="!cargandoSolicitudes && !failedToLoadRequests && misSolicitudes.length > 0">
-                <table class="table-mat">
-                  <thead>
-                    <tr>
-                      <th style="width: 105px;">Fecha</th>
-                      <th>Causa / Solicitud</th>
-                      <th>Razón</th>
-                      <th>Reglamento</th>
-                      <th style="width: 115px;">Sanción / Mérito</th>
-                      <th style="width: 120px;">Estado</th>
-                      <th style="width: 150px;">Involucrados</th>
-                      <th class="text-right" style="width: 100px;">Acciones</th>
-                    </tr>
+                <table class="table table-hover table-mat">
+                  <thead class="text-primary">
+                    <th class="sortable-th" (click)="cambiarOrden('numero')" title="Ordenar por N° Expediente">
+                      Exp. <i class="material-icons">{{getIconoOrden('numero')}}</i>
+                    </th>
+                    <th class="sortable-th" (click)="cambiarOrden('titulo')" title="Ordenar por Título">
+                      Título <i class="material-icons">{{getIconoOrden('titulo')}}</i>
+                    </th>
+                    <th class="sortable-th" (click)="cambiarOrden('involucrados')" title="Ordenar por Involucrados">
+                      Involucrados <i class="material-icons">{{getIconoOrden('involucrados')}}</i>
+                    </th>
+                    <th class="sortable-th" (click)="cambiarOrden('fecha')" title="Ordenar por Fecha">
+                      Fecha <i class="material-icons">{{getIconoOrden('fecha')}}</i>
+                    </th>
+                    <th class="sortable-th" (click)="cambiarOrden('puntos')" title="Ordenar por Puntos">
+                      Puntos <i class="material-icons">{{getIconoOrden('puntos')}}</i>
+                    </th>
+                    <th class="sortable-th" (click)="cambiarOrden('urgencia')" title="Ordenar por Urgencia">
+                      Urgencia <i class="material-icons">{{getIconoOrden('urgencia')}}</i>
+                    </th>
+                    <th class="sortable-th" (click)="cambiarOrden('estado')" title="Ordenar por Estado">
+                      Estado <i class="material-icons">{{getIconoOrden('estado')}}</i>
+                    </th>
+                    <th class="text-right">Acciones</th>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let s of misSolicitudes">
+                    <tr *ngFor="let s of misSolicitudesOrdenadas"
+                        tabindex="0"
+                        role="row"
+                        [attr.aria-label]="'Solicitud ' + (s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero) + ' - ' + (s.titulo || s.motivo)"
+                        (click)="abrirDetalle(s)"
+                        (keydown)="onTableKeyDown($event, s)"
+                        style="cursor: pointer;">
+                      <!-- Exp -->
+                      <td class="font-weight-bold text-dark">
+                        {{ s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero }}
+                      </td>
+
+                      <!-- Título -->
+                      <td style="max-width: 300px;">
+                        <div class="text-truncate" [title]="s.titulo || s.motivo || 'Sin título'">
+                          {{ s.titulo || s.motivo || 'Sin título' }}
+                        </div>
+                      </td>
+
+                      <!-- Involucrados -->
+                      <td>
+                        {{ s.involucrados?.length || 0 }}
+                      </td>
+
                       <!-- Fecha -->
-                      <td class="text-muted small">
-                        {{ s.fecha | date:'dd/MM/yyyy' }}
-                      </td>
-
-                      <!-- Causa / Solicitud -->
                       <td>
-                        <div class="font-weight-bold text-dark">{{ s.titulo || 'Sin título' }}</div>
-                        <small class="text-muted">
-                          {{ s.numero }}
-                          <ng-container *ngIf="s.numero_expediente"> &bull; Exp: {{ formatCaseNumber(s.numero_expediente) }}</ng-container>
-                        </small>
+                        <time [attr.datetime]="s.fecha">{{ s.fecha | date:'dd/MM/yyyy' }}</time>
                       </td>
 
-                      <!-- Razón (resumen conciso) -->
-                      <td style="max-width: 250px;">
-                        <span class="text-dark small text-truncate d-block" [title]="s.razon || s.motivo || ''">
-                          {{ s.razon || s.motivo || 'Sin fundamentación' }}
+                      <!-- Puntos -->
+                      <td>
+                        <span class="font-weight-bold tabular-nums" [ngClass]="(s.puntos || 0) > 0 ? 'text-success' : 'text-danger'" *ngIf="s.puntos !== null">
+                          {{ s.puntos == -0.25 ? 'Llamado de Atención' : s.puntos == 0.25 ? 'Felicitación' : ((s.puntos > 0 ? '+' : '') + s.puntos + ' pts') }}
+                        </span>
+                        <span class="text-muted" *ngIf="s.puntos === null">S/D</span>
+                      </td>
+
+                      <!-- Urgencia -->
+                      <td>
+                        <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(s.urgencia)">
+                          {{ s.urgencia_display || (s.urgencia | uppercase) || 'NORMAL' }}
                         </span>
                       </td>
 
-                      <!-- Reglamento -->
-                      <td style="max-width: 180px;">
-                        <span class="small text-muted text-truncate d-block" 
-                              *ngIf="s.reglamentos_respaldantes && s.reglamentos_respaldantes.length > 0"
-                              [title]="s.reglamentos_respaldantes.join(', ')">
-                          {{ s.reglamentos_respaldantes.join(', ') }}
+                      <!-- Estado -->
+                      <td>
+                        <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
+                          {{ obtenerTextoEstado(s) | uppercase }}
                         </span>
-                        <span class="small text-muted" *ngIf="!s.reglamentos_respaldantes || s.reglamentos_respaldantes.length === 0">
-                          {{ s.causal || 'Reglamento Gral.' }}
-                        </span>
-                      </td>
-
-                      <!-- Puntos / Sanción o Mérito -->
-                      <td>
-                        <div>
-                          <span class="badge-mat" [ngClass]="s.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
-                            {{ s.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
-                          </span>
-                        </div>
-                        <small class="font-weight-bold" [ngClass]="s.puntos && s.puntos < 0 ? 'text-danger' : 'text-success'" *ngIf="s.puntos !== null">
-                          {{ s.puntos > 0 ? '+' : '' }}{{ s.puntos }} pts
-                        </small>
-                      </td>
-
-                      <!-- Estado y Urgencia -->
-                      <td>
-                        <div>
-                          <span class="badge-mat" [ngClass]="obtenerClaseBadge(s)">
-                            {{ obtenerTextoEstado(s) }}
-                          </span>
-                        </div>
-                        <!-- Indicador visual de Urgencia (SCRUM-78) -->
-                        <div class="mt-1" *ngIf="s.estado === 'ISSUED' && s.urgencia">
-                          <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(s.urgencia)">
-                            <i class="material-icons" style="font-size: 11px; vertical-align: middle; line-height: 1;">{{ obtenerIconoUrgencia(s.urgencia) }}</i>
-                            {{ s.urgencia_display || s.urgencia }}
-                          </span>
-                        </div>
-                      </td>
-
-                      <!-- Involucrados (1 a Muchos con Botón "VER SOCIOS") -->
-                      <td>
-                        <div class="text-dark small mb-1">{{ obtenerTextoInvolucrados(s) }}</div>
-                        <button type="button" 
-                                class="btn-ver-socios" 
-                                (click)="abrirDetalle(s)" 
-                                title="Ver detalle de socios involucrados">
-                          <i class="material-icons">people</i> VER SOCIOS
-                        </button>
                       </td>
 
                       <!-- Acciones -->
-                      <td class="td-actions text-right text-nowrap">
+                      <td class="td-actions text-right text-nowrap" (click)="$event.stopPropagation()">
                         <div class="d-inline-flex align-items-center justify-content-end">
+                          <button mat-button
+                                  type="button"
+                                  class="btn btn-info btn-link btn-just-icon"
+                                  (click)="abrirDetalle(s)"
+                                  aria-label="Ver Detalle">
+                            <i class="material-icons">visibility</i>
+                          </button>
                           <ng-container *ngIf="s.estado === 'DRAFT'">
-                            <button mat-button 
-                                    type="button" 
-                                    class="btn btn-info btn-link btn-just-icon" 
-                                    (click)="continuarEdicion(s)" 
-                                    title="Continuar edición" 
-                                    matTooltip="Continuar edición">
+                            <button mat-button
+                                    type="button"
+                                    class="btn btn-info btn-link btn-just-icon ml-1"
+                                    (click)="continuarEdicion(s)"
+                                    aria-label="Continuar edición">
                               <i class="material-icons">edit</i>
                             </button>
-                            <button mat-button 
-                                    type="button" 
-                                    class="btn btn-danger btn-link btn-just-icon ml-1" 
-                                    (click)="eliminarBorrador(s)" 
-                                    title="Eliminar borrador" 
-                                    matTooltip="Eliminar borrador">
+                            <button mat-button
+                                    type="button"
+                                    class="btn btn-danger btn-link btn-just-icon ml-1"
+                                    (click)="eliminarBorrador(s)"
+                                    aria-label="Eliminar borrador">
                               <i class="material-icons">delete</i>
-                            </button>
-                          </ng-container>
-                          <ng-container *ngIf="s.estado === 'ISSUED'">
-                            <button mat-button 
-                                    type="button" 
-                                    class="btn btn-info btn-link btn-just-icon" 
-                                    (click)="abrirDetalle(s)" 
-                                    title="Ver Detalle" 
-                                    matTooltip="Ver detalle completo">
-                              <i class="material-icons">visibility</i>
                             </button>
                           </ng-container>
                         </div>
@@ -488,6 +495,344 @@
           </div>
         </div>
 
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ====================================================================== -->
+<!-- MODAL DETALLE COMPLETO DE LA SOLICITUD (Estilo Gestionar Expedientes)  -->
+<!-- ====================================================================== -->
+<div *ngIf="modalDetalleAbierto && solicitudSeleccionada"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     tabindex="-1"
+     (click)="cerrarModalDetalle()"
+     (keydown.escape)="cerrarModalDetalle()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()">
+    <div class="card modal-detalle-card">
+      <!-- Cabecera del Modal -->
+      <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+        <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
+          {{ solicitudSeleccionada.numero_expediente ? ('Exp: ' + formatCaseNumber(solicitudSeleccionada.numero_expediente)) : ('Solicitud: ' + solicitudSeleccionada.numero) }}
+        </span>
+        <div class="modal-titulo-central flex-grow-1 text-center px-3">
+          <h4 class="card-title mb-0 font-weight-bold text-white">
+            {{ solicitudSeleccionada.titulo || solicitudSeleccionada.motivo || 'Detalle de Solicitud' }}
+          </h4>
+        </div>
+        <button type="button" 
+                class="btn btn-link text-white p-1 m-0 btn-close-modal" 
+                (click)="cerrarModalDetalle()" 
+                aria-label="Cerrar modal">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      <div class="card-body modal-detalle-body" tabindex="-1">
+        <div class="row metadatos-row">
+          <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
+          <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Estado:</span>
+              <span class="badge-mat" [ngClass]="obtenerClaseBadge(solicitudSeleccionada)">
+                {{ obtenerTextoEstado(solicitudSeleccionada) }}
+              </span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap" *ngIf="solicitudSeleccionada.urgencia">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Urgencia:</span>
+              <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(solicitudSeleccionada.urgencia)">
+                <i class="material-icons" style="font-size: 11px;">{{ obtenerIconoUrgencia(solicitudSeleccionada.urgencia) }}</i>
+                {{ solicitudSeleccionada.urgencia_display || solicitudSeleccionada.urgencia }}
+              </span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje Solicitado:</span>
+              <span class="font-weight-bold puntaje-solicitado-val" [ngClass]="(solicitudSeleccionada.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
+                {{ solicitudSeleccionada.puntos !== null ? (((solicitudSeleccionada.puntos || 0) > 0 ? '+' : '') + solicitudSeleccionada.puntos + ' pts') : 'S/D' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Fila 2: Fecha de Solicitud y Tipo de Acción -->
+          <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Fecha de Solicitud:</span>
+              <span class="font-weight-bold">{{ solicitudSeleccionada.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+
+            <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+              <span class="text-muted small font-weight-bold metadato-label mr-2">Tipo de Acción:</span>
+              <span class="badge-mat" [ngClass]="solicitudSeleccionada.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
+                {{ solicitudSeleccionada.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Causal si existe -->
+          <div class="col-12 mb-3" *ngIf="solicitudSeleccionada.causal">
+            <span class="text-muted small font-weight-bold d-block mb-1">Causal Reglamentaria:</span>
+            <div class="text-dark">{{ solicitudSeleccionada.causal }}</div>
+          </div>
+
+          <!-- Fila 3: Sección Reglamentación (Tabla Normativa) -->
+          <div class="col-12 mb-3" *ngIf="solicitudSeleccionada.reglamentos_respaldantes && solicitudSeleccionada.reglamentos_respaldantes.length > 0">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted small font-weight-bold">Reglamentación:</span>
+            </div>
+            <div class="reglamentacion-box">
+              <app-tabla-reglamentos [articulos]="formatReglamentosCitas(solicitudSeleccionada.reglamentos_respaldantes)"></app-tabla-reglamentos>
+            </div>
+          </div>
+
+          <!-- Bloque Motivo -->
+          <div class="col-12 mb-3">
+            <span class="text-muted small font-weight-bold d-block mb-1">Motivo / Fundamentación:</span>
+            <div class="motivo-box p-3 rounded-xl border text-break bg-white" style="white-space: pre-wrap;">
+              {{ solicitudSeleccionada.razon || solicitudSeleccionada.motivo || 'Sin fundamentación' }}
+            </div>
+          </div>
+
+          <!-- Detalles adicionales / Hoja de anexo -->
+          <div class="col-12 mb-3" *ngIf="solicitudSeleccionada.anexo_fecha || solicitudSeleccionada.anexo_lugar || solicitudSeleccionada.anexo_testigos || solicitudSeleccionada.anexo_relato">
+            <span class="text-muted small font-weight-bold d-block mb-1">Detalles adicionales / Hoja de anexo:</span>
+            <div class="p-3 bg-light border rounded">
+              <div class="row" *ngIf="solicitudSeleccionada.anexo_fecha || solicitudSeleccionada.anexo_lugar">
+                <div class="col-md-6 mb-2" *ngIf="solicitudSeleccionada.anexo_fecha">
+                  <small class="text-muted d-block">Fecha del hecho:</small>
+                  <strong>{{ solicitudSeleccionada.anexo_fecha }}</strong>
+                </div>
+                <div class="col-md-6 mb-2" *ngIf="solicitudSeleccionada.anexo_lugar">
+                  <small class="text-muted d-block">Lugar o Evento del hecho:</small>
+                  <strong>{{ solicitudSeleccionada.anexo_lugar }}</strong>
+                </div>
+              </div>
+              <div class="mb-2" *ngIf="solicitudSeleccionada.anexo_testigos">
+                <small class="text-muted d-block">Testigos presenciales y participación:</small>
+                <span>{{ solicitudSeleccionada.anexo_testigos }}</span>
+              </div>
+              <div *ngIf="solicitudSeleccionada.anexo_relato">
+                <small class="text-muted d-block">Relato circunstanciado:</small>
+                <div class="text-dark" style="white-space: pre-wrap;">{{ solicitudSeleccionada.anexo_relato }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección Involucrados -->
+        <section class="mt-3 p-3 bg-light rounded border seccion-involucrados" aria-labelledby="titulo-involucrados-solicitud">
+          <h5 id="titulo-involucrados-solicitud" class="font-weight-bold text-dark mb-2">
+            <i class="material-icons text-info mr-1" aria-hidden="true" style="vertical-align: middle;">groups</i> Socios involucrados ({{ solicitudSeleccionada.involucrados?.length || 0 }})
+          </h5>
+          <div class="table-responsive" *ngIf="solicitudSeleccionada.involucrados && solicitudSeleccionada.involucrados.length > 0">
+            <table class="table table-sm mb-0 tabla-involucrados">
+              <thead>
+                <tr>
+                  <th scope="col">N° de Socio</th>
+                  <th scope="col">Nombre Completo</th>
+                  <th scope="col">Grupo</th>
+                  <th scope="col">Subcomisión</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of solicitudSeleccionada.involucrados">
+                  <td class="font-weight-bold legajo-cell">{{ s.legajo || '—' }}</td>
+                  <td class="nombre-cell">{{ s.last_name ? (s.last_name + ', ' + s.first_name) : (s.nombre || '—') }}</td>
+                  <td class="grupo-cell">{{ s.grupo || '—' }}</td>
+                  <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="text-muted small py-1" *ngIf="!solicitudSeleccionada.involucrados || solicitudSeleccionada.involucrados.length === 0">
+            No se registraron socios vinculados formalmente en esta solicitud.
+          </div>
+        </section>
+
+        <!-- Resolución Final (si está emitida) -->
+        <div class="card border-success mt-3" *ngIf="solicitudSeleccionada.resolucion_final">
+          <div class="card-header bg-success text-white py-2">
+            <i class="material-icons align-middle mr-1">verified</i>
+            Resolución Firme Emitida por el Tribunal de Disciplina
+          </div>
+          <div class="card-body p-3">
+            <div *ngIf="solicitudSeleccionada.resolucion_final.fecha" class="small text-muted mb-1">
+              Fecha de emisión: {{ solicitudSeleccionada.resolucion_final.fecha | date:'dd/MM/yyyy HH:mm' }}
+            </div>
+            <p class="mb-0 text-dark font-weight-bold">
+              {{ solicitudSeleccionada.resolucion_final.dictamen }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pie del Modal -->
+      <div class="card-footer d-flex justify-content-end align-items-center p-3 border-top">
+        <button mat-button 
+                type="button" 
+                class="btn btn-default btn-cerrar-modal m-0" 
+                (click)="cerrarModalDetalle()">
+          CERRAR
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ====================================================================== -->
+<!-- MODAL CATÁLOGO DE REGLAMENTOS RESPALDANTES (Multidocumento)            -->
+<!-- ====================================================================== -->
+<div class="modal-reglamentos-backdrop"
+     *ngIf="modalReglamentosAbierto"
+     (click)="cerrarModalReglamentos()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()"
+     (keydown.escape)="cerrarModalReglamentos()"
+     tabindex="-1"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-reglamentos-title">
+  <div #modalReglamentosDialog
+       class="modal-reglamentos-dialog"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalReglamentosKeydown($event)">
+    <!-- Cabecera del Modal -->
+    <div class="modal-reglamentos-header d-flex justify-content-between align-items-start">
+      <div>
+        <span class="eyebrow-label text-white-50">SUSTENTO NORMATIVO AVEIT</span>
+        <h4 id="modal-reglamentos-title" class="mb-1 font-weight-bold text-white d-flex align-items-center">
+          <i class="material-icons mr-2">gavel</i> Seleccionar Reglamento(s) Respaldante
+        </h4>
+        <p class="mb-0 small text-white-50">
+          Podés seleccionar uno o varios artículos combinando el Estatuto y el Reglamento Interno.
+        </p>
+      </div>
+      <button type="button" class="btn-modal-close" (click)="cerrarModalReglamentos()" title="Cerrar catálogo">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+
+    <!-- Barra de Pestañas por Documento + Buscador -->
+    <div class="modal-reglamentos-toolbar">
+      <div class="doc-filter-tabs" role="tablist">
+        <button type="button"
+                class="doc-tab-btn"
+                [class.active]="filtroDocumentoModal === 'TODOS'"
+                (click)="setFiltroDocumentoModal('TODOS')">
+          Todos
+          <span class="doc-tab-badge tabular-nums" *ngIf="reglamentosSeleccionados.length > 0">
+            {{ reglamentosSeleccionados.length }}
+          </span>
+        </button>
+        <button type="button"
+                class="doc-tab-btn"
+                [class.active]="filtroDocumentoModal === 'Estatuto'"
+                (click)="setFiltroDocumentoModal('Estatuto')">
+          <i class="material-icons mr-1">account_balance</i> Estatuto
+          <span class="doc-tab-badge tabular-nums" *ngIf="contarSeleccionadosPorDocumento('Estatuto') > 0">
+            {{ contarSeleccionadosPorDocumento('Estatuto') }}
+          </span>
+        </button>
+        <button type="button"
+                class="doc-tab-btn"
+                [class.active]="filtroDocumentoModal === 'Reglamento Interno'"
+                (click)="setFiltroDocumentoModal('Reglamento Interno')">
+          <i class="material-icons mr-1">gavel</i> Reglamento Interno
+          <span class="doc-tab-badge tabular-nums" *ngIf="contarSeleccionadosPorDocumento('Reglamento Interno') > 0">
+            {{ contarSeleccionadosPorDocumento('Reglamento Interno') }}
+          </span>
+        </button>
+      </div>
+
+      <div class="search-box-modal mt-2">
+        <i class="material-icons search-icon">search</i>
+        <input #modalSearchInput
+               type="text"
+               class="form-control search-input-modal"
+               placeholder="Buscar por número de artículo, inciso, sección o palabras clave..."
+               [(ngModel)]="filtroReglamentos">
+        <button *ngIf="filtroReglamentos"
+                type="button"
+                class="btn-clear-search"
+                (click)="filtroReglamentos = ''"
+                title="Limpiar búsqueda">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de Artículos Seleccionables con Checkboxes -->
+    <div #modalReglamentosBody
+         class="modal-reglamentos-body"
+         tabindex="-1">
+      <div *ngIf="articulosModalFiltrados.length === 0" class="text-center py-5 text-muted">
+        <i class="material-icons mb-2" style="font-size: 38px; opacity: 0.5;">find_in_page</i>
+        <p class="mb-0">No se encontraron artículos que coincidan con la búsqueda actual.</p>
+      </div>
+
+      <div class="catalogo-articulos-list" *ngIf="articulosModalFiltrados.length > 0">
+        <div *ngFor="let item of articulosModalFiltrados"
+             class="catalogo-articulo-card"
+             [class.selected]="esReglamentoSeleccionado(item.raw)"
+             (click)="toggleReglamento(item.raw)">
+          <div class="catalogo-check-col">
+            <span class="custom-checkbox" [class.checked]="esReglamentoSeleccionado(item.raw)">
+              <i class="material-icons" *ngIf="esReglamentoSeleccionado(item.raw)">check</i>
+            </span>
+          </div>
+          <div class="catalogo-content-col">
+            <div class="d-flex flex-wrap align-items-center justify-content-between mb-1">
+              <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="doc-pill"
+                      [class.doc-pill-estatuto]="item.documento === 'Estatuto'"
+                      [class.doc-pill-interno]="item.documento === 'Reglamento Interno'">
+                  {{ item.documento }}
+                </span>
+                <strong class="catalogo-cite tabular-nums">{{ item.citaCorta }}</strong>
+              </div>
+              <span class="catalogo-seccion text-muted small" *ngIf="item.seccion">{{ item.seccion }}</span>
+            </div>
+            <p class="catalogo-cuerpo mb-0">{{ item.cuerpo }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pie del Modal con Resumen y Confirmación -->
+    <div class="modal-reglamentos-footer d-flex flex-wrap justify-content-between align-items-center">
+      <div class="footer-selection-summary small">
+        <ng-container *ngIf="reglamentosSeleccionados.length > 0">
+          <strong class="tabular-nums">{{ reglamentosSeleccionados.length }}</strong>
+          {{ reglamentosSeleccionados.length === 1 ? 'artículo seleccionado' : 'artículos seleccionados' }}
+          <span class="text-muted ml-1">
+            ({{ contarSeleccionadosPorDocumento('Estatuto') }} Estatuto &bull; {{ contarSeleccionadosPorDocumento('Reglamento Interno') }} Reglamento Interno)
+          </span>
+        </ng-container>
+        <span class="text-muted" *ngIf="reglamentosSeleccionados.length === 0">
+          Seleccioná al menos 1 artículo para respaldar la solicitud.
+        </span>
+      </div>
+      <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+        <button type="button"
+                class="btn btn-link text-danger btn-sm mr-2"
+                *ngIf="reglamentosSeleccionados.length > 0"
+                (click)="limpiarReglamentos()">
+          Limpiar
+        </button>
+        <button type="button"
+                class="btn btn-primary"
+                (click)="cerrarModalReglamentos()">
+          <i class="material-icons mr-1" style="font-size: 16px; vertical-align: middle;">check</i>
+          Confirmar selección
+        </button>
       </div>
     </div>
   </div>
