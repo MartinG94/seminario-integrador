@@ -1,156 +1,169 @@
-<div class="modal-header d-flex justify-content-between align-items-center pb-2 border-bottom">
-  <div>
-    <h4 class="modal-title font-weight-bold text-dark mb-0">
-      <mat-icon class="align-middle mr-1 text-primary">assignment</mat-icon>
-      Solicitud {{ solicitud.numero }}
-    </h4>
-    <small class="text-muted">Fecha: {{ solicitud.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
-  </div>
-  <div class="d-flex align-items-center">
-    <span class="badge-mat" [ngClass]="obtenerClaseEstado(solicitud.estado_procesal)">
-      {{ solicitud.estado_procesal_display }}
+<div class="card modal-detalle-card mb-0 border-0">
+  <!-- Cabecera del Modal (idéntica a Gestionar Expedientes) -->
+  <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
+    <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
+      <ng-container *ngIf="solicitud.numero_expediente">Exp: {{ formatCaseNumber(solicitud.numero_expediente) }} &bull; </ng-container>Solicitud {{ solicitud.numero }}
     </span>
-    <span class="badge-mat ml-2" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)" *ngIf="solicitud.estado === 'ISSUED' && solicitud.urgencia">
-      <i class="material-icons" style="font-size: 13px; line-height: 1; vertical-align: middle;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
-      {{ solicitud.urgencia_display || solicitud.urgencia }}
-    </span>
-    <button mat-icon-button (click)="cerrar()" title="Cerrar ventana" class="ml-2">
-      <mat-icon>close</mat-icon>
+    <div class="modal-titulo-central flex-grow-1 text-center px-3">
+      <h4 class="card-title mb-0 font-weight-bold text-white">
+        {{ solicitud.titulo || solicitud.motivo || 'Detalle de Solicitud' }}
+      </h4>
+    </div>
+    <button type="button" 
+            class="btn btn-link text-white p-1 m-0 btn-close-modal" 
+            (click)="cerrar()" 
+            aria-label="Cerrar modal"
+            title="Cerrar">
+      <i class="material-icons">close</i>
     </button>
   </div>
-</div>
 
-<div mat-dialog-content class="pt-3 pb-3">
-  <!-- Datos Principales -->
-  <div class="card bg-light border-0 p-3 mb-3">
-    <div class="row">
-      <div class="col-md-5 mb-2">
-        <label class="text-secondary small font-weight-bold mb-0">Título:</label>
-        <div class="font-weight-bold text-dark">{{ solicitud.titulo || 'Sin título especificado' }}</div>
+  <div class="card-body modal-detalle-body" mat-dialog-content tabindex="-1">
+    <div class="row metadatos-row">
+      <!-- Fila 1: Estado, Urgencia y Puntaje Solicitado en una sola línea -->
+      <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+        <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+          <span class="text-muted small font-weight-bold metadato-label mr-2">Estado:</span>
+          <span class="badge-mat" [ngClass]="obtenerClaseEstado(solicitud.estado_procesal)">
+            {{ solicitud.estado_procesal_display || (solicitud.estado === 'DRAFT' ? 'Borrador' : 'En Trámite') }}
+          </span>
+        </div>
+
+        <div class="d-inline-flex align-items-center gap-2 flex-nowrap" *ngIf="solicitud.urgencia">
+          <span class="text-muted small font-weight-bold metadato-label mr-2">Urgencia:</span>
+          <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)">
+            <i class="material-icons" style="font-size: 11px;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
+            {{ solicitud.urgencia_display || solicitud.urgencia }}
+          </span>
+        </div>
+
+        <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+          <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje Solicitado:</span>
+          <span class="font-weight-bold puntaje-solicitado-val" [ngClass]="(solicitud.puntos || 0) > 0 ? 'text-success' : 'text-danger'">
+            {{ solicitud.puntos !== null ? (((solicitud.puntos || 0) > 0 ? '+' : '') + solicitud.puntos + ' pts') : 'S/D' }}
+          </span>
+        </div>
       </div>
-      <div class="col-md-2 mb-2">
-        <label class="text-secondary small font-weight-bold mb-0">Tipo de Acción:</label>
-        <div>
+
+      <!-- Fila 2: Fecha de Solicitud y Tipo de Acción -->
+      <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 metadatos-inline-row">
+        <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+          <span class="text-muted small font-weight-bold metadato-label mr-2">Fecha de Solicitud:</span>
+          <span class="font-weight-bold">{{ solicitud.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+
+        <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
+          <span class="text-muted small font-weight-bold metadato-label mr-2">Tipo de Acción:</span>
           <span class="badge-mat" [ngClass]="solicitud.tipo_accion === 'SANCTION' ? 'badge-mat-danger' : 'badge-mat-success'">
             {{ solicitud.tipo_accion === 'SANCTION' ? 'Sanción' : 'Mérito' }}
           </span>
         </div>
       </div>
-      <div class="col-md-2 mb-2">
-        <label class="text-secondary small font-weight-bold mb-0">Puntos solicitados:</label>
-        <div class="font-weight-bold" [ngClass]="solicitud.puntos < 0 ? 'text-danger' : 'text-success'">
-          {{ solicitud.puntos !== null ? (solicitud.puntos > 0 ? '+' : '') + solicitud.puntos + ' pts' : 'S/D' }}
-        </div>
-      </div>
-      <div class="col-md-3 mb-2" *ngIf="solicitud.urgencia">
-        <label class="text-secondary small font-weight-bold mb-0">Urgencia:</label>
-        <div>
-          <span class="badge-mat" [ngClass]="obtenerClaseUrgencia(solicitud.urgencia)">
-            <i class="material-icons" style="font-size: 12px; line-height: 1; vertical-align: middle;">{{ obtenerIconoUrgencia(solicitud.urgencia) }}</i>
-            {{ solicitud.urgencia_display || solicitud.urgencia }}
-          </span>
-        </div>
-      </div>
-    </div>
 
-    <div class="row mt-1" *ngIf="solicitud.causal">
-      <div class="col-12">
-        <label class="text-secondary small font-weight-bold mb-0">Causal reglamentaria:</label>
+      <!-- Causal si existe -->
+      <div class="col-12 mb-3" *ngIf="solicitud.causal">
+        <span class="text-muted small font-weight-bold d-block mb-1">Causal Reglamentaria:</span>
         <div class="text-dark">{{ solicitud.causal }}</div>
       </div>
-    </div>
 
-    <div class="row mt-2" *ngIf="reglamentosCitas.length > 0">
-      <div class="col-12">
-        <label class="text-secondary small font-weight-bold mb-1 d-block">Reglamentos respaldantes:</label>
-        <app-tabla-reglamentos [articulos]="reglamentosCitas"></app-tabla-reglamentos>
-      </div>
-    </div>
-  </div>
-
-  <!-- Socios involucrados (1 a Muchos) -->
-  <div class="mb-3">
-    <h6 class="font-weight-bold text-dark mb-2">
-      <mat-icon class="align-middle mr-1 small text-info">people</mat-icon>
-      Socios involucrados ({{ solicitud.involucrados.length }})
-    </h6>
-    <div class="table-responsive border rounded" *ngIf="solicitud.involucrados.length > 0">
-      <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="thead-light">
-          <tr>
-            <th style="width: 110px;">Legajo</th>
-            <th>Apellido y Nombre</th>
-            <th>Grupo</th>
-            <th>Subcomisión</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let s of solicitud.involucrados">
-            <td><span class="badge-mat badge-mat-info">{{ s.legajo || 'S/D' }}</span></td>
-            <td class="font-weight-bold">{{ s.last_name }}, {{ s.first_name }}</td>
-            <td>{{ s.grupo || 'S/D' }}</td>
-            <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="alert alert-secondary py-2 px-3 mb-0" *ngIf="solicitud.involucrados.length === 0">
-      <small>No se registraron socios vinculados formalmente en esta solicitud.</small>
-    </div>
-  </div>
-
-  <!-- Razón del T-01 -->
-  <div class="mb-3" *ngIf="solicitud.razon || solicitud.motivo">
-    <h6 class="font-weight-bold text-dark mb-2">Razón del T-01:</h6>
-    <div class="p-3 bg-white border rounded text-dark" style="white-space: pre-wrap; font-size: 0.92rem;">
-      {{ solicitud.razon || solicitud.motivo }}
-    </div>
-  </div>
-
-  <!-- Detalles adicionales / Anexo (si tiene) -->
-  <div class="mb-3" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar || solicitud.anexo_testigos || solicitud.anexo_relato">
-    <h6 class="font-weight-bold text-dark mb-2">Detalles adicionales / Hoja de anexo:</h6>
-    <div class="p-3 bg-light border rounded">
-      <div class="row" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar">
-        <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_fecha">
-          <small class="text-muted d-block">Fecha del hecho:</small>
-          <strong>{{ solicitud.anexo_fecha }}</strong>
+      <!-- Fila 3: Sección Reglamentación (Tabla Normativa) -->
+      <div class="col-12 mb-3" *ngIf="reglamentosCitas.length > 0">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="text-muted small font-weight-bold">Reglamentación:</span>
         </div>
-        <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_lugar">
-          <small class="text-muted d-block">Lugar o Evento del hecho:</small>
-          <strong>{{ solicitud.anexo_lugar }}</strong>
+        <div class="reglamentacion-box">
+          <app-tabla-reglamentos [articulos]="reglamentosCitas"></app-tabla-reglamentos>
         </div>
       </div>
-      <div class="mb-2" *ngIf="solicitud.anexo_testigos">
-        <small class="text-muted d-block">Testigos presenciales y participación:</small>
-        <span>{{ solicitud.anexo_testigos }}</span>
+
+      <!-- Bloque Motivo -->
+      <div class="col-12 mb-3">
+        <span class="text-muted small font-weight-bold d-block mb-1">Motivo / Fundamentación:</span>
+        <div class="motivo-box p-3 rounded-xl border text-break bg-white" style="white-space: pre-wrap;">
+          {{ solicitud.razon || solicitud.motivo || 'Sin fundamentación' }}
+        </div>
       </div>
-      <div *ngIf="solicitud.anexo_relato">
-        <small class="text-muted d-block">Relato circunstanciado:</small>
-        <div class="text-dark" style="white-space: pre-wrap;">{{ solicitud.anexo_relato }}</div>
+
+      <!-- Detalles adicionales / Hoja de anexo -->
+      <div class="col-12 mb-3" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar || solicitud.anexo_testigos || solicitud.anexo_relato">
+        <span class="text-muted small font-weight-bold d-block mb-1">Detalles adicionales / Hoja de anexo:</span>
+        <div class="p-3 bg-light border rounded">
+          <div class="row" *ngIf="solicitud.anexo_fecha || solicitud.anexo_lugar">
+            <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_fecha">
+              <small class="text-muted d-block">Fecha del hecho:</small>
+              <strong>{{ solicitud.anexo_fecha }}</strong>
+            </div>
+            <div class="col-md-6 mb-2" *ngIf="solicitud.anexo_lugar">
+              <small class="text-muted d-block">Lugar o Evento del hecho:</small>
+              <strong>{{ solicitud.anexo_lugar }}</strong>
+            </div>
+          </div>
+          <div class="mb-2" *ngIf="solicitud.anexo_testigos">
+            <small class="text-muted d-block">Testigos presenciales y participación:</small>
+            <span>{{ solicitud.anexo_testigos }}</span>
+          </div>
+          <div *ngIf="solicitud.anexo_relato">
+            <small class="text-muted d-block">Relato circunstanciado:</small>
+            <div class="text-dark" style="white-space: pre-wrap;">{{ solicitud.anexo_relato }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección Involucrados (siempre visible con estilo de Gestionar Expedientes) -->
+    <section class="mt-3 p-3 bg-light rounded border seccion-involucrados" aria-labelledby="titulo-involucrados">
+      <h5 id="titulo-involucrados" class="font-weight-bold text-dark mb-2">
+        <i class="material-icons text-info mr-1" aria-hidden="true" style="vertical-align: middle;">groups</i> Socios involucrados ({{ solicitud.involucrados?.length || 0 }})
+      </h5>
+      <div class="table-responsive" *ngIf="solicitud.involucrados && solicitud.involucrados.length > 0">
+        <table class="table table-sm mb-0 tabla-involucrados">
+          <thead>
+            <tr>
+              <th scope="col">N° de Socio</th>
+              <th scope="col">Nombre Completo</th>
+              <th scope="col">Grupo</th>
+              <th scope="col">Subcomisión</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of solicitud.involucrados">
+              <td class="font-weight-bold legajo-cell">{{ s.legajo || '—' }}</td>
+              <td class="nombre-cell">{{ s.last_name ? (s.last_name + ', ' + s.first_name) : (s.nombre || '—') }}</td>
+              <td class="grupo-cell">{{ s.grupo || '—' }}</td>
+              <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="text-muted small py-1" *ngIf="!solicitud.involucrados || solicitud.involucrados.length === 0">
+        No se registraron socios vinculados formalmente en esta solicitud.
+      </div>
+    </section>
+
+    <!-- Resolución Final (si está emitida) -->
+    <div class="card border-success mt-3" *ngIf="solicitud.resolucion_final">
+      <div class="card-header bg-success text-white py-2">
+        <mat-icon class="align-middle mr-1">verified</mat-icon>
+        Resolución Firme Emitida por el Tribunal de Disciplina
+      </div>
+      <div class="card-body p-3">
+        <div *ngIf="solicitud.resolucion_final.fecha" class="small text-muted mb-1">
+          Fecha de emisión: {{ solicitud.resolucion_final.fecha | date:'dd/MM/yyyy HH:mm' }}
+        </div>
+        <p class="mb-0 text-dark font-weight-bold">
+          {{ solicitud.resolucion_final.dictamen }}
+        </p>
       </div>
     </div>
   </div>
 
-  <!-- Resolución Final (si está emitida) -->
-  <div class="card border-success mt-3" *ngIf="solicitud.resolucion_final">
-    <div class="card-header bg-success text-white py-2">
-      <mat-icon class="align-middle mr-1">verified</mat-icon>
-      Resolución Firme Emitida por el Tribunal de Disciplina
-    </div>
-    <div class="card-body p-3">
-      <div *ngIf="solicitud.resolucion_final.fecha" class="small text-muted mb-1">
-        Fecha de emisión: {{ solicitud.resolucion_final.fecha | date:'dd/MM/yyyy HH:mm' }}
-      </div>
-      <p class="mb-0 text-dark font-weight-bold">
-        {{ solicitud.resolucion_final.dictamen }}
-      </p>
-    </div>
+  <!-- Pie del Modal (estilo Gestionar Expedientes) -->
+  <div class="card-footer d-flex justify-content-end align-items-center p-3 border-top" mat-dialog-actions>
+    <button mat-button 
+            type="button" 
+            class="btn btn-default btn-cerrar-modal m-0" 
+            (click)="cerrar()">
+      CERRAR
+    </button>
   </div>
-</div>
-
-<div mat-dialog-actions class="d-flex justify-content-end p-2 border-top">
-  <button mat-raised-button class="btn btn-default" (click)="cerrar()">
-    Cerrar
-  </button>
 </div>

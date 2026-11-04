@@ -44,7 +44,6 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   sociosSeleccionados: PadronSocio[] = [];
   socioBusqueda = new FormControl('');
   sociosFiltrados: PadronSocio[] = [];
-  tipoAccion: TipoAccionT01 = 'SANCTION';
   urgency: NivelUrgencia = 'normal';
   puntosSeleccionados: number | null = -1;
   causal = '';
@@ -96,21 +95,77 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   estadoFiltro = new FormControl('');
   private destroy$ = new Subject<void>();
 
+  // Ordenamiento de tabla (PB-04 / SCRUM-75)
+  columnaOrden = 'numero';
+  ordenAscendente = true;
+
+  // Modal de Detalle de Solicitud (estilo Gestionar Expedientes)
+  modalDetalleAbierto = false;
+  solicitudSeleccionada: SolicitudMonitoreo | null = null;
+
   // Pestañas principales: 'nueva' (Formulario T01) vs 'creadas' (Mis Solicitudes)
   tabActiva: 'nueva' | 'creadas' = 'nueva';
 
-  escalasSancion = [
-    { valor: -0.5, desc: '-0.5 pts: Falta Leve' },
-    { valor: -1, desc: '-1.0 pts: Falta Media' },
-    { valor: -1.5, desc: '-1.5 pts: Falta Grave' },
-    { valor: -2, desc: '-2.0 pts: Falta Muy Grave' }
-  ];
-  escalasMerito = [
-    { valor: 0.5, desc: '+0.5 pts: Reconocimiento Leve' },
-    { valor: 1, desc: '+1.0 pts: Reconocimiento Estándar' },
-    { valor: 2, desc: '+2.0 pts: Reconocimiento Destacado' },
-    { valor: 3, desc: '+3.0 pts: Máximo Reconocimiento' }
-  ];
+  /** Valor numérico que representa el Llamado de Atención (rank usado por el Tribunal). */
+  static readonly PUNTOS_LLAMADO_ATENCION = -0.25;
+  /** Valor numérico que representa la Felicitación (rank usado por el Tribunal). */
+  static readonly PUNTOS_FELICITACION = 0.25;
+
+  /** Escala de puntaje (misma que gestionar-expedientes, sin el 0.0 de eximición). */
+  readonly escalaPuntos: number[] = [-3, -2.5, -2, -1.5, -1, -0.5, -0.25, 0.25, 0.5, 1, 1.5, 2, 2.5, 3];
+
+  /** El tipo de acción se deriva del signo de los puntos solicitados. */
+  get tipoAccion(): TipoAccionT01 {
+    return (this.puntosSeleccionados ?? -1) < 0 ? 'SANCTION' : 'MERIT';
+  }
+
+  get puntosTexto(): string {
+    const valor = this.puntosSeleccionados ?? -1;
+    if (valor === SolicitarPuntosComponent.PUNTOS_LLAMADO_ATENCION) return 'Llamado de Atención';
+    if (valor === SolicitarPuntosComponent.PUNTOS_FELICITACION) return 'Felicitación';
+    return `${valor > 0 ? '+' : ''}${valor.toFixed(1)} pts`;
+  }
+
+  private get indicePuntos(): number {
+    return this.escalaPuntos.indexOf(this.normalizarPuntos(this.puntosSeleccionados));
+  }
+
+  /** Etiqueta del tipo de acción según el valor elegido. */
+  get tipoAccionTexto(): string {
+    const valor = this.puntosSeleccionados ?? -1;
+    if (valor === SolicitarPuntosComponent.PUNTOS_LLAMADO_ATENCION) return 'Apercibimiento';
+    if (valor === SolicitarPuntosComponent.PUNTOS_FELICITACION) return 'Reconocimiento';
+    return this.tipoAccion === 'SANCTION' ? 'Sanción' : 'Premio';
+  }
+
+  get puedeDecrementarPuntos(): boolean {
+    return this.estado !== 'ISSUED' && !this.cargando && this.indicePuntos > 0;
+  }
+
+  get puedeIncrementarPuntos(): boolean {
+    return this.estado !== 'ISSUED' && !this.cargando && this.indicePuntos < this.escalaPuntos.length - 1;
+  }
+
+  decrementarPuntos(): void {
+    if (!this.puedeDecrementarPuntos) return;
+    this.puntosSeleccionados = this.escalaPuntos[this.indicePuntos - 1];
+  }
+
+  incrementarPuntos(): void {
+    if (!this.puedeIncrementarPuntos) return;
+    this.puntosSeleccionados = this.escalaPuntos[this.indicePuntos + 1];
+  }
+
+  /** Ajusta cualquier valor (p. ej. de un borrador previo) al paso de escala más cercano. */
+  private normalizarPuntos(valor: number | null | undefined): number {
+    const numero = Number(valor);
+    if (valor === null || valor === undefined || isNaN(numero) || numero === 0) {
+      return -1;
+    }
+    return this.escalaPuntos.reduce((mejor, paso) =>
+      Math.abs(paso - numero) < Math.abs(mejor - numero) ? paso : mejor
+    );
+  }
 
   constructor(
     private padronApi: PadronApiService,
@@ -224,11 +279,6 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     return `${socio.last_name}, ${socio.first_name}`;
   }
 
-  onTipoAccionChange(tipo: TipoAccionT01): void {
-    this.tipoAccion = tipo;
-    this.puntosSeleccionados = tipo === 'SANCTION' ? -1 : 1;
-  }
-
   guardarBorrador(): void {
     if (this.estado === 'ISSUED') return;
     this.cargando = true;
@@ -280,9 +330,14 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.numeroExpediente = solicitud.numero_expediente;
     this.titulo = solicitud.titulo ?? '';
     this.causal = solicitud.causal ?? '';
-    this.tipoAccion = solicitud.tipo_accion ?? 'SANCTION';
     this.urgency = solicitud.urgencia ?? 'normal';
-    this.puntosSeleccionados = solicitud.puntos ?? (this.tipoAccion === 'SANCTION' ? -1 : 1);
+    if (solicitud.puntaje_especial === 'LLAMADO_ATENCION' || solicitud.puntos === -0.25) {
+      this.puntosSeleccionados = SolicitarPuntosComponent.PUNTOS_LLAMADO_ATENCION;
+    } else if (solicitud.puntaje_especial === 'FELICITACION' || solicitud.puntos === 0.25) {
+      this.puntosSeleccionados = SolicitarPuntosComponent.PUNTOS_FELICITACION;
+    } else {
+      this.puntosSeleccionados = this.normalizarPuntos(solicitud.puntos);
+    }
     this.razon = solicitud.razon || solicitud.motivo || '';
     this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes ? [...solicitud.reglamentos_respaldantes] : [];
     this.reglamentoExpandidoForm = null;
@@ -504,7 +559,6 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.numeroExpediente = null;
     this.titulo = '';
     this.causal = '';
-    this.tipoAccion = 'SANCTION';
     this.urgency = 'normal';
     this.puntosSeleccionados = -1;
     this.razon = '';
@@ -522,12 +576,119 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.sincronizarEstadoSocio();
   }
 
-  abrirDetalle(solicitud: SolicitudMonitoreo): void {
-    this.dialog.open(SolicitudDetalleDialogComponent, {
-      width: '100%',
-      maxWidth: '750px',
-      data: solicitud
+  cambiarOrden(col: string): void {
+    if (this.columnaOrden === col) {
+      this.ordenAscendente = !this.ordenAscendente;
+    } else {
+      this.columnaOrden = col;
+      this.ordenAscendente = true;
+    }
+  }
+
+  getIconoOrden(col: string): string {
+    if (this.columnaOrden !== col) return 'swap_vert';
+    return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
+  }
+
+  get misSolicitudesOrdenadas(): SolicitudMonitoreo[] {
+    if (!this.misSolicitudes || this.misSolicitudes.length === 0) {
+      return [];
+    }
+    const result = [...this.misSolicitudes];
+    result.sort((a, b) => {
+      let valA: any;
+      let valB: any;
+      switch (this.columnaOrden) {
+        case 'numero':
+          valA = a.numero_expediente ? this.formatCaseNumber(a.numero_expediente) : (a.numero || '');
+          valB = b.numero_expediente ? this.formatCaseNumber(b.numero_expediente) : (b.numero || '');
+          break;
+        case 'titulo':
+          valA = a.titulo || a.motivo || '';
+          valB = b.titulo || b.motivo || '';
+          break;
+        case 'involucrados':
+        case 'cantidadSocios':
+          valA = a.involucrados?.length || 0;
+          valB = b.involucrados?.length || 0;
+          return this.ordenAscendente ? valA - valB : valB - valA;
+        case 'fecha':
+        case 'fechaCreacion':
+          valA = new Date(a.fecha || a.created_at || 0).getTime();
+          valB = new Date(b.fecha || b.created_at || 0).getTime();
+          return this.ordenAscendente ? valA - valB : valB - valA;
+        case 'puntos':
+          valA = a.puntos ?? 0;
+          valB = b.puntos ?? 0;
+          return this.ordenAscendente ? valA - valB : valB - valA;
+        case 'urgencia': {
+          const pesos: Record<string, number> = { urgente: 3, normal: 2, baja: 1 };
+          valA = pesos[a.urgencia || 'normal'] || 0;
+          valB = pesos[b.urgencia || 'normal'] || 0;
+          return this.ordenAscendente ? valA - valB : valB - valA;
+        }
+        case 'estado':
+          valA = this.obtenerTextoEstado(a);
+          valB = this.obtenerTextoEstado(b);
+          break;
+        default:
+          valA = (a as any)[this.columnaOrden] ?? '';
+          valB = (b as any)[this.columnaOrden] ?? '';
+          break;
+      }
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return this.ordenAscendente ? -1 : 1;
+      if (valA > valB) return this.ordenAscendente ? 1 : -1;
+      return 0;
     });
+    return result;
+  }
+
+  onTableKeyDown(event: KeyboardEvent, solicitud: SolicitudMonitoreo): void {
+    if (!event) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.abrirDetalle(solicitud);
+      return;
+    }
+    if (event.key === 'ArrowDown' || event.key === 'Down') {
+      event.preventDefault();
+      const currentTr = (event.target as HTMLElement)?.closest('tr');
+      const nextTr = currentTr?.nextElementSibling as HTMLElement | null;
+      if (nextTr && typeof nextTr.focus === 'function') {
+        nextTr.focus();
+      }
+      return;
+    }
+    if (event.key === 'ArrowUp' || event.key === 'Up') {
+      event.preventDefault();
+      const currentTr = (event.target as HTMLElement)?.closest('tr');
+      const prevTr = currentTr?.previousElementSibling as HTMLElement | null;
+      if (prevTr && typeof prevTr.focus === 'function') {
+        prevTr.focus();
+      }
+      return;
+    }
+  }
+
+  abrirDetalle(solicitud: SolicitudMonitoreo): void {
+    this.solicitudSeleccionada = solicitud;
+    this.modalDetalleAbierto = true;
+    this.scrollLock.lock();
+    setTimeout(() => {
+      const modalBody = (document.querySelector('.modal-detalle-body') || document.querySelector('.modal-dialog-custom')) as HTMLElement;
+      if (modalBody) {
+        modalBody.focus({ preventScroll: true });
+      }
+    }, 50);
+  }
+
+  cerrarModalDetalle(): void {
+    this.modalDetalleAbierto = false;
+    this.solicitudSeleccionada = null;
+    this.scrollLock.unlock();
   }
 
   obtenerClaseBadge(solicitud: SolicitudMonitoreo): string {
@@ -602,10 +763,17 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   private payload(): SolicitudT01Payload {
     const ids = this.sociosSeleccionados.map(s => s.socio_id);
+    let puntajeEspecial: 'LLAMADO_ATENCION' | 'FELICITACION' | '' = '';
+    if (this.puntosSeleccionados === SolicitarPuntosComponent.PUNTOS_LLAMADO_ATENCION) {
+      puntajeEspecial = 'LLAMADO_ATENCION';
+    } else if (this.puntosSeleccionados === SolicitarPuntosComponent.PUNTOS_FELICITACION) {
+      puntajeEspecial = 'FELICITACION';
+    }
     return {
       destinatario_socio_id: ids.length > 0 ? ids[0] : null,
       destinatarios_socios_ids: ids,
       tipo_accion: this.tipoAccion,
+      puntaje_especial: puntajeEspecial,
       urgencia: this.urgency,
       titulo: this.titulo,
       causal: this.causal,
@@ -637,10 +805,6 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       this.notifications.error('Indica los puntos antes de emitir.');
       return false;
     }
-    if ((this.tipoAccion === 'SANCTION' && this.puntosSeleccionados >= 0) || (this.tipoAccion === 'MERIT' && this.puntosSeleccionados <= 0)) {
-      this.notifications.error('Los puntos no son coherentes con el tipo de acción.');
-      return false;
-    }
     if (!this.reglamentosSeleccionados || this.reglamentosSeleccionados.length === 0) {
       this.notifications.error('Seleccioná al menos un artículo del reglamento respaldante.');
       return false;
@@ -654,9 +818,14 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.numeroExpediente = solicitud.numero_expediente;
     this.titulo = solicitud.titulo ?? this.titulo;
     this.causal = solicitud.causal ?? this.causal;
-    this.tipoAccion = solicitud.tipo_accion ?? this.tipoAccion;
     this.urgency = solicitud.urgencia ?? 'normal';
-    this.puntosSeleccionados = solicitud.puntos == null ? this.puntosSeleccionados : Number(solicitud.puntos);
+    if (solicitud.puntaje_especial === 'LLAMADO_ATENCION' || solicitud.puntos === -0.25) {
+      this.puntosSeleccionados = SolicitarPuntosComponent.PUNTOS_LLAMADO_ATENCION;
+    } else if (solicitud.puntaje_especial === 'FELICITACION' || solicitud.puntos === 0.25) {
+      this.puntosSeleccionados = SolicitarPuntosComponent.PUNTOS_FELICITACION;
+    } else {
+      this.puntosSeleccionados = solicitud.puntos == null ? this.puntosSeleccionados : this.normalizarPuntos(Number(solicitud.puntos));
+    }
     this.razon = solicitud.razon || solicitud.motivo || this.razon;
     if (solicitud.reglamentos_respaldantes && solicitud.reglamentos_respaldantes.length > 0) {
       this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes;

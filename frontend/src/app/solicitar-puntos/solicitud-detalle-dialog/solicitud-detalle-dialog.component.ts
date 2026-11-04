@@ -1,6 +1,7 @@
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import type { SolicitudMonitoreo } from '../../services/expediente-api.service';
+import { formatCaseNumber } from '../../utils/case-number.util';
 import {
   parseReglamentoCite,
   parseReglamentosList,
@@ -22,6 +23,10 @@ export class SolicitudDetalleDialogComponent {
 
   cerrar(): void {
     this.dialogRef.close();
+  }
+
+  formatCaseNumber(numero: string | null | undefined): string {
+    return formatCaseNumber(numero);
   }
 
   get reglamentosCitas(): ReglamentoCiteView[] {

@@ -48,6 +48,7 @@ export interface SolicitudMonitoreo {
   estado: EstadoT01;
   tipo_accion: TipoAccionT01;
   puntos: number | null;
+  puntaje_especial?: 'LLAMADO_ATENCION' | 'FELICITACION' | '';
   titulo: string;
   motivo: string;
   causal: string;
@@ -79,6 +80,7 @@ export interface SolicitudT01 {
   titulo: string;
   causal: string;
   puntos: number | string | null;
+  puntaje_especial?: 'LLAMADO_ATENCION' | 'FELICITACION' | '';
   motivo: string;
   razon: string;
   reglamentos_respaldantes: string[];
@@ -115,6 +117,7 @@ export interface SolicitudT01Payload {
   titulo?: string;
   causal?: string;
   puntos?: number | null;
+  puntaje_especial?: 'LLAMADO_ATENCION' | 'FELICITACION' | '';
   motivo?: string;
   razon?: string;
   reglamentos_respaldantes?: string[];

@@ -1238,6 +1238,18 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     };
   }
 
+  getPuntajeSolicitadoDisplay(exp: Expediente | null | undefined): string {
+    if (!exp) return '0 pts';
+    if (exp.puntaje_solicitado === 'LLAMADO_ATENCION' || exp.puntos === -0.25) {
+      return 'Llamado de Atención';
+    }
+    if (exp.puntaje_solicitado === 'FELICITACION' || exp.puntos === 0.25) {
+      return 'Felicitación';
+    }
+    const p = exp.puntos ?? 0;
+    return `${p > 0 ? '+' : ''}${p} pts`;
+  }
+
   decrementarPuntaje(): void {
     if (!this.puedeModificarPuntaje) return;
     const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
@@ -1311,7 +1323,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else if (fila.descargo.decisiones_causal?.[0]) {
       valorInicial = String(this.getPuntajeFinalInvolucrado(fila));
     } else {
-      valorInicial = Number(pedido).toFixed(1);
+      if (this.expedienteSeleccionado?.puntaje_solicitado) {
+        valorInicial = this.expedienteSeleccionado.puntaje_solicitado;
+      } else if (Number(pedido) === -0.25) {
+        valorInicial = 'LLAMADO_ATENCION';
+      } else if (Number(pedido) === 0.25) {
+        valorInicial = 'FELICITACION';
+      } else {
+        valorInicial = Number(pedido).toFixed(1);
+      }
     }
 
     const match = this.escalaPuntajes.find(

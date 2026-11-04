@@ -330,6 +330,57 @@ describe('MisExpedientesComponent', () => {
       expect(component.columnaOrden).toBe('motivo');
       expect(component.ordenAscendente).toBeTrue();
     });
+
+    it('ordena por involucrados y urgencia', () => {
+      const exp1: Expediente = { ...mockExpedientes[0], cantidadSocios: 1, urgencia: 'normal' };
+      const exp2: Expediente = { ...mockExpedientes[1], cantidadSocios: 3, urgencia: 'urgente' };
+      component.misExpedientes = [exp1, exp2];
+
+      component.columnaOrden = 'involucrados';
+      component.ordenAscendente = true;
+      expect(component.expedientesOrdenados[0].numero).toBe(exp1.numero);
+
+      component.columnaOrden = 'urgencia';
+      component.ordenAscendente = true;
+      expect(component.expedientesOrdenados[0].numero).toBe(exp1.numero);
+    });
+
+    it('obtiene cantidad de involucrados correctamente', () => {
+      const expConSocios: any = { cantidadSocios: 4 };
+      expect(component.getCantidadInvolucrados(expConSocios)).toBe(4);
+
+      const expConArray: any = { sociosInvolucrados: [{}, {}] };
+      expect(component.getCantidadInvolucrados(expConArray)).toBe(2);
+
+      const expVacio: any = {};
+      expect(component.getCantidadInvolucrados(expVacio)).toBe(1);
+    });
+
+    it('obtiene badges y etiquetas de urgencia', () => {
+      expect(component.getUrgenciaLabel('urgente')).toBe('URGENTE');
+      expect(component.getUrgenciaLabel('baja')).toBe('BAJA');
+      expect(component.getUrgenciaLabel('normal')).toBe('NORMAL');
+
+      expect(component.getUrgenciaBadgeClass('urgente')).toContain('badge-mat-danger');
+      expect(component.getUrgenciaBadgeClass('normal')).toContain('badge-mat-info');
+
+      expect(component.getUrgenciaIcon('urgente')).toBe('priority_high');
+      expect(component.getUrgenciaIcon('baja')).toBe('arrow_downward');
+      expect(component.getUrgenciaIcon('normal')).toBe('remove');
+    });
+
+    it('maneja eventos de teclado en la fila de tabla', () => {
+      spyOn(component, 'abrirModalDetalle');
+      const exp = mockExpedientes[0];
+      const eventEnter = new KeyboardEvent('keydown', { key: 'Enter' });
+      const eventEscape = new KeyboardEvent('keydown', { key: 'Escape' });
+
+      component.onTableKeyDown(eventEnter, exp);
+      expect(component.abrirModalDetalle).toHaveBeenCalledWith(exp);
+
+      component.onTableKeyDown(eventEscape, exp);
+      expect(component.abrirModalDetalle).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Temporizador Dinámico y Plazo Preclusivo (S3-02 / CA3)', () => {

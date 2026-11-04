@@ -499,6 +499,50 @@ describe('SolicitarPuntosComponent', () => {
     expect(window.scrollTo).toHaveBeenCalled();
   });
 
+  it('ajusta los puntos con las flechas y deriva el tipo de acción del signo', () => {
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.tipoAccion).toBe('SANCTION');
+
+    component.decrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-1.5);
+
+    component.puntosSeleccionados = -0.5;
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-0.25);
+    expect(component.puntosTexto).toBe('Llamado de Atención');
+    expect(component.tipoAccion).toBe('SANCTION');
+
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(0.25);
+    expect(component.puntosTexto).toBe('Felicitación');
+    expect(component.tipoAccion).toBe('MERIT');
+
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(0.5);
+    expect(component.puntosTexto).toBe('+0.5 pts');
+  });
+
+  it('respeta los límites de la escala de puntos y no permite 0', () => {
+    component.puntosSeleccionados = -3;
+    expect(component.puedeDecrementarPuntos).toBeFalse();
+    component.decrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-3);
+
+    component.puntosSeleccionados = 3;
+    expect(component.puedeIncrementarPuntos).toBeFalse();
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(3);
+    expect(component.escalaPuntos).not.toContain(0);
+  });
+
+  it('bloquea las flechas de puntos en solicitudes emitidas', () => {
+    component.estado = 'ISSUED';
+    component.puntosSeleccionados = -1;
+    component.incrementarPuntos();
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.puedeIncrementarPuntos).toBeFalse();
+  });
+
   it('conmuta correctamente entre pestañas (nueva solicitud y solicitudes creadas)', () => {
     expect(component.tabActiva).toBe('nueva');
     component.setTab('creadas');
@@ -535,15 +579,12 @@ describe('SolicitarPuntosComponent', () => {
     expect(expediente.listarMisSolicitudes).toHaveBeenCalled();
   });
 
-  it('abre el diálogo de detalle al presionar abrirDetalle sobre una solicitud emitida', () => {
+  it('abre el modal de detalle al presionar abrirDetalle sobre una solicitud emitida', () => {
     const emitida = mockSolicitudes[1];
     component.abrirDetalle(emitida);
 
-    expect(dialog.open).toHaveBeenCalledWith(SolicitudDetalleDialogComponent, {
-      width: '100%',
-      maxWidth: '750px',
-      data: emitida,
-    });
+    expect(component.modalDetalleAbierto).toBeTrue();
+    expect(component.solicitudSeleccionada).toBe(emitida);
   });
 
   it('retorna clases semánticas de badge conformes a DESIGN.md', () => {
@@ -567,6 +608,143 @@ describe('SolicitarPuntosComponent', () => {
     expect(component.obtenerTextoInvolucrados({ ...mockSolicitudes[0], involucrados: [] })).toBe('Sin socios asignados');
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[0])).toBe('Prueba, Ana');
     expect(component.obtenerTextoInvolucrados(mockSolicitudes[1])).toBe('Prueba, Ana (+1)');
+  });
+
+  describe('ordenamiento y tabla interactiva de solicitudes creadas (PB-04 / SCRUM-75)', () => {
+    it('alterna el orden ascendente/descendente al hacer clic en la misma columna y cambia columna en caso contrario', () => {
+      component.columnaOrden = 'numero';
+      component.ordenAscendente = true;
+
+      component.cambiarOrden('numero');
+      expect(component.columnaOrden).toBe('numero');
+      expect(component.ordenAscendente).toBeFalse();
+      expect(component.getIconoOrden('numero')).toBe('arrow_downward');
+
+      component.cambiarOrden('numero');
+      expect(component.ordenAscendente).toBeTrue();
+      expect(component.getIconoOrden('numero')).toBe('arrow_upward');
+
+      component.cambiarOrden('titulo');
+      expect(component.columnaOrden).toBe('titulo');
+      expect(component.ordenAscendente).toBeTrue();
+      expect(component.getIconoOrden('numero')).toBe('swap_vert');
+      expect(component.getIconoOrden('titulo')).toBe('arrow_upward');
+    });
+
+    it('ordena correctamente por número, título, involucrados, fecha, puntos, urgencia y estado', () => {
+      component.misSolicitudes = [
+        {
+          ...mockSolicitudes[0],
+          id: '1',
+          numero: 'T01-002',
+          numero_expediente: '2/2026',
+          titulo: 'B - Falta a reunión',
+          involucrados: [mockSociosInvolucrados[0]],
+          fecha: '2026-05-10T10:00:00Z',
+          puntos: -1,
+          urgencia: 'normal',
+          estado_procesal: 'creado'
+        },
+        {
+          ...mockSolicitudes[1],
+          id: '2',
+          numero: 'T01-001',
+          numero_expediente: '1/2026',
+          titulo: 'A - Felicitación aniversario',
+          involucrados: [mockSociosInvolucrados[0], mockSociosInvolucrados[1]],
+          fecha: '2026-06-01T10:00:00Z',
+          puntos: 2,
+          urgencia: 'urgente',
+          estado_procesal: 'emitido'
+        }
+      ];
+
+      // Orden por número asc
+      component.columnaOrden = 'numero';
+      component.ordenAscendente = true;
+      let ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].numero_expediente).toBe('1/2026');
+      expect(ordenadas[1].numero_expediente).toBe('2/2026');
+
+      // Orden por título asc
+      component.columnaOrden = 'titulo';
+      component.ordenAscendente = true;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].titulo).toContain('A -');
+      expect(ordenadas[1].titulo).toContain('B -');
+
+      // Orden por involucrados asc y desc
+      component.columnaOrden = 'involucrados';
+      component.ordenAscendente = true;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].involucrados.length).toBe(1);
+      component.ordenAscendente = false;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].involucrados.length).toBe(2);
+
+      // Orden por puntos asc
+      component.columnaOrden = 'puntos';
+      component.ordenAscendente = true;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].puntos).toBe(-1);
+      expect(ordenadas[1].puntos).toBe(2);
+
+      // Orden por urgencia desc (urgente > normal)
+      component.columnaOrden = 'urgencia';
+      component.ordenAscendente = false;
+      ordenadas = component.misSolicitudesOrdenadas;
+      expect(ordenadas[0].urgencia).toBe('urgente');
+    });
+
+    it('abre detalle al presionar Enter o Espacio en onTableKeyDown', () => {
+      spyOn(component, 'abrirDetalle');
+      const sol = mockSolicitudes[0];
+
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+      component.onTableKeyDown(enterEvent, sol);
+      expect(component.abrirDetalle).toHaveBeenCalledWith(sol);
+
+      const spaceEvent = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
+      component.onTableKeyDown(spaceEvent, sol);
+      expect(component.abrirDetalle).toHaveBeenCalledTimes(2);
+    });
+
+    it('renderiza el encabezado sin la columna Creador y abre detalle al hacer click en fila u ojito', () => {
+      component.tabActiva = 'creadas';
+      component.cargandoSolicitudes = false;
+      component.failedToLoadRequests = false;
+      component.misSolicitudes = [...mockSolicitudes];
+      fixture.detectChanges();
+
+      const thElements = fixture.nativeElement.querySelectorAll('.explorer-table-container thead th');
+      const headerTexts = Array.from(thElements).map((el: any) => el.textContent.trim());
+      
+      // Debe contener EXP, TÍTULO, INVOLUCRADOS, FECHA, PUNTOS, URGENCIA, ESTADO, ACCIONES
+      expect(headerTexts.some((t: string) => t.includes('Exp.'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Título'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Involucrados'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Fecha'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Puntos'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Urgencia'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Estado'))).toBeTrue();
+      expect(headerTexts.some((t: string) => t.includes('Acciones'))).toBeTrue();
+
+      // Mandato explícito: NO debe contener columna Creador
+      expect(headerTexts.some((t: string) => t.toLowerCase().includes('creador'))).toBeFalse();
+
+      // Clic en la fila debe disparar abrirDetalle
+      spyOn(component, 'abrirDetalle');
+      const rows = fixture.nativeElement.querySelectorAll('.explorer-table-container tbody tr');
+      expect(rows.length).toBeGreaterThan(0);
+      (rows[0] as HTMLElement).click();
+      expect(component.abrirDetalle).toHaveBeenCalledWith(component.misSolicitudesOrdenadas[0]);
+
+      // Clic en el botón ojito
+      const ojitoBtn = rows[0].querySelector('.btn-just-icon') as HTMLElement;
+      expect(ojitoBtn).toBeTruthy();
+      ojitoBtn.click();
+      expect(component.abrirDetalle).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('selección y filtrado de reglamentos vigentes (Milestone 5)', () => {

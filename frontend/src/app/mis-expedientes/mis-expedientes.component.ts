@@ -319,6 +319,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       },
       error: () => {}
     });
+    setTimeout(() => {
+      const modalBody = (document.querySelector('.modal-dialog-tribunal .modal-detalle-body') ||
+                         document.querySelector('.modal-dialog-custom .card-body') ||
+                         document.querySelector('.modal-dialog-custom')) as HTMLElement;
+      if (modalBody) {
+        modalBody.focus({ preventScroll: true });
+      }
+    }, 50);
   }
 
   cerrarModalDetalle(): void {
@@ -983,6 +991,58 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  onTableKeyDown(event: KeyboardEvent, exp: Expediente): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.abrirModalDetalle(exp);
+    }
+  }
+
+  getCantidadInvolucrados(exp: Expediente): number {
+    if (typeof exp.cantidadSocios === 'number' && exp.cantidadSocios > 0) {
+      return exp.cantidadSocios;
+    }
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados.length;
+    }
+    const raw = (exp as any).involucrados;
+    if (Array.isArray(raw) && raw.length > 0) {
+      return raw.length;
+    }
+    return 1;
+  }
+
+  getUrgenciaLabel(urgencia?: string): string {
+    switch ((urgencia || '').toLowerCase()) {
+      case 'urgente': return 'URGENTE';
+      case 'baja': return 'BAJA';
+      case 'normal':
+      default:
+        return 'NORMAL';
+    }
+  }
+
+  getUrgenciaBadgeClass(urgencia?: string): string {
+    switch ((urgencia || '').toLowerCase()) {
+      case 'urgente': return 'badge-urgencia-urgente badge-mat-danger';
+      case 'baja': return 'badge-urgencia-baja badge-mat-info';
+      case 'normal':
+      default:
+        return 'badge-urgencia-normal badge-mat-info';
+    }
+  }
+
+  getUrgenciaIcon(urgencia?: string): string {
+    switch ((urgencia || '').toLowerCase()) {
+      case 'urgente': return 'priority_high';
+      case 'baja': return 'arrow_downward';
+      case 'normal':
+      default:
+        return 'remove';
+    }
+  }
+
   get expedientesOrdenados(): Expediente[] {
     let lista = [...this.misExpedientes];
     if (this.filtroTab === 'en_tramite') {
@@ -1000,6 +1060,22 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       if (this.columnaOrden === 'numero') {
         valA = this.formatCaseNumber(a.numero);
         valB = this.formatCaseNumber(b.numero);
+      }
+      if (this.columnaOrden === 'involucrados') {
+        valA = this.getCantidadInvolucrados(a);
+        valB = this.getCantidadInvolucrados(b);
+      }
+      if (this.columnaOrden === 'urgencia') {
+        valA = (a.urgencia || 'normal').toLowerCase();
+        valB = (b.urgencia || 'normal').toLowerCase();
+      }
+      if (this.columnaOrden === 'fechaCreacion' || this.columnaOrden === 'fecha') {
+        valA = new Date(a.fechaCreacion || 0).getTime();
+        valB = new Date(b.fechaCreacion || 0).getTime();
+      }
+      if (this.columnaOrden === 'puntos') {
+        valA = Number(a.puntos || 0);
+        valB = Number(b.puntos || 0);
       }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();

@@ -189,134 +189,6 @@ textarea.form-control-aveit {
   padding: 10px 14px !important;
 }
 
-// Selector visual de Tipo de Acción (Sanción vs Premio)
-.tipo-card {
-  border: 1.5px solid $border-light;
-  border-radius: 10px;
-  padding: 14px 18px;
-  background-color: #FFFFFF;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-  height: 100%;
-
-  &:hover:not(.disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(21, 24, 70, 0.07);
-  }
-
-  &.disabled {
-    cursor: not-allowed;
-    opacity: 0.65;
-  }
-
-  &.tipo-card-sancion {
-    &:hover:not(.disabled) {
-      border-color: #F87171;
-    }
-
-    &.active {
-      border-color: #DC2626;
-      background-color: #FEF2F2;
-      box-shadow: 0 0 0 1px #DC2626, 0 4px 12px rgba(220, 38, 38, 0.1);
-
-      .tipo-title {
-        color: #B91C1C;
-        font-weight: 700;
-      }
-
-      .tipo-icon-container {
-        background-color: #FEE2E2;
-        color: #DC2626;
-      }
-
-      .tipo-radio {
-        border-color: #DC2626;
-        &::after {
-          background-color: #DC2626;
-        }
-      }
-    }
-  }
-
-  &.tipo-card-premio {
-    &:hover:not(.disabled) {
-      border-color: #4ADE80;
-    }
-
-    &.active {
-      border-color: #16A34A;
-      background-color: #F0FDF4;
-      box-shadow: 0 0 0 1px #16A34A, 0 4px 12px rgba(22, 163, 74, 0.1);
-
-      .tipo-title {
-        color: #15803D;
-        font-weight: 700;
-      }
-
-      .tipo-icon-container {
-        background-color: #DCFCE7;
-        color: #16A34A;
-      }
-
-      .tipo-radio {
-        border-color: #16A34A;
-        &::after {
-          background-color: #16A34A;
-        }
-      }
-    }
-  }
-
-  .tipo-icon-container {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background-color: #F1F5F9;
-    color: #64748B;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-
-    i.material-icons {
-      font-size: 24px;
-    }
-  }
-
-  .tipo-title {
-    font-size: 0.96rem;
-    font-weight: 600;
-    color: #1E293B;
-  }
-
-  .tipo-subtitle {
-    font-size: 0.8rem;
-    color: #64748B;
-  }
-
-  .tipo-radio {
-    width: 20px;
-    height: 20px;
-    border: 2px solid #CBD5E1;
-    border-radius: 50%;
-    display: inline-block;
-    position: relative;
-    transition: all 0.2s ease;
-
-    &.checked::after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-  }
-}
-
 // Trigger del Catálogo de Reglamentos y Bandeja de Chips Interactivos
 .btn-link-clear {
   background: none;
@@ -1013,32 +885,7 @@ textarea.form-control-aveit {
     color: #F8FAFC !important;
   }
 
-  .tipo-card {
-    background-color: #131720;
-    border-color: #2A3142;
-
-    .tipo-title {
-      color: #F8FAFC;
-    }
-
-    .tipo-subtitle {
-      color: #94A3B8;
-    }
-
-    &.tipo-card-sancion.active {
-      background-color: rgba(220, 38, 38, 0.14);
-      border-color: #F87171;
-      .tipo-title { color: #FCA5A5; }
-    }
-
-    &.tipo-card-premio.active {
-      background-color: rgba(22, 163, 74, 0.14);
-      border-color: #4ADE80;
-      .tipo-title { color: #86EFAC; }
-    }
-  }
-
-  .reglamento-chip {
+    .reglamento-chip {
     background-color: #131720;
     border-color: #2A3142;
     color: #E2E8F0;
@@ -1121,4 +968,272 @@ textarea.form-control-aveit {
 :host ::ng-deep body.modal-open-scroll-lock,
 :host ::ng-deep .main-panel.modal-open-scroll-lock {
   overflow: hidden !important;
+}
+
+// Stepper de Puntos Solicitados (flechas arriba/abajo)
+.input-group-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  width: auto;
+  border: 1.5px solid $border-light;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #FFFFFF;
+
+  .btn-stepper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 10px;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    cursor: pointer;
+
+    i.material-icons {
+      font-size: 20px;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: rgba(2, 132, 199, 0.08);
+    }
+
+    &:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  .stepper-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    padding: 0 12px;
+    font-weight: 700;
+    border-left: 1.5px solid $border-light;
+    border-right: 1.5px solid $border-light;
+  }
+}
+
+// Encabezados ordenables y filas seleccionables (estilo Gestionar Expedientes)
+.table thead th,
+.table-mat thead th {
+  white-space: nowrap !important;
+  vertical-align: middle;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap !important;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  i.material-icons {
+    display: inline-block;
+    vertical-align: text-bottom;
+    font-size: 16px;
+    margin-left: 4px;
+    line-height: 1;
+  }
+}
+
+table.table-mat tbody tr:focus {
+  outline: 2px solid var(--color-border-focus, #00acc1);
+  outline-offset: -2px;
+  background-color: rgba(110, 157, 220, 0.12) !important;
+}
+
+table.table-mat tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+// Modal Detalle Completo de la Solicitud (estilo Gestionar Expedientes)
+.modal-backdrop-custom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  overflow: hidden;
+}
+
+.modal-dialog-custom {
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+
+  &:focus {
+    outline: none;
+  }
+
+  > .card {
+    margin: 0;
+    max-height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    > [class*="card-header-"],
+    > .card-header {
+      margin: 0 !important;
+      border-radius: 12px 12px 0 0 !important;
+      flex-shrink: 0;
+    }
+
+    > .card-body {
+      overflow-y: auto;
+      flex: 1 1 auto;
+      max-height: calc(100vh - 200px);
+
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+}
+
+.modal-dialog-tribunal {
+  max-width: 860px !important;
+
+  .modal-detalle-card {
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    background-color: #FFFFFF;
+    border: none;
+    overflow: hidden;
+
+    > [class*="card-header-"],
+    > .card-header,
+    .card-header-primary {
+      margin: 0 !important;
+      border-radius: 12px 12px 0 0 !important;
+      flex-shrink: 0;
+    }
+  }
+
+  .card-header-primary {
+    background: linear-gradient(60deg, #151846, #252b6b);
+    padding: 16px 20px;
+    color: #FFFFFF;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+
+  .modal-badge-exp {
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    background-color: rgba(255, 255, 255, 0.18);
+    padding: 4px 10px;
+    border-radius: 6px;
+    line-height: 1.2;
+  }
+
+  .modal-titulo-central {
+    h4 {
+      font-size: 16px;
+      line-height: 1.3;
+      letter-spacing: 0.2px;
+    }
+  }
+
+  .btn-close-modal {
+    color: #ffffff !important;
+    opacity: 0.85;
+    transition: opacity 0.2s ease-in-out;
+    line-height: 1;
+
+    &:hover,
+    &:focus {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
+
+  .metadatos-inline-row {
+    background-color: #F8FAFC;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+  }
+
+  .metadato-label {
+    font-size: 13px;
+    color: #64748B;
+  }
+
+  .puntaje-solicitado-val {
+    font-size: 14px;
+  }
+
+  .motivo-box {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #1E293B;
+  }
+
+  .seccion-involucrados {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+
+    .tabla-involucrados {
+      background-color: #FFFFFF;
+      border-radius: 6px;
+      overflow: hidden;
+
+      th {
+        color: #64748B;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-top: none;
+        padding: 8px 12px;
+      }
+
+      td {
+        padding: 8px 12px;
+        vertical-align: middle;
+        font-size: 13px;
+      }
+
+      .legajo-cell {
+        color: #151846;
+      }
+    }
+  }
+
+  .btn-cerrar-modal {
+    min-width: 90px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
 }
