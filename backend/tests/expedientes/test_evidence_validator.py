@@ -98,21 +98,21 @@ class TestEvidenceValidator:
         assert "passwd.pdf" in result.filename
 
     def test_validate_quota_t02_valid(self):
-        # T02 admite entre 1 y 3 documentos
+        # Admite hasta 5 documentos
         EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=1)
-        EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=2)
         EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=3)
+        EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=5)
 
     def test_validate_quota_t02_missing_evidence(self):
         with pytest.raises(EvidenceValidationError, match="al menos 1 comprobante"):
             EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=0)
 
     def test_validate_quota_t02_exceeded(self):
-        with pytest.raises(EvidenceValidationError, match="máximo de 3 comprobantes"):
-            EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=4)
+        with pytest.raises(EvidenceValidationError, match="máximo de 5 comprobantes"):
+            EvidenceValidator.validate_quota(tipo_descargo="T02_CERTIFICADO", count=6)
 
     def test_validate_quota_t03_valid(self):
-        # T03 admite entre 0 y 5 documentos
+        # Admite entre 0 y 5 documentos
         EvidenceValidator.validate_quota(tipo_descargo="T03_EXTRAORDINARIO", count=0)
         EvidenceValidator.validate_quota(tipo_descargo="T03_EXTRAORDINARIO", count=1)
         EvidenceValidator.validate_quota(tipo_descargo="T03_EXTRAORDINARIO", count=5)

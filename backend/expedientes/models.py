@@ -38,8 +38,8 @@ class EstadoExpedienteEnum(models.TextChoices):
 class TipoDescargoEnum(models.TextChoices):
     """Tipos de formularios de justificación y descargos admitidos."""
 
-    T02_CERTIFICADO = "T02_CERTIFICADO", "Formulario T02 - Causal con Certificado"
-    T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
+    T02_CERTIFICADO = "T02_CERTIFICADO", "Descargo con Causal / Certificado"
+    T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Descargo - Otros"
 
 
 class OperacionDescargoEnum(models.TextChoices):

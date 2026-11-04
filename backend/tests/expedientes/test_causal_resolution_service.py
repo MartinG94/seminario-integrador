@@ -174,14 +174,15 @@ class TestEtapaYTipo:
 
         assert _decide(causal_descargo, causal_vocal.user).version == 1
 
-    def test_rejects_t03_descargo(self, causal_descargo, causal_vocal) -> None:
+    def test_allows_t03_descargo_resolution(self, causal_descargo, causal_vocal) -> None:
         DescargoExpediente.objects.filter(pk=causal_descargo.pk).update(
             tipo=TipoDescargoEnum.T03_EXTRAORDINARIO
         )
         causal_descargo.refresh_from_db()
 
-        with pytest.raises(CausalResolutionValidationError):
-            _decide(causal_descargo, causal_vocal.user, fundamento=GROUNDS)
+        decision = _decide(causal_descargo, causal_vocal.user, fundamento=GROUNDS)
+        assert decision.version == 1
+        assert decision.descargo.tipo == TipoDescargoEnum.T03_EXTRAORDINARIO
 
     def test_descargo_from_another_expediente_is_not_found(
         self, causal_descargo, causal_vocal, make_socio

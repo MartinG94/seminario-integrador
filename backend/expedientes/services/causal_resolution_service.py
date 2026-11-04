@@ -27,7 +27,6 @@ from expedientes.models import (
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
-    TipoDescargoEnum,
 )
 from expedientes.services.warning_accumulation_service import WarningAccumulationService
 
@@ -135,11 +134,6 @@ class CausalResolutionService:
             )
 
         descargo = CausalResolutionService.get_descargo(expediente_id, descargo_id)
-        if descargo.tipo != TipoDescargoEnum.T02_CERTIFICADO:
-            raise CausalResolutionValidationError(
-                "Sólo se resuelven acá las causales tipificadas del Formulario T02."
-            )
-
         current = current_evidence_for(descargo)
         if evidencia_ids is None:
             valued = current

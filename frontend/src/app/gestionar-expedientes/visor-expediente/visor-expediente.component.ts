@@ -215,7 +215,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
   }
 
   abrirEvaluacionCausal(inv: InvolucradoVisorDTO): void {
-    if (!inv.descargo || inv.descargo.tipo !== 'T02_CERTIFICADO') return;
+    if (!inv.descargo) return;
     this.involucradoSeleccionado = inv;
     const regla = inv.descargo.regla_sugerida || 'REJECTED';
     this.borradorCausal = {

@@ -607,10 +607,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             # La valoración del TD es reservada hasta la emisión (confidencialidad).
             if is_authority:
                 item["decisiones_causal"] = DecisionCausalSerializer(decisiones_qs, many=True).data
-                if d.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-                    item["regla_sugerida"] = suggested_decision(
-                        has_current_evidence=bool(evs)
-                    ).value
+                item["regla_sugerida"] = suggested_decision(has_current_evidence=bool(evs)).value
             result.append(item)
         return result
 
@@ -776,27 +773,29 @@ class PresentarDescargoSerializer(serializers.Serializer):
     def validate(self, attrs: dict) -> dict:
         tipo = attrs.get("tipo")
         evidencia_ids = attrs.get("evidencia_ids", [])
+        if len(evidencia_ids) > 5:
+            raise serializers.ValidationError(
+                {"evidencia_ids": "Se admite un máximo de 5 comprobantes."}
+            )
+
         if tipo == TipoDescargoEnum.T02_CERTIFICADO:
             if not attrs.get("archivo") and not evidencia_ids:
                 raise serializers.ValidationError(
-                    {"archivo": "Es obligatorio adjuntar comprobante para justificaciones T02."}
-                )
-            if len(evidencia_ids) > 3:
-                raise serializers.ValidationError(
-                    {"evidencia_ids": "El Formulario T02 admite un máximo de 3 comprobantes."}
+                    {"archivo": "Es obligatorio adjuntar comprobante para esta justificación."}
                 )
         elif tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
             texto = attrs.get("texto", "").strip()
             if not texto:
                 raise serializers.ValidationError(
-                    {"texto": "Es obligatorio incluir la exposición fáctica para descargos T03."}
+                    {
+                        "texto": (
+                            "Es obligatorio incluir la exposición fáctica para "
+                            "justificaciones de tipo Otros."
+                        )
+                    }
                 )
             if len(texto) > MAX_DESCARGO_TEXT_LENGTH:
                 raise serializers.ValidationError({"texto": descargo_text_too_long_message()})
-            if len(evidencia_ids) > 5:
-                raise serializers.ValidationError(
-                    {"evidencia_ids": "El Formulario T03 admite un máximo de 5 comprobantes."}
-                )
         return attrs
 
 

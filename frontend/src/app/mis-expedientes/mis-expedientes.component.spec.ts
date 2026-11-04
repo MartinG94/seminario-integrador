@@ -80,7 +80,7 @@ describe('MisExpedientesComponent', () => {
     component.causalSeleccionada = 'Compromiso Laboral Comprobable';
     component.onCausalChange();
     expect(component.tipoDescargo).toBe('T02_CERTIFICADO');
-    expect(component.limiteActual).toBe(3);
+    expect(component.limiteActual).toBe(5);
   });
 
   it('permite enviar motivo o justificación opcional en justificaciones con certificado (T02)', () => {
@@ -598,9 +598,9 @@ describe('MisExpedientesComponent', () => {
       expect(primera.accionLabel).toBe('Descargo presentado');
       expect(primera.usuario).toBe('Lucas Gastiaburu (Legajo 74907)');
       expect(primera.timestamp).toBe('16/10/2026 15:30 hs');
-      expect(primera.detalle).toBe('v1 · T03 (Extraordinario) · Otro · 1 comprobante');
+      expect(primera.detalle).toBe('v1 · Otros · 1 comprobante');
       expect(segunda.operacion).toBe('EDICION');
-      expect(segunda.detalle).toBe('v2 · T02 (Certificado) · Examen · 0 comprobantes');
+      expect(segunda.detalle).toBe('v2 · Con Certificado · Examen · 0 comprobantes');
       expect(tercera.operacion).toBe('ELIMINACION');
     });
 

@@ -864,13 +864,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   esEvaluable(fila: InvolucradoJustificacion): boolean {
-    return fila.descargo?.tipo === 'T02_CERTIFICADO';
+    return !!fila.descargo;
   }
 
   estadoJustificacion(fila: InvolucradoJustificacion): string {
     const descargo = fila.descargo;
     if (!descargo) return 'Sin justificación';
-    if (descargo.tipo === 'T03_EXTRAORDINARIO') return 'Extraordinaria (T03)';
     const ultima = descargo.decisiones_causal?.[0];
     if (!ultima) return 'Pendiente de evaluación';
     return this.etiquetaDecision(ultima.decision);
@@ -1328,11 +1327,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   getTipoDescargoDisplay(desc: DescargoDetalleDTO | null | undefined): string {
     if (!desc) return '—';
-    if (desc.causal && desc.causal.trim()) {
+    if (desc.causal && desc.causal.trim() && desc.causal.trim() !== 'Otro') {
       return desc.causal.trim();
     }
-    if (desc.tipo === 'T02_CERTIFICADO') return 'Certificado de Examen (T02)';
-    if (desc.tipo === 'T03_EXTRAORDINARIO') return 'Descargo Extraordinario (T03)';
+    if (desc.causal === 'Otro' || desc.tipo === 'T03_EXTRAORDINARIO') return 'Otros';
+    if (desc.tipo === 'T02_CERTIFICADO') return 'Descargo con Certificado';
     return desc.tipo || '—';
   }
 

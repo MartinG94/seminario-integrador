@@ -536,12 +536,12 @@ describe('GestionarExpedientesComponent', () => {
       ]);
     });
 
-    it('sólo permite evaluar las justificaciones T02', () => {
+    it('permite evaluar las justificaciones con descargo vigente', () => {
       abrirComo('TD');
       const [t02, t03, sinDescargo] = component.involucradosJustificacion;
 
       expect(component.esEvaluable(t02)).toBeTrue();
-      expect(component.esEvaluable(t03)).toBeFalse();
+      expect(component.esEvaluable(t03)).toBeTrue();
       expect(component.esEvaluable(sinDescargo)).toBeFalse();
     });
 
@@ -1788,7 +1788,14 @@ describe('GestionarExpedientesComponent', () => {
         tipo: 'T02_CERTIFICADO',
         causal: ''
       } as any;
-      expect(component.getTipoDescargoDisplay(descSinCausal)).toBe('Certificado de Examen (T02)');
+      expect(component.getTipoDescargoDisplay(descSinCausal)).toBe('Descargo con Certificado');
+
+      const descOtros = {
+        id: 3,
+        tipo: 'T03_EXTRAORDINARIO',
+        causal: 'Otro'
+      } as any;
+      expect(component.getTipoDescargoDisplay(descOtros)).toBe('Otros');
     });
 
     it('exige fundamentación obligatoria solo cuando el puntaje final perjudica al socio respecto al pedido', () => {

@@ -120,21 +120,12 @@ class EvidenceValidator:
         - T02: mínimo 1 obligatorio, máximo 3.
         - T03: opcional (0 a 5).
         """
+        if count > 5:
+            raise EvidenceValidationError("Se admite un máximo de 5 comprobantes probatorios.")
+        if count < 0:
+            raise EvidenceValidationError("La cantidad de comprobantes no puede ser negativa.")
+
         if tipo_descargo == "T02_CERTIFICADO":
             if count < 1:
-                msg = (
-                    "Debe adjuntar al menos 1 comprobante para la causal tipificada "
-                    "(Formulario T02)."
-                )
+                msg = "Debe adjuntar al menos 1 comprobante para la causal seleccionada."
                 raise EvidenceValidationError(msg)
-            if count > 3:
-                raise EvidenceValidationError(
-                    "El Formulario T02 admite un máximo de 3 comprobantes probatorios."
-                )
-        elif tipo_descargo == "T03_EXTRAORDINARIO":
-            if count < 0:
-                raise EvidenceValidationError("La cantidad de comprobantes no puede ser negativa.")
-            if count > 5:
-                raise EvidenceValidationError(
-                    "El Formulario T03 admite un máximo de 5 comprobantes probatorios."
-                )
