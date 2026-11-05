@@ -50,7 +50,16 @@ export interface BoardCaseDTO {
   transiciones_permitidas: EstadoExpediente[];
   cantidad_socios?: number;
   socios?: SocioInvolucrado[];
+  resolucion_estado?: string;
+  firmantes_td?: any[];
+  vistos?: string;
+  considerandos?: string;
+  articulos_resolutivos?: string;
+  contenido_hash?: string;
+  issued_at?: string;
 }
+
+export type BoardCaseDto = BoardCaseDTO;
 
 export interface BoardColumnDTO {
   key: EstadoExpediente;
@@ -120,15 +129,36 @@ export interface Expediente {
   };
   evidencias?: any[];
   logsDescargo?: LogJustificativo[];
+  vistos?: string;
+  considerandos?: string;
+  seResuelve?: string;
+  numeroResolucion?: string;
+  fechaResolucion?: string;
   votacion?: {
-    votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
+    votos?: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' };
+    vistos?: string;
     considerandos?: string;
+    seResuelve?: string;
+    numeroResolucion?: string;
+    fechaResolucion?: string;
     aprobado?: boolean;
   };
+  resolucion?: {
+    vistos?: string;
+    considerandos?: string;
+    seResuelve?: string;
+    numeroResolucion?: string;
+    fechaResolucion?: string;
+    emitida?: boolean;
+    hashCriptografico?: string;
+    firmantes?: string[];
+  };
+  articulosResolutivos?: string;
   firmas?: {
     juecesFirmantes: string[];
     hashCriptografico?: string;
     timestamp?: string;
+    fechaSellado?: string;
   };
 }
 
@@ -175,199 +205,7 @@ export class TribunalDataService {
   private darkModeSubject = new BehaviorSubject<boolean>(false);
   public darkMode$ = this.darkModeSubject.asObservable();
 
-  private expedientesSubject = new BehaviorSubject<Expediente[]>([
-    {
-      id: '2',
-      numero: 'EXP-001/2026',
-      socio: 'Lucas Gastiaburu',
-      legajo: '74907',
-      subcomision: 'Cómputos',
-      motivo: 'Inasistencia no informada a asamblea general ordinaria',
-      titulo: 'Inasistencia no informada a asamblea general ordinaria',
-      razon: 'Ausencia registrada al cierre del acta de asamblea general ordinaria.',
-      creador: 'Rosales, Nicolás (408917)',
-      fechaCreacion: '2026-03-01',
-      estado: 'justificando',
-      horasRestantes: 74,
-      tipo: 'falta',
-      puntos: -1.0,
-      cantidadSocios: 1,
-      sociosInvolucrados: [
-        { id: '1', nombre: 'Lucas Gastiaburu', legajo: '74907', grupo: '62', estado: 'Pasivo' }
-      ],
-      plazoInicioAt: '2026-10-08T18:00:00-03:00',
-      plazoLimiteAt: '2026-10-15T18:00:00-03:00',
-      descargoPresentado: false
-    },
-    {
-      id: 'EXP-2026-002',
-      numero: 'EXP-002/2026',
-      socio: 'Lucas Martín Guillén',
-      legajo: '85194',
-      subcomision: 'Cómputos',
-      motivo: 'Falta reiterada de entrega de informes operativos cuatrimestrales',
-      titulo: 'Falta reiterada de entrega de informes operativos cuatrimestrales',
-      razon: 'Vencimiento del plazo de presentación de informes operativos del cuatrimestre.',
-      creador: 'Sánchez, Diego Gabriel (87414)',
-      fechaCreacion: '2026-03-02',
-      estado: 'revision_resolucion',
-      horasRestantes: 0,
-      tipo: 'falta',
-      puntos: -1.5,
-      cantidadSocios: 2,
-      sociosInvolucrados: [
-        { id: '2', nombre: 'Lucas Martín Guillén', legajo: '85194', grupo: '60', estado: 'Activo' },
-        { id: '3', nombre: 'Diego Gabriel Sánchez', legajo: '87414', grupo: '59', estado: 'Activo' }
-      ],
-      descargo: {
-        tipo: 'T02_CERTIFICADO',
-        causal: 'Examen Académico Universitario en UTN FRC',
-        archivo: 'certificado_examen_utn.pdf',
-        texto: 'Presento constancia de examen final rendido el mismo día en sede central.',
-        fecha: '2026-03-03'
-      },
-      logsDescargo: [
-        {
-          operacion: 'CREACION',
-          accionLabel: 'Añadir Justificativo',
-          usuario: 'Lucas Martín Guillén (Legajo 85194)',
-          legajo: '85194',
-          timestamp: '03/03/2026 10:15 hs',
-          detalle: 'Modalidad T02 (Certificado): Examen Académico Universitario en UTN FRC • Archivo: certificado_examen_utn.pdf'
-        }
-      ],
-      votacion: {
-        votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE' },
-        considerandos: 'El justificativo académico cumple las formalidades estatutarias requeridas.',
-        aprobado: true
-      }
-    },
-    {
-      id: 'EXP-2026-003',
-      numero: 'EXP-003/2026',
-      socio: 'Nicolás Rosales',
-      legajo: '408917',
-      subcomision: 'Cómputos',
-      motivo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
-      titulo: 'Coordinación ejemplar en jornadas tecnológicas solidarias',
-      razon: 'Organización integral y liderazgo en las jornadas tecnológicas solidarias.',
-      creador: 'Sánchez, Diego Gabriel (87414)',
-      fechaCreacion: '2026-02-28',
-      estado: 'pendiente_correos',
-      horasRestantes: 0,
-      tipo: 'merito',
-      puntos: 2.0,
-      cantidadSocios: 1,
-      sociosInvolucrados: [
-        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
-      ],
-      votacion: {
-        votos: { 'Juez 1': 'FAVORABLE', 'Juez 2': 'FAVORABLE', 'Juez 3': 'FAVORABLE' },
-        considerandos: 'Desempeño sobresaliente con impacto directo en la comunidad.',
-        aprobado: true
-      },
-      firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)'],
-        hashCriptografico: '',
-        timestamp: ''
-      }
-    },
-    {
-      id: 'EXP-2026-004',
-      numero: 'EXP-004/2026',
-      socio: 'Valentina Rossi',
-      legajo: 'LEG-6541',
-      subcomision: 'Prensa y Difusión',
-      motivo: 'Incumplimiento de tareas asignadas en cobertura institucional',
-      titulo: 'Incumplimiento de tareas asignadas en cobertura institucional',
-      razon: 'Falta de entrega del material audiovisual de cobertura institucional.',
-      creador: 'Rosales, Nicolás (408917)',
-      fechaCreacion: '2026-02-15',
-      estado: 'emitido',
-      horasRestantes: 0,
-      tipo: 'falta',
-      puntos: -0.5,
-      cantidadSocios: 1,
-      sociosInvolucrados: [
-        { id: '8', nombre: 'Valentina Rossi', legajo: 'LEG-6541', grupo: '60', estado: 'Activo' }
-      ],
-      firmas: {
-        juecesFirmantes: ['Presidente TD', 'Miembro Titular 1', 'Miembro Titular 2'],
-        hashCriptografico: 'sha256-8f4b23c90e1a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
-        timestamp: '2026-02-22 18:30:12'
-      }
-    },
-    {
-      id: 'EXP-2026-005',
-      numero: 'EXP-005/2026',
-      socio: 'Martín Gómez',
-      legajo: 'LEG-5412',
-      subcomision: 'Deportes',
-      motivo: 'Ausencia en convocatoria de reacondicionamiento edilicio',
-      titulo: 'Ausencia en convocatoria de reacondicionamiento edilicio',
-      razon: 'Inasistencia sin aviso previo a la jornada de reacondicionamiento.',
-      creador: 'Rosales, Nicolás (408917)',
-      fechaCreacion: '2026-03-04',
-      estado: 'creado',
-      horasRestantes: 120,
-      tipo: 'falta',
-      puntos: -1.0,
-      cantidadSocios: 1,
-      sociosInvolucrados: [
-        { id: '9', nombre: 'Martín Gómez', legajo: 'LEG-5412', grupo: '62', estado: 'Pasivo' }
-      ]
-    },
-    {
-      id: 'EXP-2026-006',
-      numero: 'EXP-006/2026',
-      socio: 'Nicolás Rosales',
-      legajo: '408917',
-      subcomision: 'Cómputos',
-      motivo: 'Retraso reiterado en entrega de actas de subcomisión',
-      titulo: 'Retraso reiterado en entrega de actas de subcomisión',
-      razon: 'Demora en la carga de actas de reuniones ordinarias de la subcomisión.',
-      creador: 'Sánchez, Diego Gabriel (87414)',
-      fechaCreacion: '2026-03-02',
-      estado: 'pendiente_firma',
-      horasRestantes: 0,
-      tipo: 'falta',
-      puntos: -1.0,
-      cantidadSocios: 1,
-      sociosInvolucrados: [
-        { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
-      ],
-      firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)'],
-        hashCriptografico: '',
-        timestamp: ''
-      }
-    },
-    {
-      id: 'EXP-2026-007',
-      numero: 'EXP-007/2026',
-      socio: 'Axel René Villegas',
-      legajo: '403655',
-      subcomision: 'Cómputos',
-      motivo: 'Incumplimiento de guardia de laboratorio informático',
-      titulo: 'Incumplimiento de guardia de laboratorio informático',
-      razon: 'Ausencia durante el turno asignado en el laboratorio informático.',
-      creador: 'Rosales, Nicolás (408917)',
-      fechaCreacion: '2026-02-28',
-      estado: 'pendiente_correos',
-      horasRestantes: 0,
-      tipo: 'falta',
-      puntos: -2.0,
-      cantidadSocios: 1,
-      sociosInvolucrados: [
-        { id: '5', nombre: 'Axel René Villegas', legajo: '403655', grupo: '59', estado: 'Activo' }
-      ],
-      firmas: {
-        juecesFirmantes: ['Dr. Argañaraz (Presidente TD)', 'Dra. Bustos (Miembro Titular)', 'Ing. Rossi (Miembro Titular)'],
-        hashCriptografico: 'sha256-abc123789fed456',
-        timestamp: '2026-03-05 11:20:00'
-      }
-    }
-  ]);
+  private expedientesSubject = new BehaviorSubject<Expediente[]>([]);
   public expedientes$ = this.expedientesSubject.asObservable();
 
   private sociosSubject = new BehaviorSubject<Socio[]>([
@@ -550,6 +388,23 @@ export class TribunalDataService {
       urgencia === 'urgente' ? 'Urgente' : urgencia === 'baja' ? 'Baja' : 'Normal'
     );
 
+    const firmantesReales: string[] = Array.isArray(c.firmantes_td)
+      ? c.firmantes_td.map((f: any) => {
+          if (typeof f === 'string') return f;
+          if (f && typeof f === 'object') {
+            return f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`;
+          }
+          return String(f);
+        })
+      : [];
+
+    let estado = c.estado;
+    let estadoDisplay = c.estado_display;
+    if (c.estado === 'pendiente_correos' && firmantesReales.length < 3 && c.resolucion_estado !== 'ISSUED') {
+      estado = 'pendiente_firma';
+      estadoDisplay = 'Pendiente de Firma';
+    }
+
     return {
       id: String(c.id),
       numero: c.numero,
@@ -565,9 +420,13 @@ export class TribunalDataService {
       reglamentoAsociado: c.reglamento_asociado || '',
       reglamentos_respaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
       reglamentosRespaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
+      vistos: c.vistos,
+      considerandos: c.considerandos,
+      seResuelve: c.articulos_resolutivos,
+      articulosResolutivos: c.articulos_resolutivos,
       fechaCreacion: c.created_at || '',
-      estado: c.estado,
-      estadoDisplay: c.estado_display,
+      estado,
+      estadoDisplay,
       urgencia,
       urgenciaDisplay,
       transicionesPermitidas: c.transiciones_permitidas || [],
@@ -578,7 +437,13 @@ export class TribunalDataService {
       puntajeSolicitado: c.puntaje_solicitado || null,
       cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
       sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
-      plazoLimiteAt: c.plazo_limite_at || undefined
+      plazoLimiteAt: c.plazo_limite_at || undefined,
+      firmas: {
+        juecesFirmantes: firmantesReales,
+        hashCriptografico: c.contenido_hash || '',
+        timestamp: c.issued_at || '',
+        fechaSellado: c.issued_at || ''
+      }
     };
   }
 
@@ -614,8 +479,8 @@ export class TribunalDataService {
     const operacion: 'CREACION' | 'EDICION' = esEdicion ? 'EDICION' : 'CREACION';
     const accionLabel = esEdicion ? 'Edición de Justificativo' : 'Añadir Justificativo';
     const detalle = tipo === 'T02_CERTIFICADO'
-      ? `Modalidad T02 (Certificado): ${datos.causal || 'Causal tipificada'}${datos.archivo ? ' • Archivo: ' + datos.archivo : ''}${datos.texto && !datos.texto.startsWith('Justificación presentada') ? ' • Fundamento: ' + datos.texto.slice(0, 50) : ''}`
-      : `Modalidad T03 (Extraordinario): ${datos.texto ? datos.texto.slice(0, 60) + '...' : 'Fundamentación expuesta'}`;
+      ? `Descargo: ${datos.causal || 'Causal tipificada'}${datos.archivo ? ' • Archivo: ' + datos.archivo : ''}${datos.texto && !datos.texto.startsWith('Justificación presentada') ? ' • Fundamento: ' + datos.texto.slice(0, 50) : ''}`
+      : `Descargo (Otros): ${datos.texto ? datos.texto.slice(0, 60) + '...' : 'Fundamentación expuesta'}`;
 
     const now = new Date();
     const timestamp = now.toLocaleDateString('es-AR', {
@@ -688,25 +553,49 @@ export class TribunalDataService {
   votarDictamen(
     expedienteId: string, 
     votos: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' }, 
-    considerandos: string
+    considerandos: string,
+    resolucionData?: {
+      vistos?: string;
+      considerandos?: string;
+      seResuelve?: string;
+      numeroResolucion?: string;
+      fechaResolucion?: string;
+    }
   ): boolean {
     const current = this.expedientesSubject.value;
     const index = current.findIndex(e => e.id === expedienteId);
     if (index === -1) return false;
 
     const exp = { ...current[index] };
-    const favorables = Object.values(votos).filter(v => v === 'FAVORABLE').length;
     const quorumn = Object.keys(votos).length;
-    const aprobado = quorumn >= 2 && favorables >= 2;
+    const favorables = Object.values(votos).filter(v => v === 'FAVORABLE').length;
+    // Si no hay votos nominales (nueva resolución oficial colegiada) o quorum alcanzado, aprobado es true
+    const aprobado = quorumn === 0 ? true : (quorumn >= 2 && favorables >= 2);
+
+    const vistos = resolucionData?.vistos || exp.vistos || '';
+    const considerandosFinal = resolucionData?.considerandos || considerandos || exp.considerandos || '';
+    const seResuelve = resolucionData?.seResuelve || exp.seResuelve || '';
+    const numeroResolucion = resolucionData?.numeroResolucion || exp.numeroResolucion || exp.numero;
+    const fechaResolucion = resolucionData?.fechaResolucion || exp.fechaResolucion || new Date().toISOString();
+
+    exp.vistos = vistos;
+    exp.considerandos = considerandosFinal;
+    exp.seResuelve = seResuelve;
+    exp.numeroResolucion = numeroResolucion;
+    exp.fechaResolucion = fechaResolucion;
 
     exp.votacion = {
       votos,
-      considerandos,
+      considerandos: considerandosFinal,
+      vistos,
+      seResuelve,
+      numeroResolucion,
+      fechaResolucion,
       aprobado
     };
 
     if (aprobado) {
-      exp.estado = 'pendiente_correos';
+      exp.estado = 'pendiente_firma';
       exp.firmas = {
         juecesFirmantes: [],
         hashCriptografico: '',
@@ -718,6 +607,19 @@ export class TribunalDataService {
     newArr[index] = exp;
     this.expedientesSubject.next(newArr);
     return true;
+  }
+
+  generarResolucionOficial(
+    expedienteId: string,
+    datos: {
+      vistos: string;
+      considerandos: string;
+      seResuelve: string;
+      numeroResolucion?: string;
+      fechaResolucion?: string;
+    }
+  ): boolean {
+    return this.votarDictamen(expedienteId, {}, datos.considerandos, datos);
   }
 
   firmarResolucion(expedienteId: string, juezFirmante: string): { completo: boolean; exp?: Expediente } {

@@ -38,8 +38,8 @@ class EstadoExpedienteEnum(models.TextChoices):
 class TipoDescargoEnum(models.TextChoices):
     """Tipos de formularios de justificación y descargos admitidos."""
 
-    T02_CERTIFICADO = "T02_CERTIFICADO", "Formulario T02 - Causal con Certificado"
-    T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Formulario T03 - Extraordinario"
+    T02_CERTIFICADO = "T02_CERTIFICADO", "Descargo con Causal / Certificado"
+    T03_EXTRAORDINARIO = "T03_EXTRAORDINARIO", "Descargo - Otros"
 
 
 class OperacionDescargoEnum(models.TextChoices):
@@ -1631,6 +1631,70 @@ class AtencionFelicitacion(models.Model):
             f"Socio {self.socio_id}: {self.llamadosAtencion} llamados, "
             f"{self.felicitaciones} felicitaciones"
         )
+
+
+class EstadoResolucionEnum(models.TextChoices):
+    DRAFT = "DRAFT", "Borrador"
+    ISSUED = "ISSUED", "Emitida"
+
+
+class Resolucion(models.Model):
+    """Resolución oficial versionada; no almacena adjuntos privados."""
+
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="resoluciones"
+    )
+    version = models.PositiveIntegerField(default=1)
+    plantilla_version = models.CharField(max_length=50, default="v1", blank=True)
+    estado = models.CharField(
+        max_length=10, choices=EstadoResolucionEnum.choices, default=EstadoResolucionEnum.DRAFT
+    )
+    numero_expediente_snapshot = models.CharField(max_length=50)
+    vistos = models.TextField(blank=True, default="")
+    considerandos = models.TextField(blank=True, default="")
+    articulos_resolutivos = models.TextField(blank=True, default="")
+    reglamentos_respaldantes = models.JSONField(default=list, blank=True)
+    puntos_finales = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    medidas = models.JSONField(default=list, blank=True)
+    firmantes = models.JSONField(default=list, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="resoluciones_creadas"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="resoluciones_emitidas",
+    )
+    issued_at = models.DateTimeField(null=True, blank=True)
+    contenido_hash = models.CharField(max_length=64, blank=True, default="")
+
+    class Meta:
+        db_table = "expedientes_resolucion"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["expediente", "version"], name="unique_resolucion_version"
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if (
+            self.pk
+            and type(self).objects.filter(pk=self.pk, estado=EstadoResolucionEnum.ISSUED).exists()
+        ):
+            raise ValidationError("Una resolución emitida es inmutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if (
+            self.pk
+            and type(self).objects.filter(pk=self.pk, estado=EstadoResolucionEnum.ISSUED).exists()
+        ):
+            raise ValidationError("Una resolución emitida es inmutable.")
+        return super().delete(*args, **kwargs)
 
 
 # Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy

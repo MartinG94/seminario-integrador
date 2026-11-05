@@ -22,7 +22,6 @@ from expedientes.models import (
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
-    TipoDescargoEnum,
 )
 from expedientes.services.causal_resolution_service import current_evidence_for
 from socios.models import Role, Socio
@@ -621,17 +620,14 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                     contiene_datos_medicos = es_med
                     datos_medicos_restringidos = False
 
-                # Decisión sobre causal T02 si corresponde
-                decisiones_causal_data = []
-                regla_sugerida_val = None
-                if descargo_vigente.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-                    evs_vigentes = current_evidence_for(descargo_vigente, evidencias_all)
-                    regla_sugerida_val = suggested_decision(
-                        has_current_evidence=bool(evs_vigentes)
-                    ).value
-                    decisiones_causal_data = DecisionCausalVisorSerializer(
-                        descargo_vigente.decisiones_causal.all(), many=True
-                    ).data
+                # Decisión sobre el descargo si corresponde
+                evs_vigentes = current_evidence_for(descargo_vigente, evidencias_all)
+                regla_sugerida_val = suggested_decision(
+                    has_current_evidence=bool(evs_vigentes)
+                ).value
+                decisiones_causal_data = DecisionCausalVisorSerializer(
+                    descargo_vigente.decisiones_causal.all(), many=True
+                ).data
 
                 descargo_dto = {
                     "id": descargo_vigente.id,

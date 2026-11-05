@@ -387,6 +387,16 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 14.1 Sprint 4 — Desglose Atómico: S4-05 / SCRUM-56 (Generar Resolución Oficial Canónica y Firma Colegiada por Año Social)
+
+- [x] **TS4-05.1 Modelo `Resolucion`, firmantes reales y servicio sin hardcodeos [TDD]:** Modelo `Resolucion` con numeración `NNN/AAAA`, estado `DRAFT`/`ISSUED`, `firmantes` JSON por año social (4.º, 5.º y 6.º), servicio `registrar_firma_resolucion` y emisión con hash SHA-256 sin nombres hardcodeados.
+- [x] **TS4-05.2 Persistencia de estado del expediente y endpoints REST [TDD]:** Transición persistente del expediente a `pendiente_correos` (con registro en `CambioEstadoExpediente`) al generar resolución en `POST`/`PATCH /api/v1/expedientes/<id>/resolucion/`, endpoint `POST /api/v1/expedientes/<id>/resolucion/firmar/` y previsualización PDF institucional.
+- [x] **TS4-05.3 Regla transversal RBAC para rol `TD` [TDD]:** Permiso exclusivo de evaluación de descargos, consolidación de puntajes finales, generación de resolución y firma para cualquier usuario autenticado con rol `TD`, sin dependencia de `ComposicionTribunal` ni bloqueo adicional.
+- [x] **TS4-05.4 Modal trazable "Generar Resolución Oficial" y Modal "Firmar Resolución" en Angular [TDD]:** Sección `VISTO` con selector de Catálogo Reglamentario multi-documento y `<app-tabla-reglamentos>`, `CONSIDERANDO` como único campo editable para rol `TD`, `SE RESUELVE` con Artículo 1° (tabla de puntos finales consolidados en solo lectura) y Artículo 2° fijo formal, ocultamiento de firmas en la generación y estampado de firmas reales por año social en estado `Pendiente de Firma`.
+- [x] **TS4-05.5 Verificación integral y consistencia PO:** Suites `pytest` (53/53 en verde) y `Karma` (154/154 en verde), `ruff check/format`, `npm run build` y control contra `notasPO.md`.
+
+---
+
 ## 13.1 Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
 
 > **Tareas:** [`specs/009-reportes-e-informes/tasks.md`](specs/009-reportes-e-informes/tasks.md)

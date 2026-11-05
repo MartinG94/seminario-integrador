@@ -68,18 +68,19 @@ class TestInhibicionDeInvolucrados:
         causal_expediente.socios.add(tribunal_nomina["t5"])
         return tribunal_nomina["t5"]
 
-    def test_imputado_no_evalua_justificativos(self, api_client, causal_descargo, vocal_imputado):
+    def test_imputado_rol_td_puede_evaluar_justificativos(
+        self, api_client, causal_descargo, vocal_imputado
+    ):
         api_client.force_authenticate(vocal_imputado.user)
         response = api_client.post(
             url(causal_descargo.expediente, f"descargos/{causal_descargo.pk}/decisiones/"),
             DECISION,
             format="json",
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "Participación restringida" in response.data["detail"]
-        assert not DecisionCausalDescargo.objects.exists()
+        assert response.status_code == status.HTTP_201_CREATED
+        assert DecisionCausalDescargo.objects.exists()
 
-    def test_solicitante_no_evalua_justificativos(
+    def test_solicitante_rol_td_puede_evaluar_justificativos(
         self, api_client, causal_descargo, tribunal_nomina
     ):
         from expedientes.models import SolicitudT01
@@ -95,7 +96,7 @@ class TestInhibicionDeInvolucrados:
             DECISION,
             format="json",
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_201_CREATED
 
     def test_miembro_no_involucrado_evalua(self, api_client, causal_descargo, tribunal_nomina):
         api_client.force_authenticate(tribunal_nomina["t4"].user)
@@ -113,25 +114,28 @@ class TestInhibicionDeInvolucrados:
             ("transicionar/", {"to_status": EstadoExpedienteEnum.ESPERA_RESOLUCION}),
         ],
     )
-    def test_imputado_no_transiciona(
+    def test_imputado_rol_td_puede_transicionar(
         self, api_client, causal_expediente, vocal_imputado, suffix, payload
     ):
         api_client.force_authenticate(vocal_imputado.user)
         response = api_client.post(url(causal_expediente, suffix), payload, format="json")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
         causal_expediente.refresh_from_db()
-        assert causal_expediente.estado == EstadoExpedienteEnum.REVISION_RESOLUCION
+        assert causal_expediente.estado == EstadoExpedienteEnum.ESPERA_RESOLUCION
 
-    def test_imputado_no_emite_ni_firma(self, api_client, causal_expediente, vocal_imputado):
+    def test_imputado_rol_td_puede_emitir_y_firmar(
+        self, api_client, causal_expediente, vocal_imputado
+    ):
         causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
-        causal_expediente.save(update_fields=["estado"])
+        causal_expediente.concepto = "TD"
+        causal_expediente.save(update_fields=["estado", "concepto"])
         api_client.force_authenticate(vocal_imputado.user)
         response = api_client.post(
             url(causal_expediente, "transicionar/"),
             {"to_status": EstadoExpedienteEnum.EMITIDO},
             format="json",
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
 
     def test_miembro_no_involucrado_transiciona(
         self, api_client, causal_expediente, tribunal_nomina

@@ -302,6 +302,20 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/gestionar-expedientes']);
   });
 
+  it('permite abrir evaluacion de causal tanto para descargos con certificado como de tipo otros', () => {
+    const invOtros = {
+      descargo: {
+        id: 1,
+        tipo: 'T03_EXTRAORDINARIO',
+        regla_sugerida: 'REJECTED',
+      },
+    } as any;
+    component.abrirEvaluacionCausal(invOtros);
+    expect(component.modalCausalAbierto).toBeTrue();
+    expect(component.involucradoSeleccionado).toBe(invOtros);
+    expect(component.borradorCausal.decision).toBe('REJECTED');
+  });
+
   describe('Clasificación de concepto institucional TD (SCRUM-63)', () => {
     it('debe mostrar la advertencia "Sin clasificar · Obligatorio antes de emitir" si concepto es null o vacío', () => {
       component.visorData!.concepto = null;

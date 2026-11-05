@@ -42,7 +42,6 @@ from expedientes.permissions import (
     CanResolveCausal,
     CanTransitionExpedientes,
     IsImputadoOrTribunal,
-    IsNotInvolvedInExpediente,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
@@ -127,6 +126,7 @@ EXPEDIENTE_LIST_PREFETCH = (
     "descargos__decisiones_causal__autor",
     "evidencias__socio",
     "solicitud_t01",
+    "resoluciones",
 )
 
 
@@ -191,7 +191,7 @@ class ExpedienteCollectionView(APIView):
 
 
 class TransicionExpedienteView(APIView):
-    permission_classes = [CanTransitionExpedientes, IsNotInvolvedInExpediente]
+    permission_classes = [CanTransitionExpedientes]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = TransicionExpedienteSerializer(data=request.data)
@@ -744,7 +744,6 @@ class DecisionCausalView(APIView):
             return [
                 permissions.IsAuthenticated(),
                 CanResolveCausal(),
-                IsNotInvolvedInExpediente(),
             ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
@@ -1081,7 +1080,7 @@ class BoardExpedientesView(APIView):
                 "solicitud_t01",
                 "solicitud_t01__solicitante",
             )
-            .prefetch_related("socios", "cambios_estado")
+            .prefetch_related("socios", "cambios_estado", "resoluciones")
             .all()
         )
         filterset = ExpedienteFilter(request.query_params, queryset=qs)
@@ -1099,7 +1098,6 @@ class TransicionarExpedienteView(APIView):
     permission_classes = [
         permissions.IsAuthenticated,
         CanTransitionExpedientes,
-        IsNotInvolvedInExpediente,
     ]
 
     def post(self, request: Request, pk: int) -> Response:

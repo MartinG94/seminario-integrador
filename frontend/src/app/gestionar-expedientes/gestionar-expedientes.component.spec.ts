@@ -15,7 +15,7 @@ import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
-import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
+import { TribunalDataService, BoardResponseDTO, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
 import {
   ComposicionTribunalDTO,
   DecisionCausalDTO,
@@ -120,13 +120,13 @@ describe('GestionarExpedientesComponent', () => {
     expect(component.columnasKanbanVisibles[0].estado).toBe('justificando');
   });
 
-  it('puedeVotarOFirmar debe ser true para miembros del Tribunal (TD) o ADMIN', () => {
+  it('puedeVotarOFirmar debe ser true únicamente para miembros con rol TD', () => {
     spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
     expect(component.puedeVotarOFirmar).toBeTrue();
   });
 
-  it('puedeVotarOFirmar debe ser false para CD u otros roles que solo tienen permisos de supervisión', () => {
-    spyOn(authService, 'tieneRol').and.callFake((...roles) => !roles.includes('TD') && !roles.includes('ADMIN'));
+  it('puedeVotarOFirmar debe ser false para CD, ADMIN u otros roles sin rol TD', () => {
+    spyOn(authService, 'tieneRol').and.callFake((...roles) => !roles.includes('TD'));
     expect(component.puedeVotarOFirmar).toBeFalse();
   });
 
@@ -532,16 +532,16 @@ describe('GestionarExpedientesComponent', () => {
         ['Ana', 'Pérez', '59'], ['Bruno', 'Díaz', '60'], ['Carla', 'Gómez', '61']
       ]);
       expect(filas.map(f => component.estadoJustificacion(f))).toEqual([
-        'Pendiente de evaluación', 'Extraordinaria (T03)', 'Sin justificación'
+        'Pendiente de evaluación', 'Pendiente de evaluación', 'Sin justificación'
       ]);
     });
 
-    it('sólo permite evaluar las justificaciones T02', () => {
+    it('permite evaluar las justificaciones con descargo vigente', () => {
       abrirComo('TD');
       const [t02, t03, sinDescargo] = component.involucradosJustificacion;
 
       expect(component.esEvaluable(t02)).toBeTrue();
-      expect(component.esEvaluable(t03)).toBeFalse();
+      expect(component.esEvaluable(t03)).toBeTrue();
       expect(component.esEvaluable(sinDescargo)).toBeFalse();
     });
 
@@ -726,6 +726,7 @@ describe('GestionarExpedientesComponent', () => {
 
     beforeEach(() => {
       api = TestBed.inject(ExpedienteApiService);
+      spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
       filaPrueba = {
         socioId: 10,
         legajo: '74907',
@@ -1675,20 +1676,18 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.composicion).toBeNull();
     });
 
-    describe('inhibición de involucrados (Art. 95 y Art. 24 RPD)', () => {
-      it('muestra el banner y oculta decisión de justificativos y transición', () => {
+    describe('Autorización transversal por rol TD (sin bloqueos por usuarioInvolucrado ni banner)', () => {
+      it('no muestra el banner de inhibición y cualquier usuario con rol TD puede evaluar y resolver', () => {
         abrirComo('TD', composicion({ usuario: { esta_involucrado: true } }));
 
         const banner = compiled().querySelector('.banner-involucrado');
-        expect(banner?.textContent).toContain('Participación restringida');
-        expect(banner?.textContent).toContain('Tu lugar lo ocupa automáticamente tu suplente');
-        expect(component.puedeEvaluarJustificaciones).toBeFalse();
-        expect(component.puedeResolverExpedienteSeleccionado).toBeFalse();
-        expect(component.puedeGenerarResolucion).toBeFalse();
-        expect(compiled().querySelector('.btn-generar-resolucion')).toBeNull();
+        expect(banner).toBeNull();
+        expect(component.usuarioInvolucrado).toBeFalse();
+        expect(component.puedeEvaluarJustificaciones).toBeTrue();
+        expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
       });
 
-      it('un miembro no involucrado puede evaluar y resolver', () => {
+      it('un usuario con rol TD puede evaluar y resolver', () => {
         abrirComo('TD');
         expect(compiled().querySelector('.banner-involucrado')).toBeNull();
         expect(component.puedeEvaluarJustificaciones).toBeTrue();
@@ -1697,10 +1696,8 @@ describe('GestionarExpedientesComponent', () => {
     });
 
     describe('Casos críticos del Art. 95', () => {
-      it('muestra el aviso de derivación a Asamblea sin inmovilizar la causa ni pedir un acta', () => {
-        // Decisión del PO (31/10/2026): la Asamblea designa integrantes con rol TD por fuera del sistema.
+      it('no renderiza paneles ni inputs de acta y mantiene puedeResolverExpedienteSeleccionado activo para TD', () => {
         abrirComo('TD', casoCritico());
-        expect(compiled().querySelector('.aviso-asamblea')?.textContent).toContain('Asamblea General');
         expect(compiled().querySelector('.panel-composicion')).toBeNull();
         expect(compiled().querySelector('input[type="file"]#acta-asamblea')).toBeNull();
         expect(component.puedeResolverExpedienteSeleccionado).toBeTrue();
@@ -1714,6 +1711,8 @@ describe('GestionarExpedientesComponent', () => {
   });
 
   describe('Escala discreta de puntajes, llamados, felicitaciones y bloqueo de edición', () => {
+    let tieneRolSpy: jasmine.Spy;
+
     const expEnRevision: Expediente = {
       id: '12',
       numero: 'EXP-012/2026',
@@ -1730,7 +1729,11 @@ describe('GestionarExpedientesComponent', () => {
       titulo: 'En etapa probatoria'
     } as any;
 
-    it('solo permite modificar puntaje si el expediente está En Revisión (revision_resolucion o espera_resolucion)', () => {
+    beforeEach(() => {
+      tieneRolSpy = spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
+    });
+
+    it('solo permite modificar puntaje a usuarios con rol TD y si el expediente está En Revisión (revision_resolucion o espera_resolucion)', () => {
       component.expedienteSeleccionado = expEnRevision;
       expect(component.puedeModificarPuntaje).toBeTrue();
 
@@ -1738,6 +1741,10 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.puedeModificarPuntaje).toBeTrue();
 
       component.expedienteSeleccionado = expEnTramite;
+      expect(component.puedeModificarPuntaje).toBeFalse();
+
+      tieneRolSpy.and.returnValue(false);
+      component.expedienteSeleccionado = expEnRevision;
       expect(component.puedeModificarPuntaje).toBeFalse();
     });
 
@@ -1788,7 +1795,14 @@ describe('GestionarExpedientesComponent', () => {
         tipo: 'T02_CERTIFICADO',
         causal: ''
       } as any;
-      expect(component.getTipoDescargoDisplay(descSinCausal)).toBe('Certificado de Examen (T02)');
+      expect(component.getTipoDescargoDisplay(descSinCausal)).toBe('Descargo con Certificado');
+
+      const descOtros = {
+        id: 3,
+        tipo: 'T03_EXTRAORDINARIO',
+        causal: 'Otro'
+      } as any;
+      expect(component.getTipoDescargoDisplay(descOtros)).toBe('Otros');
     });
 
     it('exige fundamentación obligatoria solo cuando el puntaje final perjudica al socio respecto al pedido', () => {
@@ -1866,6 +1880,7 @@ describe('GestionarExpedientesComponent', () => {
       component.abrirModalVotacion(expSinReg);
 
       expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+      expect(component.considerandosTexto).toBe('');
     });
 
     it('permite filtrar artículos por texto en el modal de resolución sin deseleccionar los elegidos', () => {
@@ -1890,7 +1905,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.reglamentosSeleccionadosResolucion).toEqual([nuevoArt]);
     });
 
-    it('actualiza los reglamentos respaldantes en el expediente y emite votación en confirmarVotacion', () => {
+    it('actualiza los reglamentos respaldantes y persiste la resolución pasando a pendiente_firma en confirmarVotacion', () => {
       spyOn(dataService, 'votarDictamen').and.callThrough();
       const exp = crearExpConReglamentos();
       component.abrirModalVotacion(exp);
@@ -1898,6 +1913,7 @@ describe('GestionarExpedientesComponent', () => {
         'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
         'Estatuto - Art. 25: Deberes y obligaciones de los socios'
       ];
+      component.considerandosTexto = 'CONSIDERANDO: mérito y fundamentos de la causa.';
 
       component.confirmarVotacion();
 
@@ -1908,11 +1924,156 @@ describe('GestionarExpedientesComponent', () => {
       expect(dataService.votarDictamen).toHaveBeenCalledWith(
         'EXP-100',
         component.votosJueces,
-        component.considerandosTexto
+        component.considerandosTexto,
+        jasmine.objectContaining({
+          considerandos: 'CONSIDERANDO: mérito y fundamentos de la causa.'
+        })
       );
-      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Dictamen votado'));
+      expect(exp.estado).toBe('pendiente_firma');
+      expect(exp.vistos).toContain('VISTO:');
+      expect(exp.seResuelve).toContain('ARTÍCULO 1°.-');
+      expect(exp.seResuelve).toContain('ARTÍCULO 2°.-');
+      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Resolución oficial generada con éxito'));
       expect(component.modalVotacionAbierto).toBeFalse();
       expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+    });
+
+    it('impide generar la resolución si no se seleccionaron reglamentos para VISTO o CONSIDERANDO está vacío', () => {
+      spyOn(dataService, 'votarDictamen');
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = [];
+      component.considerandosTexto = 'Considerandos válidos';
+
+      component.confirmarVotacion();
+
+      expect(notifications.warning).toHaveBeenCalledWith(
+        'Seleccioná al menos un artículo reglamentario en VISTO.'
+      );
+      expect(dataService.votarDictamen).not.toHaveBeenCalled();
+      expect(component.modalVotacionAbierto).toBeTrue();
+
+      component.reglamentosSeleccionadosResolucion = ['Estatuto - Art. 25: Deberes'];
+      component.considerandosTexto = '   ';
+      component.confirmarVotacion();
+
+      expect(notifications.warning).toHaveBeenCalledWith(
+        'El campo CONSIDERANDO es obligatorio.'
+      );
+    });
+
+    it('llama a crearResolucion con plantilla_version v1 y persiste pendiente_firma si exp.id es numérico', () => {
+      spyOn(expedienteApi, 'crearResolucion').and.returnValue(of({
+        id: 1,
+        expediente: 12,
+        version: 1,
+        plantilla_version: 'v1',
+        estado: 'DRAFT',
+        numero_expediente_snapshot: 'EXP-012/2026',
+        vistos: 'Vistos...',
+        considerandos: 'Considerandos...',
+        articulos_resolutivos: 'Articulos...',
+        firmantes_td: [],
+        created_by: 1,
+        created_at: '',
+        updated_at: '',
+        contenido_hash: 'sha256-abc'
+      }));
+      const exp = { ...crearExpConReglamentos(), id: '12' };
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = ['Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'];
+      component.considerandosTexto = 'Fundamentos válidos';
+
+      component.confirmarVotacion();
+
+      expect(expedienteApi.crearResolucion).toHaveBeenCalledWith('12', jasmine.objectContaining({
+        plantilla_version: 'v1',
+        considerandos: 'Fundamentos válidos',
+        reglamentos_respaldantes: ['Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión']
+      }));
+      expect(exp.estado).toBe('pendiente_firma');
+      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Resolución oficial generada con éxito'));
+      expect(component.modalVotacionAbierto).toBeFalse();
+    });
+
+    it('muestra error y no altera el estado si crearResolucion falla con error del servidor', () => {
+      spyOn(expedienteApi, 'crearResolucion').and.returnValue(throwError(() => ({
+        status: 400,
+        error: { detail: 'Error de validación en el servidor.' }
+      })));
+      const exp = { ...crearExpConReglamentos(), id: '12', estado: 'revision_resolucion' as EstadoExpediente };
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = ['Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'];
+      component.considerandosTexto = 'Fundamentos válidos';
+
+      component.confirmarVotacion();
+
+      expect(expedienteApi.crearResolucion).toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalled();
+      expect(exp.estado).toBe('revision_resolucion');
+      expect(component.modalVotacionAbierto).toBeTrue();
+      expect(component.guardandoResolucion).toBeFalse();
+    });
+
+    it('Modal 2 renderiza encabezado institucional, selector de catálogo para VISTO, único textarea para CONSIDERANDO, y SE RESUELVE estructurado sin bloque de firmas', () => {
+      const exp = crearExpConReglamentos();
+      component.involucradosJustificacion = [
+        {
+          socioId: 10,
+          legajo: '75001',
+          nombre: 'Lucas',
+          apellido: 'Gómez',
+          grupo: '59',
+          descargo: { id: 1, tipo: 'T02_CERTIFICADO', leido: true, puntaje_ratificado: -1.0 } as any
+        }
+      ];
+      component.abrirModalVotacion(exp);
+      fixture.detectChanges();
+
+      const modalEl = fixture.nativeElement.querySelector('.modal-backdrop-custom');
+      expect(modalEl).toBeTruthy();
+
+      // Debe contener la tabla de puntajes finales consolidados en Artículo 1°
+      const tablaPuntajes = modalEl.querySelector('.tabla-puntajes-consolidados');
+      expect(tablaPuntajes).toBeTruthy();
+      expect(tablaPuntajes.textContent).toContain('Lucas Gómez');
+      expect(tablaPuntajes.textContent).toContain('-1');
+
+      // Botón selector de catálogo para VISTO presente, sin textarea libre de Visto
+      expect(modalEl.querySelector('.btn-abrir-catalogo')).toBeTruthy();
+      expect(modalEl.querySelector('textarea#vistosTexto')).toBeNull();
+
+      // Único textarea presente para CONSIDERANDO
+      expect(modalEl.querySelector('textarea#resolucion-considerandos')).toBeTruthy();
+
+      // SE RESUELVE estructurado, sin textarea libre
+      expect(modalEl.querySelector('textarea#seResuelveTexto')).toBeNull();
+      expect(modalEl.textContent).toContain('ARTÍCULO 1°.-');
+      expect(modalEl.textContent).toContain('ARTÍCULO 2°.-');
+
+      // NO debe contener bloque de firmas en Modal 2
+      expect(modalEl.querySelector('.resolucion-pie-firmas')).toBeNull();
+    });
+
+    it('Modal 3 renderiza los 3 espacios de firma por año social sin nombres hardcodeados y estampa firma digital', () => {
+      const exp = crearExpConReglamentos();
+      exp.estado = 'pendiente_firma';
+      exp.firmas = { juecesFirmantes: [], hashCriptografico: '', timestamp: '' };
+      component.abrirFirma(exp);
+      fixture.detectChanges();
+
+      expect(component.modalFirmaAbierto).toBeTrue();
+      expect(component.espaciosFirmaPorAnioSocial.length).toBe(3);
+      expect(component.espaciosFirmaPorAnioSocial[0].etiquetaAnio).toBe('4.º Año Social');
+      expect(component.espaciosFirmaPorAnioSocial[1].etiquetaAnio).toBe('5.º Año Social');
+      expect(component.espaciosFirmaPorAnioSocial[2].etiquetaAnio).toBe('6.º Año Social');
+      expect(component.espaciosFirmaPorAnioSocial[0].firmado).toBeFalse();
+
+      spyOn(dataService, 'firmarResolucion').and.returnValue({ completo: false });
+      component.confirmarFirma();
+
+      expect(notifications.success).toHaveBeenCalled();
+      expect(component.modalFirmaAbierto).toBeFalse();
     });
 
     it('getReglamentosSustento preserva intactas las citas históricas aunque un artículo subyacente se dé de baja', () => {
@@ -1979,6 +2140,81 @@ describe('GestionarExpedientesComponent', () => {
       component.toggleExpandirChipReglamento(expMulti.reglamentosRespaldantes![0]);
       fixture.detectChanges();
       expect(component.reglamentoExpandidoDetalle?.cuerpo).toContain('Deber de asistir a las asambleas.');
+    });
+
+it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_correos y emitido cuando tiene texto', () => {
+      const baseExp = crearExpConReglamentos();
+      baseExp.considerandos = 'Fundamentos válidos de la sanción.';
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'pendiente_firma' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeTrue();
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'pendiente_correos' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeTrue();
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'emitido' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeTrue();
+
+      // En estados previos no se muestra
+      component.expedienteSeleccionado = { ...baseExp, estado: 'revision_resolucion' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeFalse();
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'justificando' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeFalse();
+
+      // Con texto vacío o solo espacios no se muestra
+      component.expedienteSeleccionado = { ...baseExp, estado: 'pendiente_firma' as EstadoExpediente, considerandos: '   ' };
+      expect(component.mostrarConsiderandosEnDetalle).toBeFalse();
+    });
+
+    it('Modal 1 renderiza la sección CONSIDERANDO en el DOM cuando mostrarConsiderandosEnDetalle es true', fakeAsync(() => {
+      const baseExp = crearExpConReglamentos();
+      baseExp.considerandos = 'Que analizadas las actuaciones corresponde aplicar la sanción.';
+      baseExp.estado = 'pendiente_firma' as EstadoExpediente;
+
+      spyOn(expedienteApi, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 12,
+        numero: 'EXP-100',
+        estado: 'pendiente_firma',
+        socios: [],
+        descargos: [],
+        considerandos: baseExp.considerandos,
+        reglamentos_respaldantes: ['Reglamento Procesal Disciplinario 2026, Art. 12']
+      }));
+
+      component.abrirDetalle(baseExp);
+      fixture.detectChanges();
+      tick();
+
+      const modal = fixture.nativeElement.querySelector('.modal-backdrop-custom');
+      expect(modal).toBeTruthy();
+      const seccionConsiderando = modal.querySelector('.seccion-considerandos');
+      expect(seccionConsiderando).toBeTruthy();
+      expect(seccionConsiderando.textContent).toContain('CONSIDERANDO:');
+      expect(seccionConsiderando.textContent).toContain('Que analizadas las actuaciones');
+    }));
+
+    it('cargarJustificaciones hidrata considerandos y reglamentosRespaldantes en el expediente seleccionado', () => {
+      const baseExp = crearExpConReglamentos();
+      component.expedienteSeleccionado = baseExp;
+      component.expedientes = [baseExp];
+
+      spyOn(expedienteApi, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: Number(baseExp.id),
+        numero: baseExp.numero,
+        estado: 'pendiente_firma',
+        socios: [],
+        descargos: [],
+        considerandos: 'Considerandos traídos desde el backend.',
+        reglamentos_respaldantes: ['Estatuto Social A.V.E.I.T. - Art. 10']
+      }));
+
+      component.cargarJustificaciones(baseExp.id);
+
+      expect(component.expedienteSeleccionado.considerandos).toBe('Considerandos traídos desde el backend.');
+      expect(component.expedienteSeleccionado.reglamentosRespaldantes).toEqual(['Estatuto Social A.V.E.I.T. - Art. 10']);
+      expect(component.expedientes[0].considerandos).toBe('Considerandos traídos desde el backend.');
+      expect(component.expedientes[0].reglamentosRespaldantes).toEqual(['Estatuto Social A.V.E.I.T. - Art. 10']);
     });
   });
 
@@ -2071,6 +2307,8 @@ describe('GestionarExpedientesComponent', () => {
       component.onModalKeydown(escEv);
       expect(component.modalDetalleAbierto).toBeFalse();
     }));
+
+
   });
 
 });

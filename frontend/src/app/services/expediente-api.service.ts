@@ -200,6 +200,49 @@ export interface RegistrarDecisionCausalPayload {
   puntaje_final?: number | string | null;
 }
 
+export interface FirmanteTdDTO {
+  user_id?: number;
+  legajo: string;
+  full_name: string;
+  social_year: number;
+  grupo: string;
+  etiqueta: string;
+  signed_at?: string;
+}
+
+export interface ResolucionOficialDTO {
+  id: number;
+  expediente: number;
+  version: number;
+  plantilla_version: string;
+  estado: 'DRAFT' | 'ISSUED';
+  numero_expediente_snapshot?: string;
+  identificador_resolucion?: string;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+  reglamentos_respaldantes?: string[];
+  puntos_finales?: Record<string, unknown> | null;
+  medidas?: unknown[] | null;
+  firmantes_td?: Array<FirmanteTdDTO | string>;
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+  issued_by?: number;
+  issued_at?: string | null;
+  contenido_hash?: string;
+}
+
+export type ResolucionDto = ResolucionOficialDTO;
+
+export interface GuardarResolucionPayload {
+  plantilla_version?: string;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+  reglamentos_respaldantes?: string[];
+}
+
 export interface DescargoDetalleDTO {
   id: number;
   socio_id: number;
@@ -347,6 +390,9 @@ export interface ExpedienteDetalleDTO {
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
+  considerandos?: string;
+  vistos?: string;
+  articulos_resolutivos?: string;
 }
 
 // --- Apelación y adecuación del T01 (PB-02, Spec 008) ---
@@ -817,6 +863,30 @@ export class ExpedienteApiService {
 
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {
     return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
+  }
+
+  obtenerResolucion(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.get<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`);
+  }
+
+  crearResolucion(expedienteId: number | string, payload: GuardarResolucionPayload): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`, payload);
+  }
+
+  actualizarResolucion(expedienteId: number | string, payload: Partial<GuardarResolucionPayload>): Observable<ResolucionOficialDTO> {
+    return this.http.patch<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`, payload);
+  }
+
+  emitirResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/emitir/`, {});
+  }
+
+  firmarResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/firmar/`, {});
+  }
+
+  descargarPreviewResolucionPdf(expedienteId: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/resolucion/preview/`, { responseType: 'blob' });
   }
 
   actualizarConceptoExpediente(expedienteId: number | string, concepto: string | null): Observable<any> {

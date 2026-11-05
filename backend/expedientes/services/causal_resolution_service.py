@@ -27,7 +27,6 @@ from expedientes.models import (
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
-    TipoDescargoEnum,
 )
 from expedientes.services.warning_accumulation_service import WarningAccumulationService
 
@@ -135,11 +134,6 @@ class CausalResolutionService:
             )
 
         descargo = CausalResolutionService.get_descargo(expediente_id, descargo_id)
-        if descargo.tipo != TipoDescargoEnum.T02_CERTIFICADO:
-            raise CausalResolutionValidationError(
-                "Sólo se resuelven acá las causales tipificadas del Formulario T02."
-            )
-
         current = current_evidence_for(descargo)
         if evidencia_ids is None:
             valued = current
@@ -153,12 +147,13 @@ class CausalResolutionService:
             valued = [by_id[ev_id] for ev_id in dict.fromkeys(evidencia_ids)]
 
         suggested = suggested_decision(has_current_evidence=bool(current))
-        fundamento = fundamento.strip()
+        fundamento = (fundamento or "").strip()
 
         # Regla de negocio y cálculo de puntaje final / llamado de atención / felicitación
         puntos_pedido = expediente.puntos if expediente.puntos is not None else Decimal("0")
         pedido_dec = Decimal(str(puntos_pedido))
         final_snapshot_val = None
+        final_rank = None
 
         ultima_decision = (
             DecisionCausalDescargo.objects.filter(descargo=descargo).order_by("-version").first()
@@ -170,7 +165,8 @@ class CausalResolutionService:
         especial_previo = parse_puntaje_especial(prev_snapshot_val)
         especial_nuevo = parse_puntaje_especial(puntaje_final)
 
-        if puntaje_final is not None and str(puntaje_final).strip():
+        has_numeric_final = puntaje_final is not None and str(puntaje_final).strip() != ""
+        if has_numeric_final:
             if especial_nuevo == PuntajeEspecial.LLAMADO_ATENCION:
                 final_rank = PUNTAJE_ESPECIAL_RANK[PuntajeEspecial.LLAMADO_ATENCION]
                 final_snapshot_val = "LLAMADO_ATENCION"
@@ -182,10 +178,10 @@ class CausalResolutionService:
                 final_snapshot_val = float(final_rank)
 
             if final_rank < pedido_dec:
-                if not fundamento or len(fundamento.strip()) < 10:
+                if not fundamento or len(fundamento) < 10:
                     raise CausalResolutionValidationError(
-                        "La fundamentación escrita es obligatoria cuando "
-                        "el puntaje final es menor al pedido original."
+                        "La fundamentación escrita es obligatoria (al menos 10 caracteres) cuando "
+                        "el puntaje final desfavorece al socio respecto al pedido original."
                     )
 
         if especial_nuevo != especial_previo:
@@ -226,10 +222,11 @@ class CausalResolutionService:
                     actor=actor_name,
                 )
 
-        try:
-            validate_decision(decision, suggested, fundamento)
-        except CausalDecisionError as exc:
-            raise CausalResolutionValidationError(str(exc)) from exc
+        if not has_numeric_final:
+            try:
+                validate_decision(decision, suggested, fundamento)
+            except CausalDecisionError as exc:
+                raise CausalResolutionValidationError(str(exc)) from exc
 
         last_version = (
             DecisionCausalDescargo.objects.filter(descargo=descargo).aggregate(last=Max("version"))[
@@ -238,13 +235,14 @@ class CausalResolutionService:
             or 0
         )
         socio = getattr(user, "socio", None)
+        se_aparta = (final_rank != pedido_dec) if has_numeric_final else (decision != suggested)
         return DecisionCausalDescargo.objects.create(
             expediente=expediente,
             descargo=descargo,
             version=last_version + 1,
             decision=decision,
             regla_sugerida=suggested,
-            se_aparta_de_regla=decision != suggested,
+            se_aparta_de_regla=se_aparta,
             fundamento=fundamento,
             evidencias_valoradas=[
                 {

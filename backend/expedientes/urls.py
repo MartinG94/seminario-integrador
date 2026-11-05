@@ -1,6 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from expedientes.resolution_views import (
+    ResolucionEmitirView,
+    ResolucionFirmarView,
+    ResolucionPreviewView,
+    ResolucionView,
+)
 from expedientes.views import (
     AdecuacionT01View,
     ApelacionT01View,
@@ -53,6 +59,22 @@ router.register(r"eventos", EventoInstitucionalViewSet, basename="evento")
 router.register(r"apercibimientos", RegistroApercibimientoViewSet, basename="apercibimiento")
 
 urlpatterns = [
+    path(
+        "<int:expediente_id>/resolucion/preview/",
+        ResolucionPreviewView.as_view(),
+        name="resolucion-preview",
+    ),
+    path("<int:expediente_id>/resolucion/", ResolucionView.as_view(), name="resolucion"),
+    path(
+        "<int:expediente_id>/resolucion/firmar/",
+        ResolucionFirmarView.as_view(),
+        name="expediente-resolucion-firmar",
+    ),
+    path(
+        "<int:expediente_id>/resolucion/emitir/",
+        ResolucionEmitirView.as_view(),
+        name="resolucion-emitir",
+    ),
     # Reportes e Indicadores Institucionales (SCRUM-63)
     path("reportes/t01/", ReportesT01View.as_view(), name="reportes-t01"),
     path("reportes/reuniones/", ReportesReunionesView.as_view(), name="reportes-reuniones"),

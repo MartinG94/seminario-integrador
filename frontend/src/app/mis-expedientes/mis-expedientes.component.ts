@@ -58,8 +58,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   archivosSeleccionados: File[] = [];
   evidenciasExistentes: any[] = [];
   subiendoArchivos = false;
-  readonly LIMITE_T02 = 3;
-  readonly LIMITE_T03 = 5;
+  readonly LIMITE_DOCUMENTOS = 5;
   readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
   readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
@@ -477,11 +476,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       CORREGIDO: 'EDICION',
       RETIRADO: 'ELIMINACION'
     };
-    const modalidad = v.tipo === 'T02_CERTIFICADO' ? 'T02 (Certificado)' : 'T03 (Extraordinario)';
+    const modalidad = v.tipo === 'T02_CERTIFICADO' ? 'Con Certificado' : 'Otros';
     const cantidad = (v.evidencias || []).length;
     const comprobantes = `${cantidad} ${cantidad === 1 ? 'comprobante' : 'comprobantes'}`;
     const partes = [`v${v.numero}`, modalidad];
-    if (v.causal) {
+    if (v.causal && v.causal !== 'Otro' && v.causal !== 'Otros') {
       partes.push(v.causal);
     }
     partes.push(comprobantes);
@@ -694,7 +693,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get limiteActual(): number {
-    return this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+    return this.LIMITE_DOCUMENTOS;
   }
 
   get puedeSubirMas(): boolean {
@@ -852,19 +851,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length;
 
+    if (totalComprobantes > this.LIMITE_DOCUMENTOS) {
+      this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_DOCUMENTOS} documentos.`);
+      return;
+    }
+
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
       if (totalComprobantes === 0 && !this.nombreArchivo) {
         this.notifications.error('Debe adjuntar al menos un documento.');
-        return;
-      }
-      if (totalComprobantes > this.LIMITE_T02) {
-        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T02} documentos.`);
-        return;
-      }
-      if (this.relatoTexto && this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
-        this.notifications.error(
-          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
-        );
         return;
       }
     } else {
@@ -872,16 +866,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error('Por favor ingrese el motivo de la justificación.');
         return;
       }
-      if (this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
-        this.notifications.error(
-          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
-        );
-        return;
-      }
-      if (totalComprobantes > this.LIMITE_T03) {
-        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T03} documentos.`);
-        return;
-      }
+    }
+
+    if (this.relatoTexto && this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+      this.notifications.error(
+        `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
+      );
+      return;
     }
 
     const perfil = this.auth.getPerfil();
