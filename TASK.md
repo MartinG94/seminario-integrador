@@ -410,7 +410,19 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14. Instrucciones para la Actualización de este Archivo
+## 14. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
+
+> **Historia de Usuario:** S5-06: Como autoridad quiero recibir alertas de saldos críticos para actuar conforme al reglamento.  
+> **Criterios de Aceptación:** CA1 (Saldo negativo de 10 o más genera alerta crítica única por cruce descendente), CA2 (Destinatario y acción siguen acto aprobado / bloqueo normativo documentado), CA3 (Umbral -7 diferenciado, configurable y desactivable hasta validar Circular 001/2026), CA4 (Reversiones reevalúan sin borrar historial), CA5 (Cero información médica en notificaciones).
+
+- [x] **TS5-06.1 Dominio y Motor de Umbrales (-10 crítico y -7 preventivo configurable) [TDD]:** Entidades de dominio `UmbralConfig`, `TipoAlerta`, `TipoCruce`, `EstadoDespachoAlerta` y `ThresholdAlertEngine.evaluar_cruce()` con unicidad por cruce descendente y política preventiva diferenciada/desactivable (`backend/ranking/domain/threshold_alerts.py`).
+- [x] **TS5-06.2 Reversiones, Rectificaciones, Historial Inmutable y Acto Aprobado [TDD]:** Implementación de `reevaluar_por_reversion()`, `reevaluar_por_rectificacion()`, preservación inmutable del historial previo (`RegistroAlerta`), `InternalAlertRepository`, abstracción `ActoAprobadoResolver` con bloqueo formal documentado ante falta de acto aprobado formal y exportación en `backend/ranking/services.py`.
+- [x] **TS5-06.3 Sanitización Médica y Suite Integral de Pruebas [TDD]:** `AlertaSanitizer` para blindaje estricto de privacidad (cero datos médicos en asuntos, cuerpos y metadatos) y suite de 37 tests unitarios en `backend/tests/test_threshold_alerts.py` cubriendo los 8 criterios de aceptación sin envíos externos ni bajas de socios.
+- [x] **TS5-06.4 Revisión PR #72 — Adecuación de Destinatarios Oficiales, Outbox Transaccional y Configuración de Correos [TDD]:** Exposición de defaults neutros en `core/settings.py` y `.env.example`, resolución de destinatarios oficiales (Socio Imputado, CD y Tribunal) y acción `ESPERA_ACTO_RESOLUTIVO_CD` sin bloqueo operativo por `ActoAprobado`, despacho formal exclusivo mediante `EmailOutbox` transaccional sin notificaciones in-app, sustitución de correos institucionales reales en fixtures por `@aveit.test` y suite de 45 tests unitarios en verde.
+
+---
+
+## 15. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

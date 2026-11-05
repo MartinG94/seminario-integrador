@@ -75,7 +75,7 @@ class EmailDispatcherService:
         if outbox.status == EmailOutboxStatus.SENT:
             return True
 
-        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "notificaciones@aveit.utn.edu.ar")
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "sistema@example.org")
         to_list = outbox.to if isinstance(outbox.to, list) else [outbox.to]
         cc_list = outbox.cc if isinstance(outbox.cc, list) else []
         bcc_list = outbox.bcc if isinstance(outbox.bcc, list) else []
