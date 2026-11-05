@@ -326,6 +326,13 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     es_felicitacion = serializers.SerializerMethodField()
     es_llamado = serializers.SerializerMethodField()
     justificacion_aprobada = serializers.SerializerMethodField()
+    resolucion_estado = serializers.SerializerMethodField()
+    firmantes_td = serializers.SerializerMethodField()
+    vistos = serializers.SerializerMethodField()
+    considerandos = serializers.SerializerMethodField()
+    articulos_resolutivos = serializers.SerializerMethodField()
+    contenido_hash = serializers.SerializerMethodField()
+    issued_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -370,6 +377,13 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "descargos",
             "es_t01",
             "puntaje_solicitado",
+            "resolucion_estado",
+            "firmantes_td",
+            "vistos",
+            "considerandos",
+            "articulos_resolutivos",
+            "contenido_hash",
+            "issued_at",
         ]
 
     def get_es_felicitacion(self, obj: Expediente) -> bool:
@@ -649,6 +663,47 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 item["regla_sugerida"] = suggested_decision(has_current_evidence=bool(evs)).value
             result.append(item)
         return result
+
+    def _obtener_resolucion_reciente(self, obj: Expediente):
+        if not hasattr(obj, "_resolucion_cache"):
+            if hasattr(obj, "resoluciones"):
+                resoluciones = list(obj.resoluciones.all())
+                obj._resolucion_cache = (
+                    sorted(resoluciones, key=lambda r: (r.version, r.id), reverse=True)[0]
+                    if resoluciones
+                    else None
+                )
+            else:
+                obj._resolucion_cache = None
+        return obj._resolucion_cache
+
+    def get_resolucion_estado(self, obj: Expediente) -> str | None:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.estado if res else None
+
+    def get_firmantes_td(self, obj: Expediente) -> list:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.firmantes or [] if res else []
+
+    def get_vistos(self, obj: Expediente) -> str:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.vistos if res else ""
+
+    def get_considerandos(self, obj: Expediente) -> str:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.considerandos if res else ""
+
+    def get_articulos_resolutivos(self, obj: Expediente) -> str:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.articulos_resolutivos if res else ""
+
+    def get_contenido_hash(self, obj: Expediente) -> str:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.contenido_hash if res else ""
+
+    def get_issued_at(self, obj: Expediente) -> str | None:
+        res = self._obtener_resolucion_reciente(obj)
+        return res.issued_at.isoformat() if res and res.issued_at else None
 
 
 class AperturaExpedienteSerializer(serializers.Serializer):

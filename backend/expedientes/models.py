@@ -1655,6 +1655,7 @@ class Resolucion(models.Model):
     articulos_resolutivos = models.TextField(blank=True, default="")
     puntos_finales = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     medidas = models.JSONField(default=list, blank=True)
+    firmantes = models.JSONField(default=list, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="resoluciones_creadas"
     )

@@ -126,6 +126,7 @@ EXPEDIENTE_LIST_PREFETCH = (
     "descargos__decisiones_causal__autor",
     "evidencias__socio",
     "solicitud_t01",
+    "resoluciones",
 )
 
 

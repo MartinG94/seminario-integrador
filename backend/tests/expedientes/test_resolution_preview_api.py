@@ -170,4 +170,20 @@ def test_preview_incluye_membrete_identificacion_y_firmantes(
     assert "RESOLUCIÓN" in text
     assert "SE RESUELVE — ARTÍCULOS RESOLUTIVOS" in text
     assert "TRIBUNAL DE DISCIPLINA — FIRMANTES" in text
-    assert "Candela Moreno Migliore" in text or "G59" in text
+    assert "Pendiente de firma" in text
+
+    # Si se agrega una firma real
+    resolucion = Resolucion.objects.filter(expediente=causal_expediente).first()
+    resolucion.firmantes = [
+        {
+            "social_year": 4,
+            "etiqueta": "40001 - Ana Perez - G60",
+            "signed_at": "2026-01-01T00:00:00Z",
+        }
+    ]
+    resolucion.save(update_fields=["firmantes"])
+
+    response_signed = authenticate(causal_vocal).get(preview_url(causal_expediente.pk))
+    text_signed = extract_pdf_text(response_signed)
+    assert "40001 - Ana Perez - G60" in text_signed
+    assert "Pendiente de firma" in text_signed

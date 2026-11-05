@@ -14,6 +14,10 @@ def emit_url(expediente_id: int) -> str:
     return f"{resolution_url(expediente_id)}emitir/"
 
 
+def sign_url(expediente_id: int) -> str:
+    return f"{resolution_url(expediente_id)}firmar/"
+
+
 def draft_payload() -> dict:
     return {
         "expediente": 999999,
@@ -223,7 +227,7 @@ def test_resolucion_serializer_campos_identificador_y_firmantes(
         == f"RESOLUCIÓN {causal_expediente.numero.replace('EXP-', '')}"
     )
     assert isinstance(response.data["firmantes_td"], list)
-    assert len(response.data["firmantes_td"]) == 3
+    assert response.data["firmantes_td"] == []
 
 
 @pytest.mark.django_db
@@ -251,4 +255,97 @@ def test_emision_end_to_end_con_consolidated_decision_provider(
         response.data["identificador_resolucion"]
         == f"RESOLUCIÓN {causal_expediente.numero.replace('EXP-', '')}"
     )
-    assert len(response.data["firmantes_td"]) == 3
+    assert response.data["firmantes_td"] == []
+
+
+@pytest.mark.django_db
+def test_creacion_resolucion_persiste_estado_pendiente_correos(
+    causal_expediente, causal_vocal, authenticate
+):
+    causal_expediente.estado = "revision_resolucion"
+    causal_expediente.save()
+
+    client = authenticate(causal_vocal)
+    payload = draft_payload()
+    response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
+    assert response.status_code == 201
+
+    causal_expediente.refresh_from_db()
+    assert causal_expediente.estado == "pendiente_correos"
+    cambio = causal_expediente.cambios_estado.first()
+    assert cambio.estado_nuevo == "pendiente_correos"
+
+
+@pytest.mark.django_db
+def test_firmar_resolucion_endpoint_agrega_firma_y_emite_al_completar(
+    causal_expediente, make_socio, authenticate
+):
+    causal_expediente.estado = "pendiente_correos"
+    causal_expediente.puntos = Decimal("-2.50")
+    causal_expediente.save()
+
+    s4 = make_socio(legajo="40101", role=Role.TD, social_year=4)
+    s5 = make_socio(legajo="50101", role=Role.TD, social_year=5)
+    s6 = make_socio(legajo="60101", role=Role.TD, social_year=6)
+
+    # Crear resolución borrador
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerandos de prueba.",
+        articulos_resolutivos="Artículo 1: sanción.",
+        created_by=s4.user,
+    )
+
+    # 1. Firma socio de 4.° año
+    client4 = authenticate(s4)
+    res4 = client4.post(sign_url(causal_expediente.pk), {}, format="json")
+    assert res4.status_code == 200
+    assert len(res4.data["firmantes_td"]) == 1
+    assert res4.data["estado"] == "DRAFT"
+
+    # Intento de firmar nuevamente con el mismo usuario debe dar 400
+    res4_dup = client4.post(sign_url(causal_expediente.pk), {}, format="json")
+    assert res4_dup.status_code == 400
+
+    # 2. Firma socio de 5.° año
+    client5 = authenticate(s5)
+    res5 = client5.post(sign_url(causal_expediente.pk), {}, format="json")
+    assert res5.status_code == 200
+    assert len(res5.data["firmantes_td"]) == 2
+    assert res5.data["estado"] == "DRAFT"
+
+    # 3. Firma socio de 6.° año -> emite automáticamente
+    client6 = authenticate(s6)
+    res6 = client6.post(sign_url(causal_expediente.pk), {}, format="json")
+    assert res6.status_code == 200
+    assert len(res6.data["firmantes_td"]) == 3
+    assert res6.data["estado"] == "ISSUED"
+
+    causal_expediente.refresh_from_db()
+    assert causal_expediente.estado == "emitido"
+
+
+@pytest.mark.django_db
+def test_expediente_list_serializer_expone_datos_resolucion(causal_expediente, causal_vocal):
+    from expedientes.serializers import ExpedienteListSerializer
+
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos serializados.",
+        considerandos="Considerandos serializados.",
+        articulos_resolutivos="Artículos serializados.",
+        firmantes=[{"social_year": 4, "etiqueta": "40001 - Ana Perez - G60"}],
+        created_by=causal_vocal.user,
+    )
+
+    data = ExpedienteListSerializer(causal_expediente).data
+    assert data["resolucion_estado"] == "DRAFT"
+    assert len(data["firmantes_td"]) == 1
+    assert data["vistos"] == "Vistos serializados."
+    assert data["considerandos"] == "Considerandos serializados."
+    assert data["articulos_resolutivos"] == "Artículos serializados."

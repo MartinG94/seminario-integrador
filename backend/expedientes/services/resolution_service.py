@@ -9,6 +9,8 @@ from django.utils import timezone
 
 from expedientes.domain.closed_decision import ClosedDecision, ClosedDecisionProvider
 from expedientes.models import (
+    CambioEstadoExpediente,
+    ConceptoExpedienteEnum,
     EstadoExpedienteEnum,
     EstadoResolucionEnum,
     Expediente,
@@ -16,7 +18,6 @@ from expedientes.models import (
     SolicitudT01,
 )
 from expedientes.serializers.visor_serializers import cargar_mapa_grupos
-from socios.models import Role, Socio
 
 
 class DictamenNoCerradoError(Exception):
@@ -112,39 +113,107 @@ class ExpedienteConsolidatedDecisionProvider:
         )
 
 
-FALLBACK_FIRMANTES_TD = {
-    4: "11735 - Candela Moreno Migliore - G59",
-    5: "11737 - Catalina Cerda Gallego - G58",
-    6: "11239 - Giuliano Toselli - G57",
-}
+def obtener_firmantes_resolucion(resolucion: Resolucion) -> list[dict]:
+    """Devuelve la lista real de firmantes registrados en la resolución ordenada por año social."""
+    firmantes = getattr(resolucion, "firmantes", []) or []
+    return sorted(
+        firmantes,
+        key=lambda f: f.get("social_year") or f.get("anio_social") or 99,
+    )
 
 
-def obtener_firmantes_td_por_anio_social() -> list[str]:
-    """Selecciona 3 firmantes del Tribunal de Disciplina, uno por cada año social (4, 5 y 6)."""
-    socios_td = list(Socio.objects.filter(role=Role.TD, is_enabled=True).order_by("id"))
+def obtener_firmantes_td_por_anio_social(resolucion: Resolucion | None = None) -> list[str]:
+    """Devuelve las firmas reales registradas en la resolución (cero hardcodeos)."""
+    if not resolucion:
+        return []
+    return [
+        f.get("etiqueta") or f.get("firma") or str(f)
+        for f in obtener_firmantes_resolucion(resolucion)
+    ]
+
+
+@transaction.atomic
+def registrar_firma_resolucion(resolucion: Resolucion, user) -> Resolucion:
+    """Registra la firma real del usuario TD autenticado según su año social."""
+    resolucion = (
+        Resolucion.objects.select_for_update().select_related("expediente").get(pk=resolucion.pk)
+    )
+    if resolucion.estado == EstadoResolucionEnum.ISSUED:
+        raise ValidationError("Una resolución emitida ya no admite nuevas firmas.")
+
+    socio = getattr(user, "socio", None)
+    legajo = str(getattr(socio, "legajo", "") or getattr(user, "username", "")).strip()
+    first_name = (getattr(socio, "first_name", "") or getattr(user, "first_name", "")).strip()
+    last_name = (getattr(socio, "last_name", "") or getattr(user, "last_name", "")).strip()
+    full_name = f"{first_name} {last_name}".strip() or getattr(user, "username", str(user))
+
     mapa_grupos = cargar_mapa_grupos()
-    socios_por_anio: dict[int, Socio] = {}
-    for s in socios_td:
-        if s.social_year in (4, 5, 6) and s.social_year not in socios_por_anio:
-            socios_por_anio[s.social_year] = s
+    grupo = mapa_grupos.get(legajo, "")
 
-    firmantes: list[str] = []
-    for anio in (4, 5, 6):
-        soc = socios_por_anio.get(anio)
-        if soc:
-            nro_socio = str(soc.legajo or "").strip()
-            nombre = f"{soc.first_name} {soc.last_name}".strip()
-            grupo = mapa_grupos.get(nro_socio, "")
-            if not grupo and soc.social_year:
-                current_year = timezone.localdate().year
-                grupo = f"G{(current_year - 1962) - int(soc.social_year)}"
-            if not grupo:
-                fallback_val = FALLBACK_FIRMANTES_TD[anio]
-                grupo = fallback_val.split(" - ")[-1]
-            firmantes.append(f"{nro_socio} - {nombre} - {grupo}")
-        else:
-            firmantes.append(FALLBACK_FIRMANTES_TD[anio])
-    return firmantes
+    firmantes_existentes = list(resolucion.firmantes or [])
+    for f in firmantes_existentes:
+        if f.get("user_id") == user.id or (f.get("legajo") and f.get("legajo") == legajo):
+            raise ValidationError("El usuario ya ha firmado esta resolución.")
+
+    anios_ocupados = {
+        int(f.get("social_year") or f.get("anio_social"))
+        for f in firmantes_existentes
+        if (f.get("social_year") or f.get("anio_social")) is not None
+    }
+
+    raw_social_year = getattr(socio, "social_year", None)
+    try:
+        social_year = int(raw_social_year) if raw_social_year is not None else None
+    except (ValueError, TypeError):
+        social_year = None
+
+    if social_year not in (4, 5, 6):
+        disponibles = [y for y in (4, 5, 6) if y not in anios_ocupados]
+        if not disponibles:
+            raise ValidationError("La resolución ya cuenta con las firmas de los 3 años sociales.")
+        social_year = disponibles[0]
+
+    if social_year in anios_ocupados:
+        raise ValidationError(f"El {social_year}.º año social ya se encuentra firmado.")
+
+    if not grupo and social_year:
+        current_year = timezone.localdate().year
+        grupo = f"G{(current_year - 1962) - int(social_year)}"
+
+    etiqueta = f"{legajo} - {full_name} - {grupo}" if grupo else f"{legajo} - {full_name}"
+
+    ahora_iso = timezone.now().isoformat()
+    registro_firma = {
+        "user_id": user.id,
+        "legajo": legajo,
+        "full_name": full_name,
+        "social_year": social_year,
+        "anio_social": social_year,
+        "grupo": grupo,
+        "etiqueta": etiqueta,
+        "firma": etiqueta,
+        "signed_at": ahora_iso,
+        "firmado_at": ahora_iso,
+    }
+
+    firmantes_existentes.append(registro_firma)
+    resolucion.firmantes = firmantes_existentes
+    resolucion.save(update_fields=["firmantes", "updated_at"])
+
+    anios_actualizados = {
+        int(f.get("social_year") or f.get("anio_social"))
+        for f in resolucion.firmantes
+        if (f.get("social_year") or f.get("anio_social")) is not None
+    }
+    if {4, 5, 6}.issubset(anios_actualizados) or len(resolucion.firmantes) >= 3:
+        if resolucion.estado == EstadoResolucionEnum.DRAFT:
+            resolucion = emitir_resolucion(
+                resolucion=resolucion,
+                emisor=user,
+                provider=ExpedienteConsolidatedDecisionProvider(),
+            )
+
+    return resolucion
 
 
 @transaction.atomic
@@ -185,4 +254,21 @@ def emitir_resolucion(
     )
     resolucion.contenido_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     resolucion.save()
+
+    expediente = resolucion.expediente
+    if expediente and expediente.estado != EstadoExpedienteEnum.EMITIDO:
+        estado_ant = expediente.estado
+        if not expediente.concepto:
+            expediente.concepto = ConceptoExpedienteEnum.TD
+        expediente.estado = EstadoExpedienteEnum.EMITIDO
+        expediente.save(update_fields=["estado", "concepto", "updated_at"])
+        actor_name = getattr(emisor, "username", str(emisor))
+        CambioEstadoExpediente.objects.create(
+            expediente=expediente,
+            estado_anterior=estado_ant,
+            estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+            actor=actor_name,
+            motivo="Resolución emitida con la totalidad de firmas requeridas.",
+        )
+
     return resolucion

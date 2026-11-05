@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -6,7 +7,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from expedientes.models import Expediente, Resolucion
+from expedientes.models import CambioEstadoExpediente, EstadoExpedienteEnum, Expediente, Resolucion
 from expedientes.permissions import CanTransitionExpedientes
 from expedientes.resolution_serializers import ResolucionSerializer
 from expedientes.services.resolution_pdf import build_resolution_preview_pdf
@@ -14,6 +15,7 @@ from expedientes.services.resolution_service import (
     DictamenNoCerradoError,
     ExpedienteConsolidatedDecisionProvider,
     emitir_resolucion,
+    registrar_firma_resolucion,
 )
 
 
@@ -46,8 +48,39 @@ class ResolucionView(APIView):
             created_by=request.user,
             numero_expediente_snapshot=expediente.numero,
         )
+
+        if expediente.estado in (
+            EstadoExpedienteEnum.REVISION_RESOLUCION,
+            EstadoExpedienteEnum.ESPERA_RESOLUCION,
+        ):
+            estado_anterior = expediente.estado
+            expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+            expediente.save(update_fields=["estado", "updated_at"])
+            actor_name = (
+                request.user.username
+                if getattr(request.user, "username", None)
+                else str(request.user)
+            )
+            CambioEstadoExpediente.objects.create(
+                expediente=expediente,
+                estado_anterior=estado_anterior,
+                estado_nuevo=EstadoExpedienteEnum.PENDIENTE_CORREOS,
+                actor=actor_name,
+                motivo="Resolución oficial generada y enviada a pendiente de firma.",
+            )
+
+        reglamentos = request.data.get("reglamentos_respaldantes")
+        if (
+            isinstance(reglamentos, list)
+            and hasattr(expediente, "solicitud_t01")
+            and expediente.solicitud_t01
+        ):
+            expediente.solicitud_t01.reglamentos_respaldantes = reglamentos
+            expediente.solicitud_t01.save(update_fields=["reglamentos_respaldantes", "updated_at"])
+
         return Response(ResolucionSerializer(resolucion).data, status=status.HTTP_201_CREATED)
 
+    @transaction.atomic
     def patch(self, request, expediente_id):
         resolucion = (
             Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
@@ -64,7 +97,59 @@ class ResolucionView(APIView):
             )
         serializer = ResolucionSerializer(resolucion, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        return Response(ResolucionSerializer(serializer.save()).data)
+        resolucion_guardada = serializer.save()
+
+        expediente = resolucion.expediente
+        if expediente and expediente.estado in (
+            EstadoExpedienteEnum.REVISION_RESOLUCION,
+            EstadoExpedienteEnum.ESPERA_RESOLUCION,
+        ):
+            estado_anterior = expediente.estado
+            expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+            expediente.save(update_fields=["estado", "updated_at"])
+            actor_name = (
+                request.user.username
+                if getattr(request.user, "username", None)
+                else str(request.user)
+            )
+            CambioEstadoExpediente.objects.create(
+                expediente=expediente,
+                estado_anterior=estado_anterior,
+                estado_nuevo=EstadoExpedienteEnum.PENDIENTE_CORREOS,
+                actor=actor_name,
+                motivo="Resolución oficial generada y enviada a pendiente de firma.",
+            )
+
+        reglamentos = request.data.get("reglamentos_respaldantes")
+        if (
+            isinstance(reglamentos, list)
+            and hasattr(expediente, "solicitud_t01")
+            and expediente.solicitud_t01
+        ):
+            expediente.solicitud_t01.reglamentos_respaldantes = reglamentos
+            expediente.solicitud_t01.save(update_fields=["reglamentos_respaldantes", "updated_at"])
+
+        return Response(ResolucionSerializer(resolucion_guardada).data)
+
+
+class ResolucionFirmarView(APIView):
+    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+
+    def post(self, request, expediente_id):
+        resolucion = (
+            Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
+        )
+        if not resolucion:
+            return Response(
+                {"detail": "Resolución no encontrada."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            resolucion = registrar_firma_resolucion(resolucion, request.user)
+        except ValidationError as exc:
+            msg = exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            raise DRFValidationError(msg) from exc
+        return Response(ResolucionSerializer(resolucion).data, status=status.HTTP_200_OK)
 
 
 class ResolucionEmitirView(APIView):

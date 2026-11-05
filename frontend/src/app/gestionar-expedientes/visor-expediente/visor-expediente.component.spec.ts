@@ -390,5 +390,4 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
       );
     });
   });
-  });
 });

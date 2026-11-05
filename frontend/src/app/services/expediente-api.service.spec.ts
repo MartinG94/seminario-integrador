@@ -352,6 +352,20 @@ describe('ExpedienteApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
     });
+
+    it('firma la resolución oficial con endpoint /firmar/', () => {
+      service.firmarResolucionOficial(15).subscribe(res => {
+        expect(res.firmantes_td?.length).toBe(1);
+      });
+      const req = http.expectOne(`${base}/firmar/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({
+        id: 2,
+        estado: 'DRAFT',
+        firmantes_td: [{ legajo: '11239', full_name: 'Giuliano Toselli', social_year: 6, grupo: 'G57', etiqueta: '11239 - Giuliano Toselli - G57' }]
+      });
+    });
   });
 
   it('actualiza el concepto del expediente mediante PATCH', () => {

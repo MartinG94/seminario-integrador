@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
 from expedientes.models import Resolucion
-from expedientes.services.resolution_service import obtener_firmantes_td_por_anio_social
 
 
 class ResolucionSerializer(serializers.ModelSerializer):
@@ -18,6 +17,7 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "estado",
             "numero_expediente_snapshot",
             "identificador_resolucion",
+            "firmantes",
             "firmantes_td",
             "vistos",
             "considerandos",
@@ -37,6 +37,7 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "estado",
             "numero_expediente_snapshot",
             "identificador_resolucion",
+            "firmantes",
             "firmantes_td",
             "puntos_finales",
             "medidas",
@@ -53,5 +54,5 @@ class ResolucionSerializer(serializers.ModelSerializer):
         raw = numero.replace("EXP-", "").strip()
         return f"RESOLUCIÓN {raw}"
 
-    def get_firmantes_td(self, obj: Resolucion) -> list[str]:
-        return obtener_firmantes_td_por_anio_social()
+    def get_firmantes_td(self, obj: Resolucion) -> list:
+        return obj.firmantes or []

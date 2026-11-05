@@ -50,7 +50,16 @@ export interface BoardCaseDTO {
   transiciones_permitidas: EstadoExpediente[];
   cantidad_socios?: number;
   socios?: SocioInvolucrado[];
+  resolucion_estado?: string;
+  firmantes_td?: any[];
+  vistos?: string;
+  considerandos?: string;
+  articulos_resolutivos?: string;
+  contenido_hash?: string;
+  issued_at?: string;
 }
+
+export type BoardCaseDto = BoardCaseDTO;
 
 export interface BoardColumnDTO {
   key: EstadoExpediente;
@@ -144,10 +153,12 @@ export interface Expediente {
     hashCriptografico?: string;
     firmantes?: string[];
   };
+  articulosResolutivos?: string;
   firmas?: {
     juecesFirmantes: string[];
     hashCriptografico?: string;
     timestamp?: string;
+    fechaSellado?: string;
   };
 }
 
@@ -356,7 +367,7 @@ export class TribunalDataService {
         { id: '4', nombre: 'Nicolás Rosales', legajo: '408917', grupo: '58', estado: 'Activo' }
       ],
       firmas: {
-        juecesFirmantes: ['11239 - Giuliano Toselli - G57'],
+        juecesFirmantes: [],
         hashCriptografico: '',
         timestamp: ''
       }
@@ -569,6 +580,23 @@ export class TribunalDataService {
       urgencia === 'urgente' ? 'Urgente' : urgencia === 'baja' ? 'Baja' : 'Normal'
     );
 
+    const firmantesReales: string[] = Array.isArray(c.firmantes_td)
+      ? c.firmantes_td.map((f: any) => {
+          if (typeof f === 'string') return f;
+          if (f && typeof f === 'object') {
+            return f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`;
+          }
+          return String(f);
+        })
+      : [];
+
+    let estado = c.estado;
+    let estadoDisplay = c.estado_display;
+    if (c.estado === 'pendiente_correos' && firmantesReales.length < 3 && c.resolucion_estado !== 'ISSUED') {
+      estado = 'pendiente_firma';
+      estadoDisplay = 'Pendiente de Firma';
+    }
+
     return {
       id: String(c.id),
       numero: c.numero,
@@ -584,9 +612,13 @@ export class TribunalDataService {
       reglamentoAsociado: c.reglamento_asociado || '',
       reglamentos_respaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
       reglamentosRespaldantes: c.reglamentos_respaldantes || (c.reglamento_asociado ? [c.reglamento_asociado] : []),
+      vistos: c.vistos,
+      considerandos: c.considerandos,
+      seResuelve: c.articulos_resolutivos,
+      articulosResolutivos: c.articulos_resolutivos,
       fechaCreacion: c.created_at || '',
-      estado: c.estado,
-      estadoDisplay: c.estado_display,
+      estado,
+      estadoDisplay,
       urgencia,
       urgenciaDisplay,
       transicionesPermitidas: c.transiciones_permitidas || [],
@@ -597,7 +629,13 @@ export class TribunalDataService {
       puntajeSolicitado: c.puntaje_solicitado || null,
       cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
       sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
-      plazoLimiteAt: c.plazo_limite_at || undefined
+      plazoLimiteAt: c.plazo_limite_at || undefined,
+      firmas: {
+        juecesFirmantes: firmantesReales,
+        hashCriptografico: c.contenido_hash || '',
+        timestamp: c.issued_at || '',
+        fechaSellado: c.issued_at || ''
+      }
     };
   }
 

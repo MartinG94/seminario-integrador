@@ -34,6 +34,7 @@ class Migration(migrations.Migration):
                     models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True),
                 ),
                 ("medidas", models.JSONField(blank=True, default=list)),
+                ("firmantes", models.JSONField(blank=True, default=list)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("issued_at", models.DateTimeField(blank=True, null=True)),

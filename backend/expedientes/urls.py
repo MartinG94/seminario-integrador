@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from expedientes.resolution_views import (
     ResolucionEmitirView,
+    ResolucionFirmarView,
     ResolucionPreviewView,
     ResolucionView,
 )
@@ -64,6 +65,11 @@ urlpatterns = [
         name="resolucion-preview",
     ),
     path("<int:expediente_id>/resolucion/", ResolucionView.as_view(), name="resolucion"),
+    path(
+        "<int:expediente_id>/resolucion/firmar/",
+        ResolucionFirmarView.as_view(),
+        name="expediente-resolucion-firmar",
+    ),
     path(
         "<int:expediente_id>/resolucion/emitir/",
         ResolucionEmitirView.as_view(),

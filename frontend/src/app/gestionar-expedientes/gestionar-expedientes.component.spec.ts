@@ -1912,9 +1912,7 @@ describe('GestionarExpedientesComponent', () => {
         'Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión',
         'Estatuto - Art. 25: Deberes y obligaciones de los socios'
       ];
-      component.vistosTexto = 'VISTO: actuaciones y reglamentos.';
-      component.considerandosTexto = 'CONSIDERANDO: mérito de la causa.';
-      component.seResuelveTexto = 'SE RESUELVE: aplicar sanción correspondiente.';
+      component.considerandosTexto = 'CONSIDERANDO: mérito y fundamentos de la causa.';
 
       component.confirmarVotacion();
 
@@ -1927,37 +1925,43 @@ describe('GestionarExpedientesComponent', () => {
         component.votosJueces,
         component.considerandosTexto,
         jasmine.objectContaining({
-          vistos: 'VISTO: actuaciones y reglamentos.',
-          considerandos: 'CONSIDERANDO: mérito de la causa.',
-          seResuelve: 'SE RESUELVE: aplicar sanción correspondiente.'
+          considerandos: 'CONSIDERANDO: mérito y fundamentos de la causa.'
         })
       );
       expect(exp.estado).toBe('pendiente_firma');
-      expect(exp.vistos).toBe('VISTO: actuaciones y reglamentos.');
-      expect(exp.seResuelve).toBe('SE RESUELVE: aplicar sanción correspondiente.');
+      expect(exp.vistos).toContain('VISTO:');
+      expect(exp.seResuelve).toContain('ARTÍCULO 1°.-');
+      expect(exp.seResuelve).toContain('ARTÍCULO 2°.-');
       expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Resolución oficial generada con éxito'));
       expect(component.modalVotacionAbierto).toBeFalse();
       expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
     });
 
-    it('impide generar la resolución si alguno de los bloques VISTO, CONSIDERANDO o SE RESUELVE está vacío', () => {
+    it('impide generar la resolución si no se seleccionaron reglamentos para VISTO o CONSIDERANDO está vacío', () => {
       spyOn(dataService, 'votarDictamen');
       const exp = crearExpConReglamentos();
       component.abrirModalVotacion(exp);
-      component.vistosTexto = '   ';
+      component.reglamentosSeleccionadosResolucion = [];
       component.considerandosTexto = 'Considerandos válidos';
-      component.seResuelveTexto = 'Se resuelve válido';
 
       component.confirmarVotacion();
 
       expect(notifications.warning).toHaveBeenCalledWith(
-        'Todos los bloques (VISTO, CONSIDERANDO y SE RESUELVE) son obligatorios.'
+        'Seleccioná al menos un artículo reglamentario en VISTO.'
       );
       expect(dataService.votarDictamen).not.toHaveBeenCalled();
       expect(component.modalVotacionAbierto).toBeTrue();
+
+      component.reglamentosSeleccionadosResolucion = ['Estatuto - Art. 25: Deberes'];
+      component.considerandosTexto = '   ';
+      component.confirmarVotacion();
+
+      expect(notifications.warning).toHaveBeenCalledWith(
+        'El campo CONSIDERANDO es obligatorio.'
+      );
     });
 
-    it('Modal 2 no renderiza selectores de votación nominal ni alerta de 2/3, sino tabla de puntajes consolidados, bloques y 3 firmantes por año social', () => {
+    it('Modal 2 renderiza encabezado institucional, selector de catálogo para VISTO, único textarea para CONSIDERANDO, y SE RESUELVE estructurado sin bloque de firmas', () => {
       const exp = crearExpConReglamentos();
       component.involucradosJustificacion = [
         {
@@ -1975,32 +1979,47 @@ describe('GestionarExpedientesComponent', () => {
       const modalEl = fixture.nativeElement.querySelector('.modal-backdrop-custom');
       expect(modalEl).toBeTruthy();
 
-      // No debe contener la alerta de mayoría calificada de 2/3
-      expect(modalEl.textContent).not.toContain('mayoría absoluta del cuerpo colegiado');
-      expect(modalEl.textContent).not.toContain('2/3');
-
-      // Debe contener la tabla de puntajes finales consolidados
+      // Debe contener la tabla de puntajes finales consolidados en Artículo 1°
       const tablaPuntajes = modalEl.querySelector('.tabla-puntajes-consolidados');
       expect(tablaPuntajes).toBeTruthy();
       expect(tablaPuntajes.textContent).toContain('Lucas Gómez');
       expect(tablaPuntajes.textContent).toContain('-1');
 
-      // Debe contener los 3 textareas para VISTO, CONSIDERANDO y SE RESUELVE
-      expect(modalEl.querySelector('textarea#vistosTexto')).toBeTruthy();
-      expect(modalEl.querySelector('textarea#considerandosTexto')).toBeTruthy();
-      expect(modalEl.querySelector('textarea#seResuelveTexto')).toBeTruthy();
+      // Botón selector de catálogo para VISTO presente, sin textarea libre de Visto
+      expect(modalEl.querySelector('.btn-abrir-catalogo')).toBeTruthy();
+      expect(modalEl.querySelector('textarea#vistosTexto')).toBeNull();
 
-      // Debe contener la vista previa con el pie de 3 firmantes por año social
-      const pieFirmas = modalEl.querySelector('.resolucion-pie-firmas');
-      expect(pieFirmas).toBeTruthy();
-      const columnasFirma = pieFirmas.querySelectorAll('.firma-col');
-      expect(columnasFirma.length).toBe(3);
-      expect(pieFirmas.textContent).toContain('4.º Año Social');
-      expect(pieFirmas.textContent).toContain('5.º Año Social');
-      expect(pieFirmas.textContent).toContain('6.º Año Social');
-      expect(pieFirmas.textContent).toContain('11735 - Candela Moreno Migliore - G59');
-      expect(pieFirmas.textContent).toContain('11737 - Catalina Cerda Gallego - G58');
-      expect(pieFirmas.textContent).toContain('11239 - Giuliano Toselli - G57');
+      // Único textarea presente para CONSIDERANDO
+      expect(modalEl.querySelector('textarea#resolucion-considerandos')).toBeTruthy();
+
+      // SE RESUELVE estructurado, sin textarea libre
+      expect(modalEl.querySelector('textarea#seResuelveTexto')).toBeNull();
+      expect(modalEl.textContent).toContain('ARTÍCULO 1°.-');
+      expect(modalEl.textContent).toContain('ARTÍCULO 2°.-');
+
+      // NO debe contener bloque de firmas en Modal 2
+      expect(modalEl.querySelector('.resolucion-pie-firmas')).toBeNull();
+    });
+
+    it('Modal 3 renderiza los 3 espacios de firma por año social sin nombres hardcodeados y estampa firma digital', () => {
+      const exp = crearExpConReglamentos();
+      exp.estado = 'pendiente_firma';
+      exp.firmas = { juecesFirmantes: [], hashCriptografico: '', timestamp: '' };
+      component.abrirFirma(exp);
+      fixture.detectChanges();
+
+      expect(component.modalFirmaAbierto).toBeTrue();
+      expect(component.espaciosFirmaPorAnioSocial.length).toBe(3);
+      expect(component.espaciosFirmaPorAnioSocial[0].etiquetaAnio).toBe('4.º Año Social');
+      expect(component.espaciosFirmaPorAnioSocial[1].etiquetaAnio).toBe('5.º Año Social');
+      expect(component.espaciosFirmaPorAnioSocial[2].etiquetaAnio).toBe('6.º Año Social');
+      expect(component.espaciosFirmaPorAnioSocial[0].firmado).toBeFalse();
+
+      spyOn(dataService, 'firmarResolucion').and.returnValue({ completo: false });
+      component.confirmarFirma();
+
+      expect(notifications.success).toHaveBeenCalled();
+      expect(component.modalFirmaAbierto).toBeFalse();
     });
 
     it('getReglamentosSustento preserva intactas las citas históricas aunque un artículo subyacente se dé de baja', () => {

@@ -200,6 +200,16 @@ export interface RegistrarDecisionCausalPayload {
   puntaje_final?: number | string | null;
 }
 
+export interface FirmanteTdDTO {
+  user_id?: number;
+  legajo: string;
+  full_name: string;
+  social_year: number;
+  grupo: string;
+  etiqueta: string;
+  signed_at?: string;
+}
+
 export interface ResolucionOficialDTO {
   id: number;
   expediente: number;
@@ -213,7 +223,7 @@ export interface ResolucionOficialDTO {
   articulos_resolutivos: string;
   puntos_finales?: Record<string, unknown> | null;
   medidas?: unknown[] | null;
-  firmantes_td?: string[];
+  firmantes_td?: Array<FirmanteTdDTO | string>;
   created_by?: number;
   created_at?: string;
   updated_at?: string;
@@ -221,6 +231,8 @@ export interface ResolucionOficialDTO {
   issued_at?: string | null;
   contenido_hash?: string;
 }
+
+export type ResolucionDto = ResolucionOficialDTO;
 
 export interface GuardarResolucionPayload {
   plantilla_version?: string;
@@ -862,6 +874,10 @@ export class ExpedienteApiService {
 
   emitirResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
     return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/emitir/`, {});
+  }
+
+  firmarResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/firmar/`, {});
   }
 
   descargarPreviewResolucionPdf(expedienteId: number | string): Observable<Blob> {

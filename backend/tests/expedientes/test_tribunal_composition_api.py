@@ -127,7 +127,8 @@ class TestInhibicionDeInvolucrados:
         self, api_client, causal_expediente, vocal_imputado
     ):
         causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
-        causal_expediente.save(update_fields=["estado"])
+        causal_expediente.concepto = "TD"
+        causal_expediente.save(update_fields=["estado", "concepto"])
         api_client.force_authenticate(vocal_imputado.user)
         response = api_client.post(
             url(causal_expediente, "transicionar/"),

@@ -60,6 +60,10 @@ export class AuthService {
     return this.perfilSubject.value;
   }
 
+  getCurrentUser(): PerfilSocio | null {
+    return this.getPerfil();
+  }
+
   isAuthenticated(): boolean {
     return this.getToken() !== null;
   }

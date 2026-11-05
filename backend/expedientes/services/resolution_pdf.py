@@ -8,8 +8,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-from expedientes.services.resolution_service import obtener_firmantes_td_por_anio_social
-
 
 def _paragraph_text(value: object) -> str:
     """Escapa texto de dominio y conserva sus saltos de línea."""
@@ -79,8 +77,17 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
         ]
     )
 
-    for firmante in obtener_firmantes_td_por_anio_social():
-        story.append(Paragraph(_paragraph_text(firmante), styles["Normal"]))
+    firmantes_dict = {}
+    for f in getattr(resolucion, "firmantes", []) or []:
+        anio = f.get("social_year") or f.get("anio_social")
+        if anio:
+            firmantes_dict[int(anio)] = f.get("etiqueta") or f.get("firma") or str(f)
+
+    for anio in (4, 5, 6):
+        texto_firmante = firmantes_dict.get(anio, "Pendiente de firma")
+        story.append(
+            Paragraph(f"{anio}.º Año Social: {_paragraph_text(texto_firmante)}", styles["Normal"])
+        )
 
     document.build(story)
     return output.getvalue()

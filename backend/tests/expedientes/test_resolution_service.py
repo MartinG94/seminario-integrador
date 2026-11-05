@@ -15,7 +15,9 @@ from expedientes.services.resolution_service import (
     DictamenNoCerradoError,
     ExpedienteConsolidatedDecisionProvider,
     emitir_resolucion,
+    obtener_firmantes_resolucion,
     obtener_firmantes_td_por_anio_social,
+    registrar_firma_resolucion,
 )
 from socios.models import Role
 
@@ -222,37 +224,110 @@ def test_consolidated_provider_con_llamado_de_atencion(
 
 
 @pytest.mark.django_db
-def test_firmantes_td_fallbacks_institucionales():
-    firmantes = obtener_firmantes_td_por_anio_social()
-    assert len(firmantes) == 3
-    assert firmantes[0] == "11735 - Candela Moreno Migliore - G59"
-    assert firmantes[1] == "11737 - Catalina Cerda Gallego - G58"
-    assert firmantes[2] == "11239 - Giuliano Toselli - G57"
+@pytest.mark.django_db
+def test_firmantes_td_inicia_vacio_y_cero_hardcodeo(causal_expediente, causal_vocal):
+    assert obtener_firmantes_td_por_anio_social() == []
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    assert obtener_firmantes_resolucion(resolucion) == []
+    assert obtener_firmantes_td_por_anio_social(resolucion) == []
 
 
 @pytest.mark.django_db
-def test_firmantes_td_con_multiples_socios_por_anio(make_socio):
-    # Crear dos socios de 4.° año, uno de 5.° y ninguno de 6.°
-    s4_1 = make_socio(legajo="40001", role=Role.TD, social_year=4)
-    s4_1.first_name = "Ana"
-    s4_1.last_name = "Perez"
-    s4_1.save()
+def test_registrar_firma_resolucion_exitoso_y_por_anio_social(
+    causal_expediente, causal_vocal, make_socio
+):
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    socio_4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+    socio_4.first_name = "Ana"
+    socio_4.last_name = "Perez"
+    socio_4.save()
 
-    s4_2 = make_socio(legajo="40002", role=Role.TD, social_year=4)
-    s4_2.first_name = "Belen"
-    s4_2.last_name = "Gomez"
-    s4_2.save()
+    resolucion = registrar_firma_resolucion(resolucion, socio_4.user)
+    assert len(resolucion.firmantes) == 1
+    firma = resolucion.firmantes[0]
+    assert firma["legajo"] == "40001"
+    assert firma["full_name"] == "Ana Perez"
+    assert firma["social_year"] == 4
+    assert firma["user_id"] == socio_4.user.id
+    assert "40001 - Ana Perez" in firma["etiqueta"]
+    assert resolucion.estado == EstadoResolucionEnum.DRAFT
 
+
+@pytest.mark.django_db
+def test_registrar_firma_rechaza_duplicado_de_usuario_o_anio_social(
+    causal_expediente, causal_vocal, make_socio
+):
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    socio_4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+    registrar_firma_resolucion(resolucion, socio_4.user)
+
+    # Intento de firmar dos veces por el mismo usuario
+    with pytest.raises(ValidationError):
+        registrar_firma_resolucion(resolucion, socio_4.user)
+
+    # Intento de firmar por otro usuario con el mismo año social
+    socio_4_otro = make_socio(legajo="40002", role=Role.TD, social_year=4)
+    with pytest.raises(ValidationError):
+        registrar_firma_resolucion(resolucion, socio_4_otro.user)
+
+
+@pytest.mark.django_db
+def test_completar_tres_firmas_emite_resolucion_y_transiciona_expediente(
+    causal_expediente, causal_vocal, make_socio
+):
+    causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+    causal_expediente.puntos = Decimal("-2.00")
+    causal_expediente.save()
+
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    s4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
     s5 = make_socio(legajo="50001", role=Role.TD, social_year=5)
-    s5.first_name = "Carlos"
-    s5.last_name = "Ruiz"
-    s5.save()
+    s6 = make_socio(legajo="60001", role=Role.TD, social_year=6)
 
-    firmantes = obtener_firmantes_td_por_anio_social()
-    assert len(firmantes) == 3
-    # El año 4 debe seleccionar exactamente un socio TD de 4.° año determinísticamente (por id)
-    assert firmantes[0].startswith(f"{s4_1.legajo} - Ana Perez -")
-    # El año 5 selecciona el socio TD de 5.° año
-    assert firmantes[1].startswith(f"{s5.legajo} - Carlos Ruiz -")
-    # El año 6 debe usar el fallback porque no hay socio TD de 6.° año
-    assert firmantes[2] == "11239 - Giuliano Toselli - G57"
+    registrar_firma_resolucion(resolucion, s4.user)
+    resolucion.refresh_from_db()
+    assert resolucion.estado == EstadoResolucionEnum.DRAFT
+
+    registrar_firma_resolucion(resolucion, s5.user)
+    resolucion.refresh_from_db()
+    assert resolucion.estado == EstadoResolucionEnum.DRAFT
+
+    registrar_firma_resolucion(resolucion, s6.user)
+    resolucion.refresh_from_db()
+    assert resolucion.estado == EstadoResolucionEnum.ISSUED
+    assert resolucion.contenido_hash
+
+    causal_expediente.refresh_from_db()
+    assert causal_expediente.estado == EstadoExpedienteEnum.EMITIDO
