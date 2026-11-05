@@ -243,6 +243,14 @@ def _obtener_titulo_expediente(obj: Expediente) -> str:
 
 def _obtener_reglamento_asociado(obj: Expediente) -> str:
     try:
+        res = _obtener_resolucion_reciente(obj)
+        if res and getattr(res, "reglamentos_respaldantes", None):
+            regs = res.reglamentos_respaldantes
+            if isinstance(regs, list) and len(regs) > 0:
+                return str(regs[0])
+    except Exception:
+        pass
+    try:
         solicitud = getattr(obj, "solicitud_t01", None)
         if solicitud and solicitud.causal:
             return solicitud.causal
@@ -254,6 +262,14 @@ def _obtener_reglamento_asociado(obj: Expediente) -> str:
 
 
 def _obtener_reglamentos_respaldantes(obj: Expediente) -> list[str]:
+    try:
+        res = _obtener_resolucion_reciente(obj)
+        if res and getattr(res, "reglamentos_respaldantes", None):
+            regs = res.reglamentos_respaldantes
+            if isinstance(regs, list) and len(regs) > 0:
+                return [str(r) for r in regs if str(r).strip()]
+    except Exception:
+        pass
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
         if solicitud:

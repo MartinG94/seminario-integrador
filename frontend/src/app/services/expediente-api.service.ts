@@ -221,6 +221,7 @@ export interface ResolucionOficialDTO {
   vistos: string;
   considerandos: string;
   articulos_resolutivos: string;
+  reglamentos_respaldantes?: string[];
   puntos_finales?: Record<string, unknown> | null;
   medidas?: unknown[] | null;
   firmantes_td?: Array<FirmanteTdDTO | string>;
@@ -239,6 +240,7 @@ export interface GuardarResolucionPayload {
   vistos: string;
   considerandos: string;
   articulos_resolutivos: string;
+  reglamentos_respaldantes?: string[];
 }
 
 export interface DescargoDetalleDTO {
@@ -388,6 +390,9 @@ export interface ExpedienteDetalleDTO {
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
+  considerandos?: string;
+  vistos?: string;
+  articulos_resolutivos?: string;
 }
 
 // --- Apelación y adecuación del T01 (PB-02, Spec 008) ---

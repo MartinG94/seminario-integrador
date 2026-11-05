@@ -381,3 +381,38 @@ def test_creacion_resolucion_sin_plantilla_version_usa_default(
     assert caso["vistos"] == "Vistos de prueba."
     assert caso["considerandos"] == "Considerando de prueba."
     assert caso["articulos_resolutivos"] == "Artículo 1: medida."
+
+
+@pytest.mark.django_db
+def test_creacion_resolucion_guarda_reglamentos_respaldantes_y_los_expone(
+    causal_expediente, causal_vocal, authenticate
+):
+    from expedientes.serializers import ExpedienteListSerializer
+
+    causal_expediente.estado = "revision_resolucion"
+    causal_expediente.save()
+
+    client = authenticate(causal_vocal)
+    reglamentos = [
+        "Reglamento Procesal Disciplinario 2026, Art. 12",
+        "Estatuto Social A.V.E.I.T. - Art. 15",
+    ]
+    payload = {
+        "vistos": "Vistos con citas.",
+        "considerandos": "Considerando específico del TD.",
+        "articulos_resolutivos": "Artículo 1: medida.",
+        "reglamentos_respaldantes": reglamentos,
+    }
+    response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
+    assert response.status_code == 201
+    assert response.data["reglamentos_respaldantes"] == reglamentos
+
+    resolucion = Resolucion.objects.get(expediente=causal_expediente)
+    assert resolucion.reglamentos_respaldantes == reglamentos
+
+    # Validar que ExpedienteListSerializer expone los reglamentos de la resolución
+    causal_expediente.refresh_from_db()
+    data = ExpedienteListSerializer(causal_expediente).data
+    assert data["reglamentos_respaldantes"] == reglamentos
+    assert data["reglamento_asociado"] == reglamentos[0]
+    assert data["considerandos"] == "Considerando específico del TD."

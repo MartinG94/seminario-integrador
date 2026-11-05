@@ -486,6 +486,19 @@
           </div>
         </section>
 
+        <!-- Sección CONSIDERANDO (para estados: pendiente_firma, pendiente_correos, emitido) -->
+        <section class="mt-3 p-3 bg-light rounded border seccion-considerandos"
+                 *ngIf="mostrarConsiderandosEnDetalle"
+                 aria-labelledby="titulo-considerandos-detalle">
+          <h5 id="titulo-considerandos-detalle" class="font-weight-bold text-dark mb-2">
+            <i class="material-icons text-info mr-1" aria-hidden="true" style="font-size: 20px; vertical-align: middle;">edit_note</i>
+            CONSIDERANDO:
+          </h5>
+          <div class="motivo-box p-3 rounded-xl border text-break considerando-texto-box">
+            {{ expedienteSeleccionado?.considerandos }}
+          </div>
+        </section>
+
       </div>
       <!-- Pie del Modal 1 -->
       <div class="card-footer d-flex justify-content-end align-items-center gap-2">

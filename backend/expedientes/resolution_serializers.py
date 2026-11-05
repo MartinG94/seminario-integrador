@@ -23,6 +23,7 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "vistos",
             "considerandos",
             "articulos_resolutivos",
+            "reglamentos_respaldantes",
             "puntos_finales",
             "medidas",
             "created_by",

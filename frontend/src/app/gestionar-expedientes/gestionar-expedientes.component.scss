@@ -398,6 +398,22 @@ table.table-mat tbody tr:focus {
       color: var(--color-text-main, #1E293B);
     }
 
+    .seccion-considerandos {
+      background-color: var(--color-surface, #F8FAFC);
+      border: 1px solid var(--color-border-main, #E2E8F0);
+      border-radius: 10px;
+
+      .considerando-texto-box {
+        background-color: var(--color-surface-pure, #FFFFFF);
+        border: 1px solid var(--color-border-main, #E2E8F0);
+        border-radius: 8px;
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: var(--color-text-main, #1E293B);
+        white-space: pre-wrap;
+      }
+    }
+
     .seccion-involucrados {
       background-color: var(--color-surface, #F8FAFC);
       border: 1px solid var(--color-border-main, #E2E8F0);

@@ -331,6 +331,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return estado === 'emitido' || estado === 'pendiente_correos';
   }
 
+  get mostrarConsiderandosEnDetalle(): boolean {
+    const est = this.expedienteSeleccionado?.estado;
+    const tieneTexto = !!this.expedienteSeleccionado?.considerandos?.trim();
+    return (
+      (est === 'pendiente_firma' || est === 'pendiente_correos' || est === 'emitido') &&
+      tieneTexto
+    );
+  }
+
   ngOnInit(): void {
     const sub = this.dataService.expedientes$.subscribe(list => {
       this.expedientes = list;
@@ -1044,9 +1053,22 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
       next: detalle => {
         this.involucradosJustificacion = this.construirInvolucrados(detalle);
-        if (detalle.reglamentos_respaldantes && this.expedienteSeleccionado) {
-          this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
-          this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+        if (this.expedienteSeleccionado) {
+          if (detalle.considerandos) {
+            this.expedienteSeleccionado.considerandos = detalle.considerandos;
+          }
+          if (detalle.reglamentos_respaldantes && detalle.reglamentos_respaldantes.length > 0) {
+            this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
+            this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+          }
+        }
+        const enLista = (this.expedientes || []).find(e => String(e.id) === String(expedienteId));
+        if (enLista) {
+          if (detalle.considerandos) enLista.considerandos = detalle.considerandos;
+          if (detalle.reglamentos_respaldantes && detalle.reglamentos_respaldantes.length > 0) {
+            enLista.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
+            enLista.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+          }
         }
         this.cargandoJustificaciones = false;
       },
@@ -1223,6 +1245,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
             if (res.vistos) this.vistosTexto = res.vistos;
             if (res.considerandos) this.considerandosTexto = res.considerandos;
             if (res.articulos_resolutivos) this.seResuelveTexto = res.articulos_resolutivos;
+            if (res.reglamentos_respaldantes && res.reglamentos_respaldantes.length > 0) {
+              this.reglamentosSeleccionadosResolucion = [...res.reglamentos_respaldantes];
+              this.actualizarCatalogoItemsModal();
+            }
           }
         },
         error: () => {}
@@ -1395,7 +1421,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       plantilla_version: 'v1',
       vistos,
       considerandos,
-      articulos_resolutivos: seResuelve
+      articulos_resolutivos: seResuelve,
+      reglamentos_respaldantes: reglamentos
     };
 
     const actualizarLocalYFinalizar = (hash?: string) => {
@@ -1411,6 +1438,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       exp.vistos = vistos;
       exp.considerandos = considerandos;
       exp.seResuelve = seResuelve;
+      exp.reglamentosRespaldantes = reglamentos;
+      exp.reglamentos_respaldantes = reglamentos;
       exp.fechaResolucion = this.fechaResolucionTexto;
       exp.numeroResolucion = exp.numero;
       exp.votacion = {

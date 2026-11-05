@@ -1653,6 +1653,7 @@ class Resolucion(models.Model):
     vistos = models.TextField(blank=True, default="")
     considerandos = models.TextField(blank=True, default="")
     articulos_resolutivos = models.TextField(blank=True, default="")
+    reglamentos_respaldantes = models.JSONField(default=list, blank=True)
     puntos_finales = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     medidas = models.JSONField(default=list, blank=True)
     firmantes = models.JSONField(default=list, blank=True)

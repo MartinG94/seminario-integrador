@@ -1988,7 +1988,8 @@ describe('GestionarExpedientesComponent', () => {
 
       expect(expedienteApi.crearResolucion).toHaveBeenCalledWith('12', jasmine.objectContaining({
         plantilla_version: 'v1',
-        considerandos: 'Fundamentos válidos'
+        considerandos: 'Fundamentos válidos',
+        reglamentos_respaldantes: ['Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión']
       }));
       expect(exp.estado).toBe('pendiente_firma');
       expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Resolución oficial generada con éxito'));
@@ -2140,6 +2141,81 @@ describe('GestionarExpedientesComponent', () => {
       fixture.detectChanges();
       expect(component.reglamentoExpandidoDetalle?.cuerpo).toContain('Deber de asistir a las asambleas.');
     });
+
+it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_correos y emitido cuando tiene texto', () => {
+      const baseExp = crearExpConReglamentos();
+      baseExp.considerandos = 'Fundamentos válidos de la sanción.';
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'pendiente_firma' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeTrue();
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'pendiente_correos' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeTrue();
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'emitido' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeTrue();
+
+      // En estados previos no se muestra
+      component.expedienteSeleccionado = { ...baseExp, estado: 'revision_resolucion' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeFalse();
+
+      component.expedienteSeleccionado = { ...baseExp, estado: 'justificando' as EstadoExpediente };
+      expect(component.mostrarConsiderandosEnDetalle).toBeFalse();
+
+      // Con texto vacío o solo espacios no se muestra
+      component.expedienteSeleccionado = { ...baseExp, estado: 'pendiente_firma' as EstadoExpediente, considerandos: '   ' };
+      expect(component.mostrarConsiderandosEnDetalle).toBeFalse();
+    });
+
+    it('Modal 1 renderiza la sección CONSIDERANDO en el DOM cuando mostrarConsiderandosEnDetalle es true', fakeAsync(() => {
+      const baseExp = crearExpConReglamentos();
+      baseExp.considerandos = 'Que analizadas las actuaciones corresponde aplicar la sanción.';
+      baseExp.estado = 'pendiente_firma' as EstadoExpediente;
+
+      spyOn(expedienteApi, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 12,
+        numero: 'EXP-100',
+        estado: 'pendiente_firma',
+        socios: [],
+        descargos: [],
+        considerandos: baseExp.considerandos,
+        reglamentos_respaldantes: ['Reglamento Procesal Disciplinario 2026, Art. 12']
+      }));
+
+      component.abrirDetalle(baseExp);
+      fixture.detectChanges();
+      tick();
+
+      const modal = fixture.nativeElement.querySelector('.modal-backdrop-custom');
+      expect(modal).toBeTruthy();
+      const seccionConsiderando = modal.querySelector('.seccion-considerandos');
+      expect(seccionConsiderando).toBeTruthy();
+      expect(seccionConsiderando.textContent).toContain('CONSIDERANDO:');
+      expect(seccionConsiderando.textContent).toContain('Que analizadas las actuaciones');
+    }));
+
+    it('cargarJustificaciones hidrata considerandos y reglamentosRespaldantes en el expediente seleccionado', () => {
+      const baseExp = crearExpConReglamentos();
+      component.expedienteSeleccionado = baseExp;
+      component.expedientes = [baseExp];
+
+      spyOn(expedienteApi, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: Number(baseExp.id),
+        numero: baseExp.numero,
+        estado: 'pendiente_firma',
+        socios: [],
+        descargos: [],
+        considerandos: 'Considerandos traídos desde el backend.',
+        reglamentos_respaldantes: ['Estatuto Social A.V.E.I.T. - Art. 10']
+      }));
+
+      component.cargarJustificaciones(baseExp.id);
+
+      expect(component.expedienteSeleccionado.considerandos).toBe('Considerandos traídos desde el backend.');
+      expect(component.expedienteSeleccionado.reglamentosRespaldantes).toEqual(['Estatuto Social A.V.E.I.T. - Art. 10']);
+      expect(component.expedientes[0].considerandos).toBe('Considerandos traídos desde el backend.');
+      expect(component.expedientes[0].reglamentosRespaldantes).toEqual(['Estatuto Social A.V.E.I.T. - Art. 10']);
+    });
   });
 
   describe('Interacción accesible, bloqueo de scroll y foco en modales de expedientes', () => {
@@ -2231,6 +2307,8 @@ describe('GestionarExpedientesComponent', () => {
       component.onModalKeydown(escEv);
       expect(component.modalDetalleAbierto).toBeFalse();
     }));
+
+
   });
 
 });

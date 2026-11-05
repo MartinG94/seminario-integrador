@@ -70,13 +70,14 @@ class ResolucionView(APIView):
             )
 
         reglamentos = request.data.get("reglamentos_respaldantes")
-        if (
-            isinstance(reglamentos, list)
-            and hasattr(expediente, "solicitud_t01")
-            and expediente.solicitud_t01
-        ):
-            expediente.solicitud_t01.reglamentos_respaldantes = reglamentos
-            expediente.solicitud_t01.save(update_fields=["reglamentos_respaldantes", "updated_at"])
+        if isinstance(reglamentos, list):
+            resolucion.reglamentos_respaldantes = reglamentos
+            resolucion.save(update_fields=["reglamentos_respaldantes", "updated_at"])
+            if hasattr(expediente, "solicitud_t01") and expediente.solicitud_t01:
+                expediente.solicitud_t01.reglamentos_respaldantes = reglamentos
+                expediente.solicitud_t01.save(
+                    update_fields=["reglamentos_respaldantes", "updated_at"]
+                )
 
         return Response(ResolucionSerializer(resolucion).data, status=status.HTTP_201_CREATED)
 
@@ -121,13 +122,14 @@ class ResolucionView(APIView):
             )
 
         reglamentos = request.data.get("reglamentos_respaldantes")
-        if (
-            isinstance(reglamentos, list)
-            and hasattr(expediente, "solicitud_t01")
-            and expediente.solicitud_t01
-        ):
-            expediente.solicitud_t01.reglamentos_respaldantes = reglamentos
-            expediente.solicitud_t01.save(update_fields=["reglamentos_respaldantes", "updated_at"])
+        if isinstance(reglamentos, list):
+            resolucion_guardada.reglamentos_respaldantes = reglamentos
+            resolucion_guardada.save(update_fields=["reglamentos_respaldantes", "updated_at"])
+            if hasattr(expediente, "solicitud_t01") and expediente.solicitud_t01:
+                expediente.solicitud_t01.reglamentos_respaldantes = reglamentos
+                expediente.solicitud_t01.save(
+                    update_fields=["reglamentos_respaldantes", "updated_at"]
+                )
 
         return Response(ResolucionSerializer(resolucion_guardada).data)
 
