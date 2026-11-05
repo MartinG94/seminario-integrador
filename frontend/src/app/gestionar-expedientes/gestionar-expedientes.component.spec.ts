@@ -15,7 +15,7 @@ import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
-import { TribunalDataService, BoardResponseDTO, Expediente } from '../services/tribunal-data.service';
+import { TribunalDataService, BoardResponseDTO, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
 import {
   ComposicionTribunalDTO,
   DecisionCausalDTO,
@@ -1960,6 +1960,58 @@ describe('GestionarExpedientesComponent', () => {
       expect(notifications.warning).toHaveBeenCalledWith(
         'El campo CONSIDERANDO es obligatorio.'
       );
+    });
+
+    it('llama a crearResolucion con plantilla_version v1 y persiste pendiente_firma si exp.id es numérico', () => {
+      spyOn(expedienteApi, 'crearResolucion').and.returnValue(of({
+        id: 1,
+        expediente: 12,
+        version: 1,
+        plantilla_version: 'v1',
+        estado: 'DRAFT',
+        numero_expediente_snapshot: 'EXP-012/2026',
+        vistos: 'Vistos...',
+        considerandos: 'Considerandos...',
+        articulos_resolutivos: 'Articulos...',
+        firmantes_td: [],
+        created_by: 1,
+        created_at: '',
+        updated_at: '',
+        contenido_hash: 'sha256-abc'
+      }));
+      const exp = { ...crearExpConReglamentos(), id: '12' };
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = ['Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'];
+      component.considerandosTexto = 'Fundamentos válidos';
+
+      component.confirmarVotacion();
+
+      expect(expedienteApi.crearResolucion).toHaveBeenCalledWith('12', jasmine.objectContaining({
+        plantilla_version: 'v1',
+        considerandos: 'Fundamentos válidos'
+      }));
+      expect(exp.estado).toBe('pendiente_firma');
+      expect(notifications.success).toHaveBeenCalledWith(jasmine.stringContaining('Resolución oficial generada con éxito'));
+      expect(component.modalVotacionAbierto).toBeFalse();
+    });
+
+    it('muestra error y no altera el estado si crearResolucion falla con error del servidor', () => {
+      spyOn(expedienteApi, 'crearResolucion').and.returnValue(throwError(() => ({
+        status: 400,
+        error: { detail: 'Error de validación en el servidor.' }
+      })));
+      const exp = { ...crearExpConReglamentos(), id: '12', estado: 'revision_resolucion' as EstadoExpediente };
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = ['Reglamento Interno - Art. 12: Faltas a reuniones de subcomisión'];
+      component.considerandosTexto = 'Fundamentos válidos';
+
+      component.confirmarVotacion();
+
+      expect(expedienteApi.crearResolucion).toHaveBeenCalled();
+      expect(notifications.error).toHaveBeenCalled();
+      expect(exp.estado).toBe('revision_resolucion');
+      expect(component.modalVotacionAbierto).toBeTrue();
+      expect(component.guardandoResolucion).toBeFalse();
     });
 
     it('Modal 2 renderiza encabezado institucional, selector de catálogo para VISTO, único textarea para CONSIDERANDO, y SE RESUELVE estructurado sin bloque de firmas', () => {

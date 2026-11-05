@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("version", models.PositiveIntegerField(default=1)),
-                ("plantilla_version", models.CharField(max_length=50)),
+                ("plantilla_version", models.CharField(blank=True, default="v1", max_length=50)),
                 (
                     "estado",
                     models.CharField(

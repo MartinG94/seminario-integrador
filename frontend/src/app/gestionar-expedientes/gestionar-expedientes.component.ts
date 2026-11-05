@@ -1392,6 +1392,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.guardandoResolucion = true;
 
     const payload: GuardarResolucionPayload = {
+      plantilla_version: 'v1',
       vistos,
       considerandos,
       articulos_resolutivos: seResuelve
@@ -1437,11 +1438,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         next: res => {
           actualizarLocalYFinalizar(res?.contenido_hash);
         },
-        error: () => {
-          this.expedienteApi.actualizarResolucion(exp.id, payload).subscribe({
-            next: res => actualizarLocalYFinalizar(res?.contenido_hash),
-            error: () => actualizarLocalYFinalizar()
-          });
+        error: (errCrear) => {
+          // Si ya existe borrador previo (409 Conflict), actualizar mediante PATCH
+          if (errCrear?.status === 409) {
+            this.expedienteApi.actualizarResolucion(exp.id, payload).subscribe({
+              next: res => actualizarLocalYFinalizar(res?.contenido_hash),
+              error: (errPatch) => {
+                this.guardandoResolucion = false;
+                this.notifications.error(httpErrorMessage(errPatch, 'Error al actualizar la resolución oficial.'));
+              }
+            });
+          } else {
+            this.guardandoResolucion = false;
+            this.notifications.error(httpErrorMessage(errCrear, 'Error al generar la resolución oficial en el servidor.'));
+          }
         }
       });
     } else {

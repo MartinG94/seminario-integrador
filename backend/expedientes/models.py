@@ -1645,7 +1645,7 @@ class Resolucion(models.Model):
         Expediente, on_delete=models.PROTECT, related_name="resoluciones"
     )
     version = models.PositiveIntegerField(default=1)
-    plantilla_version = models.CharField(max_length=50)
+    plantilla_version = models.CharField(max_length=50, default="v1", blank=True)
     estado = models.CharField(
         max_length=10, choices=EstadoResolucionEnum.choices, default=EstadoResolucionEnum.DRAFT
     )

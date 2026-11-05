@@ -6,6 +6,7 @@ from expedientes.models import Resolucion
 class ResolucionSerializer(serializers.ModelSerializer):
     identificador_resolucion = serializers.SerializerMethodField()
     firmantes_td = serializers.SerializerMethodField()
+    plantilla_version = serializers.CharField(max_length=50, default="v1", required=False)
 
     class Meta:
         model = Resolucion

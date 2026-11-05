@@ -349,3 +349,35 @@ def test_expediente_list_serializer_expone_datos_resolucion(causal_expediente, c
     assert data["vistos"] == "Vistos serializados."
     assert data["considerandos"] == "Considerandos serializados."
     assert data["articulos_resolutivos"] == "Artículos serializados."
+
+
+@pytest.mark.django_db
+def test_creacion_resolucion_sin_plantilla_version_usa_default(
+    causal_expediente, causal_vocal, authenticate
+):
+    causal_expediente.estado = "revision_resolucion"
+    causal_expediente.save()
+
+    client = authenticate(causal_vocal)
+    payload = {
+        "vistos": "Vistos de prueba.",
+        "considerandos": "Considerando de prueba.",
+        "articulos_resolutivos": "Artículo 1: medida.",
+    }
+    response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
+    assert response.status_code == 201
+    assert response.data["plantilla_version"] == "v1"
+
+    causal_expediente.refresh_from_db()
+    assert causal_expediente.estado == "pendiente_correos"
+
+    resp_board = client.get("/api/v1/expedientes/board/")
+    assert resp_board.status_code == 200
+    pendientes = next(
+        col["cases"] for col in resp_board.data["columns"] if col["key"] == "pendiente_correos"
+    )
+    caso = next(c for c in pendientes if c["id"] == causal_expediente.pk)
+    assert caso["resolucion_estado"] == "DRAFT"
+    assert caso["vistos"] == "Vistos de prueba."
+    assert caso["considerandos"] == "Considerando de prueba."
+    assert caso["articulos_resolutivos"] == "Artículo 1: medida."

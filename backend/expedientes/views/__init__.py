@@ -1080,7 +1080,7 @@ class BoardExpedientesView(APIView):
                 "solicitud_t01",
                 "solicitud_t01__solicitante",
             )
-            .prefetch_related("socios", "cambios_estado")
+            .prefetch_related("socios", "cambios_estado", "resoluciones")
             .all()
         )
         filterset = ExpedienteFilter(request.query_params, queryset=qs)
