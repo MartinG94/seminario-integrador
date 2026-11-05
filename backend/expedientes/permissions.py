@@ -6,12 +6,15 @@ Implementa:
 - CanCreateT01: Autoridades procesales habilitadas para crear y tramitar T01.
 - CanOpenExpedientes y CanTransitionExpedientes: Roles para apertura y
   transiciones manuales (PR #43).
+- IsNotInvolvedInExpediente: inhibición de las partes interesadas (S4-04).
 """
 
 from rest_framework.permissions import BasePermission
 
 from accounts import audit
 from accounts.permissions import HasAnyRole, IsTribunalOrDirectiva
+from expedientes.models import Expediente
+from expedientes.services.tribunal_composition_service import INVOLVED_MESSAGE, is_involved
 from socios.models import Role
 
 __all__ = [
@@ -20,14 +23,31 @@ __all__ = [
     "CanManageAppealDeadline",
     "CanManageCalendar",
     "CanManageEventos",
+    "CanManageReglamentos",
     "CanOpenExpedientes",
     "CanResolveCausal",
     "CanTransitionExpedientes",
     "CanValueT03",
+    "CanViewReportes",
     "IsComisionDirectivaOrAdmin",
     "IsImputadoOrTribunal",
+    "IsNotInvolvedInExpediente",
     "IsTribunalOrDirectiva",
 ]
+
+
+class CanManageReglamentos(HasAnyRole):
+    """Autoridades habilitadas para gestionar artículos de reglamentos (TD, CD, Admin)."""
+
+    allowed_roles = (Role.TD, Role.CD, Role.ADMIN)
+
+
+class CanViewReportes(HasAnyRole):
+    """Autoridades y órganos de control habilitados para consultar reportes
+    (TD, CD, Revisores, Admin).
+    """
+
+    allowed_roles = (Role.TD, Role.CD, Role.FISCALIZADORA, Role.ADMIN)
 
 
 class IsComisionDirectivaOrAdmin(HasAnyRole):
@@ -70,6 +90,20 @@ class CanValueT03(HasAnyRole):
     """Sólo los Miembros Titulares o Suplentes del Tribunal valoran descargos T03 (S4-03)."""
 
     allowed_roles = (Role.TD,)
+
+
+class IsNotInvolvedInExpediente(BasePermission):
+    """Inhibe a las partes interesadas del expediente `pk` (Art. 95 Estatuto, Art. 24 RPD).
+
+    Imputados y solicitantes no evalúan justificativos, no transicionan la causa ni
+    emiten o firman la resolución: responde 403 aunque tengan rol de Tribunal.
+    """
+
+    message = INVOLVED_MESSAGE
+
+    def has_permission(self, request, view) -> bool:
+        expediente = Expediente.objects.filter(pk=view.kwargs.get("pk")).first()
+        return expediente is None or not is_involved(expediente, request.user)
 
 
 class CanAdjustT01(HasAnyRole):

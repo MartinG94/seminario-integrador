@@ -43,7 +43,39 @@
               {{ visorData.puntos > 0 ? '+' : '' }}{{ visorData.puntos }} pts
             </span>
           </div>
-          <p class="text-muted small mb-0 mt-1">
+
+          <!-- Clasificación de Concepto Institucional (TD / CD / Admin) -->
+          <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
+            <span *ngIf="!expediente?.concepto" class="badge badge-warning text-dark d-inline-flex align-items-center">
+              <i class="material-icons mr-1" style="font-size: 14px;">warning</i>
+              Sin clasificar · Obligatorio antes de emitir
+            </span>
+            <span *ngIf="expediente?.concepto" class="badge badge-info d-inline-flex align-items-center">
+              <i class="material-icons mr-1" style="font-size: 14px;">label</i>
+              {{ expediente?.concepto_display || expediente?.concepto }}
+            </span>
+
+            <div *ngIf="isTribunalOrAdmin" class="d-inline-flex align-items-center ml-2 selector-concepto-wrapper">
+              <label for="selector-concepto-expediente" class="small text-muted mb-0 mr-2 font-weight-bold">
+                Concepto TD:
+              </label>
+              <select
+                id="selector-concepto-expediente"
+                class="form-control form-control-sm select-concepto-td"
+                [ngModel]="expediente?.concepto"
+                (ngModelChange)="actualizarConcepto($event)"
+                [disabled]="actualizandoConcepto"
+                aria-label="Clasificar concepto institucional">
+                <option [ngValue]="null" disabled selected>-- Clasificar concepto --</option>
+                <option *ngFor="let c of catalogoConceptos" [value]="c.codigo">
+                  {{ c.nombre }}
+                </option>
+              </select>
+              <span *ngIf="actualizandoConcepto" class="spinner-border spinner-border-sm ml-2 text-primary" role="status" aria-hidden="true"></span>
+            </div>
+          </div>
+
+          <p class="text-muted small mb-0 mt-2">
             <strong>Carátula:</strong> {{ visorData.titulo || visorData.motivo }}
           </p>
         </div>
@@ -82,7 +114,7 @@
             <div class="vocal-item">
               <div class="vocal-badge-titulo d-flex align-items-center">
                 <i class="material-icons mr-1" style="font-size: 13px;">gavel</i>
-                {{ 'VOCAL ' + (i + 1) }}
+                {{ 'MIEMBRO ' + (i + 1) }}
               </div>
               <div class="vocal-nombre" [title]="vocal.nombre">{{ vocal.nombre }}</div>
               <div class="d-flex align-items-center gap-2">
@@ -115,11 +147,9 @@
                 <strong>{{ visorData.solicitante.display || visorData.solicitante.nombre }}</strong>
               </div>
               <div class="col-sm-6">
-                <span class="text-muted small d-block">Causal / Normativa Invocada:</span>
-                <div class="d-flex flex-wrap gap-1 mt-1">
-                  <span *ngFor="let reg of visorData.reglamentos_respaldantes" class="badge badge-secondary">
-                    {{ reg }}
-                  </span>
+                <span class="text-muted small d-block mb-1">Causal / Normativa Invocada:</span>
+                <div class="mt-1" *ngIf="reglamentosCitas && reglamentosCitas.length > 0">
+                  <app-tabla-reglamentos [articulos]="reglamentosCitas"></app-tabla-reglamentos>
                 </div>
               </div>
             </div>
@@ -252,6 +282,9 @@
                             <span *ngIf="ev.archivo_danado" class="badge badge-danger badge-sha-danado" title="Discrepancia de integridad">
                               <i class="material-icons align-middle" style="font-size: 13px;">error</i> Archivo dañado / Discordancia
                             </span>
+                            <span *ngIf="!ev.archivo_danado && ev.sha256_valido" class="badge badge-success badge-sha-valido" title="Integridad verificada">
+                              <i class="material-icons align-middle" style="font-size: 13px;">verified</i> SHA-256 verificado
+                            </span>
 
                             <button class="btn btn-sm btn-outline-info py-1 px-2" 
                                     (click)="verEvidencia(ev)" 
@@ -276,8 +309,8 @@
                     </ng-template>
                   </div>
 
-                  <!-- Integración con S4-02: Decisiones sobre Causal T02 -->
-                  <div *ngIf="inv.descargo.tipo === 'T02_CERTIFICADO'" class="border-top pt-2">
+                  <!-- Integración con S4-02: Decisiones sobre el Descargo -->
+                  <div *ngIf="inv.descargo" class="border-top pt-2">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                       <div>
                         <span class="text-muted small font-weight-bold">Regla Sugerida: </span>

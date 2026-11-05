@@ -90,6 +90,20 @@ class TestRegisterValuationApi:
         assert stored.autor_condicion == "TITULAR"
         assert stored.antecedentes.get().expediente_antecedente_id == emitido.id
 
+    def test_tribunal_member_registers_valuation_with_puntaje_final_201(
+        self, t03_descargo, tribunal_member
+    ) -> None:
+        response = _post(
+            tribunal_member.user,
+            t03_descargo,
+            resultado="ACCEPTED",
+            puntaje_final="-1.5",
+        )
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert response.data["puntaje_final"] == "-1.5"
+        stored = ValoracionT03.objects.get(pk=response.data["id"])
+        assert stored.puntaje_final == "-1.5"
+
     def test_member_missing_from_padron_is_recorded_as_not_informed(
         self, t03_descargo, tribunal_member
     ) -> None:

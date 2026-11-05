@@ -22,15 +22,7 @@ import { CalendarioInstitucionalComponent } from '../../calendario-institucional
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
-    { 
-      path: 'reglamentos',            
-      component: EnDesarrolloComponent,
-      data: {
-        titulo: 'Reglamentos',
-        descripcion: 'Consulta del Estatuto Social, el Reglamento Interno de Disciplina y el Reglamento Procesal Disciplinario 2026.',
-        icono: 'construction'
-      }
-    },
+    { path: 'reglamentos',            component: ReglamentosComponent },
     { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
     { path: 'gestionar-expedientes/:id/visor', component: VisorExpedienteComponent, canActivate: [TribunalGuard] },
     {
@@ -44,14 +36,11 @@ export const AdminLayoutRoutes: Routes = [
       }
     },
     { path: 'calendario-institucional', component: CalendarioInstitucionalComponent },
-    { 
-      path: 'reportes',               
-      component: EnDesarrolloComponent,
-      data: {
-        titulo: 'Reportes & Balance',
-        descripcion: 'Emisión de balances cuatrimestrales, métricas de sanciones y reconocimientos por subcomisión.',
-        icono: 'bar_chart'
-      }
+    {
+      path: 'reportes',
+      component: ReportesComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
     },
     { path: 'ranking-socios',         component: RankingSociosComponent },
     {

@@ -103,11 +103,25 @@ from expedientes.services.t03_valuation_service import (
     T03ValuationValidationError,
     is_imputado,
 )
+from expedientes.services.tribunal_composition_service import (
+    TribunalCompositionError,
+    TribunalCompositionNotFound,
+    TribunalCompositionService,
+)
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from expedientes.views.evento_views import (
     EventoInstitucionalViewSet,
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
+)
+from expedientes.views.reglamento_views import (
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
+    ReglamentosVigentesView,
+)
+from expedientes.views.reportes_views import (
+    ReportesExportCSVView,
+    ReportesResumenView,
 )
 from expedientes.views.visor_views import ExpedienteVisorView
 from padron.models import SocioEstudio
@@ -128,6 +142,7 @@ EXPEDIENTE_LIST_PREFETCH = (
     "descargos__valoraciones_t03__antecedentes",
     "evidencias__socio",
     "solicitud_t01",
+    "resoluciones",
 )
 
 
@@ -742,7 +757,10 @@ class DecisionCausalView(APIView):
 
     def get_permissions(self) -> list[permissions.BasePermission]:
         if self.request.method == "POST":
-            return [permissions.IsAuthenticated(), CanResolveCausal()]
+            return [
+                permissions.IsAuthenticated(),
+                CanResolveCausal(),
+            ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
     def get(self, request: Request, pk: int, descargo_id: int) -> Response:
@@ -774,6 +792,19 @@ class DecisionCausalView(APIView):
         except CausalResolutionValidationError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DecisionCausalSerializer(decision).data, status=status.HTTP_201_CREATED)
+
+
+class CanAccessAntecedentes(permissions.BasePermission):
+    """Permite acceso a autoridades habilitadas para consultar antecedentes o crear solicitudes."""
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return (
+            CanValueT03().has_permission(request, view)
+            or IsTribunalOrDirectiva().has_permission(request, view)
+            or CanCreateT01().has_permission(request, view)
+        )
 
 
 class ValoracionT03View(APIView):
@@ -813,6 +844,7 @@ class ValoracionT03View(APIView):
                 resultado=data["resultado"],
                 fundamento=data["fundamento"],
                 antecedente_ids=data["antecedente_ids"],
+                puntaje_final=data.get("puntaje_final"),
                 user=request.user,
             )
         except T03ValuationNotFound as exc:
@@ -829,14 +861,27 @@ class ValoracionT03View(APIView):
 
 
 class AntecedenteT03View(APIView):
-    """Ficha mínima de un expediente emitido buscado por número (S4-03, RF-16 y RF-20).
+    """Ficha mínima o catálogo de expedientes emitidos (S4-03, RF-16 y RF-20).
 
-    Sólo para miembros del Tribunal: acepta `7/2026`, `007/2026` o `EXP-0007/2026`.
+    Acepta búsqueda puntual por número (?numero=7/2026) o modo catálogo (?catalogo=1).
     """
 
-    permission_classes = [permissions.IsAuthenticated, CanValueT03]
+    permission_classes = [permissions.IsAuthenticated, CanAccessAntecedentes]
 
     def get(self, request: Request) -> Response:
+        es_catalogo = request.query_params.get("catalogo") in ("1", "true", "True")
+        if es_catalogo and not request.query_params.get("numero"):
+            search = request.query_params.get("search", "")
+            tipo = request.query_params.get("tipo", "TODOS")
+            exclude_raw = request.query_params.get("exclude_id")
+            exclude_id = int(exclude_raw) if exclude_raw and exclude_raw.isdigit() else None
+            items = T03ValuationService.list_emitted_antecedents(
+                search=search,
+                tipo=tipo,
+                exclude_id=exclude_id,
+            )
+            return Response(AntecedenteT03Serializer(items, many=True).data)
+
         try:
             found = T03ValuationService.lookup_antecedent(request.query_params.get("numero", ""))
         except T03ValuationValidationError as exc:
@@ -844,6 +889,24 @@ class AntecedenteT03View(APIView):
         except T03ValuationNotFound as exc:
             raise NotFound(str(exc)) from exc
         return Response(AntecedenteT03Serializer(found).data)
+
+
+def _composition_error_response(exc: TribunalCompositionError) -> Response:
+    if isinstance(exc, TribunalCompositionNotFound):
+        raise NotFound(str(exc)) from exc
+    return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ComposicionTribunalView(APIView):
+    """Responsables del Tribunal que interviene en la causa (S4-04): TD, CD y Administrador."""
+
+    permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
+
+    def get(self, request: Request, pk: int) -> Response:
+        try:
+            return Response(TribunalCompositionService.describe(pk, request.user))
+        except TribunalCompositionError as exc:
+            return _composition_error_response(exc)
 
 
 def _t01_error_response(exc: T01AppealError) -> Response:
@@ -1032,13 +1095,20 @@ class ExpedienteDetailView(APIView):
 
         if not IsTribunalOrDirectiva().has_permission(request, self):
             raise PermissionDenied(
-                "Solo integrantes del Tribunal o Comisión Directiva pueden actualizar la urgencia."
+                "Solo integrantes del Tribunal o Comisión Directiva "
+                "pueden actualizar la urgencia o concepto."
             )
 
         serializer = UpdateUrgenciaExpedienteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        expediente.urgencia = serializer.validated_data["urgencia"]
-        expediente.save(update_fields=["urgencia", "updated_at"])
+        update_fields = ["updated_at"]
+        if "urgencia" in serializer.validated_data:
+            expediente.urgencia = serializer.validated_data["urgencia"]
+            update_fields.append("urgencia")
+        if "concepto" in serializer.validated_data:
+            expediente.concepto = serializer.validated_data["concepto"]
+            update_fields.append("concepto")
+        expediente.save(update_fields=update_fields)
 
         return Response(
             ExpedienteListSerializer(expediente, context={"request": request}).data,
@@ -1051,15 +1121,6 @@ REGLAMENTOS_VIGENTES = (
     "Reglamento Procesal Disciplinario 2026",
     "Reglamento Interno de Disciplina",
 )
-
-
-class ReglamentosVigentesView(APIView):
-    """Lista de reglamentos institucionales vigentes para respaldar un T01."""
-
-    permission_classes = (CanCreateT01,)
-
-    def get(self, request):
-        return Response({"reglamentos": list(REGLAMENTOS_VIGENTES)})
 
 
 class SolicitudT01CreateView(APIView):
@@ -1132,7 +1193,7 @@ class BoardExpedientesView(APIView):
                 "solicitud_t01",
                 "solicitud_t01__solicitante",
             )
-            .prefetch_related("socios", "cambios_estado")
+            .prefetch_related("socios", "cambios_estado", "resoluciones")
             .all()
         )
         filterset = ExpedienteFilter(request.query_params, queryset=qs)
@@ -1147,7 +1208,10 @@ class TransicionarExpedienteView(APIView):
     Delega estrictamente en ExpedienteWorkflowService.transition().
     """
 
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         # Aceptar tanto to_status/justificacion como estado/motivo
@@ -1322,9 +1386,14 @@ class CalcularPlazoView(APIView):
 
 
 __all__ = [
+    "ArticuloReglamentoDetailView",
+    "ArticuloReglamentoListCreateView",
     "EventoInstitucionalViewSet",
     "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
+    "ReglamentosVigentesView",
+    "ReportesExportCSVView",
+    "ReportesResumenView",
     "SocioApercibimientosView",
     "ExpedienteVisorView",
     "filter_expedientes_by_legajo",

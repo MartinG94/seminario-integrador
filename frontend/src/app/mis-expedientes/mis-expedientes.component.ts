@@ -12,6 +12,12 @@ import {
 } from '../services/expediente-api.service';
 import { Subscription, interval } from 'rxjs';
 import { formatCaseNumber, humanizeEstado } from '../utils/case-number.util';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../utils/reglamento-format.util';
+import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -23,6 +29,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   misExpedientes: Expediente[] = [];
   socioActual = '';
   saldoNeto = 0;
+  felicitaciones = 0;
+  llamadosAtencion = 0;
 
   // Ordenamiento de tabla
   columnaOrden = 'numero';
@@ -50,8 +58,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   archivosSeleccionados: File[] = [];
   evidenciasExistentes: any[] = [];
   subiendoArchivos = false;
-  readonly LIMITE_T02 = 3;
-  readonly LIMITE_T03 = 5;
+  readonly LIMITE_DOCUMENTOS = 5;
   readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
   readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
@@ -76,7 +83,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private renderer: Renderer2,
     private notifications: NotificationService,
-    private expedienteApi: ExpedienteApiService
+    private expedienteApi: ExpedienteApiService,
+    private scrollLock: ModalScrollLockService
   ) {}
 
   ngOnInit(): void {
@@ -152,6 +160,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       evidencias: raw.evidencias || []
     } : undefined;
 
+    const justificacionAprobada = Boolean(
+      raw.justificacion_aprobada ||
+      (raw.descargo_presentado && (raw.estado === 'emitido' || raw.descargo?.puntaje_ratificado === 0)) ||
+      (raw.descargos && raw.descargos.some((d: any) => d.puntaje_ratificado === 0))
+    );
+
     return {
       id: String(raw.id),
       numero: raw.numero,
@@ -169,13 +183,28 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       horasRestantes: raw.horas_restantes ?? 0,
       tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
       puntos: raw.puntos || 0,
+      esFelicitacion: !!raw.es_felicitacion || Math.abs(Number(raw.puntos) - 0.33) < 0.01,
+      esLlamado: !!raw.es_llamado || Math.abs(Number(raw.puntos) - (-0.33)) < 0.01,
+      justificacionAprobada: justificacionAprobada,
       plazoInicioAt: raw.plazo_inicio_at,
       plazoLimiteAt: raw.plazo_limite_at,
       esT01: !!raw.es_t01,
       descargoPresentado: raw.descargo_presentado,
       descargo: descargoObj,
       evidencias: raw.evidencias || [],
-      cantidadSocios: raw.socios ? raw.socios.length : 1
+      cantidadSocios: raw.socios ? raw.socios.length : 1,
+      reglamento_asociado: raw.reglamento_asociado || raw.reglamentoAsociado || '',
+      reglamentoAsociado: raw.reglamento_asociado || raw.reglamentoAsociado || '',
+      reglamentos_respaldantes: Array.isArray(raw.reglamentos_respaldantes)
+        ? raw.reglamentos_respaldantes
+        : Array.isArray(raw.reglamentosRespaldantes)
+        ? raw.reglamentosRespaldantes
+        : [],
+      reglamentosRespaldantes: Array.isArray(raw.reglamentos_respaldantes)
+        ? raw.reglamentos_respaldantes
+        : Array.isArray(raw.reglamentosRespaldantes)
+        ? raw.reglamentosRespaldantes
+        : []
     };
   }
 
@@ -197,11 +226,37 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   /**
    * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
-   * Los expedientes en trámite (creado, justificando, espera_resolucion, etc.) no impactan el saldo.
+   * Aplica la exención de puntos para justificaciones aprobadas y la consolidación 3:1 de felicitaciones/llamados.
    */
   public actualizarSaldoNeto(): void {
     const emitidos = this.misExpedientes.filter(e => e.estado === 'emitido');
-    this.saldoNeto = emitidos.reduce((acc, exp) => acc + Number(exp.puntos || 0), 0);
+    let puntosOrdinarios = 0;
+    let felCount = 0;
+    let llamCount = 0;
+
+    for (const exp of emitidos) {
+      // Ignorar aquellos con justificación aprobada (descargo presentado con resolución o causal aprobada)
+      const esJustAprobada = Boolean(
+        exp.justificacionAprobada ||
+        (exp.descargoPresentado && (exp.tipo === 'falta' || Number(exp.puntos) < 0))
+      );
+      if (esJustAprobada) {
+        continue;
+      }
+
+      const pts = Number(exp.puntos || 0);
+      if (exp.esFelicitacion || Math.abs(pts - 0.33) < 0.01) {
+        felCount++;
+      } else if (exp.esLlamado || Math.abs(pts - (-0.33)) < 0.01) {
+        llamCount++;
+      } else {
+        puntosOrdinarios += pts;
+      }
+    }
+
+    this.saldoNeto = puntosOrdinarios + Math.floor(felCount / 3) - Math.floor(llamCount / 3);
+    this.felicitaciones = felCount % 3;
+    this.llamadosAtencion = llamCount % 3;
   }
 
   ngOnDestroy(): void {
@@ -257,13 +312,34 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   // Modal Detalle
   modalDetalleAbierto = false;
   expedienteDetalle: Expediente | null = null;
+  reglamentoExpandidoModal: string | null = null;
 
   /** Historial inmutable del descargo, proveniente del backend (no del estado local). */
   historialDescargo: LogJustificativo[] = [];
 
+  getReglamentosCitas(exp: Expediente | null | undefined): ReglamentoCiteView[] {
+    if (!exp) return [];
+    const list =
+      exp.reglamentos_respaldantes && exp.reglamentos_respaldantes.length > 0
+        ? exp.reglamentos_respaldantes
+        : exp.reglamentosRespaldantes;
+    const single = exp.reglamento_asociado || exp.reglamentoAsociado;
+    return parseReglamentosList(list, single);
+  }
+
+  toggleReglamentoExpandido(raw: string): void {
+    this.reglamentoExpandidoModal = this.reglamentoExpandidoModal === raw ? null : raw;
+  }
+
+  get reglamentoExpandidoDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandidoModal) return null;
+    return parseReglamentoCite(this.reglamentoExpandidoModal);
+  }
+
   abrirModalDetalle(exp: Expediente): void {
     this.expedienteDetalle = exp;
     this.modalDetalleAbierto = true;
+    this.reglamentoExpandidoModal = null;
     this.actualizarScrollBloqueo();
     this.limpiarApelacion();
     if (exp.esT01) {
@@ -279,11 +355,20 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       },
       error: () => {}
     });
+    setTimeout(() => {
+      const modalBody = (document.querySelector('.modal-dialog-tribunal .modal-detalle-body') ||
+                         document.querySelector('.modal-dialog-custom .card-body') ||
+                         document.querySelector('.modal-dialog-custom')) as HTMLElement;
+      if (modalBody) {
+        modalBody.focus({ preventScroll: true });
+      }
+    }, 50);
   }
 
   cerrarModalDetalle(): void {
     this.modalDetalleAbierto = false;
     this.expedienteDetalle = null;
+    this.reglamentoExpandidoModal = null;
     this.historialDescargo = [];
     this.limpiarApelacion();
     this.actualizarScrollBloqueo();
@@ -391,11 +476,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       CORREGIDO: 'EDICION',
       RETIRADO: 'ELIMINACION'
     };
-    const modalidad = v.tipo === 'T02_CERTIFICADO' ? 'T02 (Certificado)' : 'T03 (Extraordinario)';
+    const modalidad = v.tipo === 'T02_CERTIFICADO' ? 'Con Certificado' : 'Otros';
     const cantidad = (v.evidencias || []).length;
     const comprobantes = `${cantidad} ${cantidad === 1 ? 'comprobante' : 'comprobantes'}`;
     const partes = [`v${v.numero}`, modalidad];
-    if (v.causal) {
+    if (v.causal && v.causal !== 'Otro' && v.causal !== 'Otros') {
       partes.push(v.causal);
     }
     partes.push(comprobantes);
@@ -574,18 +659,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   private actualizarScrollBloqueo(): void {
     const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
-    const body = document.body;
-    const docElem = document.documentElement;
-    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
-
     if (estaAbierto) {
-      this.renderer.addClass(body, 'modal-open');
-      this.renderer.setStyle(body, 'overflow', 'hidden');
-      this.renderer.setStyle(docElem, 'overflow', 'hidden');
-      if (mainPanel) {
-        this.renderer.setStyle(mainPanel, 'overflow', 'hidden');
-      }
+      this.scrollLock.lock();
     } else {
+      this.scrollLock.reset();
       this.removerScrollBloqueo();
     }
   }
@@ -616,7 +693,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get limiteActual(): number {
-    return this.tipoDescargo === 'T02_CERTIFICADO' ? this.LIMITE_T02 : this.LIMITE_T03;
+    return this.LIMITE_DOCUMENTOS;
   }
 
   get puedeSubirMas(): boolean {
@@ -774,19 +851,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length;
 
+    if (totalComprobantes > this.LIMITE_DOCUMENTOS) {
+      this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_DOCUMENTOS} documentos.`);
+      return;
+    }
+
     if (this.tipoDescargo === 'T02_CERTIFICADO') {
       if (totalComprobantes === 0 && !this.nombreArchivo) {
         this.notifications.error('Debe adjuntar al menos un documento.');
-        return;
-      }
-      if (totalComprobantes > this.LIMITE_T02) {
-        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T02} documentos.`);
-        return;
-      }
-      if (this.relatoTexto && this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
-        this.notifications.error(
-          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
-        );
         return;
       }
     } else {
@@ -794,16 +866,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.notifications.error('Por favor ingrese el motivo de la justificación.');
         return;
       }
-      if (this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
-        this.notifications.error(
-          `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
-        );
-        return;
-      }
-      if (totalComprobantes > this.LIMITE_T03) {
-        this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_T03} documentos.`);
-        return;
-      }
+    }
+
+    if (this.relatoTexto && this.relatoTexto.length > this.MAX_CARACTERES_JUSTIFICACION) {
+      this.notifications.error(
+        `El motivo o justificación no puede superar los ${this.MAX_CARACTERES_JUSTIFICACION} caracteres.`
+      );
+      return;
     }
 
     const perfil = this.auth.getPerfil();
@@ -950,6 +1019,58 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  onTableKeyDown(event: KeyboardEvent, exp: Expediente): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.abrirModalDetalle(exp);
+    }
+  }
+
+  getCantidadInvolucrados(exp: Expediente): number {
+    if (typeof exp.cantidadSocios === 'number' && exp.cantidadSocios > 0) {
+      return exp.cantidadSocios;
+    }
+    if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
+      return exp.sociosInvolucrados.length;
+    }
+    const raw = (exp as any).involucrados;
+    if (Array.isArray(raw) && raw.length > 0) {
+      return raw.length;
+    }
+    return 1;
+  }
+
+  getUrgenciaLabel(urgencia?: string): string {
+    switch ((urgencia || '').toLowerCase()) {
+      case 'urgente': return 'URGENTE';
+      case 'baja': return 'BAJA';
+      case 'normal':
+      default:
+        return 'NORMAL';
+    }
+  }
+
+  getUrgenciaBadgeClass(urgencia?: string): string {
+    switch ((urgencia || '').toLowerCase()) {
+      case 'urgente': return 'badge-urgencia-urgente badge-mat-danger';
+      case 'baja': return 'badge-urgencia-baja badge-mat-info';
+      case 'normal':
+      default:
+        return 'badge-urgencia-normal badge-mat-info';
+    }
+  }
+
+  getUrgenciaIcon(urgencia?: string): string {
+    switch ((urgencia || '').toLowerCase()) {
+      case 'urgente': return 'priority_high';
+      case 'baja': return 'arrow_downward';
+      case 'normal':
+      default:
+        return 'remove';
+    }
+  }
+
   get expedientesOrdenados(): Expediente[] {
     let lista = [...this.misExpedientes];
     if (this.filtroTab === 'en_tramite') {
@@ -967,6 +1088,22 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       if (this.columnaOrden === 'numero') {
         valA = this.formatCaseNumber(a.numero);
         valB = this.formatCaseNumber(b.numero);
+      }
+      if (this.columnaOrden === 'involucrados') {
+        valA = this.getCantidadInvolucrados(a);
+        valB = this.getCantidadInvolucrados(b);
+      }
+      if (this.columnaOrden === 'urgencia') {
+        valA = (a.urgencia || 'normal').toLowerCase();
+        valB = (b.urgencia || 'normal').toLowerCase();
+      }
+      if (this.columnaOrden === 'fechaCreacion' || this.columnaOrden === 'fecha') {
+        valA = new Date(a.fechaCreacion || 0).getTime();
+        valB = new Date(b.fechaCreacion || 0).getTime();
+      }
+      if (this.columnaOrden === 'puntos') {
+        valA = Number(a.puntos || 0);
+        valB = Number(b.puntos || 0);
       }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();

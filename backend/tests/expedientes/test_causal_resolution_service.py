@@ -174,14 +174,15 @@ class TestEtapaYTipo:
 
         assert _decide(causal_descargo, causal_vocal.user).version == 1
 
-    def test_rejects_t03_descargo(self, causal_descargo, causal_vocal) -> None:
+    def test_allows_t03_descargo_resolution(self, causal_descargo, causal_vocal) -> None:
         DescargoExpediente.objects.filter(pk=causal_descargo.pk).update(
             tipo=TipoDescargoEnum.T03_EXTRAORDINARIO
         )
         causal_descargo.refresh_from_db()
 
-        with pytest.raises(CausalResolutionValidationError):
-            _decide(causal_descargo, causal_vocal.user, fundamento=GROUNDS)
+        decision = _decide(causal_descargo, causal_vocal.user, fundamento=GROUNDS)
+        assert decision.version == 1
+        assert decision.descargo.tipo == TipoDescargoEnum.T03_EXTRAORDINARIO
 
     def test_descargo_from_another_expediente_is_not_found(
         self, causal_descargo, causal_vocal, make_socio
@@ -252,3 +253,118 @@ class TestAislamientoMultiactor:
         make_evidencia(causal_descargo.expediente, otro)
 
         assert suggested_for(causal_descargo) == CausalDecision.REJECTED
+
+
+@pytest.mark.django_db
+class TestFundamentoSegunPuntajeFinal:
+    def test_grounds_optional_when_score_remains_the_same(
+        self, causal_descargo, causal_vocal
+    ) -> None:
+        causal_descargo.expediente.puntos = -1
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        decision = CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.REJECTED,
+            fundamento="",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final=-1,
+        )
+        assert decision.version == 1
+        assert decision.fundamento == ""
+        assert decision.descargo_snapshot["puntaje_final"] == -1.0
+        assert decision.se_aparta_de_regla is False
+
+    def test_grounds_optional_when_score_favors_member(self, causal_descargo, causal_vocal) -> None:
+        causal_descargo.expediente.puntos = -1
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        decision = CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.ACCEPTED,
+            fundamento="",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final=0,
+        )
+        assert decision.version == 1
+        assert decision.fundamento == ""
+        assert decision.descargo_snapshot["puntaje_final"] == 0.0
+        assert decision.se_aparta_de_regla is True
+
+    def test_grounds_optional_when_positive_score_remains_the_same(
+        self, causal_descargo, causal_vocal
+    ) -> None:
+        causal_descargo.expediente.puntos = 2
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        decision = CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.ACCEPTED,
+            fundamento="",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final=2,
+        )
+        assert decision.version == 1
+        assert decision.fundamento == ""
+        assert decision.descargo_snapshot["puntaje_final"] == 2.0
+        assert decision.se_aparta_de_regla is False
+
+    def test_grounds_mandatory_when_penalty_worsens(self, causal_descargo, causal_vocal) -> None:
+        causal_descargo.expediente.puntos = -1
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        with pytest.raises(CausalResolutionValidationError) as exc:
+            CausalResolutionService.decide(
+                expediente_id=causal_descargo.expediente_id,
+                descargo_id=causal_descargo.id,
+                decision=CausalDecision.REJECTED,
+                fundamento="",
+                evidencia_ids=None,
+                user=causal_vocal.user,
+                puntaje_final=-2,
+            )
+        assert "La fundamentación escrita es obligatoria" in str(exc.value)
+
+    def test_grounds_mandatory_when_positive_points_reduced(
+        self, causal_descargo, causal_vocal
+    ) -> None:
+        causal_descargo.expediente.puntos = 2
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        with pytest.raises(CausalResolutionValidationError) as exc:
+            CausalResolutionService.decide(
+                expediente_id=causal_descargo.expediente_id,
+                descargo_id=causal_descargo.id,
+                decision=CausalDecision.ACCEPTED,
+                fundamento="",
+                evidencia_ids=None,
+                user=causal_vocal.user,
+                puntaje_final=1,
+            )
+        assert "La fundamentación escrita es obligatoria" in str(exc.value)
+
+    def test_grounds_accepted_when_penalty_worsens_with_valid_grounds(
+        self, causal_descargo, causal_vocal
+    ) -> None:
+        causal_descargo.expediente.puntos = -1
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        decision = CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.REJECTED,
+            fundamento="Agravamiento motivado por reincidencia formal.",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final=-2,
+        )
+        assert decision.version == 1
+        assert decision.fundamento == "Agravamiento motivado por reincidencia formal."
+        assert decision.descargo_snapshot["puntaje_final"] == -2.0
+        assert decision.se_aparta_de_regla is True

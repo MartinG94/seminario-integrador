@@ -1,6 +1,12 @@
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import type { SolicitudMonitoreo } from '../../services/expediente-api.service';
+import { formatCaseNumber } from '../../utils/case-number.util';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../../utils/reglamento-format.util';
 
 @Component({
   selector: 'app-solicitud-detalle-dialog',
@@ -8,6 +14,8 @@ import type { SolicitudMonitoreo } from '../../services/expediente-api.service';
   styleUrls: ['./solicitud-detalle-dialog.component.scss']
 })
 export class SolicitudDetalleDialogComponent {
+  reglamentoExpandido: string | null = null;
+
   constructor(
     public dialogRef: MatDialogRef<SolicitudDetalleDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public solicitud: SolicitudMonitoreo
@@ -15,6 +23,23 @@ export class SolicitudDetalleDialogComponent {
 
   cerrar(): void {
     this.dialogRef.close();
+  }
+
+  formatCaseNumber(numero: string | null | undefined): string {
+    return formatCaseNumber(numero);
+  }
+
+  get reglamentosCitas(): ReglamentoCiteView[] {
+    return parseReglamentosList(this.solicitud?.reglamentos_respaldantes);
+  }
+
+  get reglamentoExpandidoDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandido) return null;
+    return parseReglamentoCite(this.reglamentoExpandido);
+  }
+
+  toggleExpandirReglamento(raw: string): void {
+    this.reglamentoExpandido = this.reglamentoExpandido === raw ? null : raw;
   }
 
   obtenerClaseEstado(estadoProcesal?: string): string {
@@ -66,4 +91,3 @@ export class SolicitudDetalleDialogComponent {
     }
   }
 }
-

@@ -381,9 +381,59 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TPB-02.10 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build y control contra `notasPO.md`.
 - [x] **TPB-02.11 Rediseño del Modal de Detalle de Expediente según boceto PO (SCRUM-70 / PR #64) [TDD]:** Cabecera Exp: <n>/<YYYY> + título, metadatos, sección Reglamentación, caja Motivo, tabla Involucrados y justificaciones (6 columnas con Leído/No Leído/Sin descargo, Puntaje Final y acción Ver Descargo) y validación de botones (Generar Resolución, Firmar Resolución, Ver Resolución).
 
+## 14. Sprint 4 — Desglose Atómico: S4-04 / SCRUM-54 (Gestionar Apartamiento y Suplencia conforme al Estatuto)
+
+> **Spec de Referencia:** [`specs/007-apartamiento-suplencia/spec.md`](specs/007-apartamiento-suplencia/spec.md)  
+> **Plan Técnico:** [`specs/007-apartamiento-suplencia/plan.md`](specs/007-apartamiento-suplencia/plan.md)  
+> **Tareas:** [`specs/007-apartamiento-suplencia/tasks.md`](specs/007-apartamiento-suplencia/tasks.md)
+
+- [x] **TS4-04.1 Dominio de composición [TDD]:** Nómina 3 + 3 por 4.º, 5.º y 6.º año, incompatibilidad de cargos, apartamiento automático, suplencia y Casos A/B del Art. 95.
+- [x] **TS4-04.2 Nómina desde el padrón legado [TDD]:** Lectura de `socio_lista.idTipoSocio` (10 Titular, 11 Suplente); año social derivado del grupo con `(Año Actual - 1962) - Número de Grupo` (revisión del PO, 25/10/2026), sin tablas nuevas de integrantes.
+- [x] **TS4-04.3 Modelos inmutables y migración [TDD]:** `ComposicionTribunal` e `IntegranteComposicion` sólo-inserción (migración `0019`).
+- [x] **TS4-04.4 Servicio de aplicación [TDD]:** Involucrados (imputados y solicitante), estampado de los asientos disponibles y aviso a CD por Outbox en Casos A/B, sin inmovilizar ni bloquear por nómina incompleta (decisión del PO, 31/10/2026).
+- [x] **TS4-04.5 Inhibición y endpoints REST [TDD]:** 403 a involucrados en decisiones y transiciones; `GET /composicion/`; sin endpoints de trámite manual ni carga de acta.
+- [x] **TS4-04.6 Servicio frontend y DTOs [TDD]:** Consulta de responsables en `ExpedienteApiService`.
+- [x] **TS4-04.7 Inhibición visible en el detalle:** Remoción total del panel "Responsables del Tribunal" y de las alertas de integrantes faltantes (revisión del PO, 25/10/2026); banner de participación restringida, acciones ocultas al involucrado, aviso sutil de causa derivada a Asamblea, sin carga de acta (decisión del PO, 31/10/2026).
+- [x] **TS4-04.8 Verificación integral y consistencia PO:** Suites `pytest` y `Karma`, `ruff`, build de producción y control contra `notasPO.md` y la revisión del PO sobre el PR #63.
+
 ---
 
-## 14. Instrucciones para la Actualización de este Archivo
+## 14.1 Sprint 4 — Desglose Atómico: S4-05 / SCRUM-56 (Generar Resolución Oficial Canónica y Firma Colegiada por Año Social)
+
+- [x] **TS4-05.1 Modelo `Resolucion`, firmantes reales y servicio sin hardcodeos [TDD]:** Modelo `Resolucion` con numeración `NNN/AAAA`, estado `DRAFT`/`ISSUED`, `firmantes` JSON por año social (4.º, 5.º y 6.º), servicio `registrar_firma_resolucion` y emisión con hash SHA-256 sin nombres hardcodeados.
+- [x] **TS4-05.2 Persistencia de estado del expediente y endpoints REST [TDD]:** Transición persistente del expediente a `pendiente_correos` (con registro en `CambioEstadoExpediente`) al generar resolución en `POST`/`PATCH /api/v1/expedientes/<id>/resolucion/`, endpoint `POST /api/v1/expedientes/<id>/resolucion/firmar/` y previsualización PDF institucional.
+- [x] **TS4-05.3 Regla transversal RBAC para rol `TD` [TDD]:** Permiso exclusivo de evaluación de descargos, consolidación de puntajes finales, generación de resolución y firma para cualquier usuario autenticado con rol `TD`, sin dependencia de `ComposicionTribunal` ni bloqueo adicional.
+- [x] **TS4-05.4 Modal trazable "Generar Resolución Oficial" y Modal "Firmar Resolución" en Angular [TDD]:** Sección `VISTO` con selector de Catálogo Reglamentario multi-documento y `<app-tabla-reglamentos>`, `CONSIDERANDO` como único campo editable para rol `TD`, `SE RESUELVE` con Artículo 1° (tabla de puntos finales consolidados en solo lectura) y Artículo 2° fijo formal, ocultamiento de firmas en la generación y estampado de firmas reales por año social en estado `Pendiente de Firma`.
+- [x] **TS4-05.5 Verificación integral y consistencia PO:** Suites `pytest` (53/53 en verde) y `Karma` (154/154 en verde), `ruff check/format`, `npm run build` y control contra `notasPO.md`.
+
+---
+
+## 13.1 Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
+
+> **Tareas:** [`specs/009-reportes-e-informes/tasks.md`](specs/009-reportes-e-informes/tasks.md)
+
+- [x] **TS6-01.1 Modelo de Concepto y Regla de Emisión [TDD]:** `ConceptoExpedienteEnum` (`CD`, `TD`, `GSA`, `GVP`, `COMP`, `RRHH`, `RRII`, `PRENSA`, `MANT`, `EVENTOS`, `RIFAS`, `ASAMBLEA`, `OTROS`), campo `Expediente.concepto` (`null=True`), migración `0020_expediente_concepto.py` y validación obligatoria en `ExpedienteWorkflowService.transition` antes de pasar a `emitido`.
+- [x] **TS6-01.2 Motor Analítico `ReportesMetricsService` [TDD]:** Cálculo de los 7 KPIs (`KPI-01` tiempo de vida promedio en días corridos; `KPI-02` pedidos por autoridad; `KPI-03` pedidos por subcomisión intra vs. inter y agrupación por concepto; `KPI-04` backlog por urgencia; `KPI-05` descargos T02/T03 y apelaciones T01; `KPI-06` balance de puntos, regla 3:1 y socios en riesgo; `KPI-07` asistencia y validez de eventos).
+- [x] **TS6-01.3 Endpoints REST y RBAC `CanViewReportes` [TDD]:** `GET /api/v1/expedientes/reportes/resumen/` y `GET /api/v1/expedientes/reportes/exportar-csv/` restringidos a `TD`, `CD`, `FISCALIZADORA` y `ADMIN`.
+- [x] **TS6-01.4 Clasificación de Concepto en `VisorExpedienteComponent` [TDD]:** Selector en la vista del TD con guardado vía `PATCH /api/v1/expedientes/<id>/` y aviso de 10 segundos en `NotificationService`.
+- [x] **TS6-01.5 Rediseño de `ReportesComponent` y Protección de Ruta [TDD]:** Barra de filtros, tarjetas KPI con `tabular-nums`, 3 pestañas, exportación CSV/PDF y ruta `/reportes` protegida con `TribunalGuard`.
+- [x] **TS6-01.6 Verificación Integral y Consistencia PO:** Suites `pytest`, `Karma`, `ruff`, `npm run build` y chequeo de inmutabilidad de `notasPO.md`.
+
+---
+
+## 14. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
+
+> **Historia de Usuario:** S5-06: Como autoridad quiero recibir alertas de saldos críticos para actuar conforme al reglamento.  
+> **Criterios de Aceptación:** CA1 (Saldo negativo de 10 o más genera alerta crítica única por cruce descendente), CA2 (Destinatario y acción siguen acto aprobado / bloqueo normativo documentado), CA3 (Umbral -7 diferenciado, configurable y desactivable hasta validar Circular 001/2026), CA4 (Reversiones reevalúan sin borrar historial), CA5 (Cero información médica en notificaciones).
+
+- [x] **TS5-06.1 Dominio y Motor de Umbrales (-10 crítico y -7 preventivo configurable) [TDD]:** Entidades de dominio `UmbralConfig`, `TipoAlerta`, `TipoCruce`, `EstadoDespachoAlerta` y `ThresholdAlertEngine.evaluar_cruce()` con unicidad por cruce descendente y política preventiva diferenciada/desactivable (`backend/ranking/domain/threshold_alerts.py`).
+- [x] **TS5-06.2 Reversiones, Rectificaciones, Historial Inmutable y Acto Aprobado [TDD]:** Implementación de `reevaluar_por_reversion()`, `reevaluar_por_rectificacion()`, preservación inmutable del historial previo (`RegistroAlerta`), `InternalAlertRepository`, abstracción `ActoAprobadoResolver` con bloqueo formal documentado ante falta de acto aprobado formal y exportación en `backend/ranking/services.py`.
+- [x] **TS5-06.3 Sanitización Médica y Suite Integral de Pruebas [TDD]:** `AlertaSanitizer` para blindaje estricto de privacidad (cero datos médicos en asuntos, cuerpos y metadatos) y suite de 37 tests unitarios en `backend/tests/test_threshold_alerts.py` cubriendo los 8 criterios de aceptación sin envíos externos ni bajas de socios.
+- [x] **TS5-06.4 Revisión PR #72 — Adecuación de Destinatarios Oficiales, Outbox Transaccional y Configuración de Correos [TDD]:** Exposición de defaults neutros en `core/settings.py` y `.env.example`, resolución de destinatarios oficiales (Socio Imputado, CD y Tribunal) y acción `ESPERA_ACTO_RESOLUTIVO_CD` sin bloqueo operativo por `ActoAprobado`, despacho formal exclusivo mediante `EmailOutbox` transaccional sin notificaciones in-app, sustitución de correos institucionales reales en fixtures por `@aveit.test` y suite de 45 tests unitarios en verde.
+
+---
+
+## 15. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

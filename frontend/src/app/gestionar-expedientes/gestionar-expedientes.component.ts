@@ -6,24 +6,34 @@ import {
   EstadoExpediente, 
   NivelUrgencia
 } from '../services/tribunal-data.service';
-import { AuthService } from '../services/auth.service';
+import { AuthService, PerfilSocio } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
   AntecedenteT03DTO,
+  ComposicionTribunalDTO,
   ApelacionT01DTO,
+  ArticuloReglamentoDTO,
   DecisionCausal,
   DescargoDetalleDTO,
   EvidenciaMetadata,
   ExpedienteApiService,
   ExpedienteDetalleDTO,
+  GuardarResolucionPayload,
   HistorialT01DTO,
   RegistrarValoracionT03Payload,
+  ResolucionOficialDTO,
   SocioT01DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
 import { Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
+import {
+  parseReglamentoCite,
+  parseReglamentosList,
+  ReglamentoCiteView
+} from '../utils/reglamento-format.util';
+import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
 
 // Registro de decisiones: sólo en la etapa de resolución (Spec 006, EARS 7).
 const ESTADOS_DECISION_CAUSAL = ['revision_resolucion', 'espera_resolucion'];
@@ -34,6 +44,16 @@ const ESTADOS_CONSULTA_CAUSAL = [
 export const MIN_FUNDAMENTO_CAUSAL = 20;
 export const MAX_FUNDAMENTO_CAUSAL = 5000;
 export const MIN_MOTIVOS_ADECUACION = 20;
+
+export interface CatalogoReglamentoItem {
+  raw: string;
+  citaCorta: string;
+  documento: 'Estatuto' | 'Reglamento Interno' | 'Normativa';
+  articulo: string;
+  inciso: string;
+  seccion: string;
+  cuerpo: string;
+}
 
 /** Borrador de la adecuación de puntos e involucrados del T01 (PB-02). */
 interface BorradorAdecuacion {
@@ -144,22 +164,86 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   modalDescargoAbierto = false;
   reglamentacionExpandida = false;
   expedienteSeleccionado: Expediente | null = null;
+  private elementoFocoPrevio: HTMLElement | null = null;
 
-  // Votación
-  votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {
-    'Dr. Argañaraz (Presidente TD)': 'FAVORABLE',
-    'Dra. Bustos (Miembro Titular)': 'FAVORABLE',
-    'Ing. Rossi (Miembro Titular)': 'DESFAVORABLE'
-  };
-  considerandosTexto = 'Por cuanto las pruebas documentales aportadas y la constancia de asistencia demuestran la concurrencia de la causal invocada.';
+  // Votación y Reglamentos Respaldantes
+  reglamentosDisponibles: string[] = [];
+  articulosDisponibles: ArticuloReglamentoDTO[] = [];
+  reglamentosSeleccionadosResolucion: string[] = [];
+  filtroReglamentosResolucion = '';
 
-  // Firma
-  juezFirmando = 'Dr. Argañaraz (Presidente TD)';
-  juecesDisponibles = [
-    'Dr. Argañaraz (Presidente TD)',
-    'Dra. Bustos (Miembro Titular)',
-    'Ing. Rossi (Miembro Titular)'
-  ];
+  get expedienteService(): ExpedienteApiService {
+    return this.expedienteApi;
+  }
+
+  vistosTexto = '';
+  considerandosTexto = '';
+  seResuelveTexto = '';
+  fechaResolucionTexto = '';
+  fechaActualResolucion = new Date();
+  guardandoResolucion = false;
+  firmando = false;
+
+  // Catálogo reglamentario en Modal Generar Resolución (Sustento VISTO)
+  modalCatalogoResolucionAbierto = false;
+  filtroDocumentoResolucionModal: 'TODOS' | 'Estatuto' | 'Reglamento Interno' = 'TODOS';
+  busquedaCatalogoResolucion = '';
+  catalogoItemsModal: CatalogoReglamentoItem[] = [];
+
+  votosJueces: { [juez: string]: 'FAVORABLE' | 'DESFAVORABLE' | 'ABSTENCION' } = {};
+
+  get usuarioActualPerfil(): PerfilSocio | null {
+    return this.auth.getCurrentUser();
+  }
+
+  get firmantesPieResolucion(): { anioSocial: number; etiquetaAnio: string; firma: string }[] {
+    const firmas = this.expedienteSeleccionado?.firmas?.juecesFirmantes || [];
+    return [4, 5, 6].map((anio, idx) => {
+      const match = firmas.find(f => {
+        if (anio === 4 && (f.includes('4.°') || f.includes('4.º') || f.includes('G59') || f.includes('Candela Moreno') || f.includes('11735'))) return true;
+        if (anio === 5 && (f.includes('5.°') || f.includes('5.º') || f.includes('G58') || f.includes('Catalina Cerda') || f.includes('11737'))) return true;
+        if (anio === 6 && (f.includes('6.°') || f.includes('6.º') || f.includes('G57') || f.includes('Giuliano Toselli') || f.includes('11239'))) return true;
+        return false;
+      }) || firmas[idx];
+
+      return {
+        anioSocial: anio,
+        etiquetaAnio: `${anio}.º Año Social`,
+        firma: match || 'Pendiente de firma'
+      };
+    });
+  }
+
+  get espaciosFirmaPorAnioSocial(): { anioSocial: number; etiquetaAnio: string; firma: string | null; firmado: boolean }[] {
+    const firmas = this.expedienteSeleccionado?.firmas?.juecesFirmantes || [];
+    return [4, 5, 6].map((anio, idx) => {
+      const match = firmas.find(f => {
+        if (anio === 4 && (f.includes('4.°') || f.includes('4.º') || f.includes('G59') || f.includes('Candela Moreno') || f.includes('11735'))) return true;
+        if (anio === 5 && (f.includes('5.°') || f.includes('5.º') || f.includes('G58') || f.includes('Catalina Cerda') || f.includes('11737'))) return true;
+        if (anio === 6 && (f.includes('6.°') || f.includes('6.º') || f.includes('G57') || f.includes('Giuliano Toselli') || f.includes('11239'))) return true;
+        return false;
+      }) || firmas[idx];
+
+      return {
+        anioSocial: anio,
+        etiquetaAnio: `${anio}.º Año Social`,
+        firma: match || null,
+        firmado: !!match
+      };
+    });
+  }
+
+  get usuarioYaFirmoResolucion(): boolean {
+    const perfil = this.usuarioActualPerfil;
+    if (!perfil || !this.expedienteSeleccionado?.firmas?.juecesFirmantes) return false;
+    const legajo = String(perfil.legajo || '').trim();
+    if (!legajo) return false;
+    return this.expedienteSeleccionado.firmas.juecesFirmantes.some(f => f.includes(legajo));
+  }
+
+  get reglamentosResolucionCitas(): ReglamentoCiteView[] {
+    return parseReglamentosList(this.reglamentosSeleccionadosResolucion, null, this.articulosDisponibles);
+  }
 
   failedToLoadBoard = false;
   cargando = false;
@@ -177,6 +261,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   registrandoValoracion = false;
   private busquedasAntecedente = new Subscription();
   private busquedasEnCurso = 0;
+
+  // Tribunal de la causa (S4-04): inhibición de involucrados y suplencia automática (Art. 95)
+  composicion: ComposicionTribunalDTO | null = null;
+  cargandoComposicion = false;
 
   // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
   readonly escalaPuntajes = ESCALA_PUNTAJES;
@@ -203,7 +291,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService,
     private socioApi: SocioApiService,
-    private router: Router
+    private router: Router,
+    private scrollLock: ModalScrollLockService
   ) {}
 
   get buscandoAntecedente(): boolean {
@@ -211,7 +300,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get puedeVotarOFirmar(): boolean {
-    return this.auth.tieneRol('TD', 'ADMIN');
+    return this.auth.tieneRol('TD');
   }
 
   get puedeConsultarJustificaciones(): boolean {
@@ -225,7 +314,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get puedeGenerarResolucion(): boolean {
-    if (!this.puedeVotarOFirmar || !this.expedienteSeleccionado) return false;
+    if (!this.puedeResolverExpedienteSeleccionado || !this.expedienteSeleccionado) return false;
     const enRevision =
       this.expedienteSeleccionado.estado === 'revision_resolucion' ||
       this.expedienteSeleccionado.estado === 'espera_resolucion';
@@ -243,15 +332,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get puedeFirmarResolucion(): boolean {
-    return (
-      this.puedeVotarOFirmar &&
-      this.expedienteSeleccionado?.estado === 'pendiente_firma'
-    );
+    if (!this.puedeResolverExpedienteSeleccionado || !this.expedienteSeleccionado) return false;
+    const est = this.expedienteSeleccionado.estado;
+    const firmas = this.expedienteSeleccionado.firmas?.juecesFirmantes || [];
+    return (est === 'pendiente_firma' || (est === 'pendiente_correos' && firmas.length < 3)) && firmas.length < 3;
   }
 
   get puedeVerResolucion(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
     return estado === 'emitido' || estado === 'pendiente_correos';
+  }
+
+  get mostrarConsiderandosEnDetalle(): boolean {
+    const est = this.expedienteSeleccionado?.estado;
+    const tieneTexto = !!this.expedienteSeleccionado?.considerandos?.trim();
+    return (
+      (est === 'pendiente_firma' || est === 'pendiente_correos' || est === 'emitido') &&
+      tieneTexto
+    );
   }
 
   ngOnInit(): void {
@@ -275,9 +373,206 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }));
 
     this.cargarDatosTablero();
+    this.cargarReglamentosDisponibles();
+  }
+
+  cargarReglamentosDisponibles(): void {
+    this.expedienteService.listarReglamentos().subscribe({
+      next: res => {
+        this.reglamentosDisponibles = res?.reglamentos || [];
+        this.articulosDisponibles = (res as any)?.articulos || [];
+        this.actualizarCatalogoItemsModal();
+      },
+      error: err => {
+        console.warn('No se pudieron cargar los reglamentos vigentes', err);
+      }
+    });
+  }
+
+  actualizarCatalogoItemsModal(): void {
+    if (this.articulosDisponibles && this.articulosDisponibles.length > 0) {
+      this.catalogoItemsModal = this.articulosDisponibles.map(art => {
+        const raw = art.cita_completa || (art.cuerpo ? `${art.cita_corta}: ${art.cuerpo}` : art.cita_corta);
+        const parsed = parseReglamentoCite(raw, this.articulosDisponibles);
+        return {
+          raw,
+          citaCorta: parsed.citaCorta,
+          documento: parsed.documento,
+          articulo: String(art.articulo ?? ''),
+          inciso: art.inciso && art.inciso !== '-' ? String(art.inciso) : '',
+          seccion: String(art.seccion ?? ''),
+          cuerpo: (art.cuerpo || art.descripcion || parsed.cuerpo || '').trim()
+        };
+      });
+      return;
+    }
+    this.catalogoItemsModal = (this.reglamentosDisponibles || []).map(raw => {
+      const parsed = parseReglamentoCite(raw);
+      return {
+        raw,
+        citaCorta: parsed.citaCorta,
+        documento: parsed.documento,
+        articulo: '',
+        inciso: '',
+        seccion: '',
+        cuerpo: parsed.cuerpo
+      };
+    });
+  }
+
+  get articulosModalResolucionFiltrados(): CatalogoReglamentoItem[] {
+    const busqueda = (this.busquedaCatalogoResolucion || '').trim().toLowerCase();
+    return this.catalogoItemsModal.filter(item => {
+      if (this.filtroDocumentoResolucionModal !== 'TODOS' && item.documento !== this.filtroDocumentoResolucionModal) {
+        return false;
+      }
+      if (!busqueda) {
+        return true;
+      }
+      return (
+        item.raw.toLowerCase().includes(busqueda) ||
+        item.citaCorta.toLowerCase().includes(busqueda) ||
+        item.cuerpo.toLowerCase().includes(busqueda) ||
+        item.seccion.toLowerCase().includes(busqueda) ||
+        (`art. ${item.articulo}`).toLowerCase().includes(busqueda)
+      );
+    });
+  }
+
+  abrirModalCatalogoResolucion(): void {
+    this.busquedaCatalogoResolucion = '';
+    this.filtroDocumentoResolucionModal = 'TODOS';
+    this.actualizarCatalogoItemsModal();
+    this.modalCatalogoResolucionAbierto = true;
+    this.scrollLock.lock();
+  }
+
+  cerrarModalCatalogoResolucion(): void {
+    this.modalCatalogoResolucionAbierto = false;
+    this.scrollLock.unlock();
+  }
+
+  setFiltroDocumentoResolucionModal(doc: 'TODOS' | 'Estatuto' | 'Reglamento Interno'): void {
+    this.filtroDocumentoResolucionModal = doc;
+  }
+
+  esReglamentoResolucionSeleccionado(raw: string): boolean {
+    return this.reglamentosSeleccionadosResolucion.includes(raw);
+  }
+
+  contarSeleccionadosPorDocumentoResolucion(doc: 'Estatuto' | 'Reglamento Interno'): number {
+    return this.reglamentosResolucionCitas.filter(c => c.documento === doc).length;
+  }
+
+  get reglamentosResolucionFiltrados(): string[] {
+    const busqueda = (this.filtroReglamentosResolucion || '').trim().toLowerCase();
+    if (!busqueda) {
+      return this.reglamentosDisponibles;
+    }
+    return this.reglamentosDisponibles.filter(reg =>
+      reg.toLowerCase().includes(busqueda) || this.reglamentosSeleccionadosResolucion.includes(reg)
+    );
+  }
+
+  toggleReglamentoResolucion(reg: string): void {
+    const idx = this.reglamentosSeleccionadosResolucion.indexOf(reg);
+    if (idx >= 0) {
+      this.reglamentosSeleccionadosResolucion.splice(idx, 1);
+    } else {
+      this.reglamentosSeleccionadosResolucion.push(reg);
+    }
+    this.vistosTexto = this.construirVistosPorDefecto();
+  }
+
+  agregarReglamentoResolucion(reg: string): void {
+    if (!reg) return;
+    if (!this.reglamentosSeleccionadosResolucion.includes(reg)) {
+      this.reglamentosSeleccionadosResolucion.push(reg);
+      this.vistosTexto = this.construirVistosPorDefecto();
+    }
+  }
+
+  quitarReglamentoResolucion(reg: string): void {
+    this.reglamentosSeleccionadosResolucion = this.reglamentosSeleccionadosResolucion.filter(r => r !== reg);
+    this.vistosTexto = this.construirVistosPorDefecto();
+  }
+
+  removerReglamentoResolucion(reg: string): void {
+    this.quitarReglamentoResolucion(reg);
+  }
+
+  limpiarReglamentosResolucion(): void {
+    this.reglamentosSeleccionadosResolucion = [];
+    this.vistosTexto = this.construirVistosPorDefecto();
+  }
+
+  onModalCatalogoKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.cerrarModalCatalogoResolucion();
+    }
+  }
+
+  obtenerNumeroResolucionPreview(): string {
+    return this.expedienteSeleccionado?.numero ? this.formatCaseNumber(this.expedienteSeleccionado.numero) : 'EXP-___/____';
+  }
+
+  construirVistosPorDefecto(): string {
+    const num = this.expedienteSeleccionado ? this.formatCaseNumber(this.expedienteSeleccionado.numero) : 'S/N';
+    const titulo = this.expedienteSeleccionado?.titulo || this.expedienteSeleccionado?.motivo || 'Causa Disciplinaria';
+    const fecha = this.expedienteSeleccionado?.fechaCreacion ? new Date(this.expedienteSeleccionado.fechaCreacion).toLocaleDateString('es-AR') : 'reciente';
+    const solicitante = this.expedienteSeleccionado ? this.formatSolicitante(this.expedienteSeleccionado) : 'Comisión Directiva';
+
+    let lineasReglamentos = '';
+    if (this.reglamentosSeleccionadosResolucion.length > 0) {
+      lineasReglamentos = this.reglamentosSeleccionadosResolucion
+        .map((r, i) => `   ${i + 1}. ${r}`)
+        .join('\n');
+    } else {
+      lineasReglamentos = '   1. Reglamento Procesal Disciplinario 2026.';
+    }
+
+    return `VISTO:\n1. Las actuaciones obrantes en el Expediente ${num}, caratulado "${titulo}", promovido por ${solicitante} con fecha ${fecha}.\n2. Lo normado y garantizado en los siguientes artículos e instrumentos reglamentarios:\n${lineasReglamentos}\n3. Las constancias documentales, descargos tipificados y elementos probatorios aportados a la causa.`;
+  }
+
+  construirConsiderandosPorDefecto(exp?: Expediente | null): string {
+    return '';
+  }
+
+  construirSeResuelvePorDefecto(exp: Expediente): string {
+    const filas = this.involucradosJustificacion || [];
+    let detalleInvolucrados = '';
+    if (filas.length > 0) {
+      detalleInvolucrados = filas.map(f => {
+        const nombre = this.getNombreCompletoInvolucrado(f);
+        const legajo = f.legajo || 'S/L';
+        const grupo = f.grupo ? ` (G${this.formatGrupoInvolucrado(f.grupo)})` : '';
+        const puntaje = this.getPuntajeFinalInvolucradoDisplay(f);
+        return `   - Socio N° ${legajo} — ${nombre}${grupo}: ${puntaje}`;
+      }).join('\n');
+    } else {
+      const socio = exp.socio || 'Socio';
+      const legajo = exp.legajo || 'S/L';
+      const puntos = exp.puntos > 0 ? `+${exp.puntos}` : `${exp.puntos}`;
+      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${puntos} pts`;
+    }
+
+    return `SE RESUELVE:\nARTÍCULO 1°.- APLICAR la resolución disciplinaria correspondiente a los socios involucrados en los presentes actuados:\n${detalleInvolucrados}\n\nARTÍCULO 2°.- NOTIFICAR fehacientemente a los interesados y comunicar lo resuelto a la Comisión Directiva para su efectivo registro en el cómputo institucional de puntos.\n\nARTÍCULO 3°.- REGÍSTRESE, cúmplase con las firmas digitales colegiadas de los representantes de los años sociales y archívese en Secretaría del Tribunal de Disciplina.`;
+  }
+
+  construirFechaResolucionTexto(): string {
+    const hoy = new Date();
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const dia = hoy.getDate();
+    const mes = meses[hoy.getMonth()];
+    const anio = hoy.getFullYear();
+    const hora = String(hoy.getHours()).padStart(2, '0');
+    const min = String(hoy.getMinutes()).padStart(2, '0');
+    return `Córdoba, ${dia} de ${mes} de ${anio}, ${hora}:${min} hs`;
   }
 
   ngOnDestroy(): void {
+    this.scrollLock.reset();
     this.subs.forEach(s => s.unsubscribe());
     this.busquedasAntecedente.unsubscribe();
   }
@@ -574,9 +869,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalResolucionAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalDetalleAbierto = true;
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
     this.reglamentacionExpandida = false;
+    this.reglamentoExpandidoModal = null;
     this.limpiarJustificaciones();
     this.limpiarT01();
+    this.limpiarComposicion();
 
     if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
       this.involucradosJustificacion = exp.sociosInvolucrados.map(s => ({
@@ -599,6 +898,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
 
     this.cargarJustificaciones(exp.id);
+
+    if (this.puedeConsultarComposicion) {
+      this.cargarComposicion(exp.id);
+    }
 
     if (this.puedeConsultarT01) {
       this.cargarHistorialT01(exp.id);
@@ -721,15 +1024,64 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  // --- Tribunal de la causa (S4-04) ---
+
+  get puedeConsultarComposicion(): boolean {
+    return this.auth.tieneRol('TD', 'CD', 'ADMIN');
+  }
+
+  /** Parte interesada: no inhibe a miembros con rol TD conforme a directivas vigentes. */
+  get usuarioInvolucrado(): boolean {
+    return false;
+  }
+
+  /**
+   * Cualquier usuario con rol TD puede resolver sin bloqueos adicionales.
+   */
+  get puedeResolverExpedienteSeleccionado(): boolean {
+    return this.auth.tieneRol('TD');
+  }
+
+  cargarComposicion(expedienteId: number | string): void {
+    this.cargandoComposicion = true;
+    this.expedienteApi.obtenerComposicionTribunal(expedienteId).subscribe({
+      next: composicion => {
+        this.cargandoComposicion = false;
+        this.composicion = composicion;
+      },
+      error: err => {
+        this.cargandoComposicion = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la composición del Tribunal.'));
+      }
+    });
+  }
+
+  private limpiarComposicion(): void {
+    this.composicion = null;
+    this.cargandoComposicion = false;
+  }
 
   cargarJustificaciones(expedienteId: number | string): void {
     this.cargandoJustificaciones = true;
     this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
       next: detalle => {
         this.involucradosJustificacion = this.construirInvolucrados(detalle);
-        if (detalle.reglamentos_respaldantes && this.expedienteSeleccionado) {
-          this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
-          this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+        if (this.expedienteSeleccionado) {
+          if (detalle.considerandos) {
+            this.expedienteSeleccionado.considerandos = detalle.considerandos;
+          }
+          if (detalle.reglamentos_respaldantes && detalle.reglamentos_respaldantes.length > 0) {
+            this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
+            this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+          }
+        }
+        const enLista = (this.expedientes || []).find(e => String(e.id) === String(expedienteId));
+        if (enLista) {
+          if (detalle.considerandos) enLista.considerandos = detalle.considerandos;
+          if (detalle.reglamentos_respaldantes && detalle.reglamentos_respaldantes.length > 0) {
+            enLista.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
+            enLista.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+          }
         }
         this.cargandoJustificaciones = false;
       },
@@ -774,14 +1126,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   esEvaluable(fila: InvolucradoJustificacion): boolean {
-    const descargo = fila.descargo;
-    if (descargo?.tipo === 'T03_EXTRAORDINARIO') return !!descargo.valoraciones_t03;
-    return descargo?.tipo === 'T02_CERTIFICADO';
+    return !!fila.descargo;
   }
 
   accionDescargo(fila: InvolucradoJustificacion): string {
-    const valorable = fila.descargo?.tipo === 'T03_EXTRAORDINARIO' && this.esEvaluable(fila);
-    return valorable && this.puedeEvaluarJustificaciones ? 'Valorar T03' : 'Ver Descargo';
+    return this.puedeEvaluarJustificaciones ? 'Evaluar Descargo' : 'Ver Descargo';
   }
 
   estadoJustificacion(fila: InvolucradoJustificacion): string {
@@ -789,9 +1138,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!descargo) return 'Sin justificación';
     if (descargo.tipo === 'T03_EXTRAORDINARIO') {
       // Sin historial en la respuesta, la valoración está reservada para este usuario (RF-24).
-      if (!descargo.valoraciones_t03) return 'Extraordinaria (T03)';
+      if (!descargo.valoraciones_t03) return 'Descargo - Otros';
       const vigente = descargo.valoraciones_t03[0];
-      return vigente ? this.etiquetaDecision(vigente.resultado) : 'Pendiente de valoración';
+      return vigente ? this.etiquetaDecision(vigente.resultado) : 'Pendiente de evaluación';
     }
     const ultima = descargo.decisiones_causal?.[0];
     if (!ultima) return 'Pendiente de evaluación';
@@ -952,7 +1301,44 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
     this.modalDescargoAbierto = false;
+    this.modalResolucionAbierto = false;
+    this.modalCatalogoResolucionAbierto = false;
     this.modalVotacionAbierto = true;
+    this.fechaActualResolucion = new Date();
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
+    this.filtroReglamentosResolucion = '';
+    this.busquedaCatalogoResolucion = '';
+    this.filtroDocumentoResolucionModal = 'TODOS';
+    const previos = exp.reglamentosRespaldantes || exp.reglamentos_respaldantes || [];
+    this.reglamentosSeleccionadosResolucion = [...previos];
+    this.actualizarCatalogoItemsModal();
+
+    this.fechaResolucionTexto = exp.fechaResolucion || this.construirFechaResolucionTexto();
+    this.vistosTexto = exp.vistos || exp.votacion?.vistos || this.construirVistosPorDefecto();
+    this.considerandosTexto = exp.considerandos || exp.votacion?.considerandos || '';
+    this.seResuelveTexto = exp.seResuelve || exp.votacion?.seResuelve || this.construirSeResuelvePorDefecto(exp);
+
+    if (exp.id && !isNaN(Number(exp.id))) {
+      this.expedienteApi.obtenerResolucion(exp.id).subscribe({
+        next: res => {
+          if (res) {
+            if (res.vistos) this.vistosTexto = res.vistos;
+            if (res.considerandos) this.considerandosTexto = res.considerandos;
+            if (res.articulos_resolutivos) this.seResuelveTexto = res.articulos_resolutivos;
+            if (res.reglamentos_respaldantes && res.reglamentos_respaldantes.length > 0) {
+              this.reglamentosSeleccionadosResolucion = [...res.reglamentos_respaldantes];
+              this.actualizarCatalogoItemsModal();
+            }
+          }
+        },
+        error: () => {}
+      });
+    }
+  }
+
+  abrirModalVotacion(exp: Expediente): void {
+    this.abrirVotacion(exp);
   }
 
   abrirFirma(exp: Expediente): void {
@@ -961,7 +1347,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalVotacionAbierto = false;
     this.modalSociosAbierto = false;
     this.modalDescargoAbierto = false;
+    this.modalCatalogoResolucionAbierto = false;
     this.modalFirmaAbierto = true;
+    this.firmando = false;
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   abrirModalSocios(exp: Expediente, event?: Event): void {
@@ -974,6 +1364,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalFirmaAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalSociosAbierto = true;
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   volverADetalle(): void {
@@ -984,38 +1376,261 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   cerrarModales(): void {
+    this.scrollLock.reset();
     this.modalDetalleAbierto = false;
     this.modalVotacionAbierto = false;
     this.modalFirmaAbierto = false;
     this.modalSociosAbierto = false;
     this.modalResolucionAbierto = false;
     this.modalDescargoAbierto = false;
+    this.modalCatalogoResolucionAbierto = false;
     this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
+    this.reglamentosSeleccionadosResolucion = [];
+    this.filtroReglamentosResolucion = '';
+    this.busquedaCatalogoResolucion = '';
+    this.guardandoResolucion = false;
+    this.firmando = false;
     this.limpiarJustificaciones();
+    this.limpiarComposicion();
     this.limpiarT01();
+    if (this.elementoFocoPrevio && typeof this.elementoFocoPrevio.focus === 'function') {
+      this.elementoFocoPrevio.focus({ preventScroll: true });
+    }
+    this.elementoFocoPrevio = null;
+  }
+
+  private enfocarModalActivo(): void {
+    if (!this.elementoFocoPrevio && typeof document !== 'undefined') {
+      this.elementoFocoPrevio = document.activeElement as HTMLElement;
+    }
+    setTimeout(() => {
+      if (typeof document === 'undefined') return;
+      const activeDialog = document.querySelector(
+        '.modal-backdrop-custom .modal-dialog-custom'
+      ) as HTMLElement | null;
+      const cardBody = document.querySelector(
+        '.modal-backdrop-custom .modal-detalle-body, .modal-backdrop-custom .card-body'
+      ) as HTMLElement | null;
+
+      if (cardBody) {
+        cardBody.scrollTop = 0;
+      }
+      if (activeDialog && typeof activeDialog.focus === 'function') {
+        activeDialog.focus({ preventScroll: true });
+      } else if (cardBody && typeof cardBody.focus === 'function') {
+        cardBody.focus({ preventScroll: true });
+      }
+    }, 0);
+  }
+
+  onModalKeydown(event: KeyboardEvent): void {
+    if (!event) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.cerrarModales();
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName?.toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      return;
+    }
+
+    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key)) {
+      const delta = (event.key === 'ArrowDown' ? 40 : event.key === 'ArrowUp' ? -40 : event.key === 'PageDown' ? 200 : -200);
+      const cardBody = document.querySelector(
+        '.modal-backdrop-custom .modal-detalle-body, .modal-backdrop-custom .card-body'
+      ) as HTMLElement | null;
+      if (cardBody) {
+        cardBody.scrollTop += delta;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 
   confirmarVotacion(): void {
     if (!this.expedienteSeleccionado) return;
-    this.dataService.votarDictamen(
-      this.expedienteSeleccionado.id,
-      this.votosJueces,
-      this.considerandosTexto
-    );
-    this.mostrarNotificacion('Dictamen votado. Se alcanzó mayoría calificada (>= 2/3). Expediente pasa a Pendiente de correos.');
-    this.cerrarModales();
+    const exp = this.expedienteSeleccionado;
+
+    if (this.reglamentosSeleccionadosResolucion.length === 0) {
+      this.notifications.warning('Seleccioná al menos un artículo reglamentario en VISTO.');
+      return;
+    }
+
+    const considerandos = (this.considerandosTexto || '').trim();
+    if (!considerandos) {
+      this.notifications.warning('El campo CONSIDERANDO es obligatorio.');
+      return;
+    }
+
+    // Generación automática y estructurada de VISTO
+    const citas = this.reglamentosResolucionCitas
+      .map(c => c.citaCorta || c.raw)
+      .join('; ');
+    const numExp = this.formatCaseNumber(exp.numero);
+    const vistos = `VISTO: Las actuaciones obrantes en el Expediente ${numExp} y lo normado en las disposiciones institucionales de A.V.E.I.T.: ${citas}.`;
+
+    // Generación automática y estructurada de SE RESUELVE
+    const lineasSocios = (this.involucradosJustificacion || []).map(inv => {
+      const nom = this.getNombreCompletoInvolucrado(inv);
+      const grupo = inv.grupo ? ` (Grupo ${inv.grupo})` : '';
+      const pts = this.getPuntajeFinalInvolucradoDisplay(inv);
+      return `• Socio N° ${inv.legajo} - ${nom}${grupo}: Puntaje Final ${pts}.`;
+    }).join('\n');
+
+    const detalleSocios = lineasSocios || `• Socio ${exp.socio || exp.legajo || 'involucrado'}: Puntaje Final ${exp.puntos > 0 ? '+' : ''}${exp.puntos} pts.`;
+    const seResuelve = `ARTÍCULO 1°.- Aplicar la resolución disciplinaria correspondiente a los socios involucrados conforme al siguiente detalle de puntos finales consolidados:\n${detalleSocios}\n\nARTÍCULO 2°.- Notifíquese a la Comisión Directiva y a los socios involucrados, regístrese, publíquese y archívese.`;
+
+    const reglamentos = [...this.reglamentosSeleccionadosResolucion];
+    exp.reglamentosRespaldantes = reglamentos;
+    exp.reglamentos_respaldantes = reglamentos;
+
+    const enLista = (this.expedientes || []).find(e => e.id === exp.id);
+    if (enLista) {
+      enLista.reglamentosRespaldantes = reglamentos;
+      enLista.reglamentos_respaldantes = reglamentos;
+    }
+
+    this.guardandoResolucion = true;
+
+    const payload: GuardarResolucionPayload = {
+      plantilla_version: 'v1',
+      vistos,
+      considerandos,
+      articulos_resolutivos: seResuelve,
+      reglamentos_respaldantes: reglamentos
+    };
+
+    const actualizarLocalYFinalizar = (hash?: string) => {
+      this.dataService.votarDictamen(exp.id, this.votosJueces, considerandos, {
+        vistos,
+        considerandos,
+        seResuelve,
+        fechaResolucion: this.fechaResolucionTexto,
+        numeroResolucion: exp.numero
+      });
+      exp.estado = 'pendiente_firma';
+      exp.estadoDisplay = 'Pendiente de Firma';
+      exp.vistos = vistos;
+      exp.considerandos = considerandos;
+      exp.seResuelve = seResuelve;
+      exp.reglamentosRespaldantes = reglamentos;
+      exp.reglamentos_respaldantes = reglamentos;
+      exp.fechaResolucion = this.fechaResolucionTexto;
+      exp.numeroResolucion = exp.numero;
+      exp.votacion = {
+        votos: this.votosJueces,
+        vistos,
+        considerandos,
+        seResuelve,
+        fechaResolucion: this.fechaResolucionTexto,
+        numeroResolucion: exp.numero,
+        aprobado: true
+      };
+      exp.firmas = {
+        juecesFirmantes: [],
+        hashCriptografico: hash || '',
+        timestamp: ''
+      };
+      this.guardandoResolucion = false;
+      this.mostrarNotificacion('Resolución oficial generada con éxito. Expediente pasa a Pendiente de Firma.');
+      this.cerrarModales();
+      this.cargarDatosTablero();
+    };
+
+    if (exp.id && !isNaN(Number(exp.id))) {
+      this.expedienteApi.crearResolucion(exp.id, payload).subscribe({
+        next: res => {
+          actualizarLocalYFinalizar(res?.contenido_hash);
+        },
+        error: (errCrear) => {
+          // Si ya existe borrador previo (409 Conflict), actualizar mediante PATCH
+          if (errCrear?.status === 409) {
+            this.expedienteApi.actualizarResolucion(exp.id, payload).subscribe({
+              next: res => actualizarLocalYFinalizar(res?.contenido_hash),
+              error: (errPatch) => {
+                this.guardandoResolucion = false;
+                this.notifications.error(httpErrorMessage(errPatch, 'Error al actualizar la resolución oficial.'));
+              }
+            });
+          } else {
+            this.guardandoResolucion = false;
+            this.notifications.error(httpErrorMessage(errCrear, 'Error al generar la resolución oficial en el servidor.'));
+          }
+        }
+      });
+    } else {
+      actualizarLocalYFinalizar();
+    }
+  }
+
+  descargarPdfResolucion(): void {
+    if (!this.expedienteSeleccionado) return;
+    const expId = this.expedienteSeleccionado.id;
+    this.expedienteApi.descargarPreviewResolucionPdf(expId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resolucion-${expId}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      },
+      error: err => {
+        this.notifications.error(httpErrorMessage(err, 'No se pudo descargar la vista previa de la resolución en PDF.'));
+      }
+    });
   }
 
   confirmarFirma(): void {
-    if (!this.expedienteSeleccionado) return;
-    const res = this.dataService.firmarResolucion(this.expedienteSeleccionado.id, this.juezFirmando);
-    if (res.completo) {
-      this.mostrarNotificacion('Resolución perfeccionada con 3 firmas digitales e impacto en saldo del socio.');
+    if (!this.expedienteSeleccionado || this.firmando) return;
+    const exp = this.expedienteSeleccionado;
+    this.firmando = true;
+
+    const finalizarExito = (firmasActualizadas: string[], estadoRes?: string, hash?: string, issuedAt?: string) => {
+      exp.firmas = {
+        juecesFirmantes: firmasActualizadas,
+        hashCriptografico: hash || exp.firmas?.hashCriptografico || '',
+        timestamp: issuedAt || exp.firmas?.timestamp || ''
+      };
+      if (firmasActualizadas.length >= 3 || estadoRes === 'ISSUED') {
+        exp.estado = 'pendiente_correos';
+        exp.estadoDisplay = 'Pendiente de Envío';
+        this.mostrarNotificacion('Resolución perfeccionada con las 3 firmas digitales e impacto en saldo de socios.');
+      } else {
+        this.mostrarNotificacion(`Firma digital estampada exitosamente (${firmasActualizadas.length}/3 firmas recolectadas).`);
+      }
+      this.firmando = false;
+      this.cerrarModales();
+      this.cargarDatosTablero();
+    };
+
+    if (exp.id && !isNaN(Number(exp.id))) {
+      this.expedienteApi.firmarResolucionOficial(exp.id).subscribe({
+        next: res => {
+          const firmas = Array.isArray(res.firmantes_td)
+            ? res.firmantes_td.map(f => typeof f === 'string' ? f : (f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`))
+            : [];
+          finalizarExito(firmas, res.estado, res.contenido_hash, res.issued_at);
+        },
+        error: () => {
+          const perfil = this.auth.getCurrentUser();
+          const nombre = perfil ? `${perfil.legajo || ''} - ${perfil.first_name || ''} ${perfil.last_name || ''} - ${perfil.category || 'G58'}`.replace(/\s+/g, ' ').trim() : 'Firma TD';
+          const resLocal = this.dataService.firmarResolucion(exp.id, nombre);
+          finalizarExito(exp.firmas?.juecesFirmantes || [nombre], resLocal.completo ? 'ISSUED' : 'DRAFT');
+        }
+      });
     } else {
-      this.mostrarNotificacion(`Firma registrada por ${this.juezFirmando}. Pendiente firmas restantes.`);
+      const perfil = this.auth.getCurrentUser();
+      const nombre = perfil ? `${perfil.legajo || ''} - ${perfil.first_name || ''} ${perfil.last_name || ''} - ${perfil.category || 'G58'}`.replace(/\s+/g, ' ').trim() : 'Firma TD';
+      const resLocal = this.dataService.firmarResolucion(exp.id, nombre);
+      finalizarExito(exp.firmas?.juecesFirmantes || [nombre], resLocal.completo ? 'ISSUED' : 'DRAFT');
     }
-    this.cerrarModales();
   }
 
   mostrarNotificacion(msg: string): void {
@@ -1125,6 +1740,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return reg ? [reg] : ['Reglamento Procesal Disciplinario 2026'];
   }
 
+  reglamentoExpandidoModal: string | null = null;
+
+  getReglamentosSustentoCitas(exp: Expediente | null): ReglamentoCiteView[] {
+    return parseReglamentosList(this.getReglamentosSustento(exp));
+  }
+
+  toggleExpandirChipReglamento(raw: string): void {
+    this.reglamentoExpandidoModal = this.reglamentoExpandidoModal === raw ? null : raw;
+  }
+
+  get reglamentoExpandidoDetalle(): ReglamentoCiteView | null {
+    if (!this.reglamentoExpandidoModal) return null;
+    return parseReglamentoCite(this.reglamentoExpandidoModal);
+  }
+
   toggleReglamentacion(): void {
     this.reglamentacionExpandida = !this.reglamentacionExpandida;
   }
@@ -1165,7 +1795,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get puedeModificarPuntaje(): boolean {
-    if (!this.expedienteSeleccionado) return false;
+    if (!this.expedienteSeleccionado || !this.auth.tieneRol('TD')) return false;
     const estado = this.expedienteSeleccionado.estado;
     return estado === 'revision_resolucion' || estado === 'espera_resolucion';
   }
@@ -1177,6 +1807,18 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       rank: 0,
       badgeClass: 'badge-neutro'
     };
+  }
+
+  getPuntajeSolicitadoDisplay(exp: Expediente | null | undefined): string {
+    if (!exp) return '0 pts';
+    if (exp.puntaje_solicitado === 'LLAMADO_ATENCION' || exp.puntos === -0.25) {
+      return 'Llamado de Atención';
+    }
+    if (exp.puntaje_solicitado === 'FELICITACION' || exp.puntos === 0.25) {
+      return 'Felicitación';
+    }
+    const p = exp.puntos ?? 0;
+    return `${p > 0 ? '+' : ''}${p} pts`;
   }
 
   decrementarPuntaje(): void {
@@ -1197,11 +1839,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   getTipoDescargoDisplay(desc: DescargoDetalleDTO | null | undefined): string {
     if (!desc) return '—';
-    if (desc.causal && desc.causal.trim()) {
+    if (desc.causal && desc.causal.trim() && desc.causal.trim() !== 'Otro') {
       return desc.causal.trim();
     }
-    if (desc.tipo === 'T02_CERTIFICADO') return 'Certificado de Examen (T02)';
-    if (desc.tipo === 'T03_EXTRAORDINARIO') return 'Descargo Extraordinario (T03)';
+    if (desc.causal === 'Otro' || desc.tipo === 'T03_EXTRAORDINARIO') return 'Otros';
+    if (desc.tipo === 'T02_CERTIFICADO') return 'Descargo con Certificado';
     return desc.tipo || '—';
   }
 
@@ -1253,7 +1895,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else if (fila.descargo.decisiones_causal?.[0]) {
       valorInicial = String(this.getPuntajeFinalInvolucrado(fila));
     } else {
-      valorInicial = Number(pedido).toFixed(1);
+      if (this.expedienteSeleccionado?.puntaje_solicitado) {
+        valorInicial = this.expedienteSeleccionado.puntaje_solicitado;
+      } else if (Number(pedido) === -0.25) {
+        valorInicial = 'LLAMADO_ATENCION';
+      } else if (Number(pedido) === 0.25) {
+        valorInicial = 'FELICITACION';
+      } else {
+        valorInicial = Number(pedido).toFixed(1);
+      }
     }
 
     const match = this.escalaPuntajes.find(
@@ -1268,6 +1918,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     this.modalDetalleAbierto = false;
     this.modalDescargoAbierto = true;
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   getEncabezadoModalDescargo(): string {
@@ -1367,12 +2019,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalDescargoAbierto = false;
     this.involucradoSeleccionado = null;
     this.modalDetalleAbierto = true;
+    this.enfocarModalActivo();
   }
 
   abrirResolucion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.modalDescargoAbierto = false;
     this.modalResolucionAbierto = true;
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
   }
 
   formatSolicitante(exp: Expediente | null): string {

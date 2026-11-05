@@ -3,7 +3,7 @@
 import re
 import unicodedata
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from django.db.models import (
     Case,
@@ -326,3 +326,96 @@ def order_ranking_queryset(
         return qs.order_by(*combined_fields)
 
     return qs.order_by("-saldo_historico_calc", "apellido", "nombre")
+
+
+from ranking.domain.threshold_alerts import (  # noqa: E402
+    ActoAprobadoResolver,
+    EvaluacionCruceResult,
+    RegistroAlerta,
+    ThresholdAlertEngine,
+    UmbralConfig,
+)
+
+
+def evaluate_socio_threshold_crossing(
+    socio_id: int,
+    saldo_anterior: Decimal,
+    saldo_nuevo: Decimal,
+    config: Optional[UmbralConfig] = None,
+    socio_email: Optional[str] = None,
+    despachar_outbox: bool = False,
+    socio_nombre: str = "",
+    historial_alertas: Optional[list[RegistroAlerta]] = None,
+    resolver_acto: Optional[ActoAprobadoResolver] = None,
+    metadata_adicional: Optional[dict[str, Any]] = None,
+) -> EvaluacionCruceResult:
+    """Evalúa cruces de umbrales (-10 crítico y -7 preventivo) ante movimientos de saldo (S5-06)."""
+    umbral_cfg = config or UmbralConfig()
+    return ThresholdAlertEngine.evaluar_cruce(
+        socio_id=socio_id,
+        saldo_anterior=saldo_anterior,
+        saldo_nuevo=saldo_nuevo,
+        config=umbral_cfg,
+        socio_email=socio_email,
+        despachar_outbox=despachar_outbox,
+        socio_nombre=socio_nombre,
+        historial_alertas=historial_alertas,
+        resolver_acto=resolver_acto,
+        metadata_adicional=metadata_adicional,
+    )
+
+
+def reevaluate_socio_reversal(
+    socio_id: int,
+    saldo_anterior: Decimal,
+    saldo_resultante: Decimal,
+    historial_alertas: list[RegistroAlerta],
+    config: Optional[UmbralConfig] = None,
+    socio_email: Optional[str] = None,
+    despachar_outbox: bool = False,
+    socio_nombre: str = "",
+    resolver_acto: Optional[ActoAprobadoResolver] = None,
+    motivo_reversion: str = "Reversión / contramovimiento autorizado",
+) -> tuple[EvaluacionCruceResult, list[RegistroAlerta]]:
+    """Reevalúa umbrales tras reversión o contramovimiento preservando historial (S5-06)."""
+    umbral_cfg = config or UmbralConfig()
+    return ThresholdAlertEngine.reevaluar_por_reversion(
+        socio_id=socio_id,
+        saldo_anterior=saldo_anterior,
+        saldo_resultante=saldo_resultante,
+        historial_alertas=historial_alertas,
+        config=umbral_cfg,
+        socio_email=socio_email,
+        despachar_outbox=despachar_outbox,
+        socio_nombre=socio_nombre,
+        resolver_acto=resolver_acto,
+        motivo_reversion=motivo_reversion,
+    )
+
+
+def reevaluate_socio_rectification(
+    socio_id: int,
+    saldo_anterior: Decimal,
+    saldo_resultante: Decimal,
+    historial_alertas: list[RegistroAlerta],
+    config: Optional[UmbralConfig] = None,
+    socio_email: Optional[str] = None,
+    despachar_outbox: bool = False,
+    socio_nombre: str = "",
+    resolver_acto: Optional[ActoAprobadoResolver] = None,
+    motivo_rectificacion: str = "Rectificación de saldo autorizada",
+) -> tuple[EvaluacionCruceResult, list[RegistroAlerta]]:
+    """Reevalúa umbrales tras rectificación de saldo preservando historial (S5-06)."""
+    umbral_cfg = config or UmbralConfig()
+    return ThresholdAlertEngine.reevaluar_por_rectificacion(
+        socio_id=socio_id,
+        saldo_anterior=saldo_anterior,
+        saldo_resultante=saldo_resultante,
+        historial_alertas=historial_alertas,
+        config=umbral_cfg,
+        socio_email=socio_email,
+        despachar_outbox=despachar_outbox,
+        socio_nombre=socio_nombre,
+        resolver_acto=resolver_acto,
+        motivo_rectificacion=motivo_rectificacion,
+    )

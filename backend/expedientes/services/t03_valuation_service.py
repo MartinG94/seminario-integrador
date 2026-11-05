@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from django.db import DatabaseError, transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 
 from expedientes.domain.ports import TribunalConditionPort
 from expedientes.domain.t03_valuation import (
@@ -165,6 +165,43 @@ class T03ValuationService:
         return AntecedentLookup(expediente=expediente, fecha_emision=_emission_date(expediente))
 
     @staticmethod
+    def list_emitted_antecedents(
+        *,
+        search: str = "",
+        tipo: str = "TODOS",
+        exclude_id: int | None = None,
+    ) -> list[AntecedentLookup]:
+        qs = (
+            Expediente.objects.select_related("solicitud_t01", "socio")
+            .prefetch_related("socios")
+            .filter(estado=EstadoExpedienteEnum.EMITIDO)
+        )
+        if exclude_id is not None:
+            qs = qs.exclude(pk=exclude_id)
+
+        if tipo == "SANCTION":
+            qs = qs.filter(Q(solicitud_t01__tipo_accion="SANCTION") | Q(puntos__lt=0))
+        elif tipo == "MERIT":
+            qs = qs.filter(Q(solicitud_t01__tipo_accion="MERIT") | Q(puntos__gt=0))
+
+        search_clean = search.strip()
+        if search_clean:
+            qs = qs.filter(
+                Q(numero__icontains=search_clean)
+                | Q(titulo__icontains=search_clean)
+                | Q(motivo__icontains=search_clean)
+                | Q(socio__first_name__icontains=search_clean)
+                | Q(socio__last_name__icontains=search_clean)
+                | Q(socio__legajo__icontains=search_clean)
+                | Q(socios__first_name__icontains=search_clean)
+                | Q(socios__last_name__icontains=search_clean)
+                | Q(socios__legajo__icontains=search_clean)
+            ).distinct()
+
+        qs = qs.order_by("-updated_at", "-id")[:100]
+        return [AntecedentLookup(expediente=exp, fecha_emision=_emission_date(exp)) for exp in qs]
+
+    @staticmethod
     def get_descargo(expediente_id: int, descargo_id: int) -> DescargoExpediente:
         descargo = (
             DescargoExpediente.objects.select_related("socio")
@@ -184,6 +221,7 @@ class T03ValuationService:
         resultado: str,
         fundamento: str,
         antecedente_ids: Sequence[int] | None,
+        puntaje_final: str | float | int | None = None,
         user,
         condition_provider: TribunalConditionPort | None = None,
     ) -> ValoracionT03:
@@ -231,6 +269,7 @@ class T03ValuationService:
             version=last_version + 1,
             resultado=result,
             fundamento=fundamento.strip(),
+            puntaje_final=str(puntaje_final) if puntaje_final is not None else None,
             descargo_snapshot=_descargo_snapshot(descargo),
             autor=user,
             autor_legajo=socio.legajo if socio else user.get_username(),
@@ -244,3 +283,24 @@ class T03ValuationService:
                 numero_antecedente=antecedent.numero,
             )
         return valuation
+
+
+def build_expedientes_referenciados_detalle(ids: list[int] | None) -> list[dict]:
+    """Serializa fichas de antecedentes emitidos manteniendo el orden y lista blanca."""
+    if not ids:
+        return []
+    from expedientes.serializers import AntecedenteT03Serializer
+
+    found_map = {
+        exp.id: exp
+        for exp in Expediente.objects.select_related("solicitud_t01").filter(
+            pk__in=ids, estado=EstadoExpedienteEnum.EMITIDO
+        )
+    }
+    ordered_items = []
+    for pk in ids:
+        if pk in found_map:
+            exp = found_map[pk]
+            lookup = AntecedentLookup(expediente=exp, fecha_emision=_emission_date(exp))
+            ordered_items.append(lookup)
+    return AntecedenteT03Serializer(ordered_items, many=True).data

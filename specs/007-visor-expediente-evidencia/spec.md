@@ -14,7 +14,7 @@ Implementar el **Visor Autorizado de Expedientes y Evidencias** en una **vista d
 
 ## Historia de Usuario
 
-**Como** vocal del Tribunal de Disciplina o integrante de Comisión Directiva,  
+**Como** miembro del Tribunal de Disciplina (titular o suplente) o integrante de Comisión Directiva,  
 **quiero** acceder a un visor dedicado y cronológico de la causa disciplinaria con sus descargos, evidencias custodiadas y trazabilidad integral,  
 **para** sustanciar el expediente con plenas garantías de integridad, confidencialidad médica y auditoría de accesos.
 
