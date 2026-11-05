@@ -307,7 +307,6 @@ describe('ExpedienteApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush({ asientos: [{}, {}, {}] });
     });
-  });    });
   });
 
   describe('apelación y adecuación del T01 (PB-02)', () => {
@@ -509,6 +508,57 @@ describe('ExpedienteApiService', () => {
       expect(req.request.method).toBe('GET');
       expect(req.request.responseType).toBe('blob');
       req.flush(mockBlob);
+    });
+  });
+
+  describe('catálogo de antecedentes / expedientes referenciados', () => {
+    const antecedentesUrl = `${environment.apiUrl}/expedientes/antecedentes/`;
+    const mockAntecedente: AntecedenteT03DTO = {
+      id: 5,
+      numero: '5/2026',
+      fecha_emision: '2026-03-15',
+      motivo: 'Incumplimiento de guardia',
+      titulo: 'Guardia no cubierta',
+      puntos: -1,
+      tipo_accion: 'SANCTION',
+      reglamento_invocado: 'Art. 14 inc. a'
+    };
+
+    it('consulta catálogo de antecedentes con catalogo=1 por defecto', () => {
+      service.listarCatalogoAntecedentes().subscribe(res => {
+        expect(res.length).toBe(1);
+        expect(res[0].id).toBe(5);
+        expect(res[0].tipo_accion).toBe('SANCTION');
+      });
+
+      const req = http.expectOne(r =>
+        r.url === antecedentesUrl &&
+        r.params.get('catalogo') === '1' &&
+        !r.params.has('search') &&
+        !r.params.has('tipo')
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush([mockAntecedente]);
+    });
+
+    it('consulta catálogo de antecedentes aplicando filtros search, tipo y exclude_id', () => {
+      service.listarCatalogoAntecedentes({
+        search: 'Guardia',
+        tipo: 'SANCTION',
+        exclude_id: 10
+      }).subscribe(res => {
+        expect(res.length).toBe(1);
+      });
+
+      const req = http.expectOne(r =>
+        r.url === antecedentesUrl &&
+        r.params.get('catalogo') === '1' &&
+        r.params.get('search') === 'Guardia' &&
+        r.params.get('tipo') === 'SANCTION' &&
+        r.params.get('exclude_id') === '10'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush([mockAntecedente]);
     });
   });
 });

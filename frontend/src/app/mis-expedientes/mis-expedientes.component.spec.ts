@@ -80,7 +80,7 @@ describe('MisExpedientesComponent', () => {
     component.causalSeleccionada = 'Compromiso Laboral Comprobable';
     component.onCausalChange();
     expect(component.tipoDescargo).toBe('T02_CERTIFICADO');
-    expect(component.limiteActual).toBe(5);
+    expect(component.limiteActual).toBe(3);
   });
 
   it('permite enviar motivo o justificación opcional en justificaciones con certificado (T02)', () => {

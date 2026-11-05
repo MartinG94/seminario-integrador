@@ -273,6 +273,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   fundamentoPuntajeInput = '';
   guardandoDescargo = false;
 
+  // Expedientes Referenciados / Antecedentes (Resolución y Descargo)
+  expedientesSeleccionadosResolucion: AntecedenteT03DTO[] = [];
+  modalExpedientesResolucionAbierto = false;
+  modalExpedientesDescargoAbierto = false;
+  catalogoExpedientesModal: AntecedenteT03DTO[] = [];
+  cargandoCatalogoExpedientes = false;
+  catalogoExpedientesCargado = false;
+  numeroAntecedenteInput = '';
+
   // Apelación y adecuación del T01 (PB-02)
   readonly minMotivosAdecuacion = MIN_MOTIVOS_ADECUACION;
   historialT01: HistorialT01DTO | null = null;
@@ -1074,6 +1083,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
             this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
             this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
           }
+          if (detalle.expedientes_referenciados) {
+            this.expedienteSeleccionado.expedientesReferenciados = detalle.expedientes_referenciados;
+            this.expedienteSeleccionado.expedientes_referenciados = detalle.expedientes_referenciados;
+          }
+          if (detalle.expedientes_referenciados_detalle) {
+            this.expedienteSeleccionado.expedientesReferenciadosDetalle = detalle.expedientes_referenciados_detalle;
+            this.expedienteSeleccionado.expedientes_referenciados_detalle = detalle.expedientes_referenciados_detalle;
+          }
         }
         const enLista = (this.expedientes || []).find(e => String(e.id) === String(expedienteId));
         if (enLista) {
@@ -1081,6 +1098,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           if (detalle.reglamentos_respaldantes && detalle.reglamentos_respaldantes.length > 0) {
             enLista.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
             enLista.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+          }
+          if (detalle.expedientes_referenciados) {
+            enLista.expedientesReferenciados = detalle.expedientes_referenciados;
+            enLista.expedientes_referenciados = detalle.expedientes_referenciados;
+          }
+          if (detalle.expedientes_referenciados_detalle) {
+            enLista.expedientesReferenciadosDetalle = detalle.expedientes_referenciados_detalle;
+            enLista.expedientes_referenciados_detalle = detalle.expedientes_referenciados_detalle;
           }
         }
         this.cargandoJustificaciones = false;
@@ -1314,6 +1339,33 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.reglamentosSeleccionadosResolucion = [...previos];
     this.actualizarCatalogoItemsModal();
 
+    // Precargar expedientes de referencia para VISTO
+    const mapaExpedientes = new Map<number, AntecedenteT03DTO>();
+
+    // 1. Antecedentes del expediente / Solicitud T01
+    (exp.expedientesReferenciadosDetalle || exp.expedientes_referenciados_detalle || []).forEach(e => {
+      if (e && e.id) mapaExpedientes.set(e.id, e);
+    });
+
+    // 2. Antecedentes citados en valoraciones vigentes de los involucrados
+    (this.involucradosJustificacion || []).forEach(inv => {
+      (inv.descargo?.valoraciones_t03 || []).forEach(val => {
+        (val.antecedentes || []).forEach(ant => {
+          if (ant && ant.expediente_id && !mapaExpedientes.has(ant.expediente_id)) {
+            mapaExpedientes.set(ant.expediente_id, {
+              id: ant.expediente_id,
+              numero: ant.numero,
+              fecha_emision: '',
+              motivo: 'Antecedente citado en valoración de descargo',
+              reglamento_invocado: ''
+            });
+          }
+        });
+      });
+    });
+
+    this.expedientesSeleccionadosResolucion = Array.from(mapaExpedientes.values());
+
     this.fechaResolucionTexto = exp.fechaResolucion || this.construirFechaResolucionTexto();
     this.vistosTexto = exp.vistos || exp.votacion?.vistos || this.construirVistosPorDefecto();
     this.considerandosTexto = exp.considerandos || exp.votacion?.considerandos || '';
@@ -1330,11 +1382,71 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
               this.reglamentosSeleccionadosResolucion = [...res.reglamentos_respaldantes];
               this.actualizarCatalogoItemsModal();
             }
+            if (res.expedientes_referenciados_detalle && res.expedientes_referenciados_detalle.length > 0) {
+              this.expedientesSeleccionadosResolucion = [...res.expedientes_referenciados_detalle];
+            }
           }
         },
         error: () => {}
       });
     }
+  }
+
+  abrirModalExpedientesResolucion(): void {
+    this.modalExpedientesResolucionAbierto = true;
+    if (!this.catalogoExpedientesCargado) {
+      this.cargarCatalogoExpedientes();
+    }
+  }
+
+  cerrarModalExpedientesResolucion(): void {
+    this.modalExpedientesResolucionAbierto = false;
+  }
+
+  onExpedientesResolucionChange(seleccionados: AntecedenteT03DTO[]): void {
+    this.expedientesSeleccionadosResolucion = [...seleccionados];
+  }
+
+  quitarExpedienteResolucion(id: number): void {
+    this.expedientesSeleccionadosResolucion = this.expedientesSeleccionadosResolucion.filter(e => e.id !== id);
+  }
+
+  abrirModalAntecedentesDescargo(): void {
+    this.modalExpedientesDescargoAbierto = true;
+    if (!this.catalogoExpedientesCargado) {
+      this.cargarCatalogoExpedientes();
+    }
+  }
+
+  cerrarModalAntecedentesDescargo(): void {
+    this.modalExpedientesDescargoAbierto = false;
+  }
+
+  onAntecedentesDescargoChange(seleccionados: AntecedenteT03DTO[]): void {
+    this.antecedentesT03 = [...seleccionados];
+  }
+
+  agregarAntecedenteDescargoPorNumero(): void {
+    const num = (this.numeroAntecedenteInput || '').trim();
+    if (!num) return;
+    this.buscarAntecedenteT03(num);
+    this.numeroAntecedenteInput = '';
+  }
+
+  cargarCatalogoExpedientes(): void {
+    this.cargandoCatalogoExpedientes = true;
+    const excludeId = this.expedienteSeleccionado?.id ? Number(this.expedienteSeleccionado.id) : undefined;
+    this.expedienteApi.listarCatalogoAntecedentes({ exclude_id: excludeId }).subscribe({
+      next: catalogo => {
+        this.catalogoExpedientesModal = catalogo;
+        this.cargandoCatalogoExpedientes = false;
+        this.catalogoExpedientesCargado = true;
+      },
+      error: err => {
+        this.cargandoCatalogoExpedientes = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el catálogo de expedientes.'));
+      }
+    });
   }
 
   abrirModalVotacion(exp: Expediente): void {
@@ -1384,9 +1496,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalResolucionAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalCatalogoResolucionAbierto = false;
+    this.modalExpedientesResolucionAbierto = false;
+    this.modalExpedientesDescargoAbierto = false;
     this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
     this.reglamentosSeleccionadosResolucion = [];
+    this.expedientesSeleccionadosResolucion = [];
     this.filtroReglamentosResolucion = '';
     this.busquedaCatalogoResolucion = '';
     this.guardandoResolucion = false;
@@ -1473,7 +1588,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       .map(c => c.citaCorta || c.raw)
       .join('; ');
     const numExp = this.formatCaseNumber(exp.numero);
-    const vistos = `VISTO: Las actuaciones obrantes en el Expediente ${numExp} y lo normado en las disposiciones institucionales de A.V.E.I.T.: ${citas}.`;
+
+    let vistosRef = '';
+    if (this.expedientesSeleccionadosResolucion.length > 0) {
+      const expsCitas = this.expedientesSeleccionadosResolucion
+        .map(e => `Expediente ${this.formatCaseNumber(e.numero)}`)
+        .join(', ');
+      vistosRef = ` y los antecedentes e informes obrantes en ${expsCitas}`;
+    }
+
+    const vistos = `VISTO: Las actuaciones obrantes en el Expediente ${numExp}${vistosRef} y lo normado en las disposiciones institucionales de A.V.E.I.T.: ${citas}.`;
 
     // Generación automática y estructurada de SE RESUELVE
     const lineasSocios = (this.involucradosJustificacion || []).map(inv => {
@@ -1489,11 +1613,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const reglamentos = [...this.reglamentosSeleccionadosResolucion];
     exp.reglamentosRespaldantes = reglamentos;
     exp.reglamentos_respaldantes = reglamentos;
+    const refIds = this.expedientesSeleccionadosResolucion.map(e => e.id);
+    exp.expedientesReferenciados = refIds;
+    exp.expedientes_referenciados = refIds;
+    exp.expedientesReferenciadosDetalle = [...this.expedientesSeleccionadosResolucion];
+    exp.expedientes_referenciados_detalle = [...this.expedientesSeleccionadosResolucion];
 
     const enLista = (this.expedientes || []).find(e => e.id === exp.id);
     if (enLista) {
       enLista.reglamentosRespaldantes = reglamentos;
       enLista.reglamentos_respaldantes = reglamentos;
+      enLista.expedientesReferenciados = refIds;
+      enLista.expedientes_referenciados = refIds;
+      enLista.expedientesReferenciadosDetalle = [...this.expedientesSeleccionadosResolucion];
+      enLista.expedientes_referenciados_detalle = [...this.expedientesSeleccionadosResolucion];
     }
 
     this.guardandoResolucion = true;
@@ -1503,7 +1636,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       vistos,
       considerandos,
       articulos_resolutivos: seResuelve,
-      reglamentos_respaldantes: reglamentos
+      reglamentos_respaldantes: reglamentos,
+      expedientes_referenciados: refIds
     };
 
     const actualizarLocalYFinalizar = (hash?: string) => {
@@ -1521,6 +1655,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       exp.seResuelve = seResuelve;
       exp.reglamentosRespaldantes = reglamentos;
       exp.reglamentos_respaldantes = reglamentos;
+      exp.expedientesReferenciados = refIds;
+      exp.expedientes_referenciados = refIds;
+      exp.expedientesReferenciadosDetalle = [...this.expedientesSeleccionadosResolucion];
+      exp.expedientes_referenciados_detalle = [...this.expedientesSeleccionadosResolucion];
       exp.fechaResolucion = this.fechaResolucionTexto;
       exp.numeroResolucion = exp.numero;
       exp.votacion = {
@@ -1879,6 +2017,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         return this.expedienteSeleccionado?.puntos ?? 0;
       }
     }
+    if (fila.descargo?.valoraciones_t03 && fila.descargo.valoraciones_t03.length > 0) {
+      const valT03 = fila.descargo.valoraciones_t03[0];
+      if (valT03.puntaje_final != null) {
+        if (valT03.puntaje_final === 'LLAMADO_ATENCION' || valT03.puntaje_final === 'FELICITACION') return 0;
+        const num = Number(valT03.puntaje_final);
+        if (!isNaN(num)) return num;
+      }
+      if (valT03.resultado === 'ACCEPTED') return 0;
+      if (valT03.resultado === 'REJECTED') return this.expedienteSeleccionado?.puntos ?? 0;
+    }
     return this.expedienteSeleccionado?.puntos ?? 0;
   }
 
@@ -1894,6 +2042,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       valorInicial = String(fila.descargo.puntaje_ratificado);
     } else if (fila.descargo.decisiones_causal?.[0]) {
       valorInicial = String(this.getPuntajeFinalInvolucrado(fila));
+    } else if (fila.descargo.valoraciones_t03?.[0]) {
+      const valT03 = fila.descargo.valoraciones_t03[0];
+      if (valT03.puntaje_final != null) {
+        valorInicial = String(valT03.puntaje_final);
+      } else if (valT03.resultado === 'ACCEPTED') {
+        valorInicial = '0.0';
+      } else {
+        valorInicial = Number(pedido).toFixed(1);
+      }
     } else {
       if (this.expedienteSeleccionado?.puntaje_solicitado) {
         valorInicial = this.expedienteSeleccionado.puntaje_solicitado;
@@ -1914,7 +2071,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.puntajeFinalInput = isNaN(num) ? 0 : num;
 
     const ultimaDecision = fila.descargo.decisiones_causal?.[0];
-    this.fundamentoPuntajeInput = ultimaDecision?.fundamento || '';
+    const ultimaValT03 = fila.descargo.valoraciones_t03?.[0];
+    this.fundamentoPuntajeInput = ultimaDecision?.fundamento || ultimaValT03?.fundamento || '';
+
+    if (ultimaValT03?.antecedentes && ultimaValT03.antecedentes.length > 0) {
+      this.antecedentesT03 = ultimaValT03.antecedentes.map(a => {
+        const found = this.catalogoExpedientesModal.find(cat => cat.id === a.expediente_id);
+        return found || {
+          id: a.expediente_id,
+          numero: a.numero,
+          fecha_emision: '',
+          motivo: 'Expediente antecedente',
+          reglamento_invocado: '—'
+        };
+      });
+    }
 
     this.modalDetalleAbierto = false;
     this.modalDescargoAbierto = true;
@@ -1983,35 +2154,68 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const decision: DecisionCausal =
       actual.rank >= pedido && actual.rank >= 0 ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
 
-    this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
-      decision,
-      fundamento,
-      puntaje_final: puntajeFinalPayload,
-      evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
-    }).subscribe({
-      next: (resp) => {
-        this.guardandoDescargo = false;
-        descargo.leido = true;
-        descargo.puntaje_ratificado = puntajeFinalPayload;
-        if (resp) {
-          descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
+    if (descargo.tipo === 'T03_EXTRAORDINARIO') {
+      const payloadT03: RegistrarValoracionT03Payload = {
+        resultado: decision,
+        fundamento,
+        antecedente_ids: this.antecedentesT03.map(a => a.id),
+        puntaje_final: puntajeFinalPayload
+      };
+      this.expedienteApi.registrarValoracionT03(exp.id, descargo.id, payloadT03).subscribe({
+        next: (resp) => {
+          this.guardandoDescargo = false;
+          descargo.leido = true;
+          descargo.puntaje_ratificado = puntajeFinalPayload;
+          if (resp) {
+            descargo.valoraciones_t03 = [resp, ...(descargo.valoraciones_t03 || [])];
+          }
+          this.notifications.success('Evaluación del descargo extraordinario guardada con éxito.');
+          this.volverADetalleDesdeDescargo();
+        },
+        error: (err) => {
+          this.guardandoDescargo = false;
+          if (err.status === 400 && err.error?.detail) {
+            this.notifications.error(err.error.detail);
+            return;
+          }
+          // Fallback local en entornos mock / dev
+          descargo.leido = true;
+          descargo.puntaje_ratificado = puntajeFinalPayload;
+          this.notifications.success('Evaluación del descargo guardada.');
+          this.volverADetalleDesdeDescargo();
         }
-        this.notifications.success('Evaluación del descargo guardada con éxito.');
-        this.volverADetalleDesdeDescargo();
-      },
-      error: (err) => {
-        this.guardandoDescargo = false;
-        if (err.status === 400 && err.error?.detail) {
-          this.notifications.error(err.error.detail);
-          return;
+      });
+    } else {
+      this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
+        decision,
+        fundamento,
+        puntaje_final: puntajeFinalPayload,
+        evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
+      }).subscribe({
+        next: (resp) => {
+          this.guardandoDescargo = false;
+          descargo.leido = true;
+          descargo.puntaje_ratificado = puntajeFinalPayload;
+          if (resp) {
+            descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
+          }
+          this.notifications.success('Evaluación del descargo guardada con éxito.');
+          this.volverADetalleDesdeDescargo();
+        },
+        error: (err) => {
+          this.guardandoDescargo = false;
+          if (err.status === 400 && err.error?.detail) {
+            this.notifications.error(err.error.detail);
+            return;
+          }
+          // Fallback local en entornos mock / dev
+          descargo.leido = true;
+          descargo.puntaje_ratificado = puntajeFinalPayload;
+          this.notifications.success('Evaluación del descargo guardada.');
+          this.volverADetalleDesdeDescargo();
         }
-        // Fallback local en entornos mock / dev
-        descargo.leido = true;
-        descargo.puntaje_ratificado = puntajeFinalPayload;
-        this.notifications.success('Evaluación del descargo guardada.');
-        this.volverADetalleDesdeDescargo();
-      }
-    });
+      });
+    }
   }
 
   volverADetalleDesdeDescargo(): void {

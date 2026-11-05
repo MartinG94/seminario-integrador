@@ -659,11 +659,34 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   private actualizarScrollBloqueo(): void {
     const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
+    const body = document.body;
+    const docElem = document.documentElement;
+    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
+
     if (estaAbierto) {
+      this.renderer.addClass(body, 'modal-open');
+      this.renderer.setStyle(body, 'overflow', 'hidden');
+      this.renderer.setStyle(docElem, 'overflow', 'hidden');
+      if (mainPanel) {
+        this.renderer.setStyle(mainPanel, 'overflow', 'hidden');
+      }
       this.scrollLock.lock();
     } else {
       this.scrollLock.reset();
       this.removerScrollBloqueo();
+    }
+  }
+
+  private removerScrollBloqueo(): void {
+    const body = document.body;
+    const docElem = document.documentElement;
+    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
+
+    this.renderer.removeClass(body, 'modal-open');
+    this.renderer.removeStyle(body, 'overflow');
+    this.renderer.removeStyle(docElem, 'overflow');
+    if (mainPanel) {
+      this.renderer.removeStyle(mainPanel, 'overflow');
     }
   }
 
@@ -693,7 +716,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get limiteActual(): number {
-    return this.LIMITE_DOCUMENTOS;
+    return this.tipoDescargo === 'T03_EXTRAORDINARIO' ? 5 : 3;
   }
 
   get puedeSubirMas(): boolean {
@@ -705,19 +728,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.tipoDescargo = 'T03_EXTRAORDINARIO';
     } else {
       this.tipoDescargo = 'T02_CERTIFICADO';
-    }
-  }
-
-  private removerScrollBloqueo(): void {
-    const body = document.body;
-    const docElem = document.documentElement;
-    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
-
-    this.renderer.removeClass(body, 'modal-open');
-    this.renderer.removeStyle(body, 'overflow');
-    this.renderer.removeStyle(docElem, 'overflow');
-    if (mainPanel) {
-      this.renderer.removeStyle(mainPanel, 'overflow');
     }
   }
 

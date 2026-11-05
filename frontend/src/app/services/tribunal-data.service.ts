@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import type { AntecedenteT03DTO } from './expediente-api.service';
 
 export type EstadoExpediente = 
   | 'creado' 
@@ -97,6 +98,10 @@ export interface Expediente {
   reglamentoAsociado?: string;
   reglamentos_respaldantes?: string[];
   reglamentosRespaldantes?: string[];
+  expedientesReferenciados?: number[];
+  expedientes_referenciados?: number[];
+  expedientesReferenciadosDetalle?: AntecedenteT03DTO[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   fechaCreacion: string;
   estado: EstadoExpediente;
   estadoDisplay?: string;

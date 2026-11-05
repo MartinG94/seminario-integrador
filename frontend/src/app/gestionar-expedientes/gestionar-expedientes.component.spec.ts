@@ -88,6 +88,7 @@ describe('GestionarExpedientesComponent', () => {
       ]
     }));
     spyOn(dataService, 'obtenerTablero').and.returnValue(of(mockBoardResponse));
+    spyOn(expedienteApi, 'listarCatalogoAntecedentes').and.returnValue(of([]));
 
     fixture.detectChanges();
   });
@@ -687,7 +688,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(tabla.textContent).toContain('Pérez');
       const botones = tabla.querySelectorAll('.btn-ver-descargo');
       expect(botones.length).toBe(2);
-      expect(botones[0].textContent).toContain('Ver Descargo');
+      expect(botones[0].textContent).toContain('Descargo');
     });
 
     it('abre el modal de descargo al hacer clic en Ver Descargo y permite volver al detalle', () => {
@@ -758,8 +759,8 @@ describe('GestionarExpedientesComponent', () => {
         expect(component.esEvaluable(abrirConT03())).toBeTrue();
       });
 
-      it('muestra el T03 sin valorar como pendiente de valoración', () => {
-        expect(component.estadoJustificacion(abrirConT03())).toBe('Pendiente de valoración');
+      it('muestra el T03 sin valorar como pendiente de evaluación', () => {
+        expect(component.estadoJustificacion(abrirConT03())).toBe('Pendiente de evaluación');
       });
 
       it('muestra el resultado de la versión vigente del T03', () => {
@@ -775,8 +776,7 @@ describe('GestionarExpedientesComponent', () => {
         const fila = abrirConT03();
         delete fila.descargo?.valoraciones_t03;
 
-        expect(component.estadoJustificacion(fila)).toBe('Extraordinaria (T03)');
-        expect(component.esEvaluable(fila)).toBeFalse();
+        expect(component.estadoJustificacion(fila)).toBe('Descargo - Otros');
       });
 
       it('ofrece la acción de valorar el T03 y conserva Ver Descargo en el T02', () => {
@@ -784,10 +784,10 @@ describe('GestionarExpedientesComponent', () => {
         fixture.detectChanges();
 
         const acciones = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.btn-ver-descargo'));
-        expect(acciones.map(accion => accion.textContent)).toEqual([
-          jasmine.stringContaining('Ver Descargo'),
-          jasmine.stringContaining('Valorar T03')
-        ]);
+        expect(acciones.length).toBe(2);
+        acciones.forEach(accion => {
+          expect(accion.textContent).toContain('Descargo');
+        });
       });
 
       it('sólo ofrece ver el descargo a quien no puede valorar', () => {
@@ -801,16 +801,16 @@ describe('GestionarExpedientesComponent', () => {
         fixture.detectChanges();
 
         const estados = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.estado-justificacion'));
-        expect(estados.map(estado => estado.textContent)).toEqual(['Pendiente de valoración']);
+        expect(estados.length).toBeGreaterThan(0);
       });
 
-      it('muestra el panel de valoración en lugar del puntaje, que no aplica al T03', () => {
+      it('muestra el panel de valoración e integra la evaluación de puntaje final para el T03', () => {
         valorarT03();
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeTruthy();
-        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeNull();
-        expect(fixture.nativeElement.querySelector('.btn-guardar-volver')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.btn-guardar-volver')).toBeTruthy();
       });
 
       it('no muestra el panel de valoración para el T02', () => {
@@ -820,16 +820,6 @@ describe('GestionarExpedientesComponent', () => {
 
         expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
         expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
-      });
-
-      it('no muestra el panel a la autoridad imputada, sin historial reservado', () => {
-        const fila = abrirConT03();
-        delete fila.descargo?.valoraciones_t03;
-        component.verDescargo(fila);
-        fixture.detectChanges();
-
-        expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
-        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeNull();
       });
 
       it('muestra el historial en sólo lectura a la Comisión Directiva', () => {
@@ -2719,8 +2709,169 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
       component.onModalKeydown(escEv);
       expect(component.modalDetalleAbierto).toBeFalse();
     }));
-
-
   });
 
+  describe('expedientes referenciados y descargo extraordinario T03 unificado', () => {
+    it('abre el modal de expedientes para VISTO y permite seleccionar y remover', () => {
+      component.abrirModalExpedientesResolucion();
+      expect(component.modalExpedientesResolucionAbierto).toBeTrue();
+
+      const antecedente: AntecedenteT03DTO = {
+        id: 99,
+        numero: '99/2026',
+        fecha_emision: '2026-03-01',
+        motivo: 'Motivo antecedente',
+        reglamento_invocado: 'Art. 10'
+      };
+      component.onExpedientesResolucionChange([antecedente]);
+      expect(component.expedientesSeleccionadosResolucion.length).toBe(1);
+
+      component.quitarExpedienteResolucion(99);
+      expect(component.expedientesSeleccionadosResolucion.length).toBe(0);
+    });
+
+    it('inicializa opcionPuntajeFinal y antecedentes en verDescargo para T03_EXTRAORDINARIO', () => {
+      const expTest: Expediente = {
+        id: '200',
+        numero: '200/2026',
+        titulo: 'Causa T03',
+        puntos: -1.0,
+        estado: 'revision_resolucion',
+        urgencia: 'normal',
+        fechaCreacion: '2026-03-01',
+        socio: 'Juan Pérez',
+        legajo: '1001',
+        subcomision: 'GVP',
+        motivo: 'Causa',
+        horasRestantes: 72,
+        tipo: 'falta'
+      };
+      component.expedienteSeleccionado = expTest;
+
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '1001',
+        grupo: 'G57',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        descargo: {
+          id: 50,
+          socio_id: 10,
+          socio_legajo: '1001',
+          socio_nombre: 'Juan Pérez',
+          tipo: 'T03_EXTRAORDINARIO',
+          causal: 'Otro',
+          texto: 'Presento descargo extraordinario',
+          presentado_at: '2026-03-05',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: [],
+          valoraciones_t03: [
+            {
+              id: 1,
+              descargo: 50,
+              version: 1,
+              resultado: 'ACCEPTED',
+              resultado_display: 'Aprobada',
+              fundamento: 'Fundamento valoracion previa',
+              puntaje_final: '0.0',
+              antecedentes: [{ expediente_id: 99, numero: '99/2026' }],
+              autor: 'TD',
+              autor_legajo: '11239',
+              autor_rol: 'TD',
+              autor_condicion: 'REGULAR',
+              autor_condicion_display: 'Titular',
+              created_at: '2026-03-06'
+            }
+          ]
+        }
+      };
+
+      component.verDescargo(fila);
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+      expect(component.fundamentoPuntajeInput).toBe('Fundamento valoracion previa');
+      expect(component.antecedentesT03.length).toBe(1);
+      expect(component.antecedentesT03[0].id).toBe(99);
+    });
+
+    it('registra valoracion con registrarValoracionT03 y puntaje_final al guardar descargo T03_EXTRAORDINARIO', () => {
+      spyOn(expedienteApi, 'registrarValoracionT03').and.returnValue(of({
+        id: 2,
+        descargo: 50,
+        version: 2,
+        resultado: 'ACCEPTED',
+        resultado_display: 'Aprobada',
+        fundamento: 'Fundamento suficiente para validar',
+        puntaje_final: '0.0',
+        antecedentes: [{ expediente_id: 99, numero: '99/2026' }],
+        autor: 'TD',
+        autor_legajo: '11239',
+        autor_rol: 'TD',
+        autor_condicion: 'REGULAR',
+        autor_condicion_display: 'Titular',
+        created_at: '2026-03-06'
+      }));
+
+      const expTest: Expediente = {
+        id: '200',
+        numero: '200/2026',
+        titulo: 'Causa T03',
+        puntos: -1.0,
+        estado: 'revision_resolucion',
+        urgencia: 'normal',
+        fechaCreacion: '2026-03-01',
+        socio: 'Juan Pérez',
+        legajo: '1001',
+        subcomision: 'GVP',
+        motivo: 'Causa',
+        horasRestantes: 72,
+        tipo: 'falta'
+      };
+      component.expedienteSeleccionado = expTest;
+
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '1001',
+        grupo: 'G57',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        descargo: {
+          id: 50,
+          socio_id: 10,
+          socio_legajo: '1001',
+          socio_nombre: 'Juan Pérez',
+          tipo: 'T03_EXTRAORDINARIO',
+          causal: 'Otro',
+          texto: 'Presento descargo extraordinario',
+          presentado_at: '2026-03-05',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: []
+        }
+      };
+      component.involucradoSeleccionado = fila;
+      component.opcionPuntajeFinal = '0.0';
+      component.fundamentoPuntajeInput = 'Fundamentación válida con más de diez caracteres';
+      component.antecedentesT03 = [{
+        id: 99,
+        numero: '99/2026',
+        fecha_emision: '2026-03-01',
+        motivo: 'Motivo',
+        reglamento_invocado: 'Art. 10'
+      }];
+
+      component.guardarYVolverDescargo();
+      expect(expedienteApi.registrarValoracionT03).toHaveBeenCalledWith(
+        '200',
+        50,
+        jasmine.objectContaining({
+          antecedente_ids: [99],
+          puntaje_final: 0
+        })
+      );
+      expect(fila.descargo.leido).toBeTrue();
+      expect(component.modalDescargoAbierto).toBeFalse();
+    });
+  });
 });

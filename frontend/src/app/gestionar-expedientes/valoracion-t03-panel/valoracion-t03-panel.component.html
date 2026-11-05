@@ -16,7 +16,12 @@
   </div>
 
   <div class="form-group mb-2">
-    <label class="small font-weight-bold" [attr.for]="'antecedente-t03-' + descargoId">Antecedentes (opcional)</label>
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <label class="small font-weight-bold mb-0" [attr.for]="'antecedente-t03-' + descargoId">Antecedentes (opcional)</label>
+      <button type="button" class="btn btn-sm btn-link p-0 text-primary btn-explorar-modal-t03" (click)="abrirModalAntecedentes.emit()">
+        <i class="material-icons" style="font-size: 15px; vertical-align: middle;">search</i> Explorar expedientes...
+      </button>
+    </div>
     <div class="d-flex">
       <input type="text" class="form-control campo-antecedente" placeholder="N.º de expediente, por ejemplo 7/2026"
              [id]="'antecedente-t03-' + descargoId"

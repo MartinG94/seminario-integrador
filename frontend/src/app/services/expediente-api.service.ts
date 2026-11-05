@@ -54,6 +54,8 @@ export interface SolicitudMonitoreo {
   causal: string;
   razon: string;
   reglamentos_respaldantes: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   anexo_fecha: string | null;
   anexo_lugar: string;
   anexo_relato: string;
@@ -84,6 +86,8 @@ export interface SolicitudT01 {
   motivo: string;
   razon: string;
   reglamentos_respaldantes: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   anexo_fecha: string | null;
   anexo_lugar: string;
   anexo_relato: string;
@@ -121,6 +125,7 @@ export interface SolicitudT01Payload {
   motivo?: string;
   razon?: string;
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
   anexo_fecha?: string | null;
   anexo_lugar?: string;
   anexo_relato?: string;
@@ -213,7 +218,7 @@ export interface ValoracionT03DTO {
   resultado: DecisionCausal;
   resultado_display: string;
   fundamento: string;
-  puntaje_final?: string | null;
+  puntaje_final?: string | number | null;
   antecedentes: AntecedenteCitadoDTO[];
   autor: string;
   autor_legajo: string;
@@ -278,6 +283,7 @@ export interface ResolucionOficialDTO {
 }
 
 export type ResolucionDto = ResolucionOficialDTO;
+export type ResolucionDTO = ResolucionOficialDTO;
 
 export interface GuardarResolucionPayload {
   plantilla_version?: string;
@@ -285,6 +291,7 @@ export interface GuardarResolucionPayload {
   considerandos: string;
   articulos_resolutivos: string;
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
 }
 
 export interface DescargoDetalleDTO {
@@ -435,6 +442,8 @@ export interface ExpedienteDetalleDTO {
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   considerandos?: string;
   vistos?: string;
   articulos_resolutivos?: string;
@@ -903,18 +912,18 @@ export class ExpedienteApiService {
   }
 
 
-  listarCatalogoAntecedentes(filtro?: { search?: string; tipo?: string; exclude_id?: number }): Observable<AntecedenteT03DTO[]> {
-    let params = new HttpParams().set('catalogo', '1');
-    if (filtro?.search) {
-      params = params.set('search', filtro.search.trim());
+  listarCatalogoAntecedentes(params?: { search?: string; tipo?: 'TODOS' | 'SANCTION' | 'MERIT' | string; exclude_id?: number }): Observable<AntecedenteT03DTO[]> {
+    let httpParams = new HttpParams().set('catalogo', '1');
+    if (params?.search) {
+      httpParams = httpParams.set('search', params.search.trim());
     }
-    if (filtro?.tipo) {
-      params = params.set('tipo', filtro.tipo);
+    if (params?.tipo && params.tipo !== 'TODOS') {
+      httpParams = httpParams.set('tipo', params.tipo);
     }
-    if (filtro?.exclude_id !== undefined && filtro.exclude_id !== null) {
-      params = params.set('exclude_id', String(filtro.exclude_id));
+    if (params?.exclude_id !== undefined && params.exclude_id !== null) {
+      httpParams = httpParams.set('exclude_id', String(params.exclude_id));
     }
-    return this.http.get<AntecedenteT03DTO[]>(${this.apiUrl}/antecedentes/, { params });
+    return this.http.get<AntecedenteT03DTO[]>(`${this.apiUrl}/antecedentes/`, { params: httpParams });
   }
   obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
     return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);

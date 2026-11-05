@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import {
+  AntecedenteT03DTO,
   ArticuloReglamentoDTO,
   ExpedienteApiService,
   SolicitudMonitoreo,
@@ -86,6 +87,13 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   estado: 'DRAFT' | 'ISSUED' | null = null;
   numeroExpediente: string | null = null;
   cargando = false;
+
+  // Expedientes Referenciados / Antecedentes (Opcional)
+  expedientesReferenciadosSeleccionados: AntecedenteT03DTO[] = [];
+  modalExpedientesAbierto = false;
+  catalogoExpedientesModal: AntecedenteT03DTO[] = [];
+  cargandoCatalogoExpedientes = false;
+  catalogoExpedientesCargado = false;
 
   // Panel Mis Solicitudes T01 (SCRUM-75 / PB-04)
   misSolicitudes: SolicitudMonitoreo[] = [];
@@ -367,6 +375,12 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       this.sociosSeleccionados = [];
     }
 
+    if (solicitud.expedientes_referenciados_detalle && solicitud.expedientes_referenciados_detalle.length > 0) {
+      this.expedientesReferenciadosSeleccionados = [...solicitud.expedientes_referenciados_detalle];
+    } else {
+      this.expedientesReferenciadosSeleccionados = [];
+    }
+
     this.sincronizarEstadoSocio();
     this.notifications.info(`Borrador "${solicitud.titulo || solicitud.numero}" cargado en el formulario.`);
 
@@ -552,6 +566,49 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.reglamentoExpandidoForm = null;
   }
 
+  abrirModalExpedientes(): void {
+    if (this.estado === 'ISSUED') return;
+    this.modalExpedientesAbierto = true;
+    if (!this.catalogoExpedientesCargado) {
+      this.cargarCatalogoExpedientes();
+    }
+  }
+
+  cerrarModalExpedientes(): void {
+    this.modalExpedientesAbierto = false;
+  }
+
+  onExpedientesSeleccionadosChange(seleccionados: AntecedenteT03DTO[]): void {
+    this.expedientesReferenciadosSeleccionados = [...seleccionados];
+  }
+
+  removerExpedienteReferenciado(id: number): void {
+    if (this.estado === 'ISSUED') return;
+    this.expedientesReferenciadosSeleccionados = this.expedientesReferenciadosSeleccionados.filter(e => e.id !== id);
+  }
+
+  limpiarExpedientesReferenciados(): void {
+    if (this.estado === 'ISSUED') return;
+    this.expedientesReferenciadosSeleccionados = [];
+  }
+
+  cargarCatalogoExpedientes(): void {
+    this.cargandoCatalogoExpedientes = true;
+    this.expedienteApi.listarCatalogoAntecedentes().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: catalogo => {
+        this.catalogoExpedientesModal = catalogo;
+        this.cargandoCatalogoExpedientes = false;
+        this.catalogoExpedientesCargado = true;
+      },
+      error: error => {
+        this.cargandoCatalogoExpedientes = false;
+        this.mostrarError(error);
+      }
+    });
+  }
+
   resetearFormulario(): void {
     this.scrollLock.reset();
     this.borradorId = null;
@@ -567,6 +624,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.reglamentoExpandidoForm = null;
     this.modalReglamentosAbierto = false;
     this.filtroDocumentoModal = 'TODOS';
+    this.expedientesReferenciadosSeleccionados = [];
+    this.modalExpedientesAbierto = false;
     this.anexoFecha = '';
     this.anexoLugar = '';
     this.anexoTestigos = '';
@@ -781,6 +840,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       motivo: this.razon,
       razon: this.razon,
       reglamentos_respaldantes: this.reglamentosSeleccionados,
+      expedientes_referenciados: this.expedientesReferenciadosSeleccionados.map(e => e.id),
       anexo_fecha: this.anexoFecha || null,
       anexo_lugar: this.anexoLugar,
       anexo_relato: this.anexoRelato,
@@ -829,6 +889,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.razon = solicitud.razon || solicitud.motivo || this.razon;
     if (solicitud.reglamentos_respaldantes && solicitud.reglamentos_respaldantes.length > 0) {
       this.reglamentosSeleccionados = solicitud.reglamentos_respaldantes;
+    }
+    if (solicitud.expedientes_referenciados_detalle && solicitud.expedientes_referenciados_detalle.length > 0) {
+      this.expedientesReferenciadosSeleccionados = [...solicitud.expedientes_referenciados_detalle];
     }
     this.anexoFecha = solicitud.anexo_fecha ?? this.anexoFecha;
     this.anexoLugar = solicitud.anexo_lugar ?? this.anexoLugar;

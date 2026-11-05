@@ -30,6 +30,7 @@ export class ValoracionT03PanelComponent implements OnChanges {
   @Output() registrar = new EventEmitter<RegistrarValoracionT03Payload>();
   @Output() buscarAntecedente = new EventEmitter<string>();
   @Output() quitarAntecedente = new EventEmitter<number>();
+  @Output() abrirModalAntecedentes = new EventEmitter<void>();
 
   readonly maxFundamento = MAX_FUNDAMENTO_CAUSAL;
   readonly formatearNumero = formatCaseNumber;
