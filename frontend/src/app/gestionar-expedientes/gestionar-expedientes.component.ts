@@ -514,9 +514,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return `VISTO:\n1. Las actuaciones obrantes en el Expediente ${num}, caratulado "${titulo}", promovido por ${solicitante} con fecha ${fecha}.\n2. Lo normado y garantizado en los siguientes artículos e instrumentos reglamentarios:\n${lineasReglamentos}\n3. Las constancias documentales, descargos tipificados y elementos probatorios aportados a la causa.`;
   }
 
-  construirConsiderandosPorDefecto(exp: Expediente): string {
-    const motivo = exp.razon || exp.motivo || 'los hechos denunciados';
-    return `CONSIDERANDO:\n1. Que las presentes actuaciones se originan a partir de: "${motivo}".\n2. Que en observancia del derecho de defensa y el principio del debido proceso estatutario, se confirió oportuno traslado a los socios involucrados a los fines de formular sus descargos y presentar evidencias pertinentes.\n3. Que analizadas integralmente las justificaciones obrantes y evaluados los comprobantes por los miembros del Tribunal de Disciplina, corresponde emitir el pronunciamiento definitivo fijando las consecuencias disciplinarias con arreglo a las directivas del Reglamento.`;
+  construirConsiderandosPorDefecto(exp?: Expediente | null): string {
+    return '';
   }
 
   construirSeResuelvePorDefecto(exp: Expediente): string {
@@ -1214,7 +1213,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     this.fechaResolucionTexto = exp.fechaResolucion || this.construirFechaResolucionTexto();
     this.vistosTexto = exp.vistos || exp.votacion?.vistos || this.construirVistosPorDefecto();
-    this.considerandosTexto = exp.considerandos || exp.votacion?.considerandos || this.construirConsiderandosPorDefecto(exp);
+    this.considerandosTexto = exp.considerandos || exp.votacion?.considerandos || '';
     this.seResuelveTexto = exp.seResuelve || exp.votacion?.seResuelve || this.construirSeResuelvePorDefecto(exp);
 
     if (exp.id && !isNaN(Number(exp.id))) {

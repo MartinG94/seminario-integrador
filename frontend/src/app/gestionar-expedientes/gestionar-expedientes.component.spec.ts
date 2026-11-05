@@ -1880,6 +1880,7 @@ describe('GestionarExpedientesComponent', () => {
       component.abrirModalVotacion(expSinReg);
 
       expect(component.reglamentosSeleccionadosResolucion).toEqual([]);
+      expect(component.considerandosTexto).toBe('');
     });
 
     it('permite filtrar artículos por texto en el modal de resolución sin deseleccionar los elegidos', () => {
