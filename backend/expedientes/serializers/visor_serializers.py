@@ -22,7 +22,6 @@ from expedientes.models import (
     EstadoExpedienteEnum,
     EvidenciaDescargo,
     Expediente,
-    TipoDescargoEnum,
 )
 from expedientes.services.causal_resolution_service import current_evidence_for
 from socios.models import Role, Socio
@@ -114,7 +113,7 @@ def cargar_mapa_grupos() -> dict[str, str]:
 
 
 def obtener_responsables_td() -> list[dict[str, Any]]:
-    """Devuelve la composición canónica oficial de los 3 vocales del TD con cohorte Gxx."""
+    """Devuelve la composición canónica oficial de los 3 miembros del TD con cohorte Gxx."""
     vocales = list(
         Socio.objects.filter(role=Role.TD, is_enabled=True)
         .select_related("subcomision")
@@ -259,7 +258,7 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
             }
         )
 
-    # 4. Decisiones tomadas por vocales sobre causales T02 (S4-02)
+    # 4. Decisiones tomadas por miembros del TD sobre causales T02 (S4-02)
     for dec in expediente.decisiones_causal.all():
         autor_fmt = formatear_actor(dec.autor_legajo)
         fundamento_txt = dec.fundamento or "Sin observaciones"
@@ -407,6 +406,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
     reglamentos_respaldantes = serializers.SerializerMethodField()
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
+    concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
     fecha_solicitud = serializers.DateTimeField(source="created_at", read_only=True)
     solicitante = serializers.SerializerMethodField()
     anexo = serializers.SerializerMethodField()
@@ -435,6 +435,8 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             "estado_display",
             "urgencia",
             "urgencia_display",
+            "concepto",
+            "concepto_display",
             "fecha_solicitud",
             "created_at",
             "solicitante",
@@ -618,17 +620,14 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                     contiene_datos_medicos = es_med
                     datos_medicos_restringidos = False
 
-                # Decisión sobre causal T02 si corresponde
-                decisiones_causal_data = []
-                regla_sugerida_val = None
-                if descargo_vigente.tipo == TipoDescargoEnum.T02_CERTIFICADO:
-                    evs_vigentes = current_evidence_for(descargo_vigente, evidencias_all)
-                    regla_sugerida_val = suggested_decision(
-                        has_current_evidence=bool(evs_vigentes)
-                    ).value
-                    decisiones_causal_data = DecisionCausalVisorSerializer(
-                        descargo_vigente.decisiones_causal.all(), many=True
-                    ).data
+                # Decisión sobre el descargo si corresponde
+                evs_vigentes = current_evidence_for(descargo_vigente, evidencias_all)
+                regla_sugerida_val = suggested_decision(
+                    has_current_evidence=bool(evs_vigentes)
+                ).value
+                decisiones_causal_data = DecisionCausalVisorSerializer(
+                    descargo_vigente.decisiones_causal.all(), many=True
+                ).data
 
                 descargo_dto = {
                     "id": descargo_vigente.id,

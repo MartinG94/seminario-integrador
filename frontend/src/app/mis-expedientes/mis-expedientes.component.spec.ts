@@ -1,3 +1,4 @@
+import { ComponentsModule } from '../components/components.module';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +17,7 @@ describe('MisExpedientesComponent', () => {
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule, ComponentsModule],
       declarations: [MisExpedientesComponent],
       providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
     }).compileComponents();
@@ -79,7 +80,7 @@ describe('MisExpedientesComponent', () => {
     component.causalSeleccionada = 'Compromiso Laboral Comprobable';
     component.onCausalChange();
     expect(component.tipoDescargo).toBe('T02_CERTIFICADO');
-    expect(component.limiteActual).toBe(3);
+    expect(component.limiteActual).toBe(5);
   });
 
   it('permite enviar motivo o justificación opcional en justificaciones con certificado (T02)', () => {
@@ -329,6 +330,57 @@ describe('MisExpedientesComponent', () => {
       expect(component.columnaOrden).toBe('motivo');
       expect(component.ordenAscendente).toBeTrue();
     });
+
+    it('ordena por involucrados y urgencia', () => {
+      const exp1: Expediente = { ...mockExpedientes[0], cantidadSocios: 1, urgencia: 'normal' };
+      const exp2: Expediente = { ...mockExpedientes[1], cantidadSocios: 3, urgencia: 'urgente' };
+      component.misExpedientes = [exp1, exp2];
+
+      component.columnaOrden = 'involucrados';
+      component.ordenAscendente = true;
+      expect(component.expedientesOrdenados[0].numero).toBe(exp1.numero);
+
+      component.columnaOrden = 'urgencia';
+      component.ordenAscendente = true;
+      expect(component.expedientesOrdenados[0].numero).toBe(exp1.numero);
+    });
+
+    it('obtiene cantidad de involucrados correctamente', () => {
+      const expConSocios: any = { cantidadSocios: 4 };
+      expect(component.getCantidadInvolucrados(expConSocios)).toBe(4);
+
+      const expConArray: any = { sociosInvolucrados: [{}, {}] };
+      expect(component.getCantidadInvolucrados(expConArray)).toBe(2);
+
+      const expVacio: any = {};
+      expect(component.getCantidadInvolucrados(expVacio)).toBe(1);
+    });
+
+    it('obtiene badges y etiquetas de urgencia', () => {
+      expect(component.getUrgenciaLabel('urgente')).toBe('URGENTE');
+      expect(component.getUrgenciaLabel('baja')).toBe('BAJA');
+      expect(component.getUrgenciaLabel('normal')).toBe('NORMAL');
+
+      expect(component.getUrgenciaBadgeClass('urgente')).toContain('badge-mat-danger');
+      expect(component.getUrgenciaBadgeClass('normal')).toContain('badge-mat-info');
+
+      expect(component.getUrgenciaIcon('urgente')).toBe('priority_high');
+      expect(component.getUrgenciaIcon('baja')).toBe('arrow_downward');
+      expect(component.getUrgenciaIcon('normal')).toBe('remove');
+    });
+
+    it('maneja eventos de teclado en la fila de tabla', () => {
+      spyOn(component, 'abrirModalDetalle');
+      const exp = mockExpedientes[0];
+      const eventEnter = new KeyboardEvent('keydown', { key: 'Enter' });
+      const eventEscape = new KeyboardEvent('keydown', { key: 'Escape' });
+
+      component.onTableKeyDown(eventEnter, exp);
+      expect(component.abrirModalDetalle).toHaveBeenCalledWith(exp);
+
+      component.onTableKeyDown(eventEscape, exp);
+      expect(component.abrirModalDetalle).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Temporizador Dinámico y Plazo Preclusivo (S3-02 / CA3)', () => {
@@ -546,9 +598,9 @@ describe('MisExpedientesComponent', () => {
       expect(primera.accionLabel).toBe('Descargo presentado');
       expect(primera.usuario).toBe('Lucas Gastiaburu (Legajo 74907)');
       expect(primera.timestamp).toBe('16/10/2026 15:30 hs');
-      expect(primera.detalle).toBe('v1 · T03 (Extraordinario) · Otro · 1 comprobante');
+      expect(primera.detalle).toBe('v1 · Otros · 1 comprobante');
       expect(segunda.operacion).toBe('EDICION');
-      expect(segunda.detalle).toBe('v2 · T02 (Certificado) · Examen · 0 comprobantes');
+      expect(segunda.detalle).toBe('v2 · Con Certificado · Examen · 0 comprobantes');
       expect(tercera.operacion).toBe('ELIMINACION');
     });
 
@@ -1079,6 +1131,39 @@ describe('MisExpedientesComponent', () => {
       http.expectOne(`${apiUrl}/7/apelacion/`).flush({ detail: 'Tu plazo de apelación venció.' }, { status: 409, statusText: 'Conflict' });
       expect(notifications.error).toHaveBeenCalled();
       expect(component.enviandoApelacion).toBeFalse();
+    });
+
+    it('mapea reglamentos_respaldantes desde la API y los renderiza como chips interactivos en el modal de detalle', () => {
+      const rawApi = {
+        id: 88,
+        numero: 'EXP-0088/2026',
+        socio_nombre: 'Ana Pérez',
+        socio_legajo: '777',
+        motivo: 'Inasistencia a plenaria',
+        estado: 'justificando',
+        puntos: -1,
+        reglamentos_respaldantes: [
+          'Estatuto - Art. 14 Inc. a: Es deber de todo socio activo asistir a las asambleas.',
+          'Reglamento Interno - Art. 12: Sanciones por inasistencia injustificada.'
+        ]
+      };
+      const mapeado = (component as any).mapearExpedienteApi(rawApi);
+      expect(mapeado.reglamentos_respaldantes.length).toBe(2);
+
+      component.expedienteDetalle = mapeado;
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const rows = compiled.querySelectorAll('.table-reglamentos-normativa tbody tr');
+      expect(rows.length).toBe(2);
+      expect(rows[0].querySelector('.td-documento')?.textContent).toContain('Estatuto');
+      expect(rows[0].querySelector('.td-articulo')?.textContent?.trim()).toBe('14');
+      expect(rows[0].querySelector('.td-inciso')?.textContent?.trim()).toBe('a');
+      expect(rows[0].querySelector('.td-cuerpo')?.textContent).toContain('Es deber de todo socio activo asistir a las asambleas.');
+
+      expect(rows[1].querySelector('.td-documento')?.textContent).toContain('Reglamento Interno');
+      expect(rows[1].querySelector('.td-articulo')?.textContent?.trim()).toBe('12');
     });
   });
 });

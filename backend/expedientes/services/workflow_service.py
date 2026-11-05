@@ -16,6 +16,7 @@ from expedientes.models import (
     ExpedienteNumberSequence,
     UrgenciaExpedienteEnum,
 )
+from expedientes.services.tribunal_composition_service import TribunalCompositionService
 from socios.models import Socio
 
 
@@ -44,6 +45,7 @@ class ExpedienteWorkflowService:
         actor: str,
         urgencia: str = UrgenciaExpedienteEnum.NORMAL,
         points: Decimal = Decimal("-1.0"),
+        titulo: str = "",
     ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de apertura es obligatorio."})
@@ -57,6 +59,7 @@ class ExpedienteWorkflowService:
             numero=cls.format_numero(ExpedienteNumberSequence.next_value(year), year),
             socio_id=socio_ids[0],
             motivo=motivo.strip(),
+            titulo=(titulo or motivo).strip()[:255],
             estado=EstadoExpedienteEnum.CREADO,
             urgencia=urgencia,
             puntos=points,
@@ -69,6 +72,7 @@ class ExpedienteWorkflowService:
             actor=actor,
             motivo=motivo.strip(),
         )
+        TribunalCompositionService.notify_if_ad_hoc(expediente)
         return expediente
 
     @classmethod
@@ -93,6 +97,15 @@ class ExpedienteWorkflowService:
             raise ValidationError(
                 {"estado": "La transición debe avanzar exactamente al siguiente estado."}
             )
+        if estado_nuevo == EstadoExpedienteEnum.EMITIDO and not expediente.concepto:
+            raise ValidationError(
+                {
+                    "concepto": (
+                        "El Tribunal debe clasificar el concepto del expediente "
+                        "(GSA, GVP, CD, etc.) antes de emitirlo."
+                    )
+                }
+            )
         momento = ahora or timezone.now()
         # En los T01 el plazo efectivo es el último período de apelación abierto (PB-02).
         from expedientes.services.t01_appeal_service import T01AppealService
@@ -109,6 +122,10 @@ class ExpedienteWorkflowService:
                     )
                 }
             )
+
+        if estado_nuevo == EstadoExpedienteEnum.PENDIENTE_CORREOS:
+            # Adoptar la resolución estampa los responsables no involucrados (Art. 95).
+            TribunalCompositionService.stamp_for_resolution(expediente)
 
         estado_anterior = expediente.estado
         expediente.estado = estado_nuevo

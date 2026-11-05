@@ -134,6 +134,58 @@ class WarningAccumulationService:
         return atencion, expediente_generado
 
     @classmethod
+    @transaction.atomic
+    def revert_warning(
+        cls,
+        *,
+        socio_id: int,
+        actor: str = "SISTEMA",
+    ) -> AtencionFelicitacion:
+        """Compensa un llamado de atención (decrementa 1 con piso 0)."""
+        try:
+            socio = Socio.objects.select_for_update().get(pk=socio_id)
+        except Socio.DoesNotExist:
+            raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
+
+        atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
+        if atencion.llamadosAtencion > 0:
+            atencion.llamadosAtencion -= 1
+            atencion.save(update_fields=["llamadosAtencion"])
+            logger.info("Revertido llamado de atención para %s por %s.", socio.legajo, actor)
+        else:
+            logger.warning(
+                "No se pudo decrementar llamado para socio %s (contador en 0).",
+                socio.legajo,
+            )
+        return atencion
+
+    @classmethod
+    @transaction.atomic
+    def revert_felicitacion(
+        cls,
+        *,
+        socio_id: int,
+        actor: str = "SISTEMA",
+    ) -> AtencionFelicitacion:
+        """Compensa una felicitación (decrementa 1 con piso 0) si el Tribunal cambia de opinión."""
+        try:
+            socio = Socio.objects.select_for_update().get(pk=socio_id)
+        except Socio.DoesNotExist:
+            raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
+
+        atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
+        if atencion.felicitaciones > 0:
+            atencion.felicitaciones -= 1
+            atencion.save(update_fields=["felicitaciones"])
+            logger.info("Revertida felicitación para socio %s por actor %s.", socio.legajo, actor)
+        else:
+            logger.warning(
+                "No se pudo decrementar felicitación para socio %s (contador en 0).",
+                socio.legajo,
+            )
+        return atencion
+
+    @classmethod
     def get_pending_count(cls, socio_id: int) -> int:
         """Devuelve la cantidad de llamados de atención acumulados pendientes por el socio."""
         atencion = AtencionFelicitacion.objects.filter(socio_id=socio_id).first()

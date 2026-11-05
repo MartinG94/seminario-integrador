@@ -86,7 +86,7 @@ class TestRegistrarDecisionCausal:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_t03_descargo_400(self, causal_descargo, causal_vocal) -> None:
+    def test_t03_descargo_can_be_resolved(self, causal_descargo, causal_vocal) -> None:
         DescargoExpediente.objects.filter(pk=causal_descargo.pk).update(
             tipo=TipoDescargoEnum.T03_EXTRAORDINARIO
         )
@@ -95,8 +95,8 @@ class TestRegistrarDecisionCausal:
             _url(causal_descargo), {"decision": "ACCEPTED", "fundamento": GROUNDS}, format="json"
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert not DecisionCausalDescargo.objects.exists()
+        assert response.status_code == status.HTTP_201_CREATED
+        assert DecisionCausalDescargo.objects.filter(descargo=causal_descargo).exists()
 
     def test_evidence_of_another_socio_400(self, multiactor, causal_vocal) -> None:
         response = _client(causal_vocal).post(

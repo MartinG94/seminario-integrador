@@ -1,13 +1,22 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from expedientes.resolution_views import (
+    ResolucionEmitirView,
+    ResolucionFirmarView,
+    ResolucionPreviewView,
+    ResolucionView,
+)
 from expedientes.views import (
     AdecuacionT01View,
     ApelacionT01View,
+    ArticuloReglamentoDetailView,
+    ArticuloReglamentoListCreateView,
     BoardExpedientesView,
     CalcularPlazoView,
     CalendarioFeriadosView,
     CaseNotificationAuditView,
+    ComposicionTribunalView,
     DecisionCausalView,
     DescargoVersionesView,
     DispatchCaseOpeningView,
@@ -25,12 +34,22 @@ from expedientes.views import (
     PresentarDescargoView,
     RegistroApercibimientoViewSet,
     ReglamentosVigentesView,
+    ReportesExportCSVView,
+    ReportesResumenView,
     SocioApercibimientosView,
     SolicitudT01CreateView,
     SolicitudT01DetailView,
     SolicitudT01EmitView,
     TransicionarExpedienteView,
     TransicionExpedienteView,
+)
+from expedientes.views.reportes_views import (
+    ExpedienteClasificacionPatchView,
+    ReportesHistoricoRecordsView,
+    ReportesReunionesView,
+    ReportesSubcomisionesListView,
+    ReportesSubcomisionView,
+    ReportesT01View,
 )
 
 app_name = "expedientes"
@@ -40,11 +59,62 @@ router.register(r"eventos", EventoInstitucionalViewSet, basename="evento")
 router.register(r"apercibimientos", RegistroApercibimientoViewSet, basename="apercibimiento")
 
 urlpatterns = [
+    path(
+        "<int:expediente_id>/resolucion/preview/",
+        ResolucionPreviewView.as_view(),
+        name="resolucion-preview",
+    ),
+    path("<int:expediente_id>/resolucion/", ResolucionView.as_view(), name="resolucion"),
+    path(
+        "<int:expediente_id>/resolucion/firmar/",
+        ResolucionFirmarView.as_view(),
+        name="expediente-resolucion-firmar",
+    ),
+    path(
+        "<int:expediente_id>/resolucion/emitir/",
+        ResolucionEmitirView.as_view(),
+        name="resolucion-emitir",
+    ),
+    # Reportes e Indicadores Institucionales (SCRUM-63)
+    path("reportes/t01/", ReportesT01View.as_view(), name="reportes-t01"),
+    path("reportes/reuniones/", ReportesReunionesView.as_view(), name="reportes-reuniones"),
+    path(
+        "reportes/subcomisiones/",
+        ReportesSubcomisionesListView.as_view(),
+        name="reportes-subcomisiones",
+    ),
+    path("reportes/subcomision/", ReportesSubcomisionView.as_view(), name="reportes-subcomision"),
+    path(
+        "reportes/historico-records/",
+        ReportesHistoricoRecordsView.as_view(),
+        name="reportes-historico-records",
+    ),
+    path(
+        "<int:pk>/clasificacion/",
+        ExpedienteClasificacionPatchView.as_view(),
+        name="expediente-clasificacion-patch",
+    ),
     path("calendario/feriados/", CalendarioFeriadosView.as_view(), name="calendario-feriados"),
     path(
         "calendario/calcular-plazo/", CalcularPlazoView.as_view(), name="calendario-calcular-plazo"
     ),
+    path(
+        "reglamentos/articulos/",
+        ArticuloReglamentoListCreateView.as_view(),
+        name="articulos-reglamento-list-create",
+    ),
+    path(
+        "reglamentos/articulos/<int:pk>/",
+        ArticuloReglamentoDetailView.as_view(),
+        name="articulos-reglamento-detail",
+    ),
     path("reglamentos/", ReglamentosVigentesView.as_view(), name="reglamentos-vigentes"),
+    path("reportes/resumen/", ReportesResumenView.as_view(), name="reportes-resumen"),
+    path(
+        "reportes/exportar-csv/",
+        ReportesExportCSVView.as_view(),
+        name="reportes-exportar-csv",
+    ),
     path(
         "parametros/plazo-apelacion/",
         PlazoApelacionView.as_view(),
@@ -64,6 +134,11 @@ urlpatterns = [
         "<int:pk>/descargos/<int:descargo_id>/decisiones/",
         DecisionCausalView.as_view(),
         name="descargo-decisiones-causal",
+    ),
+    path(
+        "<int:pk>/composicion/",
+        ComposicionTribunalView.as_view(),
+        name="composicion-tribunal",
     ),
     path(
         "<int:pk>/descargo/versiones/",

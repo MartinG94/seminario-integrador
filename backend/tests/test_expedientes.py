@@ -130,6 +130,7 @@ def test_snapshot_emitido_conserva_todos_los_campos(padron_repo, expediente_clie
         "titulo": "",
         "causal": "Art. 21",
         "puntos": "-2.00",
+        "puntaje_especial": "",
         "motivo": "Motivo",
         "razon": "",
         "reglamentos_respaldantes": [],

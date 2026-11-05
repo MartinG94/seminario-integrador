@@ -143,9 +143,11 @@ class TestEvidenceApi:
         api_client.force_authenticate(user=socio_imputado.user)
         files = [
             SimpleUploadedFile(
-                f"cert_{i}.pdf", b"%PDF-1.4 contenido", content_type="application/pdf"
+                f"cert_{i}.pdf",
+                f"%PDF-1.4 contenido {i}".encode("utf-8"),
+                content_type="application/pdf",
             )
-            for i in range(4)
+            for i in range(6)
         ]
 
         url = f"/api/v1/expedientes/{expediente_en_plazo.id}/evidencia/"
@@ -156,19 +158,20 @@ class TestEvidenceApi:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "máximo de 3" in str(response.data)
+        assert "máximo de 5" in str(response.data)
 
     def test_upload_evidence_cumulative_quota_exceeded_t02(
         self, api_client, socio_imputado, expediente_en_plazo
     ):
-        """No permite superar el tope acumulativo de 3 archivos en tandas sucesivas (T02)."""
+        """No permite superar el tope acumulativo de 5 archivos en tandas sucesivas."""
         api_client.force_authenticate(user=socio_imputado.user)
         url = f"/api/v1/expedientes/{expediente_en_plazo.id}/evidencia/"
 
-        # Primera tanda: 2 archivos válidos
+        # Primera tanda: 3 archivos válidos
         tanda_1 = [
             SimpleUploadedFile("cert_1.pdf", b"%PDF-1.4 tanda 1 a", content_type="application/pdf"),
             SimpleUploadedFile("cert_2.pdf", b"%PDF-1.4 tanda 1 b", content_type="application/pdf"),
+            SimpleUploadedFile("cert_3.pdf", b"%PDF-1.4 tanda 1 c", content_type="application/pdf"),
         ]
         resp_1 = api_client.post(
             url,
@@ -176,12 +179,13 @@ class TestEvidenceApi:
             format="multipart",
         )
         assert resp_1.status_code == status.HTTP_201_CREATED
-        assert len(resp_1.data) == 2
+        assert len(resp_1.data) == 3
 
-        # Segunda tanda: 2 archivos más (acumula 4 > 3 máximo de T02)
+        # Segunda tanda: 3 archivos más (acumula 6 > 5 máximo)
         tanda_2 = [
-            SimpleUploadedFile("cert_3.pdf", b"%PDF-1.4 tanda 2 a", content_type="application/pdf"),
-            SimpleUploadedFile("cert_4.pdf", b"%PDF-1.4 tanda 2 b", content_type="application/pdf"),
+            SimpleUploadedFile("cert_4.pdf", b"%PDF-1.4 tanda 2 a", content_type="application/pdf"),
+            SimpleUploadedFile("cert_5.pdf", b"%PDF-1.4 tanda 2 b", content_type="application/pdf"),
+            SimpleUploadedFile("cert_6.pdf", b"%PDF-1.4 tanda 2 c", content_type="application/pdf"),
         ]
         resp_2 = api_client.post(
             url,
@@ -189,7 +193,7 @@ class TestEvidenceApi:
             format="multipart",
         )
         assert resp_2.status_code == status.HTTP_400_BAD_REQUEST
-        assert "máximo de 3" in str(resp_2.data)
+        assert "máximo de 5" in str(resp_2.data)
 
     def test_upload_evidence_invalid_magic_bytes(
         self, api_client, socio_imputado, expediente_en_plazo

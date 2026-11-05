@@ -2,7 +2,12 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../environments/environment';
-import { DescargoVersionDto, ExpedienteApiService } from './expediente-api.service';
+import {
+  ArticuloReglamentoDTO,
+  DescargoVersionDto,
+  ExpedienteApiService,
+  GuardarArticuloReglamentoPayload
+} from './expediente-api.service';
 
 describe('ExpedienteApiService', () => {
   let service: ExpedienteApiService;
@@ -34,6 +39,91 @@ describe('ExpedienteApiService', () => {
     });
     const req = http.expectOne({ method: 'GET', url: `${environment.apiUrl}/expedientes/reglamentos/` });
     req.flush({ reglamentos: ['Reglamento General'] });
+  });
+
+  describe('gestión de artículos de reglamentos', () => {
+    const articulosBaseUrl = `${environment.apiUrl}/expedientes/reglamentos/articulos/`;
+    const mockArticulo: ArticuloReglamentoDTO = {
+      id: 1,
+      titulo: 'Reglamento Interno',
+      seccion: 1,
+      articulo: 14,
+      inciso: 'a',
+      cuerpo: 'Faltas leves en la convivencia interna.',
+      descripcion: 'Faltas leves en la convivencia interna.',
+      cita_corta: 'Art. 14 inc. a',
+      cita_completa: 'Art. 14 inc. a - Reglamento Interno',
+      activo: true,
+      created_at: '2026-10-27T10:00:00Z',
+      updated_at: '2026-10-27T10:00:00Z'
+    };
+
+    it('lista artículos de reglamentos sin parámetros', () => {
+      service.listarArticulosReglamento().subscribe(articulos => {
+        expect(articulos.length).toBe(1);
+        expect(articulos[0].articulo).toBe(14);
+      });
+
+      const req = http.expectOne(r => r.url === articulosBaseUrl);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys().length).toBe(0);
+      req.flush([mockArticulo]);
+    });
+
+    it('lista artículos filtrando por título y búsqueda', () => {
+      service.listarArticulosReglamento({ titulo: 'Estatuto', search: 'asamblea' }).subscribe(articulos => {
+        expect(articulos.length).toBe(1);
+      });
+
+      const req = http.expectOne(
+        r => r.url === articulosBaseUrl &&
+             r.params.get('titulo') === 'Estatuto' &&
+             r.params.get('search') === 'asamblea'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush([mockArticulo]);
+    });
+
+    it('crea un artículo de reglamento', () => {
+      const payload: GuardarArticuloReglamentoPayload = {
+        titulo: 'Reglamento Interno',
+        articulo: 15,
+        inciso: 'b',
+        cuerpo: 'Faltas graves a las normas estatutarias.'
+      };
+
+      service.crearArticuloReglamento(payload).subscribe(art => {
+        expect(art.id).toBe(2);
+        expect(art.articulo).toBe(15);
+      });
+
+      const req = http.expectOne({ method: 'POST', url: articulosBaseUrl });
+      expect(req.request.body).toEqual(payload);
+      req.flush({ ...mockArticulo, id: 2, articulo: 15, inciso: 'b' });
+    });
+
+    it('actualiza un artículo de reglamento parcialmente', () => {
+      const updatePayload: Partial<GuardarArticuloReglamentoPayload> = {
+        cuerpo: 'Texto modificado del artículo.'
+      };
+
+      service.actualizarArticuloReglamento(1, updatePayload).subscribe(art => {
+        expect(art.cuerpo).toBe('Texto modificado del artículo.');
+      });
+
+      const req = http.expectOne({ method: 'PATCH', url: `${articulosBaseUrl}1/` });
+      expect(req.request.body).toEqual(updatePayload);
+      req.flush({ ...mockArticulo, cuerpo: 'Texto modificado del artículo.' });
+    });
+
+    it('elimina lógicamente un artículo de reglamento', () => {
+      service.eliminarArticuloReglamento(1).subscribe(res => {
+        expect(res).toBeNull();
+      });
+
+      const req = http.expectOne({ method: 'DELETE', url: `${articulosBaseUrl}1/` });
+      req.flush(null);
+    });
   });
 
   it('lista mis solicitudes sin parámetros adicionales', () => {
@@ -156,6 +246,17 @@ describe('ExpedienteApiService', () => {
     expect(versiones[0].numero).toBe(1);
   });
 
+  describe('Tribunal de la causa (S4-04)', () => {
+    const base = `${environment.apiUrl}/expedientes/12`;
+
+    it('consulta la composición de la causa', () => {
+      service.obtenerComposicionTribunal(12).subscribe(c => expect(c.asientos.length).toBe(3));
+      const req = http.expectOne(`${base}/composicion/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ asientos: [{}, {}, {}] });
+    });
+  });
+
   describe('apelación y adecuación del T01 (PB-02)', () => {
     const base = `${environment.apiUrl}/expedientes`;
 
@@ -194,4 +295,168 @@ describe('ExpedienteApiService', () => {
       req.flush({ dias_habiles: 7 });
     });
   });
+
+  describe('Resolución Oficial (US S5-01 / SCRUM-56)', () => {
+    const base = `${environment.apiUrl}/expedientes/15/resolucion`;
+
+    it('obtiene la resolución de un expediente', () => {
+      service.obtenerResolucion(15).subscribe(res => {
+        expect(res.estado).toBe('DRAFT');
+        expect(res.articulos_resolutivos).toContain('ARTÍCULO 1°');
+      });
+      const req = http.expectOne(`${base}/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ id: 1, estado: 'DRAFT', articulos_resolutivos: 'ARTÍCULO 1°...' });
+    });
+
+    it('crea una resolución oficial en borrador', () => {
+      const payload = {
+        vistos: 'VISTO...',
+        considerandos: 'CONSIDERANDO...',
+        articulos_resolutivos: 'ARTÍCULO 1°...'
+      };
+      service.crearResolucion(15, payload).subscribe(res => {
+        expect(res.id).toBe(2);
+      });
+      const req = http.expectOne(`${base}/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(payload);
+      req.flush({ id: 2, ...payload, estado: 'DRAFT' });
+    });
+
+    it('actualiza parcialmente una resolución existente', () => {
+      service.actualizarResolucion(15, { considerandos: 'Nuevos considerandos...' }).subscribe(res => {
+        expect(res.considerandos).toBe('Nuevos considerandos...');
+      });
+      const req = http.expectOne(`${base}/`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ considerandos: 'Nuevos considerandos...' });
+      req.flush({ id: 2, considerandos: 'Nuevos considerandos...', estado: 'DRAFT' });
+    });
+
+    it('emite la resolución oficial', () => {
+      service.emitirResolucionOficial(15).subscribe(res => {
+        expect(res.estado).toBe('ISSUED');
+      });
+      const req = http.expectOne(`${base}/emitir/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({ id: 2, estado: 'ISSUED' });
+    });
+
+    it('descarga el preview en PDF de la resolución', () => {
+      service.descargarPreviewResolucionPdf(15).subscribe(blob => {
+        expect(blob).toBeTruthy();
+      });
+      const req = http.expectOne(`${base}/preview/`);
+      expect(req.request.method).toBe('GET');
+      req.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+    });
+
+    it('firma la resolución oficial con endpoint /firmar/', () => {
+      service.firmarResolucionOficial(15).subscribe(res => {
+        expect(res.firmantes_td?.length).toBe(1);
+      });
+      const req = http.expectOne(`${base}/firmar/`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({
+        id: 2,
+        estado: 'DRAFT',
+        firmantes_td: [{ legajo: '11239', full_name: 'Giuliano Toselli', social_year: 6, grupo: 'G57', etiqueta: '11239 - Giuliano Toselli - G57' }]
+      });
+    });
+  });
+
+  it('actualiza el concepto del expediente mediante PATCH', () => {
+    service.actualizarConceptoExpediente(123, 'GSA').subscribe(res => {
+      expect(res.concepto).toBe('GSA');
+    });
+
+    const req = http.expectOne(`${environment.apiUrl}/expedientes/123/`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ concepto: 'GSA' });
+    req.flush({ id: 123, concepto: 'GSA', concepto_display: 'GSA — Gestión Social y Ambiental' });
+  });
+
+  describe('reportes e informes analíticos (SCRUM-63)', () => {
+    const reportesBaseUrl = `${environment.apiUrl}/expedientes/reportes/resumen/`;
+    const exportarBaseUrl = `${environment.apiUrl}/expedientes/reportes/exportar-csv/`;
+
+    it('obtiene el resumen de reportes sin filtros', () => {
+      service.obtenerResumenReportes().subscribe(res => {
+        expect(res.kpis_resumen.total_expedientes).toBe(10);
+        expect(res.kpis_resumen.tiempo_vida_promedio_dias).toBe(4.5);
+      });
+
+      const req = http.expectOne(r => r.url === reportesBaseUrl);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys().length).toBe(0);
+      req.flush({
+        filtros_aplicados: { anio: null, cuatrimestre: null, fecha_desde: null, fecha_hasta: null, subcomision_id: null, concepto: null },
+        kpis_resumen: {
+          tiempo_vida_promedio_dias: 4.5,
+          total_emitidos_evaluados: 6,
+          total_expedientes: 10,
+          en_tramite: 4,
+          emitidos: 6,
+          sanciones: 7,
+          meritos: 3,
+          sin_clasificar_concepto: 1,
+          backlog_urgencia: { total_abiertos: 4, baja: 1, normal: 2, urgente: 1, por_estado: {} },
+          descargos_resumen: { total_imputaciones: 10, total_descargos: 8, descargos_t02: 5, descargos_t03: 3, tasa_presentacion_pct: 80, decisiones_t02_total: 5, decisiones_t02_aceptadas: 4, decisiones_t02_rechazadas: 1, tasa_aceptacion_t02_pct: 80, apelaciones_t01: 1, adecuaciones_t01: 1 },
+          puntos_y_riesgo: { puntos_positivos: 15, puntos_negativos: -20, saldo_neto: -5, llamados_atencion_total: 2, felicitaciones_total: 4, socios_alerta_preventiva: 3, socios_riesgo_estatutario: 1 },
+          eventos_resumen: { total_eventos: 5, eventos_finalizados: 4, total_convocatorias: 40, total_presentes: 35, tasa_asistencia_pct: 87.5, eventos_no_sancionables: 1, pct_no_sancionables: 20 }
+        },
+        pedidos_por_subcomision: [],
+        agrupacion_por_concepto: [],
+        pedidos_por_autoridad: [],
+        balance_subcomisiones_y_categorias: [],
+        catalogo_conceptos: [],
+        catalogo_subcomisiones: []
+      });
+    });
+
+    it('obtiene el resumen de reportes aplicando todos los filtros', () => {
+      service.obtenerResumenReportes({
+        anio: 2026,
+        cuatrimestre: '1',
+        fecha_desde: '2026-03-01',
+        fecha_hasta: '2026-06-30',
+        subcomision_id: 2,
+        concepto: 'GSA'
+      }).subscribe(res => {
+        expect(res.filtros_aplicados.anio).toBe(2026);
+      });
+
+      const req = http.expectOne(r =>
+        r.url === reportesBaseUrl &&
+        r.params.get('anio') === '2026' &&
+        r.params.get('cuatrimestre') === '1' &&
+        r.params.get('fecha_desde') === '2026-03-01' &&
+        r.params.get('fecha_hasta') === '2026-06-30' &&
+        r.params.get('subcomision_id') === '2' &&
+        r.params.get('concepto') === 'GSA'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ filtros_aplicados: { anio: 2026 } });
+    });
+
+    it('descarga el reporte en formato CSV como Blob', () => {
+      const mockBlob = new Blob(['Subcomision,Total\nGSA,5'], { type: 'text/csv' });
+      service.descargarReporteCsv({ anio: 2026 }, 'autoridades').subscribe(blob => {
+        expect(blob.size).toBeGreaterThan(0);
+      });
+
+      const req = http.expectOne(r =>
+        r.url === exportarBaseUrl &&
+        r.params.get('seccion') === 'autoridades' &&
+        r.params.get('anio') === '2026'
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(mockBlob);
+    });
+  });
 });
+

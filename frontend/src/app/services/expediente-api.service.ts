@@ -9,6 +9,22 @@ import type { NivelUrgencia } from './tribunal-data.service';
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
 export type EstadoT01 = 'DRAFT' | 'ISSUED';
 
+export const CATALOGO_CONCEPTOS_EXPEDIENTE = [
+  { codigo: 'CD', nombre: 'CD — Comisión Directiva' },
+  { codigo: 'TD', nombre: 'TD — Tribunal de Disciplina' },
+  { codigo: 'GSA', nombre: 'GSA — Gestión Social y Ambiental' },
+  { codigo: 'GVP', nombre: 'GVP — Grupo de Viaje / Gestión de Viaje' },
+  { codigo: 'COMP', nombre: 'COMP — Cómputos' },
+  { codigo: 'RRHH', nombre: 'RRHH — Recursos Humanos' },
+  { codigo: 'RRII', nombre: 'RRII — Relaciones Institucionales' },
+  { codigo: 'PRENSA', nombre: 'PRENSA — Prensa y Difusión' },
+  { codigo: 'MANT', nombre: 'MANT — Mantenimiento' },
+  { codigo: 'EVENTOS', nombre: 'EVENTOS — Organización y Eventos' },
+  { codigo: 'RIFAS', nombre: 'RIFAS — Rifas' },
+  { codigo: 'ASAMBLEA', nombre: 'ASAMBLEA — Asamblea General' },
+  { codigo: 'OTROS', nombre: 'OTROS — Otros Conceptos Institucionales' },
+];
+
 export interface SocioInvolucrado {
   socio_id?: number;
   legajo?: string;
@@ -32,6 +48,7 @@ export interface SolicitudMonitoreo {
   estado: EstadoT01;
   tipo_accion: TipoAccionT01;
   puntos: number | null;
+  puntaje_especial?: 'LLAMADO_ATENCION' | 'FELICITACION' | '';
   titulo: string;
   motivo: string;
   causal: string;
@@ -63,6 +80,7 @@ export interface SolicitudT01 {
   titulo: string;
   causal: string;
   puntos: number | string | null;
+  puntaje_especial?: 'LLAMADO_ATENCION' | 'FELICITACION' | '';
   motivo: string;
   razon: string;
   reglamentos_respaldantes: string[];
@@ -99,6 +117,7 @@ export interface SolicitudT01Payload {
   titulo?: string;
   causal?: string;
   puntos?: number | null;
+  puntaje_especial?: 'LLAMADO_ATENCION' | 'FELICITACION' | '';
   motivo?: string;
   razon?: string;
   reglamentos_respaldantes?: string[];
@@ -179,6 +198,49 @@ export interface RegistrarDecisionCausalPayload {
   fundamento?: string;
   evidencia_ids?: string[];
   puntaje_final?: number | string | null;
+}
+
+export interface FirmanteTdDTO {
+  user_id?: number;
+  legajo: string;
+  full_name: string;
+  social_year: number;
+  grupo: string;
+  etiqueta: string;
+  signed_at?: string;
+}
+
+export interface ResolucionOficialDTO {
+  id: number;
+  expediente: number;
+  version: number;
+  plantilla_version: string;
+  estado: 'DRAFT' | 'ISSUED';
+  numero_expediente_snapshot?: string;
+  identificador_resolucion?: string;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+  reglamentos_respaldantes?: string[];
+  puntos_finales?: Record<string, unknown> | null;
+  medidas?: unknown[] | null;
+  firmantes_td?: Array<FirmanteTdDTO | string>;
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+  issued_by?: number;
+  issued_at?: string | null;
+  contenido_hash?: string;
+}
+
+export type ResolucionDto = ResolucionOficialDTO;
+
+export interface GuardarResolucionPayload {
+  plantilla_version?: string;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+  reglamentos_respaldantes?: string[];
 }
 
 export interface DescargoDetalleDTO {
@@ -287,6 +349,8 @@ export interface ExpedienteVisorData {
   causal: string;
   reglamento_asociado: string;
   reglamentos_respaldantes: string[];
+  concepto?: string | null;
+  concepto_display?: string | null;
   puntos: number | string;
   estado: string;
   estado_display: string;
@@ -321,9 +385,14 @@ export interface ExpedienteDetalleDTO {
   id: number;
   numero: string;
   estado: string;
+  concepto?: string | null;
+  concepto_display?: string | null;
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
+  considerandos?: string;
+  vistos?: string;
+  articulos_resolutivos?: string;
 }
 
 // --- Apelación y adecuación del T01 (PB-02, Spec 008) ---
@@ -396,6 +465,208 @@ export interface PlazoApelacionDTO {
   actualizado_por: string;
 }
 
+export type TipoDocumentoReglamento = 'Reglamento Interno' | 'Estatuto';
+
+export interface ArticuloReglamentoDTO {
+  id: number;
+  titulo: TipoDocumentoReglamento;
+  seccion: number;
+  articulo: number;
+  inciso: string;
+  cuerpo: string;
+  descripcion: string;
+  cita_corta: string;
+  cita_completa: string;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by_display?: string;
+  updated_by_display?: string;
+}
+
+export interface GuardarArticuloReglamentoPayload {
+  titulo: TipoDocumentoReglamento;
+  articulo: number;
+  inciso?: string;
+  cuerpo: string;
+  seccion?: number;
+}
+
+// --- Tribunal de la causa (S4-04, Spec 007) ---
+
+export type CondicionIntegrante = 'TITULAR' | 'SUPLENTE';
+
+export interface AsientoTribunalDTO {
+  anio_social: number;
+  socio_id: number | null;
+  nro_socio: number | null;
+  nombre: string;
+  grupo: string;
+  condicion: CondicionIntegrante | '';
+  firma: string;
+  reemplaza_a: string;
+}
+
+export interface IntegranteApartadoDTO {
+  socio_id: number;
+  nro_socio: number;
+  nombre: string;
+  anio_social: number;
+  condicion: CondicionIntegrante;
+}
+
+export interface ComposicionTribunalDTO {
+  estampada: boolean;
+  estampada_at: string | null;
+  asientos: AsientoTribunalDTO[];
+  apartados: IntegranteApartadoDTO[];
+  requiere_ad_hoc: boolean;
+  motivos_ad_hoc: string[];
+  usuario: { esta_involucrado: boolean };
+}
+
+// --- Reportes e Informes Institucionales (SCRUM-63) ---
+
+export interface FiltrosReporteDTO {
+  anio?: number | null;
+  cuatrimestre?: string | null;
+  fecha_desde?: string | null;
+  fecha_hasta?: string | null;
+  subcomision_id?: number | null;
+  concepto?: string | null;
+}
+
+export interface BacklogUrgenciaDTO {
+  total_abiertos: number;
+  baja: number;
+  normal: number;
+  urgente: number;
+  por_estado: Record<string, number>;
+}
+
+export interface DescargosResumenDTO {
+  total_imputaciones: number;
+  total_descargos: number;
+  descargos_t02: number;
+  descargos_t03: number;
+  tasa_presentacion_pct: number;
+  decisiones_t02_total: number;
+  decisiones_t02_aceptadas: number;
+  decisiones_t02_rechazadas: number;
+  tasa_aceptacion_t02_pct: number;
+  apelaciones_t01: number;
+  adecuaciones_t01: number;
+}
+
+export interface PuntosYRiesgoDTO {
+  puntos_positivos: number;
+  puntos_negativos: number;
+  saldo_neto: number;
+  llamados_atencion_total: number;
+  felicitaciones_total: number;
+  socios_alerta_preventiva: number;
+  socios_riesgo_estatutario: number;
+}
+
+export interface EventosResumenDTO {
+  total_eventos: number;
+  eventos_finalizados: number;
+  total_convocatorias: number;
+  total_presentes: number;
+  tasa_asistencia_pct: number;
+  eventos_no_sancionables: number;
+  pct_no_sancionables: number;
+}
+
+export interface KpisResumenDTO {
+  tiempo_vida_promedio_dias: number;
+  total_emitidos_evaluados: number;
+  total_expedientes: number;
+  en_tramite: number;
+  emitidos: number;
+  sanciones: number;
+  meritos: number;
+  sin_clasificar_concepto: number;
+  backlog_urgencia: BacklogUrgenciaDTO;
+  descargos_resumen: DescargosResumenDTO;
+  puntos_y_riesgo: PuntosYRiesgoDTO;
+  eventos_resumen: EventosResumenDTO;
+}
+
+export interface PedidoSubcomisionReporteDTO {
+  subcomision_id: number;
+  subcomision_nombre: string;
+  total_expedientes: number;
+  expedientes_intra: number;
+  expedientes_inter: number;
+  imputaciones_intra: number;
+  imputaciones_inter: number;
+  desglose_por_concepto: Record<string, number>;
+}
+
+export interface AgrupacionConceptoReporteDTO {
+  concepto: string;
+  nombre: string;
+  total: number;
+  sanciones: number;
+  meritos: number;
+  en_tramite: number;
+  emitidos: number;
+}
+
+export interface PedidoAutoridadReporteDTO {
+  socio_id: number;
+  nombre_completo: string;
+  legajo: string;
+  subcomision: string;
+  rol_display: string;
+  total_pedidos: number;
+  sanciones: number;
+  meritos: number;
+  en_tramite: number;
+  emitidos: number;
+  tasa_emision_pct: number;
+}
+
+export interface CategoriaBalanceDTO {
+  total_socios: number;
+  saldo_neto: number;
+  alerta_preventiva: number;
+  riesgo_estatutario: number;
+}
+
+export interface BalanceSubcomisionYCategoriasDTO {
+  subcomision_id: number;
+  subcomision_nombre: string;
+  total_socios: number;
+  puntos_positivos: number;
+  puntos_negativos: number;
+  saldo_neto: number;
+  socios_alerta_preventiva: number;
+  socios_riesgo_estatutario: number;
+  desglose_categorias: {
+    pasivo: CategoriaBalanceDTO;
+    activo: CategoriaBalanceDTO;
+  };
+}
+
+export interface ReporteResumenResponseDTO {
+  filtros_aplicados: {
+    anio: number | null;
+    cuatrimestre: string | null;
+    fecha_desde: string | null;
+    fecha_hasta: string | null;
+    subcomision_id: number | null;
+    concepto: string | null;
+  };
+  kpis_resumen: KpisResumenDTO;
+  pedidos_por_subcomision: PedidoSubcomisionReporteDTO[];
+  agrupacion_por_concepto: AgrupacionConceptoReporteDTO[];
+  pedidos_por_autoridad: PedidoAutoridadReporteDTO[];
+  balance_subcomisiones_y_categorias: BalanceSubcomisionYCategoriasDTO[];
+  catalogo_conceptos: Array<{ codigo: string; nombre: string }>;
+  catalogo_subcomisiones: Array<{ id: number; nombre: string }>;}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -420,6 +691,29 @@ export class ExpedienteApiService {
 
   listarReglamentos(): Observable<{ reglamentos: string[] }> {
     return this.http.get<{ reglamentos: string[] }>(`${this.apiUrl}/reglamentos/`);
+  }
+
+  listarArticulosReglamento(params?: { titulo?: TipoDocumentoReglamento; search?: string }): Observable<ArticuloReglamentoDTO[]> {
+    let httpParams = new HttpParams();
+    if (params?.titulo) {
+      httpParams = httpParams.set('titulo', params.titulo);
+    }
+    if (params?.search) {
+      httpParams = httpParams.set('search', params.search);
+    }
+    return this.http.get<ArticuloReglamentoDTO[]>(`${this.apiUrl}/reglamentos/articulos/`, { params: httpParams });
+  }
+
+  crearArticuloReglamento(payload: GuardarArticuloReglamentoPayload): Observable<ArticuloReglamentoDTO> {
+    return this.http.post<ArticuloReglamentoDTO>(`${this.apiUrl}/reglamentos/articulos/`, payload);
+  }
+
+  actualizarArticuloReglamento(id: number, payload: Partial<GuardarArticuloReglamentoPayload>): Observable<ArticuloReglamentoDTO> {
+    return this.http.patch<ArticuloReglamentoDTO>(`${this.apiUrl}/reglamentos/articulos/${id}/`, payload);
+  }
+
+  eliminarArticuloReglamento(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/reglamentos/articulos/${id}/`);
   }
 
   listarPorLegajo(legajo: string): Observable<ExpedienteRankingDetalle[]> {
@@ -540,6 +834,7 @@ export class ExpedienteApiService {
   obtenerVersionesDescargo(expedienteId: number | string): Observable<DescargoVersionDto[]> {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
+
   obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
     return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);
   }
@@ -562,7 +857,93 @@ export class ExpedienteApiService {
     });
   }
 
+  obtenerComposicionTribunal(expedienteId: number | string): Observable<ComposicionTribunalDTO> {
+    return this.http.get<ComposicionTribunalDTO>(`${this.apiUrl}/${expedienteId}/composicion/`);
+  }
+
   obtenerVisorExpediente(expedienteId: number | string): Observable<ExpedienteVisorData> {
     return this.http.get<ExpedienteVisorData>(`${this.apiUrl}/${expedienteId}/visor/`);
   }
+
+  obtenerResolucion(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.get<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`);
+  }
+
+  crearResolucion(expedienteId: number | string, payload: GuardarResolucionPayload): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`, payload);
+  }
+
+  actualizarResolucion(expedienteId: number | string, payload: Partial<GuardarResolucionPayload>): Observable<ResolucionOficialDTO> {
+    return this.http.patch<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/`, payload);
+  }
+
+  emitirResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/emitir/`, {});
+  }
+
+  firmarResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/firmar/`, {});
+  }
+
+  descargarPreviewResolucionPdf(expedienteId: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/resolucion/preview/`, { responseType: 'blob' });
+  }
+
+  actualizarConceptoExpediente(expedienteId: number | string, concepto: string | null): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${expedienteId}/`, { concepto });
+  }
+
+  obtenerResumenReportes(filtros?: FiltrosReporteDTO): Observable<ReporteResumenResponseDTO> {
+    let params = new HttpParams();
+    if (filtros) {
+      if (filtros.anio != null) {
+        params = params.set('anio', filtros.anio.toString());
+      }
+      if (filtros.cuatrimestre) {
+        params = params.set('cuatrimestre', filtros.cuatrimestre);
+      }
+      if (filtros.fecha_desde) {
+        params = params.set('fecha_desde', filtros.fecha_desde);
+      }
+      if (filtros.fecha_hasta) {
+        params = params.set('fecha_hasta', filtros.fecha_hasta);
+      }
+      if (filtros.subcomision_id != null) {
+        params = params.set('subcomision_id', filtros.subcomision_id.toString());
+      }
+      if (filtros.concepto) {
+        params = params.set('concepto', filtros.concepto);
+      }
+    }
+    return this.http.get<ReporteResumenResponseDTO>(`${this.apiUrl}/reportes/resumen/`, { params });
+  }
+
+  descargarReporteCsv(filtros?: FiltrosReporteDTO, seccion: string = 'subcomisiones'): Observable<Blob> {
+    let params = new HttpParams().set('seccion', seccion);
+    if (filtros) {
+      if (filtros.anio != null) {
+        params = params.set('anio', filtros.anio.toString());
+      }
+      if (filtros.cuatrimestre) {
+        params = params.set('cuatrimestre', filtros.cuatrimestre);
+      }
+      if (filtros.fecha_desde) {
+        params = params.set('fecha_desde', filtros.fecha_desde);
+      }
+      if (filtros.fecha_hasta) {
+        params = params.set('fecha_hasta', filtros.fecha_hasta);
+      }
+      if (filtros.subcomision_id != null) {
+        params = params.set('subcomision_id', filtros.subcomision_id.toString());
+      }
+      if (filtros.concepto) {
+        params = params.set('concepto', filtros.concepto);
+      }
+    }
+    return this.http.get(`${this.apiUrl}/reportes/exportar-csv/`, {
+      params,
+      responseType: 'blob'
+    });
+  }
 }
+
