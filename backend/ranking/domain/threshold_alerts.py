@@ -116,7 +116,7 @@ class AlertaSanitizer:
 class UmbralConfig:
     """Configuración de políticas de umbrales cuantitativos de saldo.
 
-    - umbral_critico: Inmutable y estatutario (-10.0 pts según Art. 93 Reglamento Interno).
+    - umbral_critico: Inmutable y reglamentario (-10.0 pts según Art. 93 Reglamento Interno).
     - umbral_preventivo: Configurable (-7.0 pts por defecto).
     - preventivo_activo: Desactivable/configurable hasta validar Circular 001/2026.
     """
@@ -128,7 +128,7 @@ class UmbralConfig:
     def __post_init__(self) -> None:
         if Decimal(str(self.umbral_critico)) != Decimal("-10.0"):
             raise ValueError(
-                "El umbral crítico es inmutable y estatutario fijado en -10.0 pts (Art. 93 R.I.)."
+                "El umbral crítico es inmutable y reglamentario fijado en -10.0 pts (Art. 93 R.I.)."
             )
         self.umbral_preventivo = Decimal(str(self.umbral_preventivo))
 
@@ -346,7 +346,7 @@ class ThresholdAlertNotificationService:
         body_text = (
             f"Estimado/a socio/a{nombre_str} (Legajo/ID: {alerta.socio_id}),\n\n"
             f"Le informamos formalmente que su saldo de puntos ha alcanzado un valor crítico "
-            f"de {alerta.saldo_nuevo} puntos, habiendo cruzado el umbral estatutario de "
+            f"de {alerta.saldo_nuevo} puntos, habiendo cruzado el umbral reglamentario de "
             f"{alerta.umbral_evaluado} puntos (Art. 93 del Reglamento Interno).\n\n"
             f"El procedimiento formal disciplinario ha quedado en estado de espera del acto "
             f"resolutivo de la Comisión Directiva. De acuerdo con el reglamento, se notifica "

@@ -353,7 +353,7 @@ class TestUmbralPreventivoConfigurableCA3:
 
     def test_umbral_critico_es_estricto_e_inmutable(self) -> None:
         """Intentar instanciar UmbralConfig con umbral crítico distinto de -10.0 falla."""
-        with pytest.raises(ValueError, match="umbral crítico es inmutable y estatutario"):
+        with pytest.raises(ValueError, match="umbral crítico es inmutable y reglamentario"):
             UmbralConfig(umbral_critico=Decimal("-12.0"))
 
 
