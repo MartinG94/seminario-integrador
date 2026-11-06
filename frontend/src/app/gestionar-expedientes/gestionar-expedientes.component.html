@@ -1271,19 +1271,6 @@
           </ul>
         </div>
 
-        <!-- Valoración extraordinaria del T03 (S4-03) -->
-        <app-valoracion-t03-panel *ngIf="desc.tipo === 'T03_EXTRAORDINARIO' && esEvaluable(involucradoSeleccionado)"
-                                  [descargoId]="desc.id"
-                                  [puedeValorar]="puedeEvaluarJustificaciones"
-                                  [registrando]="registrandoValoracion"
-                                  [buscandoAntecedente]="buscandoAntecedente"
-                                  [antecedentes]="antecedentesT03"
-                                  [historial]="desc.valoraciones_t03 || []"
-                                  (buscarAntecedente)="buscarAntecedenteT03($event)"
-                                  (quitarAntecedente)="quitarAntecedenteT03($event)"
-                                  (abrirModalAntecedentes)="abrirModalAntecedentesDescargo()"
-                                  (registrar)="registrarValoracionT03($event)"></app-valoracion-t03-panel>
-
         <!-- Sección unificada de Evaluación de Puntaje Final y Fundamento (T02 y T03) -->
         <div class="p-3 bg-light rounded border mt-3 seccion-evaluacion-descargo">
           <h6 class="font-weight-bold text-dark mb-3">
@@ -1336,8 +1323,8 @@
             Puntaje solicitado: <strong class="text-dark">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</strong>
           </div>
 
-          <!-- Selector de Expedientes Antecedentes para T03 -->
-          <div *ngIf="desc.tipo === 'T03_EXTRAORDINARIO'" class="mb-3 pt-2 border-top">
+          <!-- Selector de Expedientes Antecedentes -->
+          <div class="mb-3 pt-2 border-top">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="font-weight-bold text-dark small">Expedientes Antecedentes (opcional):</span>
               <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 d-inline-flex align-items-center" (click)="abrirModalAntecedentesDescargo()">

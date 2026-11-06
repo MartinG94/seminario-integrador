@@ -2154,68 +2154,35 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const decision: DecisionCausal =
       actual.rank >= pedido && actual.rank >= 0 ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
 
-    if (descargo.tipo === 'T03_EXTRAORDINARIO') {
-      const payloadT03: RegistrarValoracionT03Payload = {
-        resultado: decision,
-        fundamento,
-        antecedente_ids: this.antecedentesT03.map(a => a.id),
-        puntaje_final: puntajeFinalPayload
-      };
-      this.expedienteApi.registrarValoracionT03(exp.id, descargo.id, payloadT03).subscribe({
-        next: (resp) => {
-          this.guardandoDescargo = false;
-          descargo.leido = true;
-          descargo.puntaje_ratificado = puntajeFinalPayload;
-          if (resp) {
-            descargo.valoraciones_t03 = [resp, ...(descargo.valoraciones_t03 || [])];
-          }
-          this.notifications.success('Evaluación del descargo extraordinario guardada con éxito.');
-          this.volverADetalleDesdeDescargo();
-        },
-        error: (err) => {
-          this.guardandoDescargo = false;
-          if (err.status === 400 && err.error?.detail) {
-            this.notifications.error(err.error.detail);
-            return;
-          }
-          // Fallback local en entornos mock / dev
-          descargo.leido = true;
-          descargo.puntaje_ratificado = puntajeFinalPayload;
-          this.notifications.success('Evaluación del descargo guardada.');
-          this.volverADetalleDesdeDescargo();
+    this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
+      decision,
+      fundamento,
+      puntaje_final: puntajeFinalPayload,
+      evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
+    }).subscribe({
+      next: (resp) => {
+        this.guardandoDescargo = false;
+        descargo.leido = true;
+        descargo.puntaje_ratificado = puntajeFinalPayload;
+        if (resp) {
+          descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
         }
-      });
-    } else {
-      this.expedienteApi.registrarDecisionCausal(exp.id, descargo.id, {
-        decision,
-        fundamento,
-        puntaje_final: puntajeFinalPayload,
-        evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
-      }).subscribe({
-        next: (resp) => {
-          this.guardandoDescargo = false;
-          descargo.leido = true;
-          descargo.puntaje_ratificado = puntajeFinalPayload;
-          if (resp) {
-            descargo.decisiones_causal = [resp, ...(descargo.decisiones_causal || [])];
-          }
-          this.notifications.success('Evaluación del descargo guardada con éxito.');
-          this.volverADetalleDesdeDescargo();
-        },
-        error: (err) => {
-          this.guardandoDescargo = false;
-          if (err.status === 400 && err.error?.detail) {
-            this.notifications.error(err.error.detail);
-            return;
-          }
-          // Fallback local en entornos mock / dev
-          descargo.leido = true;
-          descargo.puntaje_ratificado = puntajeFinalPayload;
-          this.notifications.success('Evaluación del descargo guardada.');
-          this.volverADetalleDesdeDescargo();
+        this.notifications.success('Evaluación del descargo guardada con éxito.');
+        this.volverADetalleDesdeDescargo();
+      },
+      error: (err) => {
+        this.guardandoDescargo = false;
+        if (err.status === 400 && err.error?.detail) {
+          this.notifications.error(err.error.detail);
+          return;
         }
-      });
-    }
+        // Fallback local en entornos mock / dev
+        descargo.leido = true;
+        descargo.puntaje_ratificado = puntajeFinalPayload;
+        this.notifications.success('Evaluación del descargo guardada.');
+        this.volverADetalleDesdeDescargo();
+      }
+    });
   }
 
   volverADetalleDesdeDescargo(): void {

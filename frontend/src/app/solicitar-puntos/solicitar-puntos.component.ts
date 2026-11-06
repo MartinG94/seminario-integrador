@@ -659,8 +659,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       let valB: any;
       switch (this.columnaOrden) {
         case 'numero':
-          valA = a.numero_expediente ? this.formatCaseNumber(a.numero_expediente) : (a.numero || '');
-          valB = b.numero_expediente ? this.formatCaseNumber(b.numero_expediente) : (b.numero || '');
+          valA = this.formatSolicitudExpediente(a);
+          valB = this.formatSolicitudExpediente(b);
           break;
         case 'titulo':
           valA = a.titulo || a.motivo || '';
@@ -925,5 +925,18 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   formatCaseNumber(numero: string | null | undefined): string {
     return formatCaseNumber(numero);
+  }
+
+  formatSolicitudExpediente(s: SolicitudMonitoreo | SolicitudT01 | null | undefined): string {
+    if (!s || s.estado === 'DRAFT') {
+      return 'Borrador sin número';
+    }
+    const raw = s.numero_expediente && !s.numero_expediente.startsWith('T01-')
+      ? s.numero_expediente
+      : ('numero' in s && s.numero ? s.numero : '');
+    if (!raw || raw === 'Borrador sin número') {
+      return 'Borrador sin número';
+    }
+    return this.formatCaseNumber(raw);
   }
 }

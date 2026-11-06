@@ -15,6 +15,7 @@ import { of, throwError } from 'rxjs';
 
 import { AntecedenteT03DTO, ExpedienteApiService, SolicitudMonitoreo, SolicitudT01 } from '../services/expediente-api.service';
 import { PadronApiService } from '../services/padron-api.service';
+import { NotificationService } from '../services/notification.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { SolicitarPuntosComponent } from './solicitar-puntos.component';
 
@@ -967,6 +968,13 @@ describe('SolicitarPuntosComponent', () => {
       const p = component['payload']();
       expect(p.expedientes_referenciados).toEqual([101, 102]);
     });
+
+    it('formatea correctamente el número de expediente en solicitudes creadas', () => {
+      expect(component.formatSolicitudExpediente(null)).toBe('Borrador sin número');
+      expect(component.formatSolicitudExpediente({ estado: 'DRAFT', numero: 'EXP-0001/2026' } as any)).toBe('Borrador sin número');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0001/2026', numero_expediente: null } as any)).toBe('1/2026');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0013/2026', numero_expediente: 'T01-2026-4B07617805E6' } as any)).toBe('13/2026');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0005/2026', numero_expediente: 'EXP-0005/2026' } as any)).toBe('5/2026');
+    });
   });
 });
-import { NotificationService } from '../services/notification.service';

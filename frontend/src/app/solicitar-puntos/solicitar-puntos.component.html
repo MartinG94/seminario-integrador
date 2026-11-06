@@ -449,13 +449,13 @@
                     <tr *ngFor="let s of misSolicitudesOrdenadas"
                         tabindex="0"
                         role="row"
-                        [attr.aria-label]="'Solicitud ' + (s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero) + ' - ' + (s.titulo || s.motivo)"
+                        [attr.aria-label]="'Solicitud ' + formatSolicitudExpediente(s) + ' - ' + (s.titulo || s.motivo)"
                         (click)="abrirDetalle(s)"
                         (keydown)="onTableKeyDown($event, s)"
                         style="cursor: pointer;">
                       <!-- Exp -->
                       <td class="font-weight-bold text-dark">
-                        {{ s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero }}
+                        {{ formatSolicitudExpediente(s) }}
                       </td>
 
                       <!-- Título -->
@@ -565,7 +565,7 @@
       <!-- Cabecera del Modal -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
-          {{ solicitudSeleccionada.numero_expediente ? ('Exp: ' + formatCaseNumber(solicitudSeleccionada.numero_expediente)) : ('Solicitud: ' + solicitudSeleccionada.numero) }}
+          {{ solicitudSeleccionada.estado === 'DRAFT' ? 'Borrador sin número' : ('Exp: ' + formatSolicitudExpediente(solicitudSeleccionada)) }}
         </span>
         <div class="modal-titulo-central flex-grow-1 text-center px-3">
           <h4 class="card-title mb-0 font-weight-bold text-white">
