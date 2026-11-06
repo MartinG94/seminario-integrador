@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from expedientes.models import AuditoriaConsultaExpediente, Expediente
 from expedientes.permissions import IsImputadoOrTribunal
 from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
+from expedientes.services.deadline_service import DeadlineEnforcementService
 
 
 class ExpedienteVisorView(APIView):
@@ -17,6 +18,7 @@ class ExpedienteVisorView(APIView):
     permission_classes = [IsAuthenticated, IsImputadoOrTribunal]
 
     def get(self, request, pk: int) -> Response:
+        DeadlineEnforcementService().close_expired_deadlines()
         expediente = get_object_or_404(
             Expediente.objects.select_related("socio", "solicitud_t01").prefetch_related(
                 "socios",
@@ -48,14 +50,14 @@ class ExpedienteVisorView(APIView):
         user = request.user
         socio = getattr(user, "socio", None)
         legajo = str(socio.legajo) if socio and socio.legajo else ""
-        rol = str(socio.role) if socio and socio.role else ("ADMIN" if user.is_staff else "USUARIO")
-        user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
+        nombre = f"{user.first_name} {user.last_name}".strip() or user.username
+        rol = getattr(user, "role", "SOCIO")
 
         AuditoriaConsultaExpediente.objects.create(
             expediente=expediente,
-            usuario=user.username or legajo or str(user),
+            user=user,
             legajo=legajo,
+            nombre=nombre,
             rol=rol,
             ip_address=ip_address,
-            user_agent=user_agent,
         )

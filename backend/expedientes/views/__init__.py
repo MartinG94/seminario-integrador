@@ -78,6 +78,7 @@ from expedientes.services.causal_resolution_service import (
     CausalResolutionStateError,
     CausalResolutionValidationError,
 )
+from expedientes.services.deadline_service import DeadlineEnforcementService
 from expedientes.services.descargo_version_service import DescargoVersionService
 from expedientes.services.evidence_service import EvidenceService
 from expedientes.services.opening_notification_service import (
@@ -167,6 +168,7 @@ class ExpedienteCollectionView(APIView):
     permission_classes = [CanOpenExpedientes]
 
     def get(self, request: Request) -> Response:
+        DeadlineEnforcementService().close_expired_deadlines()
         queryset = Expediente.objects.select_related(
             "socio",
             "socio__subcomision",
@@ -239,6 +241,7 @@ class MisExpedientesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request: Request) -> Response:
+        DeadlineEnforcementService().close_expired_deadlines()
         socio = getattr(request.user, "socio", None)
         if not socio:
             return Response([], status=status.HTTP_200_OK)
@@ -248,6 +251,7 @@ class MisExpedientesView(APIView):
             .distinct()
             .select_related("socio", "socio__subcomision")
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
+            .order_by("-id")
         )
         serializer = ExpedienteListSerializer(
             queryset, many=True, context={"request": request, "es_mis_expedientes": True}
@@ -264,6 +268,7 @@ class ExpedientesPorSocioView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request: Request) -> Response:
+        DeadlineEnforcementService().close_expired_deadlines()
         legajo = request.query_params.get("legajo")
         if not legajo or not legajo.strip():
             return Response(
@@ -1056,6 +1061,7 @@ class ExpedienteDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsImputadoOrTribunal]
 
     def get(self, request: Request, pk: int) -> Response:
+        DeadlineEnforcementService().close_expired_deadlines()
         expediente = (
             Expediente.objects.filter(pk=pk)
             .select_related(
@@ -1186,6 +1192,7 @@ class BoardExpedientesView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
 
     def get(self, request: Request) -> Response:
+        DeadlineEnforcementService().close_expired_deadlines()
         qs = (
             Expediente.objects.select_related(
                 "socio",

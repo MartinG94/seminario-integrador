@@ -178,7 +178,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       solicitante: raw.solicitante || raw.creador || '',
       creador: raw.creador || raw.solicitante || '',
       fechaCreacion: raw.created_at || '',
-      estado: raw.estado,
+      estado: (() => {
+        const limiteMs = raw.plazo_limite_at ? new Date(raw.plazo_limite_at).getTime() : 0;
+        const vencido = (limiteMs > 0 && !isNaN(limiteMs))
+          ? Date.now() > limiteMs
+          : (raw.horas_restantes !== undefined && raw.horas_restantes <= 0 && raw.plazo_limite_at);
+        return ((raw.estado || '').toLowerCase().trim() === 'justificando' && vencido)
+          ? 'revision_resolucion'
+          : raw.estado;
+      })(),
       urgencia: raw.urgencia,
       horasRestantes: raw.horas_restantes ?? 0,
       tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
@@ -193,6 +201,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       descargo: descargoObj,
       evidencias: raw.evidencias || [],
       cantidadSocios: raw.socios ? raw.socios.length : 1,
+      sociosInvolucrados: raw.socios || [],
       reglamento_asociado: raw.reglamento_asociado || raw.reglamentoAsociado || '',
       reglamentoAsociado: raw.reglamento_asociado || raw.reglamentoAsociado || '',
       reglamentos_respaldantes: Array.isArray(raw.reglamentos_respaldantes)
@@ -216,9 +225,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     this.misExpedientes = (nombre || legajo)
       ? this.expedientes.filter(e => {
-          const matchNombre = !!(nombre && e.socio.trim().toLowerCase() === nombre);
+          const matchNombre = !!(nombre && e.socio && e.socio.trim().toLowerCase() === nombre);
           const matchLegajo = !!(legajo && e.legajo && String(e.legajo).trim().toLowerCase() === legajo);
-          return matchNombre || matchLegajo;
+          const matchInvolucrado = (e.sociosInvolucrados || []).some(s => {
+            const sNombre = (s.nombre || '').trim().toLowerCase();
+            const sLegajo = s.legajo ? String(s.legajo).trim().toLowerCase() : '';
+            return (nombre && sNombre === nombre) || (legajo && sLegajo === legajo);
+          });
+          return matchNombre || matchLegajo || matchInvolucrado;
         })
       : [];
     this.actualizarSaldoNeto();
@@ -991,7 +1005,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const normalizado = (estado || '').toLowerCase().trim();
     if (normalizado === 'justificando' && exp) {
       if (this.esPlazoVencido(exp)) {
-        return 'Justificando (Plazo vencido)';
+        return 'En Revisión';
       }
       const tiempo = this.getCompactCountdownLabel(exp);
       return tiempo ? `Justificando ${tiempo}` : 'Justificando';
@@ -1015,7 +1029,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   getEstadoBadgeClass(estado: string, exp?: Expediente): string {
     const normalizado = (estado || '').toLowerCase().trim();
     if (normalizado === 'justificando' && exp && this.esPlazoVencido(exp)) {
-      return 'badge-mat-danger';
+      return 'badge-mat-info';
     }
     switch (normalizado) {
       case 'creado': return 'badge-mat-primary';
@@ -1096,8 +1110,28 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         valB = b.titulo || b.motivo || '';
       }
       if (this.columnaOrden === 'numero') {
-        valA = this.formatCaseNumber(a.numero);
-        valB = this.formatCaseNumber(b.numero);
+        const parseNum = (str: string) => {
+          const s = str || '';
+          let m = s.match(/(?:EXP-)?0*(\d+)\/(\d{4})/i);
+          if (m) {
+            return { num: parseInt(m[1], 10), year: parseInt(m[2], 10) };
+          }
+          m = s.match(/(?:EXP-)?(\d{4})-(\d+)/i);
+          if (m) {
+            return { num: parseInt(m[2], 10), year: parseInt(m[1], 10) };
+          }
+          return null;
+        };
+        const pA = parseNum(a.numero || '');
+        const pB = parseNum(b.numero || '');
+        if (pA && pB) {
+          if (pA.year !== pB.year) {
+            return this.ordenAscendente ? pB.year - pA.year : pA.year - pB.year;
+          }
+          return this.ordenAscendente ? pA.num - pB.num : pB.num - pA.num;
+        }
+        valA = a.numero || '';
+        valB = b.numero || '';
       }
       if (this.columnaOrden === 'involucrados') {
         valA = this.getCantidadInvolucrados(a);

@@ -426,6 +426,15 @@ describe('MisExpedientesComponent', () => {
       expect(component.getCountdownLabel(expEnPlazo)).toBe('Plazo expirado');
     });
 
+    it('si se venció el plazo de justificación no existe estado justificando (plazo vencido) y pasa a En Revisión', () => {
+      const vencimientoMs = new Date('2026-10-15T18:00:00-03:00').getTime();
+      component.ahoraMs = vencimientoMs + 1000; // 1 segundo después
+
+      expect(component.esPlazoVencido(expEnPlazo)).toBeTrue();
+      expect(component.getEstadoLabel('justificando', expEnPlazo)).toBe('En Revisión');
+      expect(component.getEstadoBadgeClass('justificando', expEnPlazo)).toBe('badge-mat-info');
+    });
+
     it('formatea countdown compacto para el badge (getCompactCountdownLabel)', () => {
       const vencimientoMs = new Date('2026-10-15T18:00:00-03:00').getTime();
       component.ahoraMs = vencimientoMs - (2 * 86400 + 4 * 3600 + 15 * 60) * 1000;
@@ -1164,6 +1173,62 @@ describe('MisExpedientesComponent', () => {
 
       expect(rows[1].querySelector('.td-documento')?.textContent).toContain('Reglamento Interno');
       expect(rows[1].querySelector('.td-articulo')?.textContent?.trim()).toBe('12');
+    });
+
+    it('incluye expedientes donde el socio es co-imputado secundario en filtrarMisExpedientes', () => {
+      component.socioActual = 'Diego Gabriel Sánchez';
+      spyOn((component as any).auth, 'getPerfil').and.returnValue({
+        id: 3,
+        legajo: '87414',
+        first_name: 'Diego Gabriel',
+        last_name: 'Sánchez',
+        role: 'SOCIO'
+      });
+
+      component.expedientes = [
+        {
+          id: '3',
+          numero: 'EXP-0003/2026',
+          socio: 'Lucas Gastiaburu',
+          legajo: '74907',
+          sociosInvolucrados: [
+            { id: 1, legajo: '74907', nombre: 'Lucas Gastiaburu' },
+            { id: 3, legajo: '87414', nombre: 'Diego Gabriel Sánchez' }
+          ],
+          estado: 'justificando',
+          puntos: -1.5
+        } as any,
+        {
+          id: '4',
+          numero: 'EXP-0004/2026',
+          socio: 'Otro Socio',
+          legajo: '99999',
+          sociosInvolucrados: [
+            { id: 9, legajo: '99999', nombre: 'Otro Socio' }
+          ],
+          estado: 'creado',
+          puntos: -1
+        } as any
+      ];
+
+      (component as any).filtrarMisExpedientes();
+      expect(component.misExpedientes.length).toBe(1);
+      expect(component.misExpedientes[0].id).toBe('3');
+    });
+
+    it('ordena numericamente los expedientes evitando que 3/2026 quede tras 289/2024', () => {
+      component.misExpedientes = [
+        { id: '289', numero: 'EXP-0289/2024', estado: 'emitido' } as any,
+        { id: '3', numero: 'EXP-0003/2026', estado: 'justificando' } as any,
+        { id: '1', numero: 'EXP-0001/2026', estado: 'emitido' } as any
+      ];
+      component.columnaOrden = 'numero';
+      component.ordenAscendente = true;
+
+      const ordenados = component.expedientesOrdenados;
+      expect(ordenados[0].numero).toBe('EXP-0001/2026');
+      expect(ordenados[1].numero).toBe('EXP-0003/2026');
+      expect(ordenados[2].numero).toBe('EXP-0289/2024');
     });
   });
 });
