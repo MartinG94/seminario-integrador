@@ -6,7 +6,7 @@ Guía operativa obligatoria para agentes de Inteligencia Artificial (Antigravity
 
 ## 1. Proyecto
 
-Plataforma web 100% responsive (Mobile-First) para la gestión integral de expedientes disciplinarios, descargos tipificados (T02/T03), votación nominal colegiada del Tribunal de Disciplina y cómputo transaccional inmutable de saldos de puntos de la Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (**A.V.E.I.T.** - UTN FRC).
+Plataforma web 100% responsive (Mobile-First) para la gestión integral de expedientes disciplinarios, descargos tipificados (T02/T03), resolución oficial colegiada con firma digital del Tribunal de Disciplina y cómputo transaccional inmutable de saldos de puntos de la Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (**A.V.E.I.T.** - UTN FRC).
 
 - **Backend:** Python 3.12 con framework Django 4.2 LTS y Django REST Framework (DRF).
 - **Frontend:** SPA en Angular 14.2+ con TypeScript y Material Dashboard PRO (Angular Material).
