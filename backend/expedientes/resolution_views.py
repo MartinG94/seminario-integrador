@@ -79,6 +79,11 @@ class ResolucionView(APIView):
                     update_fields=["reglamentos_respaldantes", "updated_at"]
                 )
 
+        expedientes = request.data.get("expedientes_referenciados")
+        if isinstance(expedientes, list):
+            resolucion.expedientes_referenciados = expedientes
+            resolucion.save(update_fields=["expedientes_referenciados", "updated_at"])
+
         return Response(ResolucionSerializer(resolucion).data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
@@ -130,6 +135,11 @@ class ResolucionView(APIView):
                 expediente.solicitud_t01.save(
                     update_fields=["reglamentos_respaldantes", "updated_at"]
                 )
+
+        expedientes = request.data.get("expedientes_referenciados")
+        if isinstance(expedientes, list):
+            resolucion_guardada.expedientes_referenciados = expedientes
+            resolucion_guardada.save(update_fields=["expedientes_referenciados", "updated_at"])
 
         return Response(ResolucionSerializer(resolucion_guardada).data)
 

@@ -13,8 +13,9 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
-import { ExpedienteApiService, SolicitudMonitoreo, SolicitudT01 } from '../services/expediente-api.service';
+import { AntecedenteT03DTO, ExpedienteApiService, SolicitudMonitoreo, SolicitudT01 } from '../services/expediente-api.service';
 import { PadronApiService } from '../services/padron-api.service';
+import { NotificationService } from '../services/notification.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { SolicitarPuntosComponent } from './solicitar-puntos.component';
 
@@ -117,9 +118,12 @@ describe('SolicitarPuntosComponent', () => {
       'listarReglamentos',
       'listarMisSolicitudes',
       'eliminarBorrador',
+      'listarCatalogoAntecedentes',
     ]);
     padron = jasmine.createSpyObj('PadronApiService', ['listarSocios']);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
+
+    expediente.listarCatalogoAntecedentes.and.returnValue(of([]));
 
     padron.listarSocios.and.returnValue(
       of([
@@ -315,9 +319,8 @@ describe('SolicitarPuntosComponent', () => {
     component.guardarBorrador();
     fixture.detectChanges();
     await fixture.whenStable();
-    const selects: HTMLSelectElement[] = Array.from(fixture.nativeElement.querySelectorAll('select'));
-    const pointsSelect = selects.find(select => Array.from(select.options).some(option => option.textContent?.includes('Falta Media')));
-    expect(pointsSelect?.selectedOptions[0]?.textContent?.trim()).toBe('-1.0 pts: Falta Media');
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.puntosTexto).toBe('-1.0 pts');
     component.guardarBorrador();
     expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.objectContaining({ puntos: -1 }));
   });
@@ -934,5 +937,44 @@ describe('SolicitarPuntosComponent', () => {
       expect(component.modalReglamentosAbierto).toBeFalse();
     }));
   });
+
+  describe('selector de expedientes referenciados / antecedentes', () => {
+    const mockCatalogo: AntecedenteT03DTO[] = [
+      { id: 101, numero: '101/2026', titulo: 'Sanción por falta', motivo: 'Inasistencia', puntos: -1, fecha_emision: '2026-02-01', tipo_accion: 'SANCTION', reglamento_invocado: 'Art. 14 inc. a' },
+      { id: 102, numero: '102/2026', titulo: 'Mérito voluntariado', motivo: 'Colaboración', puntos: 2, fecha_emision: '2026-02-15', tipo_accion: 'MERIT', reglamento_invocado: 'Art. 25' }
+    ];
+
+    it('abre el modal y carga el catálogo de antecedentes cuando no está cargado', () => {
+      expediente.listarCatalogoAntecedentes.and.returnValue(of(mockCatalogo));
+      component.abrirModalExpedientes();
+
+      expect(component.modalExpedientesAbierto).toBeTrue();
+      expect(expediente.listarCatalogoAntecedentes).toHaveBeenCalled();
+      expect(component.catalogoExpedientesModal.length).toBe(2);
+      expect(component.catalogoExpedientesCargado).toBeTrue();
+    });
+
+    it('actualiza y remueve expedientes referenciados seleccionados', () => {
+      component.onExpedientesSeleccionadosChange(mockCatalogo);
+      expect(component.expedientesReferenciadosSeleccionados.length).toBe(2);
+
+      component.removerExpedienteReferenciado(101);
+      expect(component.expedientesReferenciadosSeleccionados.length).toBe(1);
+      expect(component.expedientesReferenciadosSeleccionados[0].id).toBe(102);
+    });
+
+    it('incluye expedientes_referenciados en el payload del borrador', () => {
+      component.onExpedientesSeleccionadosChange(mockCatalogo);
+      const p = component['payload']();
+      expect(p.expedientes_referenciados).toEqual([101, 102]);
+    });
+
+    it('formatea correctamente el número de expediente en solicitudes creadas', () => {
+      expect(component.formatSolicitudExpediente(null)).toBe('Borrador sin número');
+      expect(component.formatSolicitudExpediente({ estado: 'DRAFT', numero: 'EXP-0001/2026' } as any)).toBe('Borrador sin número');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0001/2026', numero_expediente: null } as any)).toBe('1/2026');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0013/2026', numero_expediente: 'T01-2026-4B07617805E6' } as any)).toBe('13/2026');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0005/2026', numero_expediente: 'EXP-0005/2026' } as any)).toBe('5/2026');
+    });
+  });
 });
-import { NotificationService } from '../services/notification.service';

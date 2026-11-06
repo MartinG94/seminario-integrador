@@ -15,6 +15,7 @@ from typing import Optional
 from django.db import DatabaseError, OperationalError
 from django.db.models import Exists, OuterRef, Prefetch, Q, QuerySet, Subquery
 
+from expedientes.domain.t03_valuation import TribunalCondition, condition_for_position
 from padron.domain import (
     ACTIVE_SOCIAL_YEARS,
     PASSIVE_SOCIAL_YEARS,
@@ -841,3 +842,19 @@ class DatabasePadronAdapter:
                 last_checked_at=checked_at,
                 message=f"Error inesperado en verificación de salud: {str(exc)}",
             )
+
+
+class DbTribunalConditionProvider:
+    """Adaptador de solo lectura de `socio_lista` para `TribunalConditionPort` (S4-03).
+
+    Vincula la cuenta local por `socio_lista.user_id` y considera solo filas sin `fechaBaja`.
+    """
+
+    def condition_for_user(self, user_id: int) -> TribunalCondition:
+        position = (
+            Socio.objects.filter(user_id=user_id, fechaBaja__isnull=True)
+            .order_by("nroSocio")
+            .values_list("idTipoSocio", flat=True)
+            .first()
+        )
+        return condition_for_position(position)

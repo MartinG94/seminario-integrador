@@ -31,6 +31,8 @@ from expedientes.models import (
     SolicitudT01,
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
+    ValoracionT03,
+    ValoracionT03Antecedente,
 )
 from expedientes.serializers.evento_serializers import (
     AsistenciaEventoBulkUpdateSerializer,
@@ -44,6 +46,7 @@ from expedientes.serializers.evento_serializers import (
 from expedientes.serializers.reglamento_serializers import ArticuloReglamentoSerializer
 from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
+from expedientes.services.t03_valuation_service import imputado_socio_ids
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
 
@@ -363,6 +366,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     articulos_resolutivos = serializers.SerializerMethodField()
     contenido_hash = serializers.SerializerMethodField()
     issued_at = serializers.SerializerMethodField()
+    expedientes_referenciados = serializers.SerializerMethodField()
+    expedientes_referenciados_detalle = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -374,6 +379,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "razon",
             "reglamento_asociado",
             "reglamentos_respaldantes",
+            "expedientes_referenciados",
+            "expedientes_referenciados_detalle",
             "puntos",
             "es_felicitacion",
             "es_llamado",
@@ -500,7 +507,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
         role = getattr(socio, "role", "")
         # Si es TD/CD/Admin o staff y no es imputado personal en la causa,
-        # puede consultar los descargos
+        # puede consultar los descargos.
         if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or (
             user and user.is_staff
         ):
@@ -652,6 +659,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
 
         # Mismo criterio que el servicio de decisión, sobre las evidencias ya prefetcheadas.
         evidencias = list(obj.evidencias.all())
+        es_imputado = bool(socio) and socio.pk in imputado_socio_ids(obj)
 
         result = []
         for d in descargos_list:
@@ -690,7 +698,16 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             # La valoración del TD es reservada hasta la emisión (confidencialidad).
             if is_authority:
                 item["decisiones_causal"] = DecisionCausalSerializer(decisiones_qs, many=True).data
-                item["regla_sugerida"] = suggested_decision(has_current_evidence=bool(evs)).value
+                if d.tipo == TipoDescargoEnum.T02_CERTIFICADO:
+                    item["regla_sugerida"] = suggested_decision(
+                        has_current_evidence=bool(evs)
+                    ).value
+            # La valoración del T03 también es deliberación reservada (S4-03, RF-21 a RF-24):
+            # ni siquiera una autoridad la ve si es imputada en la causa.
+            if is_authority and not es_imputado and d.tipo == TipoDescargoEnum.T03_EXTRAORDINARIO:
+                item["valoraciones_t03"] = ValoracionT03Serializer(
+                    d.valoraciones_t03.all(), many=True
+                ).data
             result.append(item)
         return result
 
@@ -721,6 +738,22 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     def get_issued_at(self, obj: Expediente) -> str | None:
         res = _obtener_resolucion_reciente(obj)
         return res.issued_at.isoformat() if res and res.issued_at else None
+
+    def get_expedientes_referenciados(self, obj: Expediente) -> list[int]:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and hasattr(solicitud, "expedientes_referenciados"):
+            return solicitud.expedientes_referenciados or []
+        return []
+
+    def get_expedientes_referenciados_detalle(self, obj: Expediente) -> list[dict]:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and hasattr(solicitud, "expedientes_referenciados"):
+            from expedientes.services.t03_valuation_service import (
+                build_expedientes_referenciados_detalle,
+            )
+
+            return build_expedientes_referenciados_detalle(solicitud.expedientes_referenciados)
+        return []
 
 
 class AperturaExpedienteSerializer(serializers.Serializer):
@@ -838,6 +871,102 @@ class RegistrarDecisionCausalSerializer(serializers.Serializer):
     )
     evidencia_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, allow_empty=True
+    )
+
+
+class ValoracionT03AntecedenteSerializer(serializers.ModelSerializer):
+    """Referencia a un expediente emitido citado como antecedente: id y número (RF-20)."""
+
+    expediente_id = serializers.IntegerField(source="expediente_antecedente_id", read_only=True)
+    numero = serializers.CharField(source="numero_antecedente", read_only=True)
+
+    class Meta:
+        model = ValoracionT03Antecedente
+        fields = ["expediente_id", "numero"]
+        read_only_fields = fields
+
+
+class ValoracionT03Serializer(serializers.ModelSerializer):
+    """Valoración versionada de un descargo T03 (S4-03, RF-28)."""
+
+    resultado_display = serializers.CharField(source="get_resultado_display", read_only=True)
+    autor = serializers.CharField(source="autor.get_username", read_only=True)
+    autor_condicion_display = serializers.CharField(
+        source="get_autor_condicion_display", read_only=True
+    )
+    antecedentes = ValoracionT03AntecedenteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ValoracionT03
+        fields = [
+            "id",
+            "descargo",
+            "version",
+            "resultado",
+            "resultado_display",
+            "fundamento",
+            "puntaje_final",
+            "antecedentes",
+            "autor",
+            "autor_legajo",
+            "autor_rol",
+            "autor_condicion",
+            "autor_condicion_display",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class AntecedenteT03Serializer(serializers.Serializer):
+    """Ficha mínima de un antecedente (RF-16) con lista blanca de campos (RF-20).
+
+    Recibe el `AntecedentLookup` del servicio; nunca expone descargos, causales ni evidencias.
+    """
+
+    id = serializers.IntegerField(source="expediente.id", read_only=True)
+    numero = serializers.CharField(source="expediente.numero", read_only=True)
+    titulo = serializers.CharField(source="expediente.titulo", default="", read_only=True)
+    fecha_emision = serializers.DateTimeField(read_only=True)
+    motivo = serializers.CharField(source="expediente.motivo", read_only=True)
+    puntos = serializers.SerializerMethodField()
+    tipo_accion = serializers.SerializerMethodField()
+    reglamento_invocado = serializers.SerializerMethodField()
+
+    def get_puntos(self, obj) -> float | None:
+        exp = getattr(obj, "expediente", obj)
+        puntos = getattr(exp, "puntos", None)
+        return float(puntos) if puntos is not None else None
+
+    def get_tipo_accion(self, obj) -> str:
+        exp = getattr(obj, "expediente", obj)
+        puntos = getattr(exp, "puntos", None)
+        if puntos is not None and puntos < 0:
+            return "SANCTION"
+        solicitud = getattr(exp, "solicitud_t01", None)
+        if solicitud and getattr(solicitud, "tipo_accion", "") == "SANCTION":
+            return "SANCTION"
+        return "MERIT"
+
+    def get_reglamento_invocado(self, obj) -> str:
+        exp = getattr(obj, "expediente", obj)
+        return _obtener_reglamento_asociado(exp)
+
+
+class RegistrarValoracionT03Serializer(serializers.Serializer):
+    """Payload de la valoración de un miembro del Tribunal sobre un descargo T03.
+
+    El resultado y el fundamento se validan en el dominio para responder un único `detail`.
+    """
+
+    resultado = serializers.CharField(required=False, allow_blank=True, default="")
+    fundamento = serializers.CharField(
+        required=False, allow_blank=True, default="", trim_whitespace=False
+    )
+    puntaje_final = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True, default=None
+    )
+    antecedente_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), required=False, allow_empty=True, default=list
     )
 
 
@@ -974,6 +1103,7 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
         choices=SolicitudT01.TipoAccion.choices,
         required=False,
     )
+    expedientes_referenciados_detalle = serializers.SerializerMethodField()
 
     class Meta:
         model = SolicitudT01
@@ -1010,6 +1140,47 @@ class SolicitudT01Serializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"El socio {sid} está duplicado en la lista.")
             vistos.add(sid)
         return value
+
+    def validate_expedientes_referenciados(self, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError(
+                "Debe ser una lista de identificadores de expedientes."
+            )
+        vistos = set()
+        for exp_id in value:
+            if not isinstance(exp_id, int) or exp_id <= 0:
+                raise serializers.ValidationError(
+                    "Cada expediente referenciado debe ser un entero positivo."
+                )
+            if exp_id in vistos:
+                raise serializers.ValidationError(
+                    f"El expediente {exp_id} está duplicado en la lista."
+                )
+            vistos.add(exp_id)
+        if vistos:
+            emitidos_ids = set(
+                Expediente.objects.filter(
+                    pk__in=vistos, estado=EstadoExpedienteEnum.EMITIDO
+                ).values_list("id", flat=True)
+            )
+            faltantes = vistos - emitidos_ids
+            if faltantes:
+                raise serializers.ValidationError(
+                    "Los siguientes expedientes no existen o no están en estado emitido: "
+                    f"{sorted(faltantes)}."
+                )
+        return value
+
+    def get_expedientes_referenciados_detalle(self, obj: SolicitudT01) -> list[dict]:
+        from expedientes.services.t03_valuation_service import (
+            build_expedientes_referenciados_detalle,
+        )
+
+        return build_expedientes_referenciados_detalle(
+            getattr(obj, "expedientes_referenciados", None)
+        )
 
     def validate(self, attrs):
         if self.instance and self.instance.estado == SolicitudT01.Estado.ISSUED:
@@ -1403,6 +1574,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
     resolucion_final = serializers.SerializerMethodField()
     urgencia = serializers.SerializerMethodField()
     urgencia_display = serializers.SerializerMethodField()
+    expedientes_referenciados_detalle = serializers.SerializerMethodField()
 
     class Meta:
         model = SolicitudT01
@@ -1420,6 +1592,8 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             "causal",
             "razon",
             "reglamentos_respaldantes",
+            "expedientes_referenciados",
+            "expedientes_referenciados_detalle",
             "anexo_fecha",
             "anexo_lugar",
             "anexo_relato",
@@ -1526,6 +1700,15 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
                 "dictamen": f"Resolución firme emitida para causa {obj.expediente.numero}.",
             }
         return None
+
+    def get_expedientes_referenciados_detalle(self, obj: SolicitudT01) -> list[dict]:
+        from expedientes.services.t03_valuation_service import (
+            build_expedientes_referenciados_detalle,
+        )
+
+        return build_expedientes_referenciados_detalle(
+            getattr(obj, "expedientes_referenciados", None)
+        )
 
 
 class HolidaySerializer(serializers.ModelSerializer):

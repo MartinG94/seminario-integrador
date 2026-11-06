@@ -6,6 +6,8 @@ Garantiza:
 3. Consistencia matemática estricta entre expedientes emitidos y saldo de puntos.
 4. Idempotencia total: puede ejecutarse múltiples veces sin duplicar registros.
 5. Escenarios de revisión de S4-02 (decisión por causal T02): EXP-0901/2026 a EXP-0904/2026.
+6. Escenarios de revisión de S4-03 (valoración T03 con antecedentes): EXP-0905/2026 y
+   EXP-0906/2026; EXP-0904/2026 sirve de antecedente con un T02 médico.
 """
 
 import datetime
@@ -135,6 +137,24 @@ CAUSAL_T02_SCENARIOS = [
             )
         ],
         [(CausalDecision.REJECTED, CAUSAL_GROUNDS)],
+    ),
+]
+
+# Escenarios de revisión de S4-03: (número, estado, motivo, legajo, texto del T03 o None).
+VALORACION_T03_SCENARIOS = [
+    (
+        "EXP-0905/2026",
+        EstadoExpedienteEnum.REVISION_RESOLUCION,
+        "Inasistencia a la asamblea extraordinaria de socios.",
+        "770010",
+        "Un corte total de ruta por una manifestación me impidió llegar a la sede a tiempo.",
+    ),
+    (
+        "EXP-0906/2026",
+        EstadoExpedienteEnum.EMITIDO,
+        "Inasistencia a la asamblea extraordinaria por un corte de ruta.",
+        "770011",
+        None,
     ),
 ]
 
@@ -502,6 +522,7 @@ class Command(BaseCommand):
 
         # Escenarios S4-02 antes de sincronizar: el emitido impacta en el libro mayor.
         self._sembrar_escenarios_causal_t02(actor_td=nicolas_socio)
+        self._sembrar_escenarios_valoracion_t03(actor_td=nicolas_socio)
 
         # 5. Sincronizar libro mayor (tribunal_puntajeaplicado) y caché (tribunal_puntajegeneral)
         # Consistencia: Sum(emitidos) == Sum(puntaje_aplicado) == puntajegeneral.puntos
@@ -590,6 +611,51 @@ class Command(BaseCommand):
                 exp.save(update_fields=["estado"])
 
             self.stdout.write(f"+ Escenario S4-02 verificado: {numero} ({estado})")
+
+    @transaction.atomic
+    def _sembrar_escenarios_valoracion_t03(self, actor_td: Socio) -> None:
+        """Siembra los escenarios de revisión de S4-03 (idempotente).
+
+        EXP-0905/2026 queda en revisión con un T03 vigente, sin valoraciones; EXP-0906/2026
+        queda emitido para citarlo como antecedente.
+        """
+        legajos = {legajo for _, _, _, legajo, _ in VALORACION_T03_SCENARIOS}
+        socios = {s.legajo: s for s in Socio.objects.filter(legajo__in=legajos)}
+
+        for numero, estado, motivo, legajo, texto_t03 in VALORACION_T03_SCENARIOS:
+            socio = socios[legajo]
+            exp, _ = Expediente.objects.get_or_create(
+                numero=numero,
+                defaults={
+                    "socio": socio,
+                    "estado": estado,
+                    "puntos": Decimal("-1.00"),
+                    "motivo": motivo,
+                    "urgencia": UrgenciaExpedienteEnum.NORMAL,
+                    "descargo_presentado": texto_t03 is not None,
+                },
+            )
+            exp.socios.add(socio)
+            if not exp.cambios_estado.exists():
+                CambioEstadoExpediente.objects.create(
+                    expediente=exp,
+                    estado_anterior=EstadoExpedienteEnum.CREADO,
+                    estado_nuevo=estado,
+                    actor=actor_td.legajo,
+                    motivo=motivo,
+                )
+            if texto_t03 is not None:
+                descargo, creado = DescargoExpediente.objects.get_or_create(
+                    expediente=exp,
+                    socio=socio,
+                    defaults={"tipo": TipoDescargoEnum.T03_EXTRAORDINARIO, "texto": texto_t03},
+                )
+                if creado:
+                    DescargoVersionService.registrar_version(
+                        descargo, OperacionDescargoEnum.PRESENTADO, socio
+                    )
+
+            self.stdout.write(f"+ Escenario S4-03 verificado: {numero} ({estado})")
 
     def _sincronizar_puntos_libro_mayor(self) -> None:
         """Sincroniza tribunal_puntajeaplicado y tribunal_puntajegeneral."""

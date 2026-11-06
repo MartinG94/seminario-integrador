@@ -323,6 +323,40 @@ class TestBoardExpedientesView:
         assert "EXP-2026-055" in numeros
         assert col_creado["cases"][0]["cantidad_socios"] >= 1
 
+    @pytest.mark.parametrize("texto", ["0007/2026", "plenaria"])
+    def test_busqueda_de_antecedentes_solo_entre_causas_emitidas(
+        self, api_client, authenticate, td_user, socio_user, texto
+    ):
+        """S4-03, RF-15: estado emitido más palabras clave sobre número o motivo (S-8)."""
+        Expediente.objects.create(
+            numero="EXP-0007/2026",
+            socio=socio_user,
+            motivo="Inasistencia a la reunión plenaria",
+            estado=EstadoExpedienteEnum.EMITIDO,
+        )
+        Expediente.objects.create(
+            numero="EXP-0008/2026",
+            socio=socio_user,
+            motivo="Daño al mobiliario de la sede",
+            estado=EstadoExpedienteEnum.EMITIDO,
+        )
+        Expediente.objects.create(
+            numero="EXP-1007/2026",
+            socio=socio_user,
+            motivo="Inasistencia a la reunión plenaria de octubre",
+            estado=EstadoExpedienteEnum.REVISION_RESOLUCION,
+        )
+
+        client = authenticate(td_user)
+        response = client.get(
+            "/api/v1/expedientes/board/",
+            {"estado": EstadoExpedienteEnum.EMITIDO, "socio": texto},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        cases = [case for column in response.data["columns"] for case in column["cases"]]
+        assert [case["numero"] for case in cases] == ["EXP-0007/2026"]
+
 
 @pytest.mark.django_db
 class TestTransicionarExpedienteView:

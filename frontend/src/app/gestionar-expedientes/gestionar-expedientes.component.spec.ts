@@ -10,20 +10,23 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
 import {
+  AntecedenteT03DTO,
   ComposicionTribunalDTO,
   DecisionCausalDTO,
   DescargoDetalleDTO,
   ExpedienteApiService,
-  HistorialT01DTO
+  HistorialT01DTO,
+  ValoracionT03DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
+import { ValoracionT03PanelComponent } from './valoracion-t03-panel/valoracion-t03-panel.component';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -60,7 +63,7 @@ describe('GestionarExpedientesComponent', () => {
         MatInputModule,
         NoopAnimationsModule
       ],
-      declarations: [GestionarExpedientesComponent],
+      declarations: [GestionarExpedientesComponent, ValoracionT03PanelComponent],
       providers: [
         { provide: NotificationService, useValue: notifications },
         TribunalDataService,
@@ -85,6 +88,7 @@ describe('GestionarExpedientesComponent', () => {
       ]
     }));
     spyOn(dataService, 'obtenerTablero').and.returnValue(of(mockBoardResponse));
+    spyOn(expedienteApi, 'listarCatalogoAntecedentes').and.returnValue(of([]));
 
     fixture.detectChanges();
   });
@@ -482,7 +486,8 @@ describe('GestionarExpedientesComponent', () => {
       causal: '',
       evidencias: [],
       regla_sugerida: undefined,
-      decisiones_causal: undefined
+      decisiones_causal: undefined,
+      valoraciones_t03: []
     });
 
     const detalle = (estado = 'revision_resolucion') => ({
@@ -683,7 +688,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(tabla.textContent).toContain('Pérez');
       const botones = tabla.querySelectorAll('.btn-ver-descargo');
       expect(botones.length).toBe(2);
-      expect(botones[0].textContent).toContain('Ver Descargo');
+      expect(botones[0].textContent).toContain('Descargo');
     });
 
     it('abre el modal de descargo al hacer clic en Ver Descargo y permite volver al detalle', () => {
@@ -705,6 +710,395 @@ describe('GestionarExpedientesComponent', () => {
       component.volverADetalleDesdeDescargo();
       expect(component.modalDescargoAbierto).toBeFalse();
       expect(component.modalDetalleAbierto).toBeTrue();
+    });
+
+    describe('Valoración T03 en la sala (S4-03)', () => {
+      const valoracion = (overrides: Partial<ValoracionT03DTO> = {}): ValoracionT03DTO => ({
+        id: 1,
+        descargo: 6,
+        version: 1,
+        resultado: 'ACCEPTED',
+        resultado_display: 'Aprobada',
+        fundamento,
+        antecedentes: [],
+        autor: 'miembro.td',
+        autor_legajo: '408917',
+        autor_rol: 'TD',
+        autor_condicion: 'TITULAR',
+        autor_condicion_display: 'Miembro Titular',
+        created_at: '2026-10-20T15:30:00Z',
+        ...overrides
+      });
+
+      const antecedente: AntecedenteT03DTO = {
+        id: 7,
+        numero: 'EXP-0007/2026',
+        fecha_emision: '2026-09-15T12:00:00Z',
+        motivo: 'Inasistencia a la reunión plenaria',
+        reglamento_invocado: 'Art. 86 del Reglamento Interno'
+      };
+
+      const payload = { resultado: 'ACCEPTED' as const, fundamento, antecedente_ids: [7] };
+
+      function abrirConT03(valoraciones: ValoracionT03DTO[] = [], rol = 'TD', estado = 'revision_resolucion') {
+        const base = detalle(estado);
+        base.descargos[1].valoraciones_t03 = valoraciones;
+        spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+        spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of(base));
+        component.abrirDetalle({ ...expRevision, estado } as Expediente);
+        return component.involucradosJustificacion.find(f => f.descargo?.id === 6)!;
+      }
+
+      function valorarT03(valoraciones: ValoracionT03DTO[] = []) {
+        const fila = abrirConT03(valoraciones);
+        component.verDescargo(fila);
+        return fila;
+      }
+
+      it('permite valorar un T03 vigente', () => {
+        expect(component.esEvaluable(abrirConT03())).toBeTrue();
+      });
+
+      it('muestra el T03 sin valorar como pendiente de evaluación', () => {
+        expect(component.estadoJustificacion(abrirConT03())).toBe('Pendiente de evaluación');
+      });
+
+      it('muestra el resultado de la versión vigente del T03', () => {
+        const fila = abrirConT03([
+          valoracion({ id: 2, version: 2, resultado: 'REJECTED', resultado_display: 'Desaprobada' }),
+          valoracion()
+        ]);
+
+        expect(component.estadoJustificacion(fila)).toBe('Desaprobada');
+      });
+
+      it('no revela la valoración a la autoridad imputada, que no la recibe del servidor', () => {
+        const fila = abrirConT03();
+        delete fila.descargo?.valoraciones_t03;
+
+        expect(component.estadoJustificacion(fila)).toBe('Descargo - Otros');
+      });
+
+      it('ofrece la acción de valorar el T03 y conserva Ver Descargo en el T02', () => {
+        abrirConT03();
+        fixture.detectChanges();
+
+        const acciones = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.btn-ver-descargo'));
+        expect(acciones.length).toBe(2);
+        acciones.forEach(accion => {
+          expect(accion.textContent).toContain('Descargo');
+        });
+      });
+
+      it('sólo ofrece ver el descargo a quien no puede valorar', () => {
+        const fila = abrirConT03([], 'CD', 'emitido');
+
+        expect(component.accionDescargo(fila)).toBe('Ver Descargo');
+      });
+
+      it('muestra el estado de la valoración en la fila del T03', () => {
+        abrirConT03();
+        fixture.detectChanges();
+
+        const estados = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.estado-justificacion'));
+        expect(estados.length).toBeGreaterThan(0);
+      });
+
+      it('integra la evaluación unificada de puntaje final para el T03 sin panel redundante', () => {
+        valorarT03();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.btn-guardar-volver')).toBeTruthy();
+      });
+
+      it('no muestra el panel de valoración para el T02', () => {
+        abrirConT03();
+        component.verDescargo(filaT02());
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
+      });
+
+      it('no da por leído un T03 sin valorar', () => {
+        expect(component.getEstadoDescargo(abrirConT03())).toBe('No Leído');
+      });
+
+      it('da por leído un T03 valorado', () => {
+        expect(component.getEstadoDescargo(abrirConT03([valoracion()]))).toBe('Leído');
+      });
+
+      it('no permite generar la resolución con un T03 sin valorar', () => {
+        const base = abrirConT03();
+        filaT02().descargo!.leido = true;
+
+        expect(component.getEstadoDescargo(base)).toBe('No Leído');
+        expect(component.puedeGenerarResolucion).toBeFalse();
+      });
+
+      it('permite generar la resolución cuando se valoró el T03', () => {
+        spyOn(api, 'registrarValoracionT03').and.returnValue(of(valoracion()));
+        valorarT03();
+        filaT02().descargo!.leido = true;
+
+        component.registrarValoracionT03(payload);
+
+        expect(component.puedeGenerarResolucion).toBeTrue();
+      });
+
+      it('agrega el antecedente encontrado', () => {
+        spyOn(api, 'buscarAntecedente').and.returnValue(of(antecedente));
+        valorarT03();
+
+        component.buscarAntecedenteT03('7/2026');
+
+        expect(api.buscarAntecedente).toHaveBeenCalledOnceWith('7/2026');
+        expect(component.antecedentesT03).toEqual([antecedente]);
+      });
+
+      it('no vincula dos veces el mismo antecedente aunque se escriba distinto', () => {
+        spyOn(api, 'buscarAntecedente').and.returnValue(of(antecedente));
+        valorarT03();
+        component.buscarAntecedenteT03('7/2026');
+
+        component.buscarAntecedenteT03('EXP-0007/2026');
+
+        expect(component.antecedentesT03.length).toBe(1);
+        expect(notifications.error).toHaveBeenCalledOnceWith('Ese antecedente ya está vinculado.');
+      });
+
+      it('notifica el error cuando el antecedente no existe', () => {
+        const detail = 'No existe un expediente emitido con ese número.';
+        spyOn(api, 'buscarAntecedente').and.returnValue(throwError(() => ({ status: 404, error: { detail } })));
+        valorarT03();
+
+        component.buscarAntecedenteT03('999/2026');
+
+        expect(component.antecedentesT03).toEqual([]);
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      it('quita un antecedente de la valoración', () => {
+        valorarT03();
+        component.antecedentesT03 = [antecedente];
+
+        component.quitarAntecedenteT03(7);
+
+        expect(component.antecedentesT03).toEqual([]);
+      });
+
+      it('registra la valoración, suma la versión al historial y limpia los antecedentes', () => {
+        const nueva = valoracion({ id: 2, version: 2 });
+        spyOn(api, 'registrarValoracionT03').and.returnValue(of(nueva));
+        const anterior = valoracion();
+        const fila = valorarT03([anterior]);
+        component.antecedentesT03 = [antecedente];
+
+        component.registrarValoracionT03(payload);
+
+        expect(api.registrarValoracionT03).toHaveBeenCalledOnceWith('12', 6, payload);
+        expect(fila.descargo?.valoraciones_t03).toEqual([nueva, anterior]);
+        expect(component.antecedentesT03).toEqual([]);
+        expect(component.registrandoValoracion).toBeFalse();
+        expect(notifications.success).toHaveBeenCalledOnceWith('Valoración registrada (versión 2).');
+      });
+
+      it('conserva el borrador si el registro falla', () => {
+        const detail = 'No podés valorar: sos parte interesada en esta causa.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 403, error: { detail } })));
+        const fila = valorarT03();
+        component.antecedentesT03 = [antecedente];
+
+        component.registrarValoracionT03(payload);
+
+        expect(fila.descargo?.valoraciones_t03).toEqual([]);
+        expect(component.antecedentesT03).toEqual([antecedente]);
+        expect(component.registrandoValoracion).toBeFalse();
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      describe('respuestas tardías de la búsqueda de antecedentes', () => {
+        let respuesta: Subject<AntecedenteT03DTO>;
+
+        beforeEach(() => {
+          respuesta = new Subject<AntecedenteT03DTO>();
+          spyOn(api, 'buscarAntecedente').and.returnValue(respuesta);
+        });
+
+        it('no la suma al borrador de otro involucrado', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.verDescargo(filaT02());
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma después de volver al listado', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.volverADetalleDesdeDescargo();
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma después de cerrar el expediente', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.cerrarModales();
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma al borrador que sigue a un registro', () => {
+          spyOn(api, 'registrarValoracionT03').and.returnValue(of(valoracion()));
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.registrarValoracionT03(payload);
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no notifica el error de una búsqueda descartada', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('999/2026');
+
+          component.volverADetalleDesdeDescargo();
+          respuesta.error({ status: 404, error: { detail: 'No existe.' } });
+
+          expect(notifications.error).not.toHaveBeenCalled();
+        });
+
+        it('cancela la búsqueda en curso al destruir la sala', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.ngOnDestroy();
+
+          expect(respuesta.observers.length).toBe(0);
+        });
+
+        it('conserva dos búsquedas seguidas del mismo borrador', () => {
+          const segunda = new Subject<AntecedenteT03DTO>();
+          (api.buscarAntecedente as jasmine.Spy).and.returnValues(respuesta, segunda);
+          const otroAntecedente = { ...antecedente, id: 8, numero: 'EXP-0008/2026' };
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+          component.buscarAntecedenteT03('8/2026');
+
+          segunda.next(otroAntecedente);
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03.map(a => a.id)).toEqual([8, 7]);
+        });
+      });
+
+      describe('registro y búsquedas en curso', () => {
+        it('informa la búsqueda en curso hasta que responde', () => {
+          const respuesta = new Subject<AntecedenteT03DTO>();
+          spyOn(api, 'buscarAntecedente').and.returnValue(respuesta);
+          valorarT03();
+
+          component.buscarAntecedenteT03('7/2026');
+          expect(component.buscandoAntecedente).toBeTrue();
+
+          respuesta.next(antecedente);
+          respuesta.complete();
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('deja de informar la búsqueda cuando falla', () => {
+          spyOn(api, 'buscarAntecedente').and.returnValue(throwError(() => ({ status: 404 })));
+          valorarT03();
+
+          component.buscarAntecedenteT03('999/2026');
+
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('deja de informar la búsqueda cuando se descarta el borrador', () => {
+          spyOn(api, 'buscarAntecedente').and.returnValue(new Subject<AntecedenteT03DTO>());
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.volverADetalleDesdeDescargo();
+
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('no borra el borrador de otro involucrado si el registro responde tarde', () => {
+          const respuesta = new Subject<ValoracionT03DTO>();
+          spyOn(api, 'registrarValoracionT03').and.returnValue(respuesta);
+          const fila = valorarT03();
+          component.registrarValoracionT03(payload);
+
+          component.verDescargo(filaT02());
+          component.antecedentesT03 = [antecedente];
+          respuesta.next(valoracion());
+
+          expect(component.antecedentesT03).toEqual([antecedente]);
+          expect(fila.descargo?.valoraciones_t03?.length).toBe(1);
+        });
+
+        it('mantiene el bloqueo de doble envío aunque se cierre el expediente', () => {
+          const respuesta = new Subject<ValoracionT03DTO>();
+          spyOn(api, 'registrarValoracionT03').and.returnValue(respuesta);
+          valorarT03();
+          component.registrarValoracionT03(payload);
+
+          component.cerrarModales();
+          expect(component.registrandoValoracion).toBeTrue();
+
+          respuesta.next(valoracion());
+          expect(component.registrandoValoracion).toBeFalse();
+        });
+      });
+
+      it('muestra el motivo cuando el padrón no está disponible', () => {
+        const detail = 'No se pudo confirmar tu condición en el padrón. Intentá nuevamente.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 503, error: { detail } })));
+        valorarT03();
+
+        component.registrarValoracionT03(payload);
+
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      it('mantiene el mensaje genérico ante otros errores del servidor', () => {
+        const detail = 'Traza interna del servidor.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 500, error: { detail } })));
+        valorarT03();
+
+        component.registrarValoracionT03(payload);
+
+        expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo registrar la valoración.');
+      });
+
+      it('descarta los antecedentes al volver al listado', () => {
+        valorarT03();
+        component.antecedentesT03 = [antecedente];
+
+        component.volverADetalleDesdeDescargo();
+
+        expect(component.antecedentesT03).toEqual([]);
+      });
+
+      it('indica en el buscador que se puede buscar por número y motivo', () => {
+        fixture.detectChanges();
+
+        const buscador: HTMLInputElement = fixture.nativeElement.querySelector('input[placeholder*="Buscar por"]');
+        expect(buscador.placeholder).toContain('número');
+        expect(buscador.placeholder).toContain('motivo');
+      });
     });
   });
 
@@ -2307,8 +2701,162 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
       component.onModalKeydown(escEv);
       expect(component.modalDetalleAbierto).toBeFalse();
     }));
-
-
   });
 
+  describe('expedientes referenciados y descargo extraordinario T03 unificado', () => {
+    it('abre el modal de expedientes para VISTO y permite seleccionar y remover', () => {
+      component.abrirModalExpedientesResolucion();
+      expect(component.modalExpedientesResolucionAbierto).toBeTrue();
+
+      const antecedente: AntecedenteT03DTO = {
+        id: 99,
+        numero: '99/2026',
+        fecha_emision: '2026-03-01',
+        motivo: 'Motivo antecedente',
+        reglamento_invocado: 'Art. 10'
+      };
+      component.onExpedientesResolucionChange([antecedente]);
+      expect(component.expedientesSeleccionadosResolucion.length).toBe(1);
+
+      component.quitarExpedienteResolucion(99);
+      expect(component.expedientesSeleccionadosResolucion.length).toBe(0);
+    });
+
+    it('inicializa opcionPuntajeFinal y antecedentes en verDescargo para T03_EXTRAORDINARIO', () => {
+      const expTest: Expediente = {
+        id: '200',
+        numero: '200/2026',
+        titulo: 'Causa T03',
+        puntos: -1.0,
+        estado: 'revision_resolucion',
+        urgencia: 'normal',
+        fechaCreacion: '2026-03-01',
+        socio: 'Juan Pérez',
+        legajo: '1001',
+        subcomision: 'GVP',
+        motivo: 'Causa',
+        horasRestantes: 72,
+        tipo: 'falta'
+      };
+      component.expedienteSeleccionado = expTest;
+
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '1001',
+        grupo: 'G57',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        descargo: {
+          id: 50,
+          socio_id: 10,
+          socio_legajo: '1001',
+          socio_nombre: 'Juan Pérez',
+          tipo: 'T03_EXTRAORDINARIO',
+          causal: 'Otro',
+          texto: 'Presento descargo extraordinario',
+          presentado_at: '2026-03-05',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: [],
+          valoraciones_t03: [
+            {
+              id: 1,
+              descargo: 50,
+              version: 1,
+              resultado: 'ACCEPTED',
+              resultado_display: 'Aprobada',
+              fundamento: 'Fundamento valoracion previa',
+              puntaje_final: '0.0',
+              antecedentes: [{ expediente_id: 99, numero: '99/2026' }],
+              autor: 'TD',
+              autor_legajo: '11239',
+              autor_rol: 'TD',
+              autor_condicion: 'REGULAR',
+              autor_condicion_display: 'Titular',
+              created_at: '2026-03-06'
+            }
+          ]
+        }
+      };
+
+      component.verDescargo(fila);
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+      expect(component.fundamentoPuntajeInput).toBe('Fundamento valoracion previa');
+      expect(component.antecedentesT03.length).toBe(1);
+      expect(component.antecedentesT03[0].id).toBe(99);
+    });
+
+    it('registra decision causal y puntaje_final al guardar descargo', () => {
+      spyOn(expedienteApi, 'registrarDecisionCausal').and.returnValue(of({
+        id: 2,
+        descargo: 50,
+        version: 2,
+        decision: 'ACCEPTED',
+        decision_display: 'Aceptado',
+        fundamento: 'Fundamento suficiente para validar',
+        puntaje_final: '0.0',
+        evidencias_valoradas: [],
+        regla_sugerida: null,
+        regla_sugerida_display: null,
+        se_aparta_de_regla: false,
+        autor: 'TD',
+        autor_legajo: '11239',
+        autor_rol: 'TD',
+        created_at: '2026-03-06'
+      }));
+
+      const expTest: Expediente = {
+        id: '200',
+        numero: '200/2026',
+        titulo: 'Causa Descargo',
+        puntos: -1.0,
+        estado: 'revision_resolucion',
+        urgencia: 'normal',
+        fechaCreacion: '2026-03-01',
+        socio: 'Juan Pérez',
+        legajo: '1001',
+        subcomision: 'GVP',
+        motivo: 'Causa',
+        horasRestantes: 72,
+        tipo: 'falta'
+      };
+      component.expedienteSeleccionado = expTest;
+
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '1001',
+        grupo: 'G57',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        descargo: {
+          id: 50,
+          socio_id: 10,
+          socio_legajo: '1001',
+          socio_nombre: 'Juan Pérez',
+          tipo: 'T02_CERTIFICADO',
+          causal: 'Otro',
+          texto: 'Presento descargo',
+          presentado_at: '2026-03-05',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: []
+        }
+      };
+      component.involucradoSeleccionado = fila;
+      component.opcionPuntajeFinal = '0.0';
+      component.fundamentoPuntajeInput = 'Fundamentación válida con más de diez caracteres';
+
+      component.guardarYVolverDescargo();
+      expect(expedienteApi.registrarDecisionCausal).toHaveBeenCalledWith(
+        '200',
+        50,
+        jasmine.objectContaining({
+          puntaje_final: 0
+        })
+      );
+      expect(fila.descargo.leido).toBeTrue();
+      expect(component.modalDescargoAbierto).toBeFalse();
+    });
+  });
 });
