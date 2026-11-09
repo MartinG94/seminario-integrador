@@ -213,6 +213,7 @@ def _serializar_socio_involucrado(
 
     return {
         "id": socio.id,
+        "numero_socio": socio.numero_socio,
         "legajo": legajo,
         "nombre": f"{socio.first_name} {socio.last_name}".strip(),
         "first_name": socio.first_name,
@@ -290,6 +291,9 @@ class ExpedienteResumenSerializer(serializers.ModelSerializer):
     """Serializador acotado para consulta pública/autenticada de expedientes por socio."""
 
     titulo = serializers.SerializerMethodField()
+    socio_numero_socio = serializers.IntegerField(
+        source="socio.numero_socio", allow_null=True, read_only=True
+    )
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
 
     class Meta:
@@ -298,6 +302,7 @@ class ExpedienteResumenSerializer(serializers.ModelSerializer):
             "id",
             "numero",
             "titulo",
+            "socio_numero_socio",
             "motivo",
             "puntos",
             "estado",
@@ -328,6 +333,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
     socio_nombre = serializers.SerializerMethodField()
+    socio_numero_socio = serializers.IntegerField(
+        source="socio.numero_socio", allow_null=True, read_only=True
+    )
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
@@ -384,6 +392,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "concepto",
             "concepto_display",
             "socio_nombre",
+            "socio_numero_socio",
             "socio_legajo",
             "creador",
             "solicitante",

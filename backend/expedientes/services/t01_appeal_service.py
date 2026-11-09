@@ -59,11 +59,19 @@ class T01AppealValidationError(T01AppealError):
 
 
 def _socio_label(socio: Socio) -> str:
-    return f"{socio.first_name} {socio.last_name}".strip() + f" (N° {socio.legajo})"
+    identificador = socio.numero_socio
+    if identificador is None:
+        return f"{socio.first_name} {socio.last_name}".strip()
+    return f"{socio.first_name} {socio.last_name}".strip() + f" (N° {identificador})"
 
 
 def _socio_snapshot(socio: Socio) -> dict:
-    return {"id": socio.id, "legajo": socio.legajo, "nombre": _socio_label(socio)}
+    return {
+        "id": socio.id,
+        "numero_socio": socio.numero_socio,
+        "legajo": socio.legajo,
+        "nombre": _socio_label(socio),
+    }
 
 
 def _involved_ids(expediente: Expediente) -> set[int]:

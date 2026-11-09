@@ -84,6 +84,7 @@ export interface ParticipacionSubcomisionItem {
 
 export interface SocioSubcomisionRow {
   posicion: number;
+  numero_socio?: number | null;
   legajo: string;
   apellido: string;
   nombre: string;

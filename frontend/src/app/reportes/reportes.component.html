@@ -520,7 +520,8 @@
                     <tr>
                       <th class="text-center" style="width: 60px;">#</th>
                       <th>Apellido y Nombre</th>
-                      <th>Legajo</th>
+                      <th>N.º de socio</th>
+                      <th>Legajo académico</th>
                       <th class="text-center">Grupo</th>
                       <th class="text-center">Puntajes Asignados Ciclo</th>
                       <th class="text-right pr-4" style="width: 180px;">Puntos Totales</th>
@@ -536,7 +537,8 @@
                           <i class="material-icons font-size-12">star</i> Récord Institucional
                         </span>
                       </td>
-                      <td class="font-family-monospace text-muted">{{ socio.legajo }}</td>
+                      <td class="font-family-monospace text-muted">{{ socio.numero_socio ?? 'S/D' }}</td>
+                      <td class="font-family-monospace text-muted">{{ socio.legajo ?? 'S/D' }}</td>
                       <td class="text-center text-muted">{{ socio.grupo }}</td>
                       <td class="text-center font-weight-bold"
                           [class.text-success]="socio.puntos_asignados_ciclo > 0"

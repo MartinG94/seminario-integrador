@@ -45,6 +45,7 @@ class SocioInstitucionalSerializer(serializers.Serializer):
     """Serializador para la ficha canónica de un socio del padrón."""
 
     socio_id = serializers.IntegerField()
+    numero_socio = serializers.SerializerMethodField()
     legajo = serializers.CharField(allow_null=True)
     dni = serializers.CharField(allow_null=True)
     first_name = serializers.CharField()
@@ -56,6 +57,10 @@ class SocioInstitucionalSerializer(serializers.Serializer):
     category = serializers.ChoiceField(choices=[c.value for c in SocioCategoryEnum])
     is_active = serializers.BooleanField()
     membership_status = serializers.ChoiceField(choices=[m.value for m in MembershipStatusEnum])
+
+    def get_numero_socio(self, obj):
+        """Expone el número institucional; socio_id es la misma PK del padrón legado."""
+        return obj.numero_socio if obj.numero_socio is not None else obj.socio_id
 
 
 class PaginatedSociosSerializer(serializers.Serializer):

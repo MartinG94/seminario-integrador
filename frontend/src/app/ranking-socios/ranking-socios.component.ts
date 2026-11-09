@@ -80,7 +80,9 @@ export class RankingSociosComponent implements OnInit {
       width: '100%',
       maxWidth: '700px',
       data: {
-        legajo: socio.legajo,
+        numeroSocio: socio.numero_socio === null || socio.numero_socio === undefined
+          ? ''
+          : String(socio.numero_socio),
         nombreSocio: `${socio.nombre} ${socio.apellido}`.trim(),
         saldo: socio.saldo
       }
@@ -294,6 +296,8 @@ export class RankingSociosComponent implements OnInit {
         (s) =>
           s.nombre.toLowerCase().includes(q) ||
           s.apellido.toLowerCase().includes(q) ||
+          (s.numero_socio !== null && s.numero_socio !== undefined &&
+            String(s.numero_socio).toLowerCase().includes(q)) ||
           s.legajo.toLowerCase().includes(q) ||
           (s.subcomision && s.subcomision.toLowerCase().includes(q)) ||
           (s.grupo && s.grupo.toLowerCase().includes(q))

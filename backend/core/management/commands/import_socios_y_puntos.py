@@ -592,19 +592,39 @@ class Command(BaseCommand):
         ano_social = max(1, min(6, socio_data["ano_social"] or 1))
         role = Role.TD if socio_data["subcom_id"] == 10 else Role.SOCIO
 
-        socio, _ = DjangoSocio.objects.get_or_create(
-            legajo=legajo,
-            defaults={
-                "user": user,
-                "first_name": socio_data["nombre"],
-                "last_name": socio_data["apellido"],
-                "email": socio_data["email"],
-                "subcomision": sub,
-                "social_year": ano_social,
-                "role": role,
-                "is_enabled": True,
-            },
-        )
+        socio = DjangoSocio.objects.filter(numero_socio=nro_socio).first()
+        if socio is None:
+            socio = DjangoSocio.objects.filter(user=user).first()
+        if socio is not None and socio.user_id not in (None, user.id):
+            self.stderr.write("Conflicto de identidad institucional; registro omitido.")
+            return socio
+        if socio is not None and socio.numero_socio not in (None, nro_socio):
+            self.stderr.write("Conflicto de numero_socio existente; registro omitido.")
+            return socio
+        if socio is None:
+            socio = DjangoSocio.objects.create(
+                user=user,
+                legajo=legajo,
+                numero_socio=nro_socio,
+                first_name=socio_data["nombre"],
+                last_name=socio_data["apellido"],
+                email=socio_data["email"],
+                subcomision=sub,
+                social_year=ano_social,
+                role=role,
+                is_enabled=True,
+            )
+        else:
+            socio.numero_socio = nro_socio
+            socio.user = user
+            socio.first_name = socio_data["nombre"]
+            socio.last_name = socio_data["apellido"]
+            socio.email = socio_data["email"]
+            socio.subcomision = sub
+            socio.social_year = ano_social
+            socio.role = role
+            socio.is_enabled = True
+            socio.save()
         return socio
 
     def _import_expedientes_11779(

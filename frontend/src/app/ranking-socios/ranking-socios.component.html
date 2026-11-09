@@ -204,7 +204,7 @@
                       (keydown)="onRowKeyDown($event, s)"
                       tabindex="0"
                       role="button"
-                      [attr.aria-label]="'Consultar expedientes de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + s.legajo"
+                      [attr.aria-label]="'Consultar expedientes de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + (s.numero_socio ?? 'S/D')"
                       class="socio-row-clickable"
                       [ngClass]="getRowClass(s)"
                       title="Clic o presione Enter/Espacio para ver expedientes de {{s.nombre}} {{s.apellido}}">
@@ -219,7 +219,7 @@
                     </td>
 
                     <!-- N° de Socio -->
-                    <td class="tabular-nums">{{ s.legajo }}</td>
+                    <td class="tabular-nums">{{ s.numero_socio ?? 'S/D' }}</td>
 
                     <!-- Categoría -->
                     <td>

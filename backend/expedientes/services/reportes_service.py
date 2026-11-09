@@ -308,6 +308,7 @@ class ReportesService:
             tabla_socios.append(
                 {
                     "posicion": pos,
+                    "numero_socio": s.numero_socio,
                     "legajo": s.legajo,
                     "apellido": s.last_name,
                     "nombre": s.first_name,
@@ -323,6 +324,7 @@ class ReportesService:
             tabla_socios = [
                 {
                     "posicion": 1,
+                    "numero_socio": 11779,
                     "legajo": "87414",
                     "apellido": "Sanchez Turu Michel",
                     "nombre": "Diego Gabriel",

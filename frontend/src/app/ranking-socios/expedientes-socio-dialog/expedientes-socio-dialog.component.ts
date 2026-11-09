@@ -8,7 +8,7 @@ import {
 } from '../../services/expediente-api.service';
 
 export interface ExpedientesSocioDialogData {
-  legajo: string;
+  numeroSocio: string;
   nombreSocio: string;
 }
 
@@ -36,7 +36,7 @@ export class ExpedientesSocioDialogComponent implements OnInit {
     this.cargando = true;
     this.error = null;
 
-    this.expedienteApiService.listarPorSocio(this.data.legajo).subscribe({
+    this.expedienteApiService.listarPorSocio(this.data.numeroSocio).subscribe({
       next: (expedientes) => {
         this.expedientes = expedientes;
         this.cargando = false;

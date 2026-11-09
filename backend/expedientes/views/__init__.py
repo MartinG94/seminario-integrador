@@ -110,6 +110,7 @@ from expedientes.views.reportes_views import (
     ReportesResumenView,
 )
 from expedientes.views.visor_views import ExpedienteVisorView
+from padron.models import Socio as PadronSocio
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
 
@@ -131,13 +132,27 @@ EXPEDIENTE_LIST_PREFETCH = (
 
 
 def filter_expedientes_by_legajo(queryset, legajo: str):
-    """Filtra expedientes asociados a un legajo como titular o socio implicado."""
-    padron_user_ids = SocioEstudio.objects.filter(
+    """Filtra por número institucional, con compatibilidad académica transitoria."""
+    try:
+        institutional_number = int(legajo)
+    except (TypeError, ValueError):
+        institutional_number = None
+
+    academic_user_ids = SocioEstudio.objects.filter(
         nroLegajo=legajo,
         socio__user_id__isnull=False,
     ).values("socio__user_id")
+    institutional_user_ids = PadronSocio.objects.none()
+    institutional_number_filter = Q()
+    if institutional_number is not None:
+        institutional_user_ids = PadronSocio.objects.filter(nroSocio=institutional_number).values(
+            "user_id"
+        )
+        institutional_number_filter = Q(numero_socio=institutional_number) | Q(
+            user_id__in=institutional_user_ids
+        )
     local_socio_ids = Socio.objects.filter(
-        user_id__in=padron_user_ids,
+        institutional_number_filter | Q(legajo=legajo) | Q(user_id__in=academic_user_ids),
     ).values("pk")
     return queryset.filter(
         Q(socio__legajo=legajo)
