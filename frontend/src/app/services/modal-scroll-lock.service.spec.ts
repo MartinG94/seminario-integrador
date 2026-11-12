@@ -129,4 +129,36 @@ describe('ModalScrollLockService', () => {
 
     service.unlock();
   });
+  it('debe desplazar programáticamente el contenedor scrollable cuando el cursor está dentro del modal', () => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-reglamentos-backdrop';
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-reglamentos-dialog';
+    const body = document.createElement('div');
+    body.className = 'modal-reglamentos-body';
+    const card = document.createElement('div');
+    card.className = 'catalogo-articulo-card';
+
+    let bodyScroll = 10;
+    Object.defineProperty(body, 'scrollTop', {
+      get: () => bodyScroll,
+      set: (val: number) => { bodyScroll = val; },
+      configurable: true
+    });
+    Object.defineProperty(body, 'scrollHeight', { get: () => 500, configurable: true });
+    Object.defineProperty(body, 'clientHeight', { get: () => 200, configurable: true });
+
+    body.appendChild(card);
+    dialog.appendChild(body);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+
+    service.lock();
+
+    const wheelCard = new WheelEvent('wheel', { deltaY: 45, bubbles: true, cancelable: true });
+    card.dispatchEvent(wheelCard);
+    expect(body.scrollTop).toBe(55);
+
+    service.unlock();
+  });
 });

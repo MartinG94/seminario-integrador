@@ -9,6 +9,7 @@ import {
 import { AuthService, PerfilSocio } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
+  AntecedenteT03DTO,
   ComposicionTribunalDTO,
   ApelacionT01DTO,
   ArticuloReglamentoDTO,
@@ -19,12 +20,13 @@ import {
   ExpedienteDetalleDTO,
   GuardarResolucionPayload,
   HistorialT01DTO,
+  RegistrarValoracionT03Payload,
   ResolucionOficialDTO,
   SocioT01DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
 import { Subject, Subscription, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 import {
   parseReglamentoCite,
@@ -254,6 +256,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   borradorCausal: BorradorDecisionCausal = { decision: '', fundamento: '' };
   registrandoCausal = false;
 
+  // Valoración de T03 dentro del detalle (S4-03)
+  antecedentesT03: AntecedenteT03DTO[] = [];
+  registrandoValoracion = false;
+  private busquedasAntecedente = new Subscription();
+  private busquedasEnCurso = 0;
+
   // Tribunal de la causa (S4-04): inhibición de involucrados y suplencia automática (Art. 95)
   composicion: ComposicionTribunalDTO | null = null;
   cargandoComposicion = false;
@@ -264,6 +272,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   puntajeFinalInput: number | null = null;
   fundamentoPuntajeInput = '';
   guardandoDescargo = false;
+
+  // Expedientes Referenciados / Antecedentes (Resolución y Descargo)
+  expedientesSeleccionadosResolucion: AntecedenteT03DTO[] = [];
+  modalExpedientesResolucionAbierto = false;
+  modalExpedientesDescargoAbierto = false;
+  catalogoExpedientesModal: AntecedenteT03DTO[] = [];
+  cargandoCatalogoExpedientes = false;
+  catalogoExpedientesCargado = false;
+  numeroAntecedenteInput = '';
 
   // Apelación y adecuación del T01 (PB-02)
   readonly minMotivosAdecuacion = MIN_MOTIVOS_ADECUACION;
@@ -286,6 +303,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     private router: Router,
     private scrollLock: ModalScrollLockService
   ) {}
+
+  get buscandoAntecedente(): boolean {
+    return this.busquedasEnCurso > 0;
+  }
 
   get puedeVotarOFirmar(): boolean {
     return this.auth.tieneRol('TD');
@@ -562,6 +583,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.scrollLock.reset();
     this.subs.forEach(s => s.unsubscribe());
+    this.busquedasAntecedente.unsubscribe();
   }
 
   toggleColapsar(estado: string, event?: Event): void {
@@ -1061,6 +1083,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
             this.expedienteSeleccionado.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
             this.expedienteSeleccionado.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
           }
+          if (detalle.expedientes_referenciados) {
+            this.expedienteSeleccionado.expedientesReferenciados = detalle.expedientes_referenciados;
+            this.expedienteSeleccionado.expedientes_referenciados = detalle.expedientes_referenciados;
+          }
+          if (detalle.expedientes_referenciados_detalle) {
+            this.expedienteSeleccionado.expedientesReferenciadosDetalle = detalle.expedientes_referenciados_detalle;
+            this.expedienteSeleccionado.expedientes_referenciados_detalle = detalle.expedientes_referenciados_detalle;
+          }
         }
         const enLista = (this.expedientes || []).find(e => String(e.id) === String(expedienteId));
         if (enLista) {
@@ -1068,6 +1098,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           if (detalle.reglamentos_respaldantes && detalle.reglamentos_respaldantes.length > 0) {
             enLista.reglamentosRespaldantes = detalle.reglamentos_respaldantes;
             enLista.reglamentos_respaldantes = detalle.reglamentos_respaldantes;
+          }
+          if (detalle.expedientes_referenciados) {
+            enLista.expedientesReferenciados = detalle.expedientes_referenciados;
+            enLista.expedientes_referenciados = detalle.expedientes_referenciados;
+          }
+          if (detalle.expedientes_referenciados_detalle) {
+            enLista.expedientesReferenciadosDetalle = detalle.expedientes_referenciados_detalle;
+            enLista.expedientes_referenciados_detalle = detalle.expedientes_referenciados_detalle;
           }
         }
         this.cargandoJustificaciones = false;
@@ -1106,6 +1144,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   private limpiarJustificaciones(): void {
     this.involucradosJustificacion = [];
+    this.descartarBorradorT03();
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
     this.registrandoCausal = false;
@@ -1115,9 +1154,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return !!fila.descargo;
   }
 
+  accionDescargo(fila: InvolucradoJustificacion): string {
+    return this.puedeEvaluarJustificaciones ? 'Evaluar Descargo' : 'Ver Descargo';
+  }
+
   estadoJustificacion(fila: InvolucradoJustificacion): string {
     const descargo = fila.descargo;
     if (!descargo) return 'Sin justificación';
+    if (descargo.tipo === 'T03_EXTRAORDINARIO') {
+      // Sin historial en la respuesta, la valoración está reservada para este usuario (RF-24).
+      if (!descargo.valoraciones_t03) return 'Descargo - Otros';
+      const vigente = descargo.valoraciones_t03[0];
+      return vigente ? this.etiquetaDecision(vigente.resultado) : 'Pendiente de evaluación';
+    }
     const ultima = descargo.decisiones_causal?.[0];
     if (!ultima) return 'Pendiente de evaluación';
     return this.etiquetaDecision(ultima.decision);
@@ -1138,10 +1187,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   seleccionarInvolucrado(fila: InvolucradoJustificacion): void {
     if (!this.esEvaluable(fila)) return;
     this.involucradoSeleccionado = fila;
+    this.descartarBorradorT03();
     this.borradorCausal = { decision: '', fundamento: '' };
   }
 
   volverAListadoInvolucrados(): void {
+    this.descartarBorradorT03();
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
   }
@@ -1214,6 +1265,61 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** La valoración es inmutable: una búsqueda en curso no puede llegar a otro borrador. */
+  private descartarBorradorT03(): void {
+    this.busquedasAntecedente.unsubscribe();
+    this.busquedasAntecedente = new Subscription();
+    this.antecedentesT03 = [];
+  }
+
+  buscarAntecedenteT03(numero: string): void {
+    this.busquedasEnCurso++;
+    const busqueda = this.expedienteApi.buscarAntecedente(numero).pipe(
+      finalize(() => this.busquedasEnCurso--)
+    ).subscribe({
+      next: antecedente => {
+        // El número admite varias escrituras: el repetido sólo se detecta con la ficha.
+        if (this.antecedentesT03.some(a => a.id === antecedente.id)) {
+          this.notifications.error('Ese antecedente ya está vinculado.');
+          return;
+        }
+        this.antecedentesT03 = [...this.antecedentesT03, antecedente];
+      },
+      error: err => {
+        this.notifications.error(httpErrorMessage(err, 'No se pudo consultar el antecedente.'));
+      }
+    });
+    this.busquedasAntecedente.add(busqueda);
+  }
+
+  quitarAntecedenteT03(id: number): void {
+    this.antecedentesT03 = this.antecedentesT03.filter(a => a.id !== id);
+  }
+
+  registrarValoracionT03(payload: RegistrarValoracionT03Payload): void {
+    const descargo = this.involucradoSeleccionado?.descargo;
+    if (!this.expedienteSeleccionado || !descargo || this.registrandoValoracion) return;
+
+    this.registrandoValoracion = true;
+    this.expedienteApi.registrarValoracionT03(this.expedienteSeleccionado.id, descargo.id, payload).subscribe({
+      next: valoracion => {
+        this.registrandoValoracion = false;
+        descargo.valoraciones_t03 = [valoracion, ...(descargo.valoraciones_t03 || [])];
+        // Si el miembro ya pasó a otro involucrado, ese borrador no se toca.
+        if (this.involucradoSeleccionado?.descargo === descargo) {
+          this.descartarBorradorT03();
+        }
+        this.notifications.success(`Valoración registrada (versión ${valoracion.version}).`);
+      },
+      error: err => {
+        this.registrandoValoracion = false;
+        // El 503 trae un mensaje pensado para el miembro; el resto de los 5xx sigue siendo genérico.
+        const motivo = err?.status === 503 ? err.error?.detail : null;
+        this.notifications.error(motivo || httpErrorMessage(err, 'No se pudo registrar la valoración.'));
+      }
+    });
+  }
+
   abrirVotacion(exp: Expediente): void {
     this.expedienteSeleccionado = exp;
     this.modalDetalleAbierto = false;
@@ -1233,6 +1339,33 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.reglamentosSeleccionadosResolucion = [...previos];
     this.actualizarCatalogoItemsModal();
 
+    // Precargar expedientes de referencia para VISTO
+    const mapaExpedientes = new Map<number, AntecedenteT03DTO>();
+
+    // 1. Antecedentes del expediente / Solicitud T01
+    (exp.expedientesReferenciadosDetalle || exp.expedientes_referenciados_detalle || []).forEach(e => {
+      if (e && e.id) mapaExpedientes.set(e.id, e);
+    });
+
+    // 2. Antecedentes citados en valoraciones vigentes de los involucrados
+    (this.involucradosJustificacion || []).forEach(inv => {
+      (inv.descargo?.valoraciones_t03 || []).forEach(val => {
+        (val.antecedentes || []).forEach(ant => {
+          if (ant && ant.expediente_id && !mapaExpedientes.has(ant.expediente_id)) {
+            mapaExpedientes.set(ant.expediente_id, {
+              id: ant.expediente_id,
+              numero: ant.numero,
+              fecha_emision: '',
+              motivo: 'Antecedente citado en valoración de descargo',
+              reglamento_invocado: ''
+            });
+          }
+        });
+      });
+    });
+
+    this.expedientesSeleccionadosResolucion = Array.from(mapaExpedientes.values());
+
     this.fechaResolucionTexto = exp.fechaResolucion || this.construirFechaResolucionTexto();
     this.vistosTexto = exp.vistos || exp.votacion?.vistos || this.construirVistosPorDefecto();
     this.considerandosTexto = exp.considerandos || exp.votacion?.considerandos || '';
@@ -1249,11 +1382,71 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
               this.reglamentosSeleccionadosResolucion = [...res.reglamentos_respaldantes];
               this.actualizarCatalogoItemsModal();
             }
+            if (res.expedientes_referenciados_detalle && res.expedientes_referenciados_detalle.length > 0) {
+              this.expedientesSeleccionadosResolucion = [...res.expedientes_referenciados_detalle];
+            }
           }
         },
         error: () => {}
       });
     }
+  }
+
+  abrirModalExpedientesResolucion(): void {
+    this.modalExpedientesResolucionAbierto = true;
+    if (!this.catalogoExpedientesCargado) {
+      this.cargarCatalogoExpedientes();
+    }
+  }
+
+  cerrarModalExpedientesResolucion(): void {
+    this.modalExpedientesResolucionAbierto = false;
+  }
+
+  onExpedientesResolucionChange(seleccionados: AntecedenteT03DTO[]): void {
+    this.expedientesSeleccionadosResolucion = [...seleccionados];
+  }
+
+  quitarExpedienteResolucion(id: number): void {
+    this.expedientesSeleccionadosResolucion = this.expedientesSeleccionadosResolucion.filter(e => e.id !== id);
+  }
+
+  abrirModalAntecedentesDescargo(): void {
+    this.modalExpedientesDescargoAbierto = true;
+    if (!this.catalogoExpedientesCargado) {
+      this.cargarCatalogoExpedientes();
+    }
+  }
+
+  cerrarModalAntecedentesDescargo(): void {
+    this.modalExpedientesDescargoAbierto = false;
+  }
+
+  onAntecedentesDescargoChange(seleccionados: AntecedenteT03DTO[]): void {
+    this.antecedentesT03 = [...seleccionados];
+  }
+
+  agregarAntecedenteDescargoPorNumero(): void {
+    const num = (this.numeroAntecedenteInput || '').trim();
+    if (!num) return;
+    this.buscarAntecedenteT03(num);
+    this.numeroAntecedenteInput = '';
+  }
+
+  cargarCatalogoExpedientes(): void {
+    this.cargandoCatalogoExpedientes = true;
+    const excludeId = this.expedienteSeleccionado?.id ? Number(this.expedienteSeleccionado.id) : undefined;
+    this.expedienteApi.listarCatalogoAntecedentes({ exclude_id: excludeId }).subscribe({
+      next: catalogo => {
+        this.catalogoExpedientesModal = catalogo;
+        this.cargandoCatalogoExpedientes = false;
+        this.catalogoExpedientesCargado = true;
+      },
+      error: err => {
+        this.cargandoCatalogoExpedientes = false;
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el catálogo de expedientes.'));
+      }
+    });
   }
 
   abrirModalVotacion(exp: Expediente): void {
@@ -1303,9 +1496,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalResolucionAbierto = false;
     this.modalDescargoAbierto = false;
     this.modalCatalogoResolucionAbierto = false;
+    this.modalExpedientesResolucionAbierto = false;
+    this.modalExpedientesDescargoAbierto = false;
     this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
     this.reglamentosSeleccionadosResolucion = [];
+    this.expedientesSeleccionadosResolucion = [];
     this.filtroReglamentosResolucion = '';
     this.busquedaCatalogoResolucion = '';
     this.guardandoResolucion = false;
@@ -1392,7 +1588,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       .map(c => c.citaCorta || c.raw)
       .join('; ');
     const numExp = this.formatCaseNumber(exp.numero);
-    const vistos = `VISTO: Las actuaciones obrantes en el Expediente ${numExp} y lo normado en las disposiciones institucionales de A.V.E.I.T.: ${citas}.`;
+
+    let vistosRef = '';
+    if (this.expedientesSeleccionadosResolucion.length > 0) {
+      const expsCitas = this.expedientesSeleccionadosResolucion
+        .map(e => `Expediente ${this.formatCaseNumber(e.numero)}`)
+        .join(', ');
+      vistosRef = ` y los antecedentes e informes obrantes en ${expsCitas}`;
+    }
+
+    const vistos = `VISTO: Las actuaciones obrantes en el Expediente ${numExp}${vistosRef} y lo normado en las disposiciones institucionales de A.V.E.I.T.: ${citas}.`;
 
     // Generación automática y estructurada de SE RESUELVE
     const lineasSocios = (this.involucradosJustificacion || []).map(inv => {
@@ -1408,11 +1613,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const reglamentos = [...this.reglamentosSeleccionadosResolucion];
     exp.reglamentosRespaldantes = reglamentos;
     exp.reglamentos_respaldantes = reglamentos;
+    const refIds = this.expedientesSeleccionadosResolucion.map(e => e.id);
+    exp.expedientesReferenciados = refIds;
+    exp.expedientes_referenciados = refIds;
+    exp.expedientesReferenciadosDetalle = [...this.expedientesSeleccionadosResolucion];
+    exp.expedientes_referenciados_detalle = [...this.expedientesSeleccionadosResolucion];
 
     const enLista = (this.expedientes || []).find(e => e.id === exp.id);
     if (enLista) {
       enLista.reglamentosRespaldantes = reglamentos;
       enLista.reglamentos_respaldantes = reglamentos;
+      enLista.expedientesReferenciados = refIds;
+      enLista.expedientes_referenciados = refIds;
+      enLista.expedientesReferenciadosDetalle = [...this.expedientesSeleccionadosResolucion];
+      enLista.expedientes_referenciados_detalle = [...this.expedientesSeleccionadosResolucion];
     }
 
     this.guardandoResolucion = true;
@@ -1422,7 +1636,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       vistos,
       considerandos,
       articulos_resolutivos: seResuelve,
-      reglamentos_respaldantes: reglamentos
+      reglamentos_respaldantes: reglamentos,
+      expedientes_referenciados: refIds
     };
 
     const actualizarLocalYFinalizar = (hash?: string) => {
@@ -1440,6 +1655,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       exp.seResuelve = seResuelve;
       exp.reglamentosRespaldantes = reglamentos;
       exp.reglamentos_respaldantes = reglamentos;
+      exp.expedientesReferenciados = refIds;
+      exp.expedientes_referenciados = refIds;
+      exp.expedientesReferenciadosDetalle = [...this.expedientesSeleccionadosResolucion];
+      exp.expedientes_referenciados_detalle = [...this.expedientesSeleccionadosResolucion];
       exp.fechaResolucion = this.fechaResolucionTexto;
       exp.numeroResolucion = exp.numero;
       exp.votacion = {
@@ -1705,7 +1924,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!fila.descargo) return 'Sin descargo';
     if (
       fila.descargo.leido === true ||
-      (fila.descargo.decisiones_causal && fila.descargo.decisiones_causal.length > 0)
+      (fila.descargo.decisiones_causal && fila.descargo.decisiones_causal.length > 0) ||
+      (fila.descargo.valoraciones_t03 && fila.descargo.valoraciones_t03.length > 0)
     ) {
       return 'Leído';
     }
@@ -1727,6 +1947,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     };
   }
 
+  getCategoriaPuntajeLabel(): string {
+    const actual = this.getOpcionPuntajeActual();
+    if (actual.valor === 'LLAMADO_ATENCION') return 'Apercibimiento';
+    if (actual.valor === 'FELICITACION') return 'Reconocimiento';
+    if (actual.rank === 0) return 'Eximición';
+    return actual.rank < 0 ? 'Sanción' : 'Mérito';
+  }
+
   getPuntajeSolicitadoDisplay(exp: Expediente | null | undefined): string {
     if (!exp) return '0 pts';
     if (exp.puntaje_solicitado === 'LLAMADO_ATENCION' || exp.puntos === -0.25) {
@@ -1739,11 +1967,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return `${p > 0 ? '+' : ''}${p} pts`;
   }
 
+  onOpcionPuntajeFinalChange(valor: string): void {
+    this.opcionPuntajeFinal = valor;
+    this.puntajeFinalInput = this.getOpcionPuntajeActual().rank;
+  }
+
+  fijarPuntajeCero(): void {
+    if (!this.puedeModificarPuntaje) return;
+    this.onOpcionPuntajeFinalChange('0.0');
+  }
+
   decrementarPuntaje(): void {
     if (!this.puedeModificarPuntaje) return;
     const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
     if (idx > 0) {
-      this.opcionPuntajeFinal = this.escalaPuntajes[idx - 1].valor;
+      this.onOpcionPuntajeFinalChange(this.escalaPuntajes[idx - 1].valor);
     }
   }
 
@@ -1751,7 +1989,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!this.puedeModificarPuntaje) return;
     const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
     if (idx !== -1 && idx < this.escalaPuntajes.length - 1) {
-      this.opcionPuntajeFinal = this.escalaPuntajes[idx + 1].valor;
+      this.onOpcionPuntajeFinalChange(this.escalaPuntajes[idx + 1].valor);
     }
   }
 
@@ -1797,12 +2035,23 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         return this.expedienteSeleccionado?.puntos ?? 0;
       }
     }
+    if (fila.descargo?.valoraciones_t03 && fila.descargo.valoraciones_t03.length > 0) {
+      const valT03 = fila.descargo.valoraciones_t03[0];
+      if (valT03.puntaje_final != null) {
+        if (valT03.puntaje_final === 'LLAMADO_ATENCION' || valT03.puntaje_final === 'FELICITACION') return 0;
+        const num = Number(valT03.puntaje_final);
+        if (!isNaN(num)) return num;
+      }
+      if (valT03.resultado === 'ACCEPTED') return 0;
+      if (valT03.resultado === 'REJECTED') return this.expedienteSeleccionado?.puntos ?? 0;
+    }
     return this.expedienteSeleccionado?.puntos ?? 0;
   }
 
   verDescargo(fila: InvolucradoJustificacion): void {
     if (!this.expedienteSeleccionado || !fila.descargo) return;
     this.involucradoSeleccionado = fila;
+    this.descartarBorradorT03();
 
     // Inicializar puntaje final y fundamento del descargo
     const pedido = this.expedienteSeleccionado.puntos ?? 0;
@@ -1811,6 +2060,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       valorInicial = String(fila.descargo.puntaje_ratificado);
     } else if (fila.descargo.decisiones_causal?.[0]) {
       valorInicial = String(this.getPuntajeFinalInvolucrado(fila));
+    } else if (fila.descargo.valoraciones_t03?.[0]) {
+      const valT03 = fila.descargo.valoraciones_t03[0];
+      if (valT03.puntaje_final != null) {
+        valorInicial = String(valT03.puntaje_final);
+      } else if (valT03.resultado === 'ACCEPTED') {
+        valorInicial = '0.0';
+      } else {
+        valorInicial = Number(pedido).toFixed(1);
+      }
     } else {
       if (this.expedienteSeleccionado?.puntaje_solicitado) {
         valorInicial = this.expedienteSeleccionado.puntaje_solicitado;
@@ -1831,7 +2089,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.puntajeFinalInput = isNaN(num) ? 0 : num;
 
     const ultimaDecision = fila.descargo.decisiones_causal?.[0];
-    this.fundamentoPuntajeInput = ultimaDecision?.fundamento || '';
+    const ultimaValT03 = fila.descargo.valoraciones_t03?.[0];
+    this.fundamentoPuntajeInput = ultimaDecision?.fundamento || ultimaValT03?.fundamento || '';
+
+    if (ultimaValT03?.antecedentes && ultimaValT03.antecedentes.length > 0) {
+      this.antecedentesT03 = ultimaValT03.antecedentes.map(a => {
+        const found = this.catalogoExpedientesModal.find(cat => cat.id === a.expediente_id);
+        return found || {
+          id: a.expediente_id,
+          numero: a.numero,
+          fecha_emision: '',
+          motivo: 'Expediente antecedente',
+          reglamento_invocado: '—'
+        };
+      });
+    }
 
     this.modalDetalleAbierto = false;
     this.modalDescargoAbierto = true;
@@ -1873,19 +2145,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!exp || !descargo || this.guardandoDescargo) return;
 
     const pedido = Number(exp.puntos ?? 0);
-    let actual = this.getOpcionPuntajeActual();
-    if (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank &&
-        actual.valor !== 'LLAMADO_ATENCION' && actual.valor !== 'FELICITACION') {
-      const match = this.escalaPuntajes.find(op => Number(op.valor) === Number(this.puntajeFinalInput));
-      if (match) {
-        this.opcionPuntajeFinal = match.valor;
-        actual = match;
-      }
-    }
+    const actual = this.getOpcionPuntajeActual();
     const puntajeFinalPayload: string | number =
       actual.valor === 'LLAMADO_ATENCION' || actual.valor === 'FELICITACION'
         ? actual.valor
-        : (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank ? Number(this.puntajeFinalInput) : Number(actual.valor));
+        : (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank
+            ? Number(this.puntajeFinalInput)
+            : Number(actual.valor));
 
     const fundamento = (this.fundamentoPuntajeInput || '').trim();
 
@@ -1932,6 +2198,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   volverADetalleDesdeDescargo(): void {
+    this.descartarBorradorT03();
     this.modalDescargoAbierto = false;
     this.involucradoSeleccionado = null;
     this.modalDetalleAbierto = true;

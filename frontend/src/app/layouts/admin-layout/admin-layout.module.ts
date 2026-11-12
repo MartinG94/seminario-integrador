@@ -6,6 +6,7 @@ import { AdminLayoutRoutes } from './admin-layout.routing';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
+import { ValoracionT03PanelComponent } from '../../gestionar-expedientes/valoracion-t03-panel/valoracion-t03-panel.component';
 import { VisorExpedienteComponent } from '../../gestionar-expedientes/visor-expediente/visor-expediente.component';
 
 import { ReportesComponent } from '../../reportes/reportes.component';
@@ -64,6 +65,7 @@ import { ComponentsModule } from '../../components/components.module';
     MisExpedientesComponent,
     ReglamentosComponent,
     GestionarExpedientesComponent,
+    ValoracionT03PanelComponent,
     ReportesComponent,
     RankingSociosComponent,
     SocioLegajoDialogComponent,

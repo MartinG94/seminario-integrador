@@ -4,6 +4,21 @@ import { Injectable, RendererFactory2, Renderer2 } from '@angular/core';
   providedIn: 'root'
 })
 export class ModalScrollLockService {
+  private static globalListenersAttached = false;
+  private static activeServiceInstance: ModalScrollLockService | null = null;
+
+  private static staticOnWheel = (event: WheelEvent): void => {
+    ModalScrollLockService.activeServiceInstance?.onWheel(event);
+  };
+
+  private static staticOnTouchMove = (event: TouchEvent): void => {
+    ModalScrollLockService.activeServiceInstance?.onTouchMove(event);
+  };
+
+  private static staticOnScroll = (event: Event): void => {
+    ModalScrollLockService.activeServiceInstance?.onScroll(event);
+  };
+
   private activeLocks = 0;
   private renderer: Renderer2;
   private savedMainPanelScrollTop = 0;
@@ -70,21 +85,25 @@ export class ModalScrollLockService {
   }
 
   private attachListeners(): void {
-    if (this.listenersAttached || typeof window === 'undefined') return;
-    window.addEventListener('wheel', this.onWheel, { passive: false, capture: true });
-    window.addEventListener('touchmove', this.onTouchMove, { passive: false, capture: true });
-    window.addEventListener('scroll', this.onScroll, { passive: false, capture: true });
-    document.addEventListener('scroll', this.onScroll, { passive: false, capture: true });
-    this.listenersAttached = true;
+    ModalScrollLockService.activeServiceInstance = this;
+    if (ModalScrollLockService.globalListenersAttached || typeof window === 'undefined') return;
+    window.addEventListener('wheel', ModalScrollLockService.staticOnWheel, { passive: false, capture: true });
+    window.addEventListener('touchmove', ModalScrollLockService.staticOnTouchMove, { passive: false, capture: true });
+    window.addEventListener('scroll', ModalScrollLockService.staticOnScroll, { passive: false, capture: true });
+    document.addEventListener('scroll', ModalScrollLockService.staticOnScroll, { passive: false, capture: true });
+    ModalScrollLockService.globalListenersAttached = true;
   }
 
   private detachListeners(): void {
-    if (!this.listenersAttached || typeof window === 'undefined') return;
-    window.removeEventListener('wheel', this.onWheel, { capture: true });
-    window.removeEventListener('touchmove', this.onTouchMove, { capture: true });
-    window.removeEventListener('scroll', this.onScroll, { capture: true });
-    document.removeEventListener('scroll', this.onScroll, { capture: true });
-    this.listenersAttached = false;
+    if (ModalScrollLockService.activeServiceInstance === this) {
+      ModalScrollLockService.activeServiceInstance = null;
+    }
+    if (!ModalScrollLockService.globalListenersAttached || typeof window === 'undefined') return;
+    window.removeEventListener('wheel', ModalScrollLockService.staticOnWheel, { capture: true });
+    window.removeEventListener('touchmove', ModalScrollLockService.staticOnTouchMove, { capture: true });
+    window.removeEventListener('scroll', ModalScrollLockService.staticOnScroll, { capture: true });
+    document.removeEventListener('scroll', ModalScrollLockService.staticOnScroll, { capture: true });
+    ModalScrollLockService.globalListenersAttached = false;
   }
 
   private restaurarScroll(): void {
@@ -133,10 +152,10 @@ export class ModalScrollLockService {
 
     if (scrollable) {
       const canScroll = this.canElementScrollInDirection(scrollable, deltaY);
-
-      if (!canScroll) {
-        event.preventDefault();
-        event.stopPropagation();
+      event.preventDefault();
+      event.stopPropagation();
+      if (canScroll) {
+        scrollable.scrollTop += deltaY;
       }
     } else {
       const modalBody = this.getActiveModalBody();

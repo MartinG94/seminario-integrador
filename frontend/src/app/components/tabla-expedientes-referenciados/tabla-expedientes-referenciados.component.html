@@ -1,0 +1,69 @@
+<div class="tabla-expedientes-container" [class.tabla-compacta]="compacta">
+  <div class="table-responsive" *ngIf="expedientes && expedientes.length > 0; else emptyState">
+    <table class="table table-sm table-expedientes-referenciados align-middle mb-0">
+      <thead>
+        <tr>
+          <th class="th-expediente" scope="col">Expediente</th>
+          <th class="th-tipo text-center" scope="col">Tipo</th>
+          <th class="th-titulo" scope="col">Título / Motivo</th>
+          <th class="th-emision text-center" scope="col">Emisión</th>
+          <th class="th-reglamento" scope="col">Reglamentación</th>
+          <th class="th-accion text-right" scope="col" *ngIf="editable">Quitar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let exp of expedientes; trackBy: trackById" class="fila-expediente">
+          <!-- Expediente -->
+          <td class="td-expediente">
+            <span class="expediente-badge d-inline-flex align-items-center">
+              <i class="material-icons mr-1">folder_shared</i>
+              <strong class="tabular-nums">{{ formatCaseNumber(exp.numero) }}</strong>
+            </span>
+          </td>
+
+          <!-- Tipo -->
+          <td class="td-tipo text-center">
+            <span class="badge-tipo" [class.badge-tipo-sancion]="esSancion(exp)" [class.badge-tipo-merito]="!esSancion(exp)">
+              {{ esSancion(exp) ? 'Sanción' : 'Mérito' }}
+            </span>
+          </td>
+
+          <!-- Título / Motivo -->
+          <td class="td-titulo">
+            <div class="titulo-motivo-text text-dark" [title]="exp.titulo || exp.motivo">
+              {{ exp.titulo || exp.motivo || 'Sin título ni motivo registrado' }}
+            </div>
+          </td>
+
+          <!-- Emisión -->
+          <td class="td-emision text-center tabular-nums text-muted">
+            {{ exp.fecha_emision ? (exp.fecha_emision | date:'dd/MM/yyyy') : '—' }}
+          </td>
+
+          <!-- Reglamentación -->
+          <td class="td-reglamento text-muted small">
+            {{ exp.reglamento_invocado || '—' }}
+          </td>
+
+          <!-- Acción Quitar (Editable) -->
+          <td class="td-accion text-right text-nowrap" *ngIf="editable">
+            <button type="button"
+                    class="btn-quitar-art"
+                    (click)="onRemover(exp.id)"
+                    title="Quitar expediente referenciado"
+                    aria-label="Quitar expediente referenciado">
+              <i class="material-icons">delete_outline</i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #emptyState>
+    <div class="empty-expedientes-state p-3 text-center text-muted">
+      <i class="material-icons empty-icon mb-1">folder_open</i>
+      <div class="empty-text small">{{ emptyMessage }}</div>
+    </div>
+  </ng-template>
+</div>

@@ -193,6 +193,51 @@
                     </small>
                   </div>
                 </div>
+
+                <div class="row mt-3">
+                  <!-- Expediente(s) de Referencia / Antecedentes (opcional) -->
+                  <div class="col-12 form-group mb-0">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label-custom mb-0">
+                        Seleccione Expediente(s) de Referencia / Antecedentes <span class="text-muted font-weight-normal">(opcional)</span>
+                      </label>
+                      <button type="button"
+                              class="btn-link-clear"
+                              *ngIf="estado !== 'ISSUED' && expedientesReferenciadosSeleccionados.length > 0"
+                              (click)="limpiarExpedientesReferenciados()">
+                        Limpiar selección
+                      </button>
+                    </div>
+
+                    <div class="reglamento-picker-trigger-row">
+                      <button type="button"
+                              class="btn-explorar-reglamentos"
+                              (click)="abrirModalExpedientes()"
+                              [disabled]="estado === 'ISSUED'">
+                        <span class="d-inline-flex align-items-center">
+                          <i class="material-icons mr-2">folder_open</i>
+                          <span>{{ expedientesReferenciadosSeleccionados.length > 0 ? 'Agregar o quitar expedientes de referencia' : 'Explorar y seleccionar expedientes...' }}</span>
+                        </span>
+                        <span class="picker-count-pill tabular-nums" [class.has-items]="expedientesReferenciadosSeleccionados.length > 0">
+                          {{ expedientesReferenciadosSeleccionados.length }} {{ expedientesReferenciadosSeleccionados.length === 1 ? 'expediente' : 'expedientes' }}
+                        </span>
+                      </button>
+                    </div>
+
+                    <!-- Tabla de Expedientes Referenciados con Acción Quitar -->
+                    <div class="mt-2" *ngIf="expedientesReferenciadosSeleccionados.length > 0">
+                      <app-tabla-expedientes-referenciados
+                        [expedientes]="expedientesReferenciadosSeleccionados"
+                        [editable]="estado !== 'ISSUED'"
+                        (remover)="removerExpedienteReferenciado($event)">
+                      </app-tabla-expedientes-referenciados>
+                    </div>
+
+                    <small class="form-text text-muted mt-1">
+                      Opcional: podés vincular uno o varios expedientes emitidos como antecedente o referencia de esta solicitud.
+                    </small>
+                  </div>
+                </div>
               </section>
 
               <!-- SECCIÓN 03: Socios Involucrados -->
@@ -404,13 +449,13 @@
                     <tr *ngFor="let s of misSolicitudesOrdenadas"
                         tabindex="0"
                         role="row"
-                        [attr.aria-label]="'Solicitud ' + (s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero) + ' - ' + (s.titulo || s.motivo)"
+                        [attr.aria-label]="'Solicitud ' + formatSolicitudExpediente(s) + ' - ' + (s.titulo || s.motivo)"
                         (click)="abrirDetalle(s)"
                         (keydown)="onTableKeyDown($event, s)"
                         style="cursor: pointer;">
                       <!-- Exp -->
                       <td class="font-weight-bold text-dark">
-                        {{ s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero }}
+                        {{ formatSolicitudExpediente(s) }}
                       </td>
 
                       <!-- Título -->
@@ -520,7 +565,7 @@
       <!-- Cabecera del Modal -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
-          {{ solicitudSeleccionada.numero_expediente ? ('Exp: ' + formatCaseNumber(solicitudSeleccionada.numero_expediente)) : ('Solicitud: ' + solicitudSeleccionada.numero) }}
+          {{ solicitudSeleccionada.estado === 'DRAFT' ? 'Borrador sin número' : ('Exp: ' + formatSolicitudExpediente(solicitudSeleccionada)) }}
         </span>
         <div class="modal-titulo-central flex-grow-1 text-center px-3">
           <h4 class="card-title mb-0 font-weight-bold text-white">
@@ -590,6 +635,16 @@
             </div>
             <div class="reglamentacion-box">
               <app-tabla-reglamentos [articulos]="formatReglamentosCitas(solicitudSeleccionada.reglamentos_respaldantes)"></app-tabla-reglamentos>
+            </div>
+          </div>
+
+          <!-- Sección Expedientes Referenciados / Antecedentes -->
+          <div class="col-12 mb-3" *ngIf="solicitudSeleccionada.expedientes_referenciados_detalle && solicitudSeleccionada.expedientes_referenciados_detalle.length > 0">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted small font-weight-bold">Expedientes de Referencia / Antecedentes:</span>
+            </div>
+            <div class="expedientes-referenciados-box">
+              <app-tabla-expedientes-referenciados [expedientes]="solicitudSeleccionada.expedientes_referenciados_detalle" [editable]="false"></app-tabla-expedientes-referenciados>
             </div>
           </div>
 
@@ -837,3 +892,13 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Selector de Expedientes Referenciados -->
+<app-modal-selector-expedientes
+  [abierto]="modalExpedientesAbierto"
+  [catalogo]="catalogoExpedientesModal"
+  [cargando]="cargandoCatalogoExpedientes"
+  [seleccionados]="expedientesReferenciadosSeleccionados"
+  (seleccionadosChange)="onExpedientesSeleccionadosChange($event)"
+  (cerrar)="cerrarModalExpedientes()">
+</app-modal-selector-expedientes>

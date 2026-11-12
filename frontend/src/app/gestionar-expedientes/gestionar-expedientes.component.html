@@ -49,10 +49,10 @@
             <input id="filtro-socio"
                    type="text"
                    class="form-control"
-                   placeholder="Buscar por socio, legajo o título..."
+                   placeholder="Buscar por socio, legajo, número o motivo..."
                    [(ngModel)]="filtroSocio"
                    (keyup.enter)="cargarDatosTablero()"
-                   aria-label="Buscar por socio, legajo, creador o título">
+                   aria-label="Buscar por socio, legajo, creador, título, número o motivo">
           </div>
 
           <!-- 2. Estado -->
@@ -417,6 +417,19 @@
             </div>
           </div>
 
+          <!-- Fila 3.1: Expedientes de Referencia / Antecedentes (si existen) -->
+          <div class="col-12 mb-3" *ngIf="expedienteSeleccionado.expedientesReferenciadosDetalle?.length || expedienteSeleccionado.expedientes_referenciados_detalle?.length">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted small font-weight-bold">Expedientes de Referencia / Antecedentes:</span>
+            </div>
+            <div class="reglamentacion-box">
+              <app-tabla-expedientes-referenciados
+                [expedientes]="expedienteSeleccionado.expedientesReferenciadosDetalle || expedienteSeleccionado.expedientes_referenciados_detalle || []"
+                [editable]="false">
+              </app-tabla-expedientes-referenciados>
+            </div>
+          </div>
+
           <!-- Bloque Motivo -->
           <div class="col-12 mb-3">
             <span class="text-muted small font-weight-bold d-block mb-1">Motivo:</span>
@@ -456,6 +469,7 @@
                             'text-warning font-weight-bold': getEstadoDescargo(fila) === 'No Leído',
                             'text-muted': getEstadoDescargo(fila) === 'Sin descargo'
                           }">{{getEstadoDescargo(fila)}}</span>
+                    <div *ngIf="fila.descargo?.tipo === 'T03_EXTRAORDINARIO'" class="small estado-justificacion">{{estadoJustificacion(fila)}}</div>
                   </td>
                   <td class="font-weight-bold puntaje-final-cell">
                     {{getPuntajeFinalInvolucradoDisplay(fila)}}
@@ -464,9 +478,9 @@
                     <button *ngIf="fila.descargo" 
                             type="button" 
                             class="btn btn-sm btn-info btn-ver-descargo"
-                            [attr.aria-label]="'Ver Descargo de ' + getNombreCompletoInvolucrado(fila)"
+                            [attr.aria-label]="accionDescargo(fila) + ' de ' + getNombreCompletoInvolucrado(fila)"
                             (click)="verDescargo(fila)">
-                      <i class="material-icons" aria-hidden="true" style="font-size: 14px;">visibility</i> Ver Descargo
+                      <i class="material-icons" aria-hidden="true" style="font-size: 14px;">visibility</i> {{accionDescargo(fila)}}
                     </button>
                     <button *ngIf="!fila.descargo && esSocioActual(fila) && expedienteSeleccionado?.estado === 'justificando'" 
                             type="button" 
@@ -634,6 +648,39 @@
           <small class="form-text text-danger mt-1" *ngIf="reglamentosSeleccionadosResolucion.length === 0">
             * Obligatorio: seleccioná como mínimo un artículo reglamentario para fundamentar el VISTO.
           </small>
+
+          <!-- Expediente(s) de Referencia / Antecedentes en VISTO (opcional) -->
+          <div class="mt-4 pt-3 border-top">
+            <h6 class="font-weight-bold text-dark mb-1 d-flex align-items-center">
+              <i class="material-icons text-secondary mr-1" style="font-size: 18px;">folder_shared</i>
+              Expediente(s) de Referencia / Antecedentes en VISTO (opcional)
+            </h6>
+            <p class="small text-muted mb-2">
+              Podés incorporar expedientes previos emitidos como antecedentes normativos para el VISTO de la resolución:
+            </p>
+
+            <div class="reglamento-picker-trigger-row mb-3">
+              <button type="button"
+                      class="btn-explorar-reglamentos w-100"
+                      (click)="abrirModalExpedientesResolucion()">
+                <span class="d-inline-flex align-items-center">
+                  <i class="material-icons mr-2">folder_open</i>
+                  <span>{{ expedientesSeleccionadosResolucion.length > 0 ? 'Modificar expedientes de referencia' : 'Explorar y seleccionar expedientes...' }}</span>
+                </span>
+                <span class="picker-count-pill tabular-nums" [class.has-items]="expedientesSeleccionadosResolucion.length > 0">
+                  {{ expedientesSeleccionadosResolucion.length }} {{ expedientesSeleccionadosResolucion.length === 1 ? 'expediente' : 'expedientes' }}
+                </span>
+              </button>
+            </div>
+
+            <div class="mt-2" *ngIf="expedientesSeleccionadosResolucion.length > 0">
+              <app-tabla-expedientes-referenciados
+                [expedientes]="expedientesSeleccionadosResolucion"
+                [editable]="true"
+                (remover)="quitarExpedienteResolucion($event)">
+              </app-tabla-expedientes-referenciados>
+            </div>
+          </div>
         </section>
 
         <!-- 2) CONSIDERANDO: Único recuadro editable por el TD -->
@@ -1224,56 +1271,88 @@
           </ul>
         </div>
 
-        <!-- Sección de Evaluación de Puntaje Final y Fundamento -->
+        <!-- Sección unificada de Evaluación de Puntaje Final y Fundamento -->
         <div class="p-3 bg-light rounded border mt-3 seccion-evaluacion-descargo">
           <h6 class="font-weight-bold text-dark mb-3">
             <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
             Evaluación y Puntaje Final
           </h6>
 
-          <div class="row align-items-center mb-3">
-            <div class="col-md-3 col-sm-4">
-              <label class="font-weight-bold text-dark mb-0" for="opcionPuntajeFinal">Puntaje Final:</label>
-            </div>
-            <div class="col-md-5 col-sm-5">
-              <div class="input-group input-group-stepper">
-                <div class="input-group-prepend">
-                  <button type="button" 
-                          class="btn btn-sm btn-outline-secondary btn-stepper-dec m-0" 
-                          (click)="decrementarPuntaje()" 
-                          [disabled]="!puedeModificarPuntaje"
-                          title="Disminuir puntaje">
-                    <i class="material-icons" style="font-size: 14px;">remove</i>
-                  </button>
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3 puntaje-final-row">
+            <div class="d-flex flex-wrap align-items-center puntaje-controls-wrapper">
+              <label class="font-weight-bold text-dark mb-0 mr-3" for="opcionPuntajeFinal">Puntaje Final:</label>
+
+              <div class="puntaje-controls-group">
+                <div class="input-group-stepper-vertical">
+                  <select id="opcionPuntajeFinal" 
+                          class="form-control font-weight-bold select-puntaje-escala" 
+                          [(ngModel)]="opcionPuntajeFinal"
+                          (ngModelChange)="onOpcionPuntajeFinalChange($event)"
+                          [disabled]="!puedeModificarPuntaje">
+                    <option *ngFor="let op of escalaPuntajes" [value]="op.valor">
+                      {{op.label}}
+                    </option>
+                  </select>
+                  <div class="stepper-vertical-buttons">
+                    <button type="button" 
+                            class="btn-stepper-inc btn-stepper-up" 
+                            (click)="incrementarPuntaje()" 
+                            [disabled]="!puedeModificarPuntaje"
+                            title="Aumentar puntaje (+)"
+                            aria-label="Aumentar puntaje">
+                      <i class="material-icons" aria-hidden="true">keyboard_arrow_up</i>
+                    </button>
+                    <button type="button" 
+                            class="btn-stepper-dec btn-stepper-down" 
+                            (click)="decrementarPuntaje()" 
+                            [disabled]="!puedeModificarPuntaje"
+                            title="Disminuir puntaje (-)"
+                            aria-label="Disminuir puntaje">
+                      <i class="material-icons" aria-hidden="true">keyboard_arrow_down</i>
+                    </button>
+                  </div>
                 </div>
-                <select id="opcionPuntajeFinal" 
-                        class="form-control text-center font-weight-bold select-puntaje-escala" 
-                        [(ngModel)]="opcionPuntajeFinal"
-                        [disabled]="!puedeModificarPuntaje">
-                  <option *ngFor="let op of escalaPuntajes" [value]="op.valor">
-                    {{op.label}}
-                  </option>
-                </select>
-                <div class="input-group-append">
-                  <button type="button" 
-                          class="btn btn-sm btn-outline-secondary btn-stepper-inc m-0" 
-                          (click)="incrementarPuntaje()" 
-                          [disabled]="!puedeModificarPuntaje"
-                          title="Aumentar puntaje">
-                    <i class="material-icons" style="font-size: 14px;">add</i>
-                  </button>
-                </div>
+
+                <!-- Botón rápido para fijar en 0.0 pts (Eximición) -->
+                <button type="button"
+                        class="btn-fijar-cero"
+                        (click)="fijarPuntajeCero()"
+                        [disabled]="!puedeModificarPuntaje || opcionPuntajeFinal === '0.0'"
+                        title="Fijar puntaje en 0.0 (Eximición)"
+                        aria-label="Fijar puntaje en 0 puntos">
+                  0 pts
+                </button>
+
+                <span class="badge-categoria-puntaje" [ngClass]="getOpcionPuntajeActual().badgeClass">
+                  {{getCategoriaPuntajeLabel()}}
+                </span>
               </div>
             </div>
-            <div class="col-md-4 col-sm-3 d-flex align-items-center">
-              <span class="badge" [ngClass]="getOpcionPuntajeActual().badgeClass">
-                {{getOpcionPuntajeActual().label}}
-              </span>
+
+            <div class="text-muted small mt-2 mt-md-0 puntaje-solicitado-ref">
+              Puntaje solicitado: <strong class="text-dark tabular-nums">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</strong>
             </div>
           </div>
 
-          <div class="mb-3 text-muted small">
-            Puntaje solicitado: <strong class="text-dark">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</strong>
+          <!-- Selector de Expedientes Antecedentes -->
+          <div class="mb-3 pt-2 border-top">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="font-weight-bold text-dark small">Expedientes Antecedentes (opcional):</span>
+              <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 d-inline-flex align-items-center" (click)="abrirModalAntecedentesDescargo()">
+                <i class="material-icons mr-1" style="font-size: 16px;">folder_open</i> Explorar expedientes...
+              </button>
+            </div>
+            <div *ngIf="antecedentesT03.length > 0" class="mb-2">
+              <app-tabla-expedientes-referenciados
+                [expedientes]="antecedentesT03"
+                [editable]="puedeModificarPuntaje"
+                (remover)="quitarAntecedenteT03($event)">
+              </app-tabla-expedientes-referenciados>
+            </div>
+            <div *ngIf="antecedentesT03.length > 0" class="alert alert-info py-2 px-3 small mb-2 d-flex align-items-center" role="note">
+              <i class="material-icons mr-2" style="font-size: 18px;">info</i>
+              <span><strong>Aviso orientativo:</strong> el Tribunal ejerce la sana crítica. Si el criterio adoptado se aparta de las consideraciones del antecedente, debe quedar fundamentado en el campo de considerandos.</span>
+            </div>
           </div>
 
           <div class="form-group mb-0">
@@ -1301,9 +1380,9 @@
       <!-- Footer Modal 6: Guardar y Volver, Volver -->
       <div class="card-footer d-flex justify-content-end align-items-center gap-2">
         <button *ngIf="puedeModificarPuntaje"
-                mat-raised-button 
-                type="button" 
-                class="btn btn-primary btn-guardar-volver d-inline-flex align-items-center" 
+                mat-raised-button
+                type="button"
+                class="btn btn-primary btn-guardar-volver d-inline-flex align-items-center"
                 [disabled]="guardandoDescargo"
                 (click)="guardarYVolverDescargo()">
           <i class="material-icons" style="font-size: 16px;">save</i>
@@ -1320,3 +1399,27 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Selector de Expedientes para Resolución Oficial (VISTO) -->
+<app-modal-selector-expedientes
+  [abierto]="modalExpedientesResolucionAbierto"
+  tituloModal="Seleccionar Expediente(s) de Referencia para VISTO"
+  subtituloModal="Podés seleccionar uno o varios expedientes emitidos como antecedentes normativos para el VISTO de la resolución oficial."
+  [catalogo]="catalogoExpedientesModal"
+  [cargando]="cargandoCatalogoExpedientes"
+  [seleccionados]="expedientesSeleccionadosResolucion"
+  (seleccionadosChange)="onExpedientesResolucionChange($event)"
+  (cerrar)="cerrarModalExpedientesResolucion()">
+</app-modal-selector-expedientes>
+
+<!-- Modal Selector de Expedientes para Descargo (Antecedentes) -->
+<app-modal-selector-expedientes
+  [abierto]="modalExpedientesDescargoAbierto"
+  tituloModal="Seleccionar Expediente(s) Antecedente(s)"
+  subtituloModal="Podés seleccionar uno o varios expedientes emitidos como antecedentes para valorar la sana crítica en este descargo."
+  [catalogo]="catalogoExpedientesModal"
+  [cargando]="cargandoCatalogoExpedientes"
+  [seleccionados]="antecedentesT03"
+  (seleccionadosChange)="onAntecedentesDescargoChange($event)"
+  (cerrar)="cerrarModalAntecedentesDescargo()">
+</app-modal-selector-expedientes>

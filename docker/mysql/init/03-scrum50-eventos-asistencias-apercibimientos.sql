@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `tribunal_evento` (
   `fecha_reporte` datetime(6) DEFAULT NULL,
   `toleranciaLeveMinutos` smallint(5) unsigned NOT NULL DEFAULT 15,
   `toleranciaGraveMinutos` smallint(5) unsigned NOT NULL DEFAULT 30,
+  `tolerancia_retiro_minutos` smallint(5) unsigned NOT NULL DEFAULT 15,
   `estado` varchar(30) NOT NULL DEFAULT 'CREADO',
   `estadoEvento_id` int(11) NOT NULL DEFAULT 1,
   `modo_convocatoria` varchar(30) NOT NULL DEFAULT 'PERSONALIZADA',

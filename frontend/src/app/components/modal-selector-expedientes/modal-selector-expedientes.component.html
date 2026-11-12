@@ -1,0 +1,163 @@
+<div class="modal-reglamentos-backdrop"
+     *ngIf="abierto"
+     (click)="onCerrar()"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-expedientes-title">
+  <div #modalDialog
+       class="modal-reglamentos-dialog"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onKeydown($event)">
+
+    <!-- Cabecera del Modal -->
+    <div class="modal-reglamentos-header d-flex justify-content-between align-items-start">
+      <div>
+        <span class="eyebrow-label text-white-50">REFERENCIAS Y ANTECEDENTES AVEIT</span>
+        <h4 id="modal-expedientes-title" class="mb-1 font-weight-bold text-white d-flex align-items-center">
+          <i class="material-icons mr-2">folder_shared</i> {{ tituloModal }}
+        </h4>
+        <p class="mb-0 small text-white-50">
+          {{ subtituloModal }}
+        </p>
+      </div>
+      <button type="button" class="btn-modal-close" (click)="onCerrar()" title="Cerrar modal" aria-label="Cerrar modal">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+
+    <!-- Barra de Pestañas por Tipo + Buscador -->
+    <div class="modal-reglamentos-toolbar">
+      <div class="doc-filter-tabs" role="tablist">
+        <button type="button"
+                class="doc-tab-btn"
+                [class.active]="filtroTipo === 'TODOS'"
+                (click)="setFiltroTipo('TODOS')">
+          Todos
+          <span class="doc-tab-badge tabular-nums" *ngIf="catalogo && catalogo.length > 0">
+            {{ catalogo.length }}
+          </span>
+        </button>
+        <button type="button"
+                class="doc-tab-btn"
+                [class.active]="filtroTipo === 'SANCTION'"
+                (click)="setFiltroTipo('SANCTION')">
+          <i class="material-icons mr-1 text-danger">gavel</i> Sanciones
+          <span class="doc-tab-badge tabular-nums" *ngIf="contarPorTipo('SANCTION') > 0">
+            {{ contarPorTipo('SANCTION') }}
+          </span>
+        </button>
+        <button type="button"
+                class="doc-tab-btn"
+                [class.active]="filtroTipo === 'MERIT'"
+                (click)="setFiltroTipo('MERIT')">
+          <i class="material-icons mr-1 text-success">military_tech</i> Reconocimientos
+          <span class="doc-tab-badge tabular-nums" *ngIf="contarPorTipo('MERIT') > 0">
+            {{ contarPorTipo('MERIT') }}
+          </span>
+        </button>
+      </div>
+
+      <div class="search-box-modal mt-2">
+        <i class="material-icons search-icon">search</i>
+        <input #searchInput
+               type="text"
+               class="form-control search-input-modal"
+               placeholder="Buscar por número de expediente, título, motivo o normativa..."
+               [(ngModel)]="filtroTexto">
+        <button *ngIf="filtroTexto"
+                type="button"
+                class="btn-clear-search"
+                (click)="limpiarBusqueda()"
+                title="Limpiar búsqueda"
+                aria-label="Limpiar búsqueda">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de Expedientes Seleccionables con Checkboxes -->
+    <div class="modal-reglamentos-body" tabindex="-1">
+      <div *ngIf="cargando" class="text-center py-5 text-muted">
+        <i class="material-icons mb-2 spin-icon" style="font-size: 38px; color: var(--color-primary, #151846);">autorenew</i>
+        <p class="mb-0">Cargando catálogo de expedientes emitidos...</p>
+      </div>
+
+      <div *ngIf="!cargando && expedientesFiltrados.length === 0" class="text-center py-5 text-muted">
+        <i class="material-icons mb-2" style="font-size: 38px; opacity: 0.5;">folder_open</i>
+        <p class="mb-0">No se encontraron expedientes emitidos que coincidan con la búsqueda actual.</p>
+      </div>
+
+      <div class="catalogo-articulos-list" *ngIf="!cargando && expedientesFiltrados.length > 0">
+        <div *ngFor="let item of expedientesFiltrados; trackBy: trackById"
+             class="catalogo-articulo-card"
+             [class.selected]="estaSeleccionado(item.id)"
+             (click)="toggleExpediente(item)">
+          <div class="catalogo-check-col">
+            <span class="custom-checkbox" [class.checked]="estaSeleccionado(item.id)">
+              <i class="material-icons" *ngIf="estaSeleccionado(item.id)">check</i>
+            </span>
+          </div>
+          <div class="catalogo-content-col">
+            <div class="d-flex flex-wrap align-items-center justify-content-between mb-1 gap-2">
+              <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="doc-pill"
+                      [class.doc-pill-sancion]="esSancion(item)"
+                      [class.doc-pill-merito]="!esSancion(item)">
+                  {{ esSancion(item) ? 'Sanción' : 'Mérito' }}
+                </span>
+                <strong class="catalogo-cite tabular-nums">Expediente {{ formatCaseNumber(item.numero) }}</strong>
+                <span class="catalogo-puntos-badge tabular-nums" *ngIf="item.puntos !== null && item.puntos !== undefined">
+                  {{ item.puntos > 0 ? '+' : '' }}{{ item.puntos }} pts
+                </span>
+              </div>
+              <span class="catalogo-fecha text-muted small tabular-nums" *ngIf="item.fecha_emision">
+                Emitido el {{ item.fecha_emision | date:'dd/MM/yyyy' }}
+              </span>
+            </div>
+            <h6 class="catalogo-titulo-expediente mb-1 text-dark" *ngIf="item.titulo">
+              {{ item.titulo }}
+            </h6>
+            <p class="catalogo-cuerpo mb-1 text-secondary">
+              {{ item.motivo || 'Sin motivo detallado' }}
+            </p>
+            <div class="catalogo-reglamento-meta small text-muted d-flex align-items-center" *ngIf="item.reglamento_invocado">
+              <i class="material-icons mr-1" style="font-size: 15px;">gavel</i>
+              <span>Reglamento: {{ item.reglamento_invocado }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pie del Modal con Resumen y Confirmación -->
+    <div class="modal-reglamentos-footer d-flex flex-wrap justify-content-between align-items-center">
+      <div class="footer-selection-summary small">
+        <ng-container *ngIf="seleccionadosLocales.length > 0">
+          <strong class="tabular-nums">{{ seleccionadosLocales.length }}</strong>
+          {{ seleccionadosLocales.length === 1 ? 'expediente seleccionado' : 'expedientes seleccionados' }}
+          <span class="text-muted ml-1">
+            ({{ contarSeleccionadosPorTipo('SANCTION') }} Sanciones &bull; {{ contarSeleccionadosPorTipo('MERIT') }} Reconocimientos)
+          </span>
+        </ng-container>
+        <span class="text-muted" *ngIf="seleccionadosLocales.length === 0">
+          No hay expedientes seleccionados (selección opcional).
+        </span>
+      </div>
+      <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+        <button type="button"
+                class="btn btn-link text-danger btn-sm mr-2"
+                *ngIf="seleccionadosLocales.length > 0"
+                (click)="limpiarSeleccion()">
+          Limpiar
+        </button>
+        <button type="button"
+                class="btn btn-primary"
+                (click)="confirmar()">
+          <i class="material-icons mr-1" style="font-size: 16px; vertical-align: middle;">check</i>
+          Confirmar selección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
