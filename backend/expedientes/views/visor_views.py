@@ -50,14 +50,14 @@ class ExpedienteVisorView(APIView):
         user = request.user
         socio = getattr(user, "socio", None)
         legajo = str(socio.legajo) if socio and socio.legajo else ""
-        nombre = f"{user.first_name} {user.last_name}".strip() or user.username
-        rol = getattr(user, "role", "SOCIO")
+        rol = str(socio.role) if socio and socio.role else ("ADMIN" if user.is_staff else "USUARIO")
+        user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
 
         AuditoriaConsultaExpediente.objects.create(
             expediente=expediente,
-            user=user,
+            usuario=user.username or legajo or str(user),
             legajo=legajo,
-            nombre=nombre,
             rol=rol,
             ip_address=ip_address,
+            user_agent=user_agent,
         )

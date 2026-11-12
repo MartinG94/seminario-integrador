@@ -205,4 +205,3 @@ class TestDeadlineEnforcementService:
         data = response.json()
         item = next(x for x in data if x["numero"] == "EXP-106/2026")
         assert item["estado"] == "revision_resolucion"
-
