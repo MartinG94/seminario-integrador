@@ -1271,56 +1271,67 @@
           </ul>
         </div>
 
-        <!-- Sección unificada de Evaluación de Puntaje Final y Fundamento (T02 y T03) -->
+        <!-- Sección unificada de Evaluación de Puntaje Final y Fundamento -->
         <div class="p-3 bg-light rounded border mt-3 seccion-evaluacion-descargo">
           <h6 class="font-weight-bold text-dark mb-3">
             <i class="material-icons text-primary mr-1" style="vertical-align: middle; font-size: 18px;">tune</i>
             Evaluación y Puntaje Final
           </h6>
 
-          <div class="row align-items-center mb-3">
-            <div class="col-md-3 col-sm-4">
-              <label class="font-weight-bold text-dark mb-0" for="opcionPuntajeFinal">Puntaje Final:</label>
-            </div>
-            <div class="col-md-5 col-sm-5">
-              <div class="input-group input-group-stepper">
-                <div class="input-group-prepend">
-                  <button type="button" 
-                          class="btn btn-sm btn-outline-secondary btn-stepper-dec m-0" 
-                          (click)="decrementarPuntaje()" 
-                          [disabled]="!puedeModificarPuntaje"
-                          title="Disminuir puntaje">
-                    <i class="material-icons" style="font-size: 14px;">remove</i>
-                  </button>
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3 puntaje-final-row">
+            <div class="d-flex flex-wrap align-items-center puntaje-controls-wrapper">
+              <label class="font-weight-bold text-dark mb-0 mr-3" for="opcionPuntajeFinal">Puntaje Final:</label>
+
+              <div class="puntaje-controls-group">
+                <div class="input-group-stepper-vertical">
+                  <select id="opcionPuntajeFinal" 
+                          class="form-control font-weight-bold select-puntaje-escala" 
+                          [(ngModel)]="opcionPuntajeFinal"
+                          (ngModelChange)="onOpcionPuntajeFinalChange($event)"
+                          [disabled]="!puedeModificarPuntaje">
+                    <option *ngFor="let op of escalaPuntajes" [value]="op.valor">
+                      {{op.label}}
+                    </option>
+                  </select>
+                  <div class="stepper-vertical-buttons">
+                    <button type="button" 
+                            class="btn-stepper-inc btn-stepper-up" 
+                            (click)="incrementarPuntaje()" 
+                            [disabled]="!puedeModificarPuntaje"
+                            title="Aumentar puntaje (+)"
+                            aria-label="Aumentar puntaje">
+                      <i class="material-icons" aria-hidden="true">keyboard_arrow_up</i>
+                    </button>
+                    <button type="button" 
+                            class="btn-stepper-dec btn-stepper-down" 
+                            (click)="decrementarPuntaje()" 
+                            [disabled]="!puedeModificarPuntaje"
+                            title="Disminuir puntaje (-)"
+                            aria-label="Disminuir puntaje">
+                      <i class="material-icons" aria-hidden="true">keyboard_arrow_down</i>
+                    </button>
+                  </div>
                 </div>
-                <select id="opcionPuntajeFinal" 
-                        class="form-control text-center font-weight-bold select-puntaje-escala" 
-                        [(ngModel)]="opcionPuntajeFinal"
-                        [disabled]="!puedeModificarPuntaje">
-                  <option *ngFor="let op of escalaPuntajes" [value]="op.valor">
-                    {{op.label}}
-                  </option>
-                </select>
-                <div class="input-group-append">
-                  <button type="button" 
-                          class="btn btn-sm btn-outline-secondary btn-stepper-inc m-0" 
-                          (click)="incrementarPuntaje()" 
-                          [disabled]="!puedeModificarPuntaje"
-                          title="Aumentar puntaje">
-                    <i class="material-icons" style="font-size: 14px;">add</i>
-                  </button>
-                </div>
+
+                <!-- Botón rápido para fijar en 0.0 pts (Eximición) -->
+                <button type="button"
+                        class="btn-fijar-cero"
+                        (click)="fijarPuntajeCero()"
+                        [disabled]="!puedeModificarPuntaje || opcionPuntajeFinal === '0.0'"
+                        title="Fijar puntaje en 0.0 (Eximición)"
+                        aria-label="Fijar puntaje en 0 puntos">
+                  0 pts
+                </button>
+
+                <span class="badge-categoria-puntaje" [ngClass]="getOpcionPuntajeActual().badgeClass">
+                  {{getCategoriaPuntajeLabel()}}
+                </span>
               </div>
             </div>
-            <div class="col-md-4 col-sm-3 d-flex align-items-center">
-              <span class="badge" [ngClass]="getOpcionPuntajeActual().badgeClass">
-                {{getOpcionPuntajeActual().label}}
-              </span>
-            </div>
-          </div>
 
-          <div class="mb-3 text-muted small">
-            Puntaje solicitado: <strong class="text-dark">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</strong>
+            <div class="text-muted small mt-2 mt-md-0 puntaje-solicitado-ref">
+              Puntaje solicitado: <strong class="text-dark tabular-nums">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</strong>
+            </div>
           </div>
 
           <!-- Selector de Expedientes Antecedentes -->
@@ -1401,7 +1412,7 @@
   (cerrar)="cerrarModalExpedientesResolucion()">
 </app-modal-selector-expedientes>
 
-<!-- Modal Selector de Expedientes para Descargo (Antecedentes T03) -->
+<!-- Modal Selector de Expedientes para Descargo (Antecedentes) -->
 <app-modal-selector-expedientes
   [abierto]="modalExpedientesDescargoAbierto"
   tituloModal="Seleccionar Expediente(s) Antecedente(s)"

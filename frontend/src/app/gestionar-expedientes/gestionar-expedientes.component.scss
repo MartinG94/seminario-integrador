@@ -582,6 +582,169 @@ body.dark-edition,
 }
 
 // Estilos del stepper de escala discreta de puntaje
+.puntaje-controls-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.input-group-stepper-vertical {
+  display: inline-flex;
+  align-items: stretch;
+  height: 40px;
+  border: 1px solid var(--color-border-main, #D1D5DB);
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--color-border-focus, #6E9DDC);
+    box-shadow: 0 0 0 3px rgba(110, 157, 220, 0.25);
+  }
+
+  .select-puntaje-escala {
+    appearance: menulist;
+    -webkit-appearance: menulist;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 0 10px 0 12px;
+    margin: 0;
+    height: 100%;
+    min-width: 175px;
+    color: var(--color-text-primary, #151846);
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      box-shadow: none !important;
+    }
+
+    &:disabled {
+      background-color: #F8FAFC !important;
+      color: #64748B;
+      cursor: not-allowed;
+    }
+  }
+
+  .stepper-vertical-buttons {
+    display: flex;
+    flex-direction: column;
+    width: 32px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--color-border-main, #D1D5DB);
+
+    .btn-stepper-up,
+    .btn-stepper-down {
+      flex: 1 1 50%;
+      height: 50%;
+      padding: 0;
+      margin: 0;
+      border: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+
+      i.material-icons {
+        font-size: 16px;
+        line-height: 1;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary, #151846);
+        outline-offset: -2px;
+      }
+
+      &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+    }
+
+    .btn-stepper-up {
+      border-bottom: 1px solid #E2E8F0;
+      background-color: #F0FDF4;
+      color: var(--color-success, #15803D);
+
+      &:hover:not(:disabled) {
+        background-color: #DCFCE7;
+        color: #166534;
+      }
+    }
+
+    .btn-stepper-down {
+      background-color: #FEF2F2;
+      color: var(--color-danger, #B91C1C);
+
+      &:hover:not(:disabled) {
+        background-color: #FEE2E2;
+        color: #991B1B;
+      }
+    }
+  }
+}
+
+.btn-fijar-cero {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-main, #D1D5DB);
+  background-color: #FFFFFF;
+  color: var(--color-text-primary, #151846);
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #F1F5F9;
+    border-color: #94A3B8;
+    color: #0F172A;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus, #6E9DDC);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    border-color: #E2E8F0;
+    color: #94A3B8;
+    background-color: #F8FAFC;
+  }
+}
+
+.badge-categoria-puntaje {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 .input-group-stepper {
   display: flex;
   align-items: stretch;
@@ -624,32 +787,26 @@ body.dark-edition,
   }
 }
 
-// Badges semánticos para escala de puntajes
+// Badges semánticos para escala de puntajes (WCAG 2.2 AA / DESIGN.md)
 .badge-sancion {
   background-color: #FEE2E2;
-  color: #DC2626;
+  color: var(--color-danger, #B91C1C);
   border: 1px solid #FCA5A5;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
 }
 
 .badge-advertencia {
   background-color: #FEF3C7;
-  color: #D97706;
+  color: var(--color-warning, #92400E);
   border: 1px solid #FCD34D;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
 }
 
 .badge-neutro {
   background-color: #E2E8F0;
-  color: #475569;
+  color: var(--color-text-secondary, #334155);
   border: 1px solid #CBD5E1;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
 }
 
 .badge-felicitacion {
@@ -657,17 +814,13 @@ body.dark-edition,
   color: #4338CA;
   border: 1px solid #A5B4FC;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
 }
 
 .badge-premio {
   background-color: #DCFCE7;
-  color: #16A34A;
+  color: var(--color-success, #15803D);
   border: 1px solid #86EFAC;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
 }
 
 

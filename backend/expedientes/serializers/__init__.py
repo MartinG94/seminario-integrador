@@ -665,7 +665,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         for d in descargos_list:
             evs = current_evidence_for(d, evidencias)
             decisiones_qs = list(d.decisiones_causal.all())
-            leido = bool(decisiones_qs)
+            valoraciones_qs = (
+                list(d.valoraciones_t03.all()) if hasattr(d, "valoraciones_t03") else []
+            )
+            leido = bool(decisiones_qs) or bool(valoraciones_qs)
             puntaje_ratificado = None
             if decisiones_qs:
                 primera = decisiones_qs[0]
@@ -675,6 +678,17 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 elif primera.decision == DecisionCausalEnum.ACCEPTED:
                     puntaje_ratificado = 0
                 elif primera.decision == DecisionCausalEnum.REJECTED:
+                    puntaje_ratificado = float(obj.puntos) if obj.puntos is not None else 0.0
+            elif valoraciones_qs:
+                primera_v = valoraciones_qs[0]
+                if primera_v.puntaje_final is not None:
+                    try:
+                        puntaje_ratificado = float(primera_v.puntaje_final)
+                    except (ValueError, TypeError):
+                        puntaje_ratificado = primera_v.puntaje_final
+                elif primera_v.resultado == "ACCEPTED":
+                    puntaje_ratificado = 0
+                elif primera_v.resultado == "REJECTED":
                     puntaje_ratificado = float(obj.puntos) if obj.puntos is not None else 0.0
 
             item = {

@@ -21,12 +21,12 @@ El modelo ha sido diseñado bajo las reglas del paradigma orientado a objetos co
 
 | Patrón ASI Canónico | Clases Participantes | Justificación y Regla de Negocio Soportada |
 | :--- | :--- | :--- |
-| **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioT02`<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, categorías Pasivos vs Activos con sus prerrogativas estatutarias) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
+| **1. Ítem - Descriptor de Ítem**<br>*(Item - Item Descriptor)* | • `CategoriaSocio` (1) $\leftarrow$ (*) `Socio`<br>• `TipificacionFaltaMerito` (1) $\leftarrow$ (*) `SolicitudT01` / `DetalleImputacion`<br>• `TipoCausalJustificacion` (1) $\leftarrow$ (*) `FormularioJustificacion` (Descargo Tipificado)<br>• `Subcomision` (1) $\leftarrow$ (*) `MembresiaSubcomision` | Desacopla la caracterización estática, normativa y de catálogo (escalas de puntos, causales tipificadas de justificación médica/académica, categorías Pasivos vs Activos con sus prerrogativas estatutarias) de las instancias transaccionales u operativas concretas, garantizando coherencia con el Reglamento Procesal 2026 y la Circular 001/2026 (`RN-08`, `RN-10`). |
 | **2. Encabezado - Detalle**<br>*(Master - Detail)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `DetalleImputacion` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `DetalleResolucionSocio` (*) $\rightarrow$ (1) `Socio`<br>• `ResolucionDisciplinaria` (1) *-- (1..*) `FirmaColegiada` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `ExpedienteDisciplinario` (1) *-- (0..*) `VotoNominal` (*) $\rightarrow$ (1) `MiembroTribunal`<br>• `FormularioJustificacion` (1) *-- (0..*) `ComprobanteAdjunto` | Modela la composición atómica de transacciones complejas: un expediente puede imputar a múltiples socios por un mismo hecho; la resolución dictamina los puntos definitivos individuales de cada socio involucrado; y se registra la deliberación nominal individual y la firma colegiada indelegable exigida por estatuto (`RN-04`, `RN-06`, `RN-08`). |
 | **3. Historial de Estados con Vigencia Temporal**<br>*(`[fechaHoraDesde, fechaHoraHasta]`)* | • `ExpedienteDisciplinario` (1) *-- (1..*) `CambioEstadoExpediente` (*) $\rightarrow$ (1) `EstadoExpediente`<br>• `Socio` (1) *-- (1..*) `CambioEstadoSocio` (*) $\rightarrow$ (1) `EstadoSocio` | Otorga auditoría cronológica absoluta y trazabilidad inalterable con intervalos de vigencia temporal (`fechaHoraDesde` y `fechaHoraHasta = null` para el estado actual vigente). Soporta los seis (6) estados oficiales del expediente (Art. 12 del Reglamento 2026) y el ciclo de vida del socio (Activo, Alerta Amarilla 7 pts, Pérdida Automática de Condición 10 pts) (`RN-01`, `RN-02`, `RN-03`, `RN-06`, `RN-11`). |
 | **4. Rol / Tipo de Rol**<br>*(Party - Role)* | • `Socio` (1) *-- (1..*) `RolInstitucional`<br>$\ll$abstract$\gg$ `RolInstitucional` $\leftarrow$ `MiembroTribunal`, `MiembroComisionDirectiva`, `MiembroComisionFiscalizadora`, `MiembroComisionRevisora`, `JefeEquipo` | Permite que un mismo socio físico desempeñe diferentes roles institucionales simultáneamente o en diferentes mandatos sin duplicar su identidad ni generar herencia múltiple. Facilita la validación estricta de competencias para solicitar expedientes (Arts. 21 a 26) y la detección de incompatibilidades/inhibiciones (`RN-05`, `RN-07`, `RN-10`). |
 | **5. Clase de Asociación / Reificación** | • `Socio` (1) $\leftarrow$ (*) `MembresiaSubcomision` (*) $\rightarrow$ (1) `Subcomision`<br>• `ResolucionDisciplinaria` (1) $\leftarrow$ (*) `MovimientoPuntos` (*) $\rightarrow$ (1) `Socio` | Captura los atributos propios de la relación entre un socio y una subcomisión (cargo, período de vigencia) y reifica la transacción del libro mayor de puntos inmutable entre la resolución emitida y el socio afectado (`RN-07`, `RN-11`). |
-| **6. Transacciones Subsiguientes**<br>*(Temporal Business Flow)* | `SolicitudT01` (1) $\rightarrow$ (1) `ExpedienteDisciplinario` (1) $\rightarrow$ (0..*) `NotificacionAcuseSancion` (1) $\rightarrow$ (0..1) `FormularioJustificacion` (`T02`/`T03`) $\rightarrow$ (1) `ResolucionDisciplinaria` (1) $\rightarrow$ (1..*) `MovimientoPuntos` | Representa la secuencia temporal y formal del debido proceso asociativo: desde la detección/solicitud formal, notificación fehaciente con plazo perentorio de 5 días hábiles, presentación de descargos probatorios, deliberación/dictamen formal colegiado, hasta el impacto transaccional inmutable en el saldo neto del socio (`RN-03`, `RN-04`, `RN-06`, `RN-11`). |
+| **6. Transacciones Subsiguientes**<br>*(Temporal Business Flow)* | `SolicitudT01` (1) $\rightarrow$ (1) `ExpedienteDisciplinario` (1) $\rightarrow$ (0..*) `NotificacionAcuseSancion` (1) $\rightarrow$ (0..1) `FormularioJustificacion` *(Descargo Tipificado / Otros)* $\rightarrow$ (1) `ResolucionDisciplinaria` (1) $\rightarrow$ (1..*) `MovimientoPuntos` | Representa la secuencia temporal y formal del debido proceso asociativo: desde la detección/solicitud formal, notificación fehaciente con plazo perentorio de 5 días hábiles, presentación de descargos probatorios, deliberación/dictamen formal colegiado, hasta el impacto transaccional inmutable en el saldo neto del socio (`RN-03`, `RN-04`, `RN-06`, `RN-11`). |
 | **7. Contenedor - Contenido / Agregación** | `BalanceCuatrimestral` (1) *-- (1..*) `DetalleBalanceSubcomision` (*) $\rightarrow$ (1) `Subcomision` | Modela la estructura consolidada de auditoría interna cuatrimestral exigida por el Art. 137 del Reglamento Interno de Disciplina de AVEIT, desglosando métricas cuantitativas por subcomisión y grupo social (`RN-09`). |
 
 ---
@@ -1050,27 +1050,28 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 
 ---
 
-### 4.15. Ficha Técnica: `FormularioJustificacion` (y Subclases `FormularioT02` / `FormularioT03`)
-* **Patrón ASI:** Transacción de Descargos / Polimorfismo de Formularios.
-* **Propósito:** Clase abstracta y especializaciones para la presentación digital de descargos por parte del socio imputado dentro del plazo de 5 días hábiles.
-* **Subclases:**
-  1. `FormularioT02` (Justificación Tipificada - Art. 17): Vinculada a una `TipoCausalJustificacion` estandarizada.
-  2. `FormularioT03` (Descargo Extraordinario - Art. 18): Para circunstancias especiales no tipificadas, fundamentadas bajo sana crítica.
+### 4.15. Ficha Técnica: `FormularioJustificacion` (Descargo Unificado: Tipificado vs "Otros")
+* **Patrón ASI:** Transacción de Descargos / Entidad Unificada de Justificación.
+* **Propósito:** Entidad canónica unificada para la presentación digital de descargos por parte del socio imputado dentro del plazo preclusivo de 5 días hábiles, superando la división histórica entre formularios T02 y T03.
+* **Modalidades de Descargo:**
+  1. `TIPIFICADO` (Justificación con Causal Reglamentaria): Vinculada a una `TipoCausalJustificacion` estandarizada con presentación obligatoria de certificado médico, académico o laboral.
+  2. `OTROS` (Descargo Circunstanciado): Para hechos, motivos o situaciones no tipificadas, fundamentadas bajo la sana crítica del Tribunal y con aportes probatorios opcionales.
 * **Atributos Comunes:**
   | Atributo | Tipo | Descripción | Restricciones / Reglas |
   | :--- | :--- | :--- | :--- |
   | `numeroFormulario` | `Integer` | Número identificador del descargo presentado. | Único, Autoincremental. |
+  | `tipoModalidad` | `String` | Modalidad del descargo (`TIPIFICADO` o `OTROS`). | Valor de catálogo (`T02_CERTIFICADO` / `T03_EXTRAORDINARIO` en BD). |
   | `fechaHoraPresentacion` | `DateTime` | Momento de registro digital por el socio. | $\le$ `fechaHoraLimiteDescargo` (`RN-03`). |
-  | `observaciones` | `String` | Explicaciones y alegatos del socio. | No Nulo. |
-  | `dictamenTD` | `String` | Resolución del TD sobre la admisibilidad ("Pendiente", "Aprobada", "Rechazada", "Parcialmente Aprobada"). | Valor de catálogo. |
-  | `fundamentacionDictamen` | `String` | Argumentos reglamentarios del TD para avalar o desestimar el descargo. | No Nulo al dictaminar. |
+  | `observaciones` | `String` | Explicaciones y alegatos circunstanciados del socio. | No Nulo en modalidad OTROS. |
+  | `dictamenTD` | `String` | Decisión del Tribunal sobre la admisibilidad ("ACCEPTED", "REJECTED", o graduación). | Valor de catálogo. |
+  | `fundamentacionDictamen` | `String` | Fundamentación reglamentaria trazable del Tribunal al evaluar el descargo. | Obligatorio al modificar/reducir puntaje. |
 * **Métodos Conceptuales:**
   - `esPresentadoEnTermino(fechaLimite): Boolean`: Evalúa si `fechaHoraPresentacion` $\le$ `fechaLimite` (`RN-03`).
 * **Relaciones:**
   - `recepciona` $\leftarrow$ `ExpedienteDisciplinario` (0..* a 1 - Composición).
   - `presentado por` $\rightarrow$ `Socio` (0..* a 1).
   - `adjunta` *-- `ComprobanteAdjunto` (1 a 0..* - Composición).
-  - `causal` $\leftarrow$ `TipoCausalJustificacion` (0..* a 1 - en `FormularioT02`).
+  - `causal` $\leftarrow$ `TipoCausalJustificacion` (0..* a 1 - aplicable en modalidad Tipificado).
 
 ---
 
@@ -1085,7 +1086,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
   | `requiereComprobanteObligatorio` | `Boolean` | Exigencia de adjuntar archivo probatorio (PDF/JPG). | `true` para enfermedad/viaje. |
   | `articuloReglamentario` | `String` | Artículo del Reglamento Interno de Disciplina de AVEIT de respaldo. | No Nulo. |
 * **Relaciones:**
-  - `causal` $\rightarrow$ `FormularioT02` (1 a 0..*).
+  - `causal` $\rightarrow$ `FormularioJustificacion` [Tipificado] (1 a 0..*).
 
 ---
 
@@ -1248,7 +1249,7 @@ A continuación se presentan las **Fichas Técnicas Formales** de cada una de la
 | :--- | :--- | :--- |
 | **`RN-01` (Art. 93 Reglamento Interno)** | Pérdida Automática de Condición de Socio al acumular $\ge 10$ puntos negativos. | • `Socio.tieneAlertaRoja()`<br>• `Socio.cambiarEstado(EstadoSocio='Perdida Automatica Condicion de Socio')`<br>• `BalanceCuatrimestral.cantidadSociosAlertaRoja` |
 | **`RN-02` (Reglamento Interno)** | Alerta Preventiva Temprana al acumular $\ge 7$ y $< 10$ puntos negativos. | • `Socio.tieneAlertaAmarilla()`<br>• `CambioEstadoSocio` / `EstadoSocio`<br>• `BalanceCuatrimestral.cantidadSociosAlertaAmarilla` |
-| **`RN-03` (Art. 12 Inc. 2 Reglamento 2026)** | Plazo Preclusivo fatal de 5 días hábiles para presentar descargos (T02/T03). | • `ExpedienteDisciplinario.calcularPlazoPreclusivo()`<br>• `ExpedienteDisciplinario.estaEnPlazoDescargo()`<br>• `NotificacionAcuseSancion.fechaHoraLimiteDescargo`<br>• `FormularioJustificacion.esPresentadoEnTermino()` |
+| **`RN-03` (Art. 12 Inc. 2 Reglamento 2026)** | Plazo Preclusivo fatal de 5 días hábiles para presentar descargos (Tipificados u Otros). | • `ExpedienteDisciplinario.calcularPlazoPreclusivo()`<br>• `ExpedienteDisciplinario.estaEnPlazoDescargo()`<br>• `NotificacionAcuseSancion.fechaHoraLimiteDescargo`<br>• `FormularioJustificacion.esPresentadoEnTermino()` |
 | **`RN-04` (Art. 96 Estatuto Social)** | Mayoría absoluta reglamentaria ($\ge 2$ votos) e irrecurribilidad en fallos del TD. | • `ExpedienteDisciplinario.tieneQuorumVotacion()`<br>• `ExpedienteDisciplinario.calcularMayoriaVotacion()`<br>• `VotoNominal.esAfirmativo()` |
 | **`RN-05` (Art. 95 Estatuto / Art. 24)** | Inhibición obligatoria de miembro del TD con conflicto de interés o promotor de la acción. | • `VotoNominal.esInhibicion()`<br>• `MiembroTribunal`<br>• `RolInstitucional.validarCompetenciaAccion()` |
 | **`RN-06` (Art. 12 Inc. 5 Reglamento 2026)** | Firma Colegiada digital de Socios Activos previa a la emisión del fallo. | • `FirmaColegiada`<br>• `MiembroTribunal.esCategoriaActivaHabilitadaFirma()`<br>• `ResolucionDisciplinaria.estaCompletamenteFirmada()` |

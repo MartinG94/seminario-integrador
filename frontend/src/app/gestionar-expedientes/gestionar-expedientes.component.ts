@@ -1947,6 +1947,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     };
   }
 
+  getCategoriaPuntajeLabel(): string {
+    const actual = this.getOpcionPuntajeActual();
+    if (actual.valor === 'LLAMADO_ATENCION') return 'Apercibimiento';
+    if (actual.valor === 'FELICITACION') return 'Reconocimiento';
+    if (actual.rank === 0) return 'Eximición';
+    return actual.rank < 0 ? 'Sanción' : 'Mérito';
+  }
+
   getPuntajeSolicitadoDisplay(exp: Expediente | null | undefined): string {
     if (!exp) return '0 pts';
     if (exp.puntaje_solicitado === 'LLAMADO_ATENCION' || exp.puntos === -0.25) {
@@ -1959,11 +1967,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return `${p > 0 ? '+' : ''}${p} pts`;
   }
 
+  onOpcionPuntajeFinalChange(valor: string): void {
+    this.opcionPuntajeFinal = valor;
+    this.puntajeFinalInput = this.getOpcionPuntajeActual().rank;
+  }
+
+  fijarPuntajeCero(): void {
+    if (!this.puedeModificarPuntaje) return;
+    this.onOpcionPuntajeFinalChange('0.0');
+  }
+
   decrementarPuntaje(): void {
     if (!this.puedeModificarPuntaje) return;
     const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
     if (idx > 0) {
-      this.opcionPuntajeFinal = this.escalaPuntajes[idx - 1].valor;
+      this.onOpcionPuntajeFinalChange(this.escalaPuntajes[idx - 1].valor);
     }
   }
 
@@ -1971,7 +1989,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!this.puedeModificarPuntaje) return;
     const idx = this.escalaPuntajes.findIndex(op => op.valor === this.opcionPuntajeFinal);
     if (idx !== -1 && idx < this.escalaPuntajes.length - 1) {
-      this.opcionPuntajeFinal = this.escalaPuntajes[idx + 1].valor;
+      this.onOpcionPuntajeFinalChange(this.escalaPuntajes[idx + 1].valor);
     }
   }
 
@@ -2127,19 +2145,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!exp || !descargo || this.guardandoDescargo) return;
 
     const pedido = Number(exp.puntos ?? 0);
-    let actual = this.getOpcionPuntajeActual();
-    if (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank &&
-        actual.valor !== 'LLAMADO_ATENCION' && actual.valor !== 'FELICITACION') {
-      const match = this.escalaPuntajes.find(op => Number(op.valor) === Number(this.puntajeFinalInput));
-      if (match) {
-        this.opcionPuntajeFinal = match.valor;
-        actual = match;
-      }
-    }
+    const actual = this.getOpcionPuntajeActual();
     const puntajeFinalPayload: string | number =
       actual.valor === 'LLAMADO_ATENCION' || actual.valor === 'FELICITACION'
         ? actual.valor
-        : (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank ? Number(this.puntajeFinalInput) : Number(actual.valor));
+        : (this.puntajeFinalInput !== null && Number(this.puntajeFinalInput) !== actual.rank
+            ? Number(this.puntajeFinalInput)
+            : Number(actual.valor));
 
     const fundamento = (this.fundamentoPuntajeInput || '').trim();
 

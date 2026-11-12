@@ -2176,6 +2176,85 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.opcionPuntajeFinal).toBe('0.0');
     });
 
+    it('fijarPuntajeCero establece la escala en 0.0 pts (Eximición) y sincroniza puntajeFinalInput', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      component.opcionPuntajeFinal = '-1.5';
+      component.puntajeFinalInput = -1.5;
+
+      component.fijarPuntajeCero();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+      expect(component.puntajeFinalInput).toBe(0);
+    });
+
+    it('fijarPuntajeCero no opera si el expediente no permite modificar puntaje', () => {
+      component.expedienteSeleccionado = expEnTramite;
+      component.opcionPuntajeFinal = '-1.5';
+      component.puntajeFinalInput = -1.5;
+
+      component.fijarPuntajeCero();
+      expect(component.opcionPuntajeFinal).toBe('-1.5');
+      expect(component.puntajeFinalInput).toBe(-1.5);
+    });
+
+    it('guarda el puntaje seleccionado sin revertir al valor previo al evaluar un descargo', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      const fila = {
+        socioId: 87414,
+        legajo: '87414',
+        nombre: 'Diego',
+        apellido: 'Sánchez',
+        grupo: '59',
+        descargo: {
+          id: 7,
+          socio_id: 87414,
+          socio_legajo: '87414',
+          tipo: 'T02_CERTIFICADO',
+          causal: 'Compromiso Laboral Comprobable',
+          texto: 'Presento certificado',
+          presentado_at: '2026-03-01',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: []
+        }
+      } as any;
+      component.verDescargo(fila);
+      expect(component.opcionPuntajeFinal).toBe('-1.0');
+
+      // Usuario selecciona 0.0 con el botón fijar o dropdown
+      component.fijarPuntajeCero();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+
+      spyOn(expedienteApi, 'registrarDecisionCausal').and.returnValue(of({ id: 101, version: 1 } as any));
+      component.guardarYVolverDescargo();
+
+      expect(expedienteApi.registrarDecisionCausal).toHaveBeenCalledWith(
+        '12',
+        7,
+        jasmine.objectContaining({
+          puntaje_final: 0
+        })
+      );
+      expect(fila.descargo.puntaje_ratificado).toBe(0);
+      expect(fila.descargo.leido).toBeTrue();
+    });
+
+    it('getCategoriaPuntajeLabel devuelve la categoría semántica sin duplicar el valor numérico', () => {
+      component.opcionPuntajeFinal = '-1.5';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Sanción');
+
+      component.opcionPuntajeFinal = 'LLAMADO_ATENCION';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Apercibimiento');
+
+      component.opcionPuntajeFinal = '0.0';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Eximición');
+
+      component.opcionPuntajeFinal = 'FELICITACION';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Reconocimiento');
+
+      component.opcionPuntajeFinal = '1.5';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Mérito');
+    });
+
     it('getTipoDescargoDisplay muestra la causal tipificada como tipo principal', () => {
       const descT02 = {
         id: 1,
