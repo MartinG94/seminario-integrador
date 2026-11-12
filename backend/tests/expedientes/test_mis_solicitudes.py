@@ -10,6 +10,7 @@ Cubre:
 - Vinculación: Creación atómica del Expediente formal al emitir.
 """
 
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -75,7 +76,7 @@ def test_emitir_t01_crea_y_vincula_expediente(make_socio, authenticate, mock_pad
     assert solicitud.estado == SolicitudT01.Estado.ISSUED
     assert solicitud.expediente is not None
     assert solicitud.expediente.estado == EstadoExpedienteEnum.CREADO
-    assert solicitud.expediente.numero.startswith("EXP-")
+    assert re.fullmatch(r"\d+/\d{4}", solicitud.expediente.numero)
     assert solicitud.expediente.socios.filter(pk=imputado.id).exists()
 
 

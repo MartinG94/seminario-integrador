@@ -309,7 +309,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.expedienteApi.emitir(solicitud.id).subscribe({
       next: emitida => {
         this.aplicarSolicitud(emitida);
-        this.notifications.success(`Expediente creado: ${emitida.numero_expediente}.`);
+        this.notifications.success(`Exp ${this.formatCaseNumber(emitida.numero_expediente)}.`);
         this.cargando = false;
         this.cargarMisSolicitudes();
       },
@@ -600,9 +600,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       let valB: any;
       switch (this.columnaOrden) {
         case 'numero':
-          valA = a.numero_expediente ? this.formatCaseNumber(a.numero_expediente) : (a.numero || '');
-          valB = b.numero_expediente ? this.formatCaseNumber(b.numero_expediente) : (b.numero || '');
-          break;
+          return this.compararNumerosExpediente(a.numero_expediente, b.numero_expediente);
         case 'titulo':
           valA = a.titulo || a.motivo || '';
           valB = b.titulo || b.motivo || '';
@@ -862,5 +860,26 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   formatCaseNumber(numero: string | null | undefined): string {
     return formatCaseNumber(numero);
+  }
+
+  numeroExpedienteVisible(numero: string | null | undefined): string {
+    return numero ? `Exp ${this.formatCaseNumber(numero)}` : 'Borrador sin número';
+  }
+
+  private compararNumerosExpediente(
+    numeroA: string | null | undefined,
+    numeroB: string | null | undefined
+  ): number {
+    const parse = (numero: string | null | undefined): [number, number] | null => {
+      const match = /^(?:EXP-)?0*(\d+)\/(\d{4})$/i.exec((numero || '').trim());
+      return match ? [Number(match[2]), Number(match[1])] : null;
+    };
+    const a = parse(numeroA);
+    const b = parse(numeroB);
+    if (!a && !b) return 0;
+    if (!a) return this.ordenAscendente ? 1 : -1;
+    if (!b) return this.ordenAscendente ? -1 : 1;
+    const comparison = a[0] - b[0] || a[1] - b[1];
+    return this.ordenAscendente ? comparison : -comparison;
   }
 }

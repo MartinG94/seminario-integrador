@@ -81,7 +81,7 @@ describe('SolicitarPuntosComponent', () => {
     {
       id: 'issued-2',
       numero: 'T01-002',
-      numero_expediente: 'EXP-002',
+      numero_expediente: '2/2026',
       fecha: '2026-03-02T12:00:00Z',
       estado: 'ISSUED',
       tipo_accion: 'MERIT',
@@ -146,7 +146,7 @@ describe('SolicitarPuntosComponent', () => {
     expediente.crearBorrador.and.returnValue(of(draft));
     expediente.actualizarBorrador.and.returnValue(of(draft));
     expediente.emitir.and.returnValue(
-      of({ ...draft, estado: 'ISSUED', numero_expediente: 'T01-2026-1', issued_at: '2026-01-01' })
+      of({ ...draft, estado: 'ISSUED', numero_expediente: '1/2026', issued_at: '2026-01-01' })
     );
     expediente.listarReglamentos.and.returnValue(of({ reglamentos: ['Estatuto AVEIT Reforma 2026'] }));
     expediente.listarMisSolicitudes.and.returnValue(of(mockSolicitudes));
@@ -271,7 +271,7 @@ describe('SolicitarPuntosComponent', () => {
   it('retoma un borrador urgente y lo emite conservando su urgencia y bloqueando el selector', fakeAsync(() => {
     spyOn(window, 'scrollTo');
     expediente.actualizarBorrador.and.returnValue(of({ ...draft, urgencia: 'urgente' as const }));
-    expediente.emitir.and.returnValue(of({ ...draft, urgencia: 'urgente' as const, estado: 'ISSUED', numero_expediente: 'T01-2026-1' }));
+    expediente.emitir.and.returnValue(of({ ...draft, urgencia: 'urgente' as const, estado: 'ISSUED', numero_expediente: '1/2026' }));
     component.continuarEdicion({ ...mockSolicitudes[0], urgencia: 'urgente' });
     fixture.detectChanges();
     tick();
@@ -309,17 +309,38 @@ describe('SolicitarPuntosComponent', () => {
     expect(urgencyOption('urgente').matches(':disabled')).toBeFalse();
   }));
 
+  it('muestra inmediatamente el número canónico devuelto al guardar', fakeAsync(() => {
+    const numberedDraft = { ...draft, numero_expediente: null };
+    expediente.crearBorrador.and.returnValue(of(numberedDraft));
+    component.guardarBorrador();
+    fixture.detectChanges();
+    tick();
+    expect(component.numeroExpediente).toBeNull();
+    expect(notifications.success).toHaveBeenCalledWith('Borrador guardado.');
+    expect(fixture.nativeElement.textContent).toContain('Borrador sin número');
+  }));
+
   it('conserva la opción de puntos al recibir decimales serializados por Django', async () => {
     await fixture.whenStable();
     expediente.crearBorrador.and.returnValue(of({ ...draft, puntos: '-1.00' }));
     component.guardarBorrador();
     fixture.detectChanges();
     await fixture.whenStable();
-    const selects: HTMLSelectElement[] = Array.from(fixture.nativeElement.querySelectorAll('select'));
-    const pointsSelect = selects.find(select => Array.from(select.options).some(option => option.textContent?.includes('Falta Media')));
-    expect(pointsSelect?.selectedOptions[0]?.textContent?.trim()).toBe('-1.0 pts: Falta Media');
+    expect(component.puntosSeleccionados).toBe(-1);
+    expect(component.puntosTexto).toBe('-1.0 pts');
     component.guardarBorrador();
     expect(expediente.actualizarBorrador).toHaveBeenCalledWith('draft-1', jasmine.objectContaining({ puntos: -1 }));
+  });
+
+  it('normaliza decimales REST al mismo paso de puntaje al recuperar un borrador', () => {
+    const cases: Array<[number | string, number]> = [
+      [-1, -1], ['-1.00', -1], [-0.25, -0.25], ['0.25', 0.25],
+      [1.5, 1.5], ['1.50', 1.5],
+    ];
+    for (const [received, expected] of cases) {
+      component.continuarEdicion({ ...mockSolicitudes[0], puntos: received as number });
+      expect(component.puntosSeleccionados).toBe(expected);
+    }
   });
 
   it('muestra la columna Grupo y los grupos de los socios seleccionados en la tabla', () => {
@@ -395,8 +416,8 @@ describe('SolicitarPuntosComponent', () => {
     component.emitirT01();
     expect(expediente.emitir).toHaveBeenCalledWith('draft-1');
     expect(component.estado).toBe('ISSUED');
-    expect(component.numeroExpediente).toBe('T01-2026-1');
-    expect(notifications.success).toHaveBeenCalledWith('Expediente creado: T01-2026-1.');
+    expect(component.numeroExpediente).toBe('1/2026');
+    expect(notifications.success).toHaveBeenCalledWith('Exp 1/2026.');
   });
 
   it('valida que se seleccione como mínimo un artículo de algún reglamento antes de emitir', () => {
@@ -694,6 +715,19 @@ describe('SolicitarPuntosComponent', () => {
       component.ordenAscendente = false;
       ordenadas = component.misSolicitudesOrdenadas;
       expect(ordenadas[0].urgencia).toBe('urgente');
+    });
+
+    it('ordena números canónicos por año y correlativo, no alfabéticamente', () => {
+      component.misSolicitudes = [
+        { ...mockSolicitudes[0], numero_expediente: 'EXP-0010/2025' },
+        { ...mockSolicitudes[1], numero_expediente: 'EXP-0002/2026' },
+        { ...mockSolicitudes[0], id: 'historico', numero_expediente: null },
+      ];
+      component.columnaOrden = 'numero';
+      component.ordenAscendente = true;
+      expect(component.misSolicitudesOrdenadas.map(s => s.numero_expediente)).toEqual([
+        'EXP-0010/2025', 'EXP-0002/2026', null
+      ]);
     });
 
     it('abre detalle al presionar Enter o Espacio en onTableKeyDown', () => {

@@ -54,10 +54,10 @@
                 </span>
               </div>
 
-              <div *ngIf="numeroExpediente" class="issued-banner d-flex flex-wrap align-items-center justify-content-between mb-4">
+              <div *ngIf="borradorId" class="issued-banner d-flex flex-wrap align-items-center justify-content-between mb-4">
                 <div class="d-flex align-items-center">
                   <i class="material-icons mr-2">verified</i>
-                  <span>Número de expediente emitido: <strong class="tabular-nums">{{ numeroExpediente }}</strong></span>
+                  <span><strong class="tabular-nums">{{ numeroExpedienteVisible(numeroExpediente) }}</strong></span>
                 </div>
                 <button type="button" class="btn btn-primary btn-sm" (click)="setTab('creadas')">
                   Ver en Solicitudes Creadas
@@ -404,13 +404,13 @@
                     <tr *ngFor="let s of misSolicitudesOrdenadas"
                         tabindex="0"
                         role="row"
-                        [attr.aria-label]="'Solicitud ' + (s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero) + ' - ' + (s.titulo || s.motivo)"
+                        [attr.aria-label]="'Solicitud ' + numeroExpedienteVisible(s.numero_expediente) + ' - ' + (s.titulo || s.motivo)"
                         (click)="abrirDetalle(s)"
                         (keydown)="onTableKeyDown($event, s)"
                         style="cursor: pointer;">
                       <!-- Exp -->
                       <td class="font-weight-bold text-dark">
-                        {{ s.numero_expediente ? formatCaseNumber(s.numero_expediente) : s.numero }}
+                        {{ numeroExpedienteVisible(s.numero_expediente) }}
                       </td>
 
                       <!-- Título -->
@@ -520,7 +520,7 @@
       <!-- Cabecera del Modal -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
-          {{ solicitudSeleccionada.numero_expediente ? ('Exp: ' + formatCaseNumber(solicitudSeleccionada.numero_expediente)) : ('Solicitud: ' + solicitudSeleccionada.numero) }}
+          Exp: {{ numeroExpedienteVisible(solicitudSeleccionada.numero_expediente) }}
         </span>
         <div class="modal-titulo-central flex-grow-1 text-center px-3">
           <h4 class="card-title mb-0 font-weight-bold text-white">

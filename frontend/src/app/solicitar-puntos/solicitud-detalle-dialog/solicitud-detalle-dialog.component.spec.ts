@@ -17,7 +17,7 @@ describe('SolicitudDetalleDialogComponent', () => {
   const mockSolicitud: SolicitudMonitoreo = {
     id: 'sol-001',
     numero: 'T01-2026-001',
-    numero_expediente: 'EXP-2026-001',
+    numero_expediente: '1/2026',
     fecha: '2026-03-15T10:00:00Z',
     estado: 'ISSUED',
     tipo_accion: 'SANCTION',
@@ -100,6 +100,11 @@ describe('SolicitudDetalleDialogComponent', () => {
   it('muestra la razón y fundamentos de la solicitud', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Incumplimiento reiterado de las normas de convivencia durante la sesión');
+  });
+
+  it('usa una etiqueta controlada para históricos sin número canónico', () => {
+    expect(component.numeroExpedienteVisible(null)).toBe('Borrador sin número');
+    expect(component.numeroExpedienteVisible('EXP-0012/2026')).toBe('Exp 12/2026');
   });
 
   it('muestra la hoja de anexo circunstanciada sin citar "Art. 16 bis"', () => {

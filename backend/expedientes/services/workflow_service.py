@@ -1,5 +1,6 @@
 """Servicios transaccionales para apertura y transiciones de expedientes."""
 
+import re
 from datetime import datetime
 from decimal import Decimal
 
@@ -33,7 +34,21 @@ class ExpedienteWorkflowService:
 
     @staticmethod
     def format_numero(value: int, year: int) -> str:
-        return f"EXP-{value:04d}/{year}"
+        return f"{value}/{year}"
+
+    @classmethod
+    def reserve_numero(cls, year: int | None = None) -> str:
+        """Reserva un número canónico compartido por solicitudes y expedientes."""
+        target_year = year or timezone.localdate().year
+        while True:
+            numero = cls.format_numero(
+                ExpedienteNumberSequence.next_value(target_year), target_year
+            )
+            if not Expediente.objects.filter(numero=numero).exists():
+                from expedientes.models import SolicitudT01
+
+                if not SolicitudT01.objects.filter(numero_expediente=numero).exists():
+                    return numero
 
     @classmethod
     @transaction.atomic
@@ -46,17 +61,21 @@ class ExpedienteWorkflowService:
         urgencia: str = UrgenciaExpedienteEnum.NORMAL,
         points: Decimal = Decimal("-1.0"),
         titulo: str = "",
+        numero: str | None = None,
     ) -> Expediente:
         if not motivo.strip():
             raise ValidationError({"motivo": "El motivo de apertura es obligatorio."})
         if not socio_ids:
             raise ValidationError({"socios": "Debe asociarse al menos un socio."})
+        if numero is not None and not re.fullmatch(r"\d+/\d{4}", numero):
+            raise ValidationError({"numero": "El número debe tener formato N/YYYY."})
         if Socio.objects.filter(pk__in=socio_ids).count() != len(set(socio_ids)):
             raise ValidationError({"socios": "Uno o más socios no existen."})
 
         year = timezone.localdate().year
+        numero_canonico = numero or cls.reserve_numero(year)
         expediente = Expediente.objects.create(
-            numero=cls.format_numero(ExpedienteNumberSequence.next_value(year), year),
+            numero=numero_canonico,
             socio_id=socio_ids[0],
             motivo=motivo.strip(),
             titulo=(titulo or motivo).strip()[:255],
