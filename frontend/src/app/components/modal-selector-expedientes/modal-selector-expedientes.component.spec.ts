@@ -158,4 +158,15 @@ describe('ModalSelectorExpedientesComponent', () => {
 
     expect(component.cerrar.emit).toHaveBeenCalled();
   });
+
+  it('debe renderizar correctamente la fecha de emisión formateada de los antecedentes', () => {
+    component.catalogo = mockCatalogo;
+    component.abierto = true;
+    fixture.detectChanges();
+
+    const fechas = fixture.debugElement.queryAll(By.css('.catalogo-fecha'));
+    expect(fechas.length).toBe(3);
+    // mockCatalogo[0].fecha_emision es '2026-02-10T12:00:00Z' -> '10/02/2026'
+    expect(fechas[0].nativeElement.textContent).toContain('10/02/2026');
+  });
 });

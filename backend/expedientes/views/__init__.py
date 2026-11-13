@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -15,6 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.pagination import PaginatedAPIViewMixin, StandardResultsSetPagination
 from expedientes.domain.calendar import compute_business_deadline
 from expedientes.domain.causal_resolution import CausalDecision
 from expedientes.domain.evidence_validator import EvidenceValidationError, EvidenceValidator
@@ -133,15 +134,22 @@ def _actor_for_user(user) -> str:
     return user.get_username()
 
 
-# Relaciones que lee ExpedienteListSerializer; compartidas para evitar N+1 (S4-02).
+# Relaciones que lee ExpedienteListSerializer; compartidas para evitar N+1 (S4-02 / SCRUM-120).
 EXPEDIENTE_LIST_PREFETCH = (
-    "socios",
+    Prefetch("socios", queryset=Socio.objects.select_related("subcomision")),
     "cambios_estado",
-    "descargos__socio",
-    "descargos__decisiones_causal__autor",
-    "descargos__valoraciones_t03__autor",
-    "descargos__valoraciones_t03__antecedentes",
-    "evidencias__socio",
+    Prefetch(
+        "descargos",
+        queryset=DescargoExpediente.objects.select_related("socio").prefetch_related(
+            "decisiones_causal__autor",
+            "valoraciones_t03__autor",
+            "valoraciones_t03__antecedentes",
+        ),
+    ),
+    Prefetch(
+        "evidencias",
+        queryset=EvidenciaDescargo.objects.defer("contenido_blob").select_related("socio"),
+    ),
     "solicitud_t01",
     "resoluciones",
 )
@@ -164,8 +172,56 @@ def filter_expedientes_by_legajo(queryset, legajo: str):
     ).distinct()
 
 
-class ExpedienteCollectionView(APIView):
+ALLOWED_EXPEDIENTE_ORDERING_FIELDS = {
+    "id",
+    "-id",
+    "numero",
+    "-numero",
+    "estado",
+    "-estado",
+    "urgencia",
+    "-urgencia",
+    "created_at",
+    "-created_at",
+    "plazo_limite_at",
+    "-plazo_limite_at",
+    "puntos",
+    "-puntos",
+    "socio__legajo",
+    "-socio__legajo",
+    "socio__last_name",
+    "-socio__last_name",
+}
+
+
+def _apply_expediente_collection_filters_and_ordering(queryset, query_params):
+    """Aplica filtros canónicos (estado, urgencia, search, fechas) y orden determinístico."""
+    filterset = ExpedienteFilter(query_params, queryset=queryset)
+    qs = filterset.qs
+
+    search = (query_params.get("search") or "").strip()
+    if search:
+        qs = ExpedienteFilter().filter_socio(qs, "socio", search)
+
+    ordering_raw = (query_params.get("ordering") or "").strip()
+    order_fields: list[str] = []
+    if ordering_raw:
+        for tok in ordering_raw.split(","):
+            tok_clean = tok.strip().lstrip("+")
+            if tok_clean in ALLOWED_EXPEDIENTE_ORDERING_FIELDS and tok_clean not in order_fields:
+                order_fields.append(tok_clean)
+
+    if not order_fields:
+        order_fields = ["-id"]
+    elif "id" not in order_fields and "-id" not in order_fields:
+        order_fields.append("-id")
+
+    return qs.order_by(*order_fields)
+
+
+class ExpedienteCollectionView(PaginatedAPIViewMixin, APIView):
     permission_classes = [CanOpenExpedientes]
+    pagination_class = StandardResultsSetPagination
 
     def get(self, request: Request) -> Response:
         DeadlineEnforcementService().close_expired_deadlines()
@@ -181,6 +237,21 @@ class ExpedienteCollectionView(APIView):
         legajo = request.query_params.get("legajo")
         if legajo is not None and legajo.strip():
             queryset = filter_expedientes_by_legajo(queryset, legajo.strip())
+
+        queryset = _apply_expediente_collection_filters_and_ordering(queryset, request.query_params)
+
+        # SCRUM-118 / T-87.12: Paginación server-side estándar con envolvente de 7 campos
+        is_paginated_requested = bool(
+            "page" in request.query_params or "page_size" in request.query_params
+        )
+        is_all_requested = request.query_params.get("all", "").lower() in ("true", "1", "yes")
+
+        if is_paginated_requested and not is_all_requested:
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = ExpedienteListSerializer(page, many=True, context={"request": request})
+                return self.get_paginated_response(serializer.data)
+
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -235,24 +306,53 @@ class TransicionExpedienteView(APIView):
         return Response(ExpedienteListSerializer(expediente, context={"request": request}).data)
 
 
-class MisExpedientesView(APIView):
+class MisExpedientesView(PaginatedAPIViewMixin, APIView):
     """Retorna la lista de expedientes asignados al socio autenticado."""
 
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
 
     def get(self, request: Request) -> Response:
         DeadlineEnforcementService().close_expired_deadlines()
         socio = getattr(request.user, "socio", None)
         if not socio:
+            is_paginated_requested = bool(
+                "page" in request.query_params or "page_size" in request.query_params
+            )
+            is_all_requested = request.query_params.get("all", "").lower() in ("true", "1", "yes")
+            if is_paginated_requested and not is_all_requested:
+                page = self.paginate_queryset([])
+                return self.get_paginated_response([])
             return Response([], status=status.HTTP_200_OK)
 
         queryset = (
             Expediente.objects.filter(Q(socio=socio) | Q(socios=socio))
             .distinct()
-            .select_related("socio", "socio__subcomision")
+            .select_related(
+                "socio",
+                "socio__subcomision",
+                "solicitud_t01",
+                "solicitud_t01__solicitante",
+            )
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
-            .order_by("-id")
         )
+        queryset = _apply_expediente_collection_filters_and_ordering(queryset, request.query_params)
+
+        is_paginated_requested = bool(
+            "page" in request.query_params or "page_size" in request.query_params
+        )
+        is_all_requested = request.query_params.get("all", "").lower() in ("true", "1", "yes")
+
+        if is_paginated_requested and not is_all_requested:
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = ExpedienteListSerializer(
+                    page,
+                    many=True,
+                    context={"request": request, "es_mis_expedientes": True},
+                )
+                return self.get_paginated_response(serializer.data)
+
         serializer = ExpedienteListSerializer(
             queryset, many=True, context={"request": request, "es_mis_expedientes": True}
         )
@@ -277,7 +377,7 @@ class ExpedientesPorSocioView(APIView):
             )
 
         legajo = legajo.strip()
-        queryset = Expediente.objects.select_related("solicitud_t01").order_by("-created_at")
+        queryset = Expediente.objects.select_related("solicitud_t01").order_by("-created_at", "-id")
         queryset = filter_expedientes_by_legajo(queryset, legajo)
         serializer = ExpedienteResumenSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1200,7 +1300,11 @@ class BoardExpedientesView(APIView):
                 "solicitud_t01",
                 "solicitud_t01__solicitante",
             )
-            .prefetch_related("socios", "cambios_estado", "resoluciones")
+            .prefetch_related(
+                Prefetch("socios", queryset=Socio.objects.select_related("subcomision")),
+                "cambios_estado",
+                "resoluciones",
+            )
             .all()
         )
         filterset = ExpedienteFilter(request.query_params, queryset=qs)

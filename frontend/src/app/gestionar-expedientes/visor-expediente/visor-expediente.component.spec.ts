@@ -284,6 +284,23 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     );
   });
 
+  it('debe permitir previsualizar piezas probatorias en modal seguro (CA3)', () => {
+    expedienteApiSpy.descargarEvidencia.and.returnValue(
+      of(new Blob(['%PDF-1.4 Mock content'], { type: 'application/pdf' }))
+    );
+
+    const evidencia = mockVisorData.involucrados[0].descargo!.evidencias[0];
+    component.verEvidencia(evidencia);
+
+    expect(component.modalPreviewAbierto).toBeTrue();
+    expect(component.evidenciaPreview).toBe(evidencia);
+    expect(expedienteApiSpy.descargarEvidencia).toHaveBeenCalledWith(123, 'ev-1', 'ver');
+
+    component.cerrarModalPreview();
+    expect(component.modalPreviewAbierto).toBeFalse();
+    expect(component.evidenciaPreview).toBeNull();
+  });
+
   it('debe notificar error centralizado de 10s ante acceso 403 Forbidden', () => {
     expedienteApiSpy.obtenerVisorExpediente.and.returnValue(
       throwError(() => ({ status: 403 }))

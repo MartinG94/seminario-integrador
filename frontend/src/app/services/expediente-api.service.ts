@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
+import { PaginatedResponse, PaginationParams } from '../models/paginated-response.model';
 import type { NivelUrgencia } from './tribunal-data.service';
 
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
@@ -770,12 +771,58 @@ export class ExpedienteApiService {
     return this.http.delete<void>(`${this.apiUrl}/reglamentos/articulos/${id}/`);
   }
 
-  listarPorLegajo(legajo: string): Observable<ExpedienteRankingDetalle[]> {
-    const params = new HttpParams().set('legajo', legajo);
-    return this.http.get<ExpedienteRankingDetalle[]>(
-      `${this.apiUrl}/gestion/`,
-      { params }
-    );
+  private appendPaginationParams(httpParams: HttpParams, params?: PaginationParams): HttpParams {
+    if (!params) {
+      return httpParams;
+    }
+    const keys: (keyof PaginationParams)[] = [
+      'page',
+      'page_size',
+      'ordering',
+      'search',
+      'estado',
+      'urgencia',
+      'concepto',
+      'socio',
+      'socio_legajo',
+      'fecha_desde',
+      'fecha_hasta',
+    ];
+    for (const key of keys) {
+      const value = params[key];
+      if (value !== undefined && value !== null && value !== '') {
+        httpParams = httpParams.set(key, String(value));
+      }
+    }
+    return httpParams;
+  }
+
+  listarPorLegajo(
+    legajo: string,
+    params?: PaginationParams
+  ): Observable<PaginatedResponse<ExpedienteRankingDetalle>> {
+    const httpParams = this.appendPaginationParams(new HttpParams().set('legajo', legajo), params);
+    return this.http
+      .get<PaginatedResponse<ExpedienteRankingDetalle> | ExpedienteRankingDetalle[]>(
+        `${this.apiUrl}/gestion/`,
+        { params: httpParams }
+      )
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response,
+            };
+          }
+          return response;
+        })
+      );
   }
 
   listarPorSocio(legajo: string): Observable<ExpedienteRankingDetalle[]> {
@@ -855,8 +902,30 @@ export class ExpedienteApiService {
     return this.http.post(`${this.apiUrl}/${expedienteId}/descargo/`, payload);
   }
 
-  listarMisExpedientes(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/mis-expedientes/`);
+  listarMisExpedientes(
+    params?: PaginationParams
+  ): Observable<PaginatedResponse<any>> {
+    const httpParams = this.appendPaginationParams(new HttpParams(), params);
+    return this.http
+      .get<PaginatedResponse<any> | any[]>(`${this.apiUrl}/mis-expedientes/`, {
+        params: httpParams,
+      })
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response,
+            };
+          }
+          return response;
+        })
+      );
   }
 
   eliminarDescargo(expedienteId: number | string): Observable<any> {

@@ -328,19 +328,37 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
         return f"{obj.reportado_por.first_name} {obj.reportado_por.last_name}".strip()
 
     def get_total_convocados(self, obj: EventoInstitucional) -> int:
+        if hasattr(obj, "total_convocados_calc"):
+            return obj.total_convocados_calc
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "asistencias" in cache:
+            return len(obj.asistencias.all())
         return obj.asistencias.count()
 
     def get_total_presentes(self, obj: EventoInstitucional) -> int:
-        return obj.asistencias.filter(
-            estado_asistencia__in=[
-                EstadoAsistenciaEventoEnum.PRESENTE,
-                EstadoAsistenciaEventoEnum.JUSTIFICADO,
-                EstadoAsistenciaEventoEnum.TARDE_LEVE,
-                EstadoAsistenciaEventoEnum.TARDE_GRAVE,
-            ]
-        ).count()
+        if hasattr(obj, "total_presentes_calc"):
+            return obj.total_presentes_calc
+        presentes_estados = {
+            EstadoAsistenciaEventoEnum.PRESENTE,
+            EstadoAsistenciaEventoEnum.JUSTIFICADO,
+            EstadoAsistenciaEventoEnum.TARDE_LEVE,
+            EstadoAsistenciaEventoEnum.TARDE_GRAVE,
+        }
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "asistencias" in cache:
+            return sum(1 for a in obj.asistencias.all() if a.estado_asistencia in presentes_estados)
+        return obj.asistencias.filter(estado_asistencia__in=presentes_estados).count()
 
     def get_total_ausentes(self, obj: EventoInstitucional) -> int:
+        if hasattr(obj, "total_ausentes_calc"):
+            return obj.total_ausentes_calc
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "asistencias" in cache:
+            return sum(
+                1
+                for a in obj.asistencias.all()
+                if a.estado_asistencia == EstadoAsistenciaEventoEnum.AUSENTE
+            )
         return obj.asistencias.filter(estado_asistencia=EstadoAsistenciaEventoEnum.AUSENTE).count()
 
 

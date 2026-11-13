@@ -1,5 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subscription } from 'rxjs';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  OnDestroy
+} from '@angular/core';
+import { Subject, Subscription } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
   ReportesService,
   MetricasT01DTO,
@@ -8,14 +15,41 @@ import {
   HistoricoRecordsDTO,
   SubcomisionItemDTO
 } from '../services/reportes.service';
+import { TrackByUtils } from '../utils/track-by.util';
 
 @Component({
   selector: 'app-reportes',
   templateUrl: './reportes.component.html',
-  styleUrls: ['./reportes.component.scss']
+  styleUrls: ['./reportes.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportesComponent implements OnInit, OnDestroy {
   public Math = Math;
+
+  private readonly destroy$ = new Subject<void>();
+  private readonly revokeTimers = new Set<number>();
+  private cachedMaxClasificacion = 50;
+  private cachedMaxPuntosT01 = 70;
+  private cachedMaxCategoriasReuniones = 30;
+  private cachedMaxSociosGrupo = 90;
+  private cachedMaxPuntosSubcom = 10;
+  private cachedMaxSerieAnual = 600;
+  private cachedMaxPuntosHistorico = 600;
+
+  readonly trackById = (index: number, item: any): any =>
+    TrackByUtils.byId(index, item);
+  readonly trackByValue = (index: number, item: any): any =>
+    TrackByUtils.byValue(index, item);
+  readonly trackByClasificacion = (index: number, item: any): any =>
+    item?.clasificacion || item?.categoria || item?.tipo || item?.subcomision_nombre || item?.subcomision || index;
+  readonly trackByGrupo = (index: number, item: any): any =>
+    item?.grupo || index;
+  readonly trackByPunto = (index: number, item: any): any =>
+    item?.puntos !== undefined ? item.puntos : (item?.etiqueta || index);
+  readonly trackByAnio = (index: number, item: any): any =>
+    item?.anio || index;
+  readonly trackBySocio = (index: number, item: any): any =>
+    item?.socio_id ?? item?.id ?? item?.legajo ?? index;
 
   tabActiva: 't01' | 'reuniones' | 'subcomision' | 'historico' = 't01';
 
@@ -33,7 +67,10 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
-  constructor(private reportesService: ReportesService) {}
+  constructor(
+    private reportesService: ReportesService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.cargarSubcomisiones();
@@ -41,7 +78,35 @@ export class ReportesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.subs.forEach(s => s.unsubscribe());
+    this.revokeTimers.forEach(id => window.clearTimeout(id));
+    this.revokeTimers.clear();
+  }
+
+  private recomputeEscalados(): void {
+    this.cachedMaxClasificacion = this.metricasT01?.expedientes_por_clasificacion?.length
+      ? Math.max(...this.metricasT01.expedientes_por_clasificacion.map(c => c.cantidad), 10)
+      : 50;
+    this.cachedMaxPuntosT01 = this.metricasT01?.distribucion_puntos?.length
+      ? Math.max(...this.metricasT01.distribucion_puntos.map(p => p.cantidad), 10)
+      : 70;
+    this.cachedMaxCategoriasReuniones = this.metricasReuniones?.expedientes_por_categoria?.length
+      ? Math.max(...this.metricasReuniones.expedientes_por_categoria.map(c => c.cantidad), 10)
+      : 30;
+    this.cachedMaxSociosGrupo = this.metricasReuniones?.socios_por_grupo?.length
+      ? Math.max(...this.metricasReuniones.socios_por_grupo.map(g => g.cantidad), 10)
+      : 90;
+    this.cachedMaxPuntosSubcom = this.metricasSubcomision?.distribucion_puntos?.length
+      ? Math.max(...this.metricasSubcomision.distribucion_puntos.map(p => p.cantidad), 5)
+      : 10;
+    this.cachedMaxSerieAnual = this.historicoRecords?.serie_anual?.length
+      ? Math.max(...this.historicoRecords.serie_anual.map(s => s.cantidad), 100)
+      : 600;
+    this.cachedMaxPuntosHistorico = this.historicoRecords?.distribucion_historica_puntos?.length
+      ? Math.max(...this.historicoRecords.distribucion_historica_puntos.map(p => p.cantidad), 100)
+      : 600;
   }
 
   cambiarTab(tab: 't01' | 'reuniones' | 'subcomision' | 'historico'): void {
@@ -51,13 +116,14 @@ export class ReportesComponent implements OnInit, OnDestroy {
   }
 
   cargarSubcomisiones(): void {
-    const sub = this.reportesService.getSubcomisiones().subscribe({
+    const sub = this.reportesService.getSubcomisiones().pipe(takeUntil(this.destroy$)).subscribe({
       next: data => {
         this.subcomisiones = data;
         const gsa = data.find(s => s.nombre.toLowerCase().includes('social'));
         if (gsa) {
           this.selectedSubcomisionId = gsa.id;
         }
+        this.cdr?.markForCheck();
       },
       error: () => {
         // Fallback lista representativa
@@ -74,6 +140,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
           { id: 5, nombre: 'Mantenimiento' },
           { id: 12, nombre: 'Grupo de Viaje y Permanencia' }
         ];
+        this.cdr?.markForCheck();
       }
     });
     this.subs.push(sub);
@@ -82,56 +149,69 @@ export class ReportesComponent implements OnInit, OnDestroy {
   cargarDatosTabActiva(): void {
     this.cargando = true;
     this.errorMensaje = null;
+    this.cdr?.markForCheck();
 
     if (this.tabActiva === 't01') {
-      const sub = this.reportesService.getMetricasT01(this.filtroSubcomisionId || undefined).subscribe({
+      const sub = this.reportesService.getMetricasT01(this.filtroSubcomisionId || undefined).pipe(takeUntil(this.destroy$)).subscribe({
         next: data => {
           this.metricasT01 = data;
+          this.recomputeEscalados();
           this.cargando = false;
+          this.cdr?.markForCheck();
         },
         error: err => {
           console.error('Error al cargar métricas T01:', err);
           this.cargando = false;
           this.errorMensaje = 'No se pudieron cargar los datos de Gestión por T01.';
+          this.cdr?.markForCheck();
         }
       });
       this.subs.push(sub);
     } else if (this.tabActiva === 'reuniones') {
-      const sub = this.reportesService.getMetricasReuniones(this.filtroSubcomisionId || undefined).subscribe({
+      const sub = this.reportesService.getMetricasReuniones(this.filtroSubcomisionId || undefined).pipe(takeUntil(this.destroy$)).subscribe({
         next: data => {
           this.metricasReuniones = data;
+          this.recomputeEscalados();
           this.cargando = false;
+          this.cdr?.markForCheck();
         },
         error: err => {
           console.error('Error al cargar métricas Reuniones:', err);
           this.cargando = false;
           this.errorMensaje = 'No se pudieron cargar los datos de Gestión por Reuniones.';
+          this.cdr?.markForCheck();
         }
       });
       this.subs.push(sub);
     } else if (this.tabActiva === 'subcomision') {
-      const sub = this.reportesService.getMetricasSubcomision(this.selectedSubcomisionId).subscribe({
+      const sub = this.reportesService.getMetricasSubcomision(this.selectedSubcomisionId).pipe(takeUntil(this.destroy$)).subscribe({
         next: data => {
           this.metricasSubcomision = data;
+          this.recomputeEscalados();
           this.cargando = false;
+          this.cdr?.markForCheck();
         },
         error: err => {
           console.error('Error al cargar métricas de Subcomisión:', err);
           this.cargando = false;
           this.errorMensaje = 'No se pudieron cargar los datos de la Subcomisión.';
+          this.cdr?.markForCheck();
         }
       });
       this.subs.push(sub);
     } else if (this.tabActiva === 'historico') {
-      const sub = this.reportesService.getHistoricoYRecords().subscribe({
+      const sub = this.reportesService.getHistoricoYRecords().pipe(takeUntil(this.destroy$)).subscribe({
         next: data => {
           this.historicoRecords = data;
+          this.recomputeEscalados();
           this.cargando = false;
+          this.cdr?.markForCheck();
         },
         error: err => {
           console.error('Error al cargar Histórico y Récords:', err);
           this.cargando = false;
           this.errorMensaje = 'No se pudieron cargar los registros históricos.';
+          this.cdr?.markForCheck();
         }
       });
       this.subs.push(sub);
@@ -160,38 +240,31 @@ export class ReportesComponent implements OnInit, OnDestroy {
   // --- Funciones de escalado para gráficos visuales SVG/HTML ---
 
   getMaxClasificacion(): number {
-    if (!this.metricasT01?.expedientes_por_clasificacion?.length) return 50;
-    return Math.max(...this.metricasT01.expedientes_por_clasificacion.map(c => c.cantidad), 10);
+    return this.cachedMaxClasificacion;
   }
 
   getMaxPuntosT01(): number {
-    if (!this.metricasT01?.distribucion_puntos?.length) return 70;
-    return Math.max(...this.metricasT01.distribucion_puntos.map(p => p.cantidad), 10);
+    return this.cachedMaxPuntosT01;
   }
 
   getMaxCategoriasReuniones(): number {
-    if (!this.metricasReuniones?.expedientes_por_categoria?.length) return 30;
-    return Math.max(...this.metricasReuniones.expedientes_por_categoria.map(c => c.cantidad), 10);
+    return this.cachedMaxCategoriasReuniones;
   }
 
   getMaxSociosGrupo(): number {
-    if (!this.metricasReuniones?.socios_por_grupo?.length) return 90;
-    return Math.max(...this.metricasReuniones.socios_por_grupo.map(g => g.cantidad), 10);
+    return this.cachedMaxSociosGrupo;
   }
 
   getMaxPuntosSubcom(): number {
-    if (!this.metricasSubcomision?.distribucion_puntos?.length) return 10;
-    return Math.max(...this.metricasSubcomision.distribucion_puntos.map(p => p.cantidad), 5);
+    return this.cachedMaxPuntosSubcom;
   }
 
   getMaxSerieAnual(): number {
-    if (!this.historicoRecords?.serie_anual?.length) return 600;
-    return Math.max(...this.historicoRecords.serie_anual.map(s => s.cantidad), 100);
+    return this.cachedMaxSerieAnual;
   }
 
   getMaxPuntosHistorico(): number {
-    if (!this.historicoRecords?.distribucion_historica_puntos?.length) return 600;
-    return Math.max(...this.historicoRecords.distribucion_historica_puntos.map(p => p.cantidad), 100);
+    return this.cachedMaxPuntosHistorico;
   }
 
   // Gradiente de color semafórico para tabla de socios
@@ -299,5 +372,10 @@ export class ReportesComponent implements OnInit, OnDestroy {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    const timerId = window.setTimeout(() => {
+      this.revokeTimers.delete(timerId);
+      URL.revokeObjectURL(url);
+    }, 1000);
+    this.revokeTimers.add(timerId);
   }
 }

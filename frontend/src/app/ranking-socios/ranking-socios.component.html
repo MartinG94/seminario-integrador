@@ -28,7 +28,7 @@
             <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
               <select class="form-control filtro-categoria"
                       [(ngModel)]="filtroCategoria"
-                      (ngModelChange)="paginaActual = 1"
+                      (ngModelChange)="onFiltroSelectChange()"
                       aria-label="Filtrar por categoría">
                 <option value="">Todas las categorías</option>
                 <option value="ACTIVO">Activo</option>
@@ -38,10 +38,10 @@
               <select class="form-control filtro-subcomision"
                       style="width: 190px;"
                       [(ngModel)]="filtroSubcomision"
-                      (ngModelChange)="paginaActual = 1"
+                      (ngModelChange)="onFiltroSelectChange()"
                       aria-label="Filtrar por subcomisión">
                 <option value="">Todas las subcomisiones</option>
-                <option *ngFor="let subcomision of subcomisiones" [value]="subcomision">
+                <option *ngFor="let subcomision of subcomisiones; trackBy: trackByValue" [value]="subcomision">
                   {{ subcomision }}
                 </option>
                 <option value="Sin Subcomisión">Sin Subcomisión</option>
@@ -50,10 +50,10 @@
               <select class="form-control filtro-grupo"
                       style="width: 150px;"
                       [(ngModel)]="filtroGrupo"
-                      (ngModelChange)="paginaActual = 1"
+                      (ngModelChange)="onFiltroSelectChange()"
                       aria-label="Filtrar por grupo">
                 <option value="">Todos los grupos</option>
-                <option *ngFor="let grupo of grupos" [value]="grupo">
+                <option *ngFor="let grupo of grupos; trackBy: trackByValue" [value]="grupo">
                   {{ grupo }}
                 </option>
                 <option value="SIN_GRUPO">Sin grupo</option>
@@ -65,7 +65,7 @@
                       (ngModelChange)="cambiarTamanoPagina($event)"
                       aria-label="Filas por página">
                 <option [ngValue]="10">10 filas</option>
-                <option [ngValue]="25">25 filas</option>
+                <option [ngValue]="20">20 filas</option>
                 <option [ngValue]="50">50 filas</option>
                 <option [ngValue]="100">100 filas</option>
                 <option [ngValue]="0">Todas</option>
@@ -95,7 +95,7 @@
             <div *ngIf="error && !cargando" class="text-center py-4">
               <button type="button"
                       class="btn btn-primary"
-                      (click)="ngOnInit()"
+                      (click)="cargarRanking()"
                       aria-label="Reintentar carga del ranking">
                 <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
               </button>
@@ -199,7 +199,7 @@
                       No se encontraron socios con los criterios seleccionados.
                     </td>
                   </tr>
-                  <tr *ngFor="let s of sociosPaginados"
+                  <tr *ngFor="let s of sociosPaginados; trackBy: trackBySocioId"
                       (click)="abrirExpedientesSocio(s)"
                       (keydown)="onRowKeyDown($event, s)"
                       tabindex="0"
@@ -256,55 +256,22 @@
               </table>
             </div>
 
-            <!-- Footer & Pagination -->
+            <!-- Footer & Paginación Server-Side Material -->
             <div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
               <span class="text-muted font-weight-medium">
                 {{ textoContador }}
               </span>
 
-              <div *ngIf="tamanoPagina !== 0 && totalPaginas > 1" class="d-flex align-items-center">
-                <button mat-raised-button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary mr-1"
-                        [disabled]="paginaActual === 1"
-                        (click)="irAPrimera()"
-                        title="Primera página"
-                        aria-label="Primera página">
-                  &laquo;
-                </button>
-
-                <button mat-raised-button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary mr-2"
-                        [disabled]="paginaActual === 1"
-                        (click)="cambiarPagina(paginaActual - 1)"
-                        title="Página anterior">
-                  &lsaquo; Anterior
-                </button>
-
-                <span class="text-muted mx-2">
-                  Página {{ paginaActual }} de {{ totalPaginas }}
-                </span>
-
-                <button mat-raised-button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary mr-1"
-                        [disabled]="paginaActual === totalPaginas"
-                        (click)="cambiarPagina(paginaActual + 1)"
-                        title="Página siguiente">
-                  Siguiente &rsaquo;
-                </button>
-
-                <button mat-raised-button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary"
-                        [disabled]="paginaActual === totalPaginas"
-                        (click)="irAUltima()"
-                        title="Última página"
-                        aria-label="Última página">
-                  &raquo;
-                </button>
-              </div>
+              <mat-paginator
+                *ngIf="tamanoPagina !== 0 && (serverPaginated ? totalRegistros : sociosOrdenados.length) > 0"
+                [length]="serverPaginated ? totalRegistros : sociosOrdenados.length"
+                [pageSize]="tamanoPagina"
+                [pageIndex]="paginaActual - 1"
+                [pageSizeOptions]="pageSizeOptions"
+                (page)="onMatPageChange($event)"
+                showFirstLastButtons
+                aria-label="Paginación de ranking de socios">
+              </mat-paginator>
             </div>
           </div>
         </div>

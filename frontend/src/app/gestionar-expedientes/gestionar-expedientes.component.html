@@ -14,24 +14,24 @@
         <div class="nav-tabs-wrapper">
           <ul class="nav nav-tabs">
             <li class="nav-item">
-              <a class="nav-link" 
-                 [class.active]="vistaActual === 'kanban'" 
-                 (click)="vistaActual = 'kanban'" 
-                 href="javascript:void(0)"
-                 role="tab">
-                <i class="material-icons">view_kanban</i> TABLERO DE ESTADOS
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" 
-                 [class.active]="vistaActual === 'tabla'" 
-                 (click)="vistaActual = 'tabla'" 
-                 href="javascript:void(0)"
-                 role="tab">
-                <i class="material-icons">view_list</i> LISTA EN TABLA
-                <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="expedientes.length > 0">
-                  {{ expedientes.length }}
-                </span>
+                <a class="nav-link" 
+                   [class.active]="vistaActual === 'kanban'" 
+                   (click)="cambiarVista('kanban')" 
+                   href="javascript:void(0)"
+                   role="tab">
+                  <i class="material-icons">view_kanban</i> TABLERO DE ESTADOS
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" 
+                   [class.active]="vistaActual === 'tabla'" 
+                   (click)="cambiarVista('tabla')" 
+                   href="javascript:void(0)"
+                   role="tab">
+                  <i class="material-icons">view_list</i> LISTA EN TABLA
+                  <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="(vistaActual === 'tabla' && usandoPaginacionTabla ? tablaTotalRegistros : expedientes.length) > 0">
+                    {{ vistaActual === 'tabla' && usandoPaginacionTabla ? tablaTotalRegistros : expedientes.length }}
+                  </span>
               </a>
             </li>
           </ul>
@@ -51,7 +51,7 @@
                    class="form-control"
                    placeholder="Buscar por socio, legajo, número o motivo..."
                    [(ngModel)]="filtroSocio"
-                   (keyup.enter)="cargarDatosTablero()"
+                   (keyup.enter)="aplicarFiltros()"
                    aria-label="Buscar por socio, legajo, creador, título, número o motivo">
           </div>
 
@@ -59,7 +59,7 @@
           <div class="filtro-item filtro-control-select">
             <label class="filtro-label" for="filtro-estado">Estado:</label>
             <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado">
-              <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
+              <option *ngFor="let est of estadosDisponibles; trackBy: trackByOpcion" [value]="est.key">{{est.label}}</option>
             </select>
           </div>
 
@@ -67,7 +67,7 @@
           <div class="filtro-item filtro-control-select">
             <label class="filtro-label" for="filtro-urgencia">Urgencia:</label>
             <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia">
-              <option *ngFor="let urg of urgenciasDisponibles" [value]="urg.key">{{urg.label}}</option>
+              <option *ngFor="let urg of urgenciasDisponibles; trackBy: trackByOpcion" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
 
@@ -87,7 +87,7 @@
           <div class="filtro-acciones d-flex align-items-center flex-shrink-0">
             <button mat-raised-button
                     class="btn btn-primary btn-sm m-0 px-3"
-                    (click)="cargarDatosTablero()"
+                    (click)="aplicarFiltros()"
                     aria-label="Aplicar filtros de búsqueda"
                     title="Filtrar">
               <i class="material-icons" style="font-size: 16px;">filter_list</i>
@@ -104,7 +104,7 @@
 
     <!-- VISTA 1: TABLERO KANBAN RESPONSIVE (Ciclo de Vida Canónico S2-05) -->
     <div *ngIf="vistaActual === 'kanban'" class="kanban-board-mat" role="region" aria-label="Tablero Kanban de estados">
-      <div *ngFor="let col of columnasKanbanVisibles" 
+      <div *ngFor="let col of columnasKanbanVisibles; trackBy: trackByColumna" 
            class="kanban-col-mat" 
            [class.colapsada]="isColumnaColapsada(col.estado)"
            [attr.aria-label]="col.titulo">
@@ -152,7 +152,7 @@
             Sin expedientes en esta etapa
           </div>
 
-          <div *ngFor="let exp of getExpedientesPorEstado(col.estado)" 
+          <div *ngFor="let exp of getExpedientesPorEstado(col.estado); trackBy: trackByExpediente" 
                class="kanban-card-mat" 
                [class.kanban-card-urgente]="exp.urgencia === 'urgente'"
                tabindex="0"
@@ -200,8 +200,8 @@
           <h4 class="card-title text-white font-weight-bold mb-0">Detalle de Expedientes</h4>
           <p class="card-category text-white-50 mb-0">Explorador integral y detallado de expedientes disciplinarios.</p>
         </div>
-        <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="expedientesFiltrados.length > 0">
-          {{ expedientesFiltrados.length }} expedientes
+        <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="(usandoPaginacionTabla ? tablaTotalRegistros : expedientesFiltrados.length) > 0">
+          {{ usandoPaginacionTabla ? tablaTotalRegistros : expedientesFiltrados.length }} expedientes
         </span>
       </div>
       <div class="card-body">
@@ -235,7 +235,7 @@
               <th class="text-right">Acciones</th>
             </thead>
             <tbody>
-              <tr *ngFor="let exp of expedientesFiltrados" 
+              <tr *ngFor="let exp of expedientesTablaPaginados; trackBy: trackByExpediente" 
                   tabindex="0"
                   role="row"
                   [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ' - ' + (exp.titulo || exp.motivo)"
@@ -311,6 +311,16 @@
             </tbody>
           </table>
         </div>
+        <mat-paginator
+          *ngIf="(usandoPaginacionTabla ? tablaTotalRegistros : expedientesFiltrados.length) > 0"
+          [length]="usandoPaginacionTabla ? tablaTotalRegistros : expedientesFiltrados.length"
+          [pageSize]="tablaPageSize"
+          [pageIndex]="tablaPage - 1"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onTablaPageChange($event)"
+          showFirstLastButtons
+          aria-label="Paginación del explorador de expedientes">
+        </mat-paginator>
       </div>
     </div>
 
@@ -459,7 +469,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let fila of involucradosJustificacion">
+                <tr *ngFor="let fila of involucradosJustificacion; trackBy: trackBySocioInvolucrado">
                   <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
                   <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
                   <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
@@ -727,7 +737,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let fila of involucradosJustificacion">
+                  <tr *ngFor="let fila of involucradosJustificacion; trackBy: trackBySocioInvolucrado">
                     <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
                     <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
                     <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
@@ -873,7 +883,7 @@
       </div>
 
       <div class="catalogo-articulos-list" *ngIf="articulosModalResolucionFiltrados.length > 0">
-        <div *ngFor="let item of articulosModalResolucionFiltrados"
+        <div *ngFor="let item of articulosModalResolucionFiltrados; trackBy: trackByArticulo"
              class="catalogo-articulo-card"
              [class.selected]="esReglamentoResolucionSeleccionado(item.raw)"
              (click)="toggleReglamentoResolucion(item.raw)">
@@ -1004,7 +1014,7 @@
             Espacios de Firma Colegiada por Año Social
           </h6>
           <div class="row text-center">
-            <div class="col-md-4 mb-3 mb-md-0 firma-col" *ngFor="let item of espaciosFirmaPorAnioSocial">
+            <div class="col-md-4 mb-3 mb-md-0 firma-col" *ngFor="let item of espaciosFirmaPorAnioSocial; trackBy: trackByFirma">
               <div class="p-2 bg-white rounded border h-100 d-flex flex-column justify-content-between">
                 <div>
                   <div class="badge badge-light border mb-2">{{ item.etiquetaAnio }}</div>
@@ -1071,7 +1081,7 @@
               <th>Estado</th>
             </thead>
             <tbody>
-              <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || [])">
+              <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || []); trackBy: trackById">
                 <td class="font-weight-bold text-dark">{{s.legajo}}</td>
                 <td>{{s.nombre}}</td>
                 <td>{{s.grupo || '-'}}</td>
@@ -1170,7 +1180,7 @@
               Firmantes Registrados por Año Social
             </div>
             <div class="row text-center">
-              <div class="col-md-4 mb-3 mb-md-0 firma-col" *ngFor="let item of firmantesPieResolucion">
+              <div class="col-md-4 mb-3 mb-md-0 firma-col" *ngFor="let item of firmantesPieResolucion; trackBy: trackByFirma">
                 <div class="linea-firma mx-auto mb-2"></div>
                 <div class="font-weight-bold text-dark small">{{item.firma}}</div>
                 <div class="text-muted smaller">{{item.etiquetaAnio}}</div>
@@ -1257,7 +1267,7 @@
             No se adjuntaron comprobantes o evidencias.
           </div>
           <ul *ngIf="desc.evidencias && desc.evidencias.length > 0" class="list-group">
-            <li *ngFor="let ev of desc.evidencias" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+            <li *ngFor="let ev of desc.evidencias; trackBy: trackById" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
               <div class="text-truncate mr-2">
                 <i class="material-icons mr-1 text-secondary" style="vertical-align: middle; font-size: 18px;">attachment</i>
                 <span class="font-weight-bold text-dark">{{ev.nombre_original}}</span>
@@ -1289,7 +1299,7 @@
                           [(ngModel)]="opcionPuntajeFinal"
                           (ngModelChange)="onOpcionPuntajeFinalChange($event)"
                           [disabled]="!puedeModificarPuntaje">
-                    <option *ngFor="let op of escalaPuntajes" [value]="op.valor">
+                    <option *ngFor="let op of escalaPuntajes; trackBy: trackByOpcion" [value]="op.valor">
                       {{op.label}}
                     </option>
                   </select>

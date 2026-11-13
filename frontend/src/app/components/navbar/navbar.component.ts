@@ -1,4 +1,6 @@
-import { Component, OnInit, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ROUTES } from '../sidebar/sidebar.component';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -10,7 +12,10 @@ import { AuthService, PerfilSocio } from '../../services/auth.service';
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
+    private readonly destroy$ = new Subject<void>();
+    private timers: number[] = [];
+    private activeLayerElement: HTMLElement | null = null;
     private listTitles: any[];
     location: Location;
     mobile_menu_visible: any = 0;
@@ -38,20 +43,31 @@ export class NavbarComponent implements OnInit {
     }
 
     ngOnInit(){
-      this.auth.perfil$.subscribe(perfil => this.perfil = perfil);
+      this.auth.perfil$.pipe(takeUntil(this.destroy$)).subscribe(perfil => this.perfil = perfil);
       this.listTitles = ROUTES.filter(listTitle => listTitle);
       const navbar: HTMLElement = this.element.nativeElement;
       this.toggleButton = navbar.getElementsByClassName('navbar-toggler')[0];
-      this.router.events.subscribe((event) => {
+      this.router.events.pipe(takeUntil(this.destroy$)).subscribe(() => {
         this.sidebarClose();
-        var $layer: any = document.getElementsByClassName('close-layer')[0];
+        const $layer: any = document.getElementsByClassName('close-layer')[0];
         if ($layer) {
           $layer.remove();
           this.mobile_menu_visible = 0;
         }
       });
 
-      this.dataService.darkMode$.subscribe(d => this.isDarkMode = d);
+      this.dataService.darkMode$.pipe(takeUntil(this.destroy$)).subscribe(d => this.isDarkMode = d);
+    }
+
+    ngOnDestroy(): void {
+      this.destroy$.next();
+      this.destroy$.complete();
+      this.timers.forEach(t => window.clearTimeout(t));
+      this.timers = [];
+      if (this.activeLayerElement) {
+        this.activeLayerElement.onclick = null;
+        this.activeLayerElement = null;
+      }
     }
 
     toggleTheme(): void {
@@ -61,9 +77,9 @@ export class NavbarComponent implements OnInit {
     sidebarOpen() {
         const toggleButton = this.toggleButton;
         const body = document.getElementsByTagName('body')[0];
-        setTimeout(function(){
-            toggleButton.classList.add('toggled');
-        }, 500);
+        this.timers.push(window.setTimeout(function(){
+            toggleButton?.classList.add('toggled');
+        }, 500));
 
         body.classList.add('nav-open');
         this.sidebarVisible = true;

@@ -9,7 +9,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
 import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
@@ -61,10 +63,12 @@ describe('GestionarExpedientesComponent', () => {
         MatAutocompleteModule,
         MatFormFieldModule,
         MatInputModule,
+        MatPaginatorModule,
         NoopAnimationsModule
       ],
       declarations: [GestionarExpedientesComponent, ValoracionT03PanelComponent],
       providers: [
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
         { provide: NotificationService, useValue: notifications },
         TribunalDataService,
         AuthService

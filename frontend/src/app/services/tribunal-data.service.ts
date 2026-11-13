@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { PaginatedResponse, PaginationParams } from '../models/paginated-response.model';
 import { AuthService } from './auth.service';
 import type { AntecedenteT03DTO } from './expediente-api.service';
 
@@ -339,6 +340,60 @@ export class TribunalDataService {
         this.expedientesSubject.next(todosLosExpedientes);
       })
     );
+  }
+
+  /**
+   * Paginación server-side de expedientes (SCRUM-118 / T-87.13).
+   * Consulta GET /api/v1/expedientes/gestion/ con page, page_size y filtros.
+   */
+  listarExpedientes(params?: PaginationParams): Observable<PaginatedResponse<Expediente>> {
+    let httpParams = new HttpParams();
+    if (params) {
+      const keys: (keyof PaginationParams)[] = [
+        'page',
+        'page_size',
+        'ordering',
+        'search',
+        'estado',
+        'urgencia',
+        'concepto',
+        'socio',
+        'socio_legajo',
+        'fecha_desde',
+        'fecha_hasta',
+      ];
+      for (const key of keys) {
+        const val = params[key];
+        if (val !== undefined && val !== null && val !== '') {
+          httpParams = httpParams.set(key, String(val));
+        }
+      }
+    }
+    return this.http
+      .get<PaginatedResponse<any> | any[]>(`${environment.apiUrl}/expedientes/gestion/`, {
+        params: httpParams,
+      })
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response.map((c: any) => this.mapearBoardCaseAExpediente(c)),
+            };
+          }
+          return {
+            ...response,
+            results: (response.results || []).map((c: any) =>
+              this.mapearBoardCaseAExpediente(c)
+            ),
+          };
+        })
+      );
   }
 
   transicionarExpediente(

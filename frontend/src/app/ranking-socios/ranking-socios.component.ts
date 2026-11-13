@@ -1,11 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { PageEvent } from '@angular/material/paginator';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { RankingService } from '../services/ranking.service';
 import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
 import { RANKING_THRESHOLDS } from './ranking-thresholds';
-// Ficha Institucional reemplazada por Detalle de expedientes (mejora UX ranking); se conserva sin uso.
-// import { SocioLegajoDialogComponent } from './socio-legajo-dialog/socio-legajo-dialog.component';
+import { TrackByUtils } from '../utils/track-by.util';
+import { PaginatedResponse, RankingPaginationParams } from '../models/paginated-response.model';
 import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expedientes-socio-dialog.component';
 
 export type RankingColumnaOrden =
@@ -20,26 +29,115 @@ export type RankingColumnaOrden =
 @Component({
   selector: 'app-ranking-socios',
   templateUrl: './ranking-socios.component.html',
-  styleUrls: ['./ranking-socios.component.scss']
+  styleUrls: ['./ranking-socios.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RankingSociosComponent implements OnInit {
-  socios: RankingSocio[] = [];
-  sortKey: RankingColumnaOrden | null = null;
-  sortDir: 'asc' | 'desc' = 'asc';
+export class RankingSociosComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  private readonly search$ = new Subject<string>();
+  private searchDebounceSubInitialized = false;
+  private subcomisionesAcumuladas = new Set<string>();
+  private gruposAcumulados = new Set<string>();
 
-  filtroTexto = '';
-  filtroCategoria: 'ACTIVO' | 'PASIVO' | '' = '';
-  filtroSubcomision = '';
-  filtroGrupo = '';
+  private _socios: RankingSocio[] = [];
+  get socios(): RankingSocio[] {
+    return this._socios;
+  }
+  set socios(val: RankingSocio[]) {
+    this._socios = val;
+    this.markDirty();
+  }
+
+  private _sortKey: RankingColumnaOrden | null = null;
+  get sortKey(): RankingColumnaOrden | null {
+    return this._sortKey;
+  }
+  set sortKey(val: RankingColumnaOrden | null) {
+    this._sortKey = val;
+    this.markDirty();
+  }
+
+  private _sortDir: 'asc' | 'desc' = 'asc';
+  get sortDir(): 'asc' | 'desc' {
+    return this._sortDir;
+  }
+  set sortDir(val: 'asc' | 'desc') {
+    this._sortDir = val;
+    this.markDirty();
+  }
+
+  private _filtroTexto = '';
+  get filtroTexto(): string {
+    return this._filtroTexto;
+  }
+  set filtroTexto(val: string) {
+    this._filtroTexto = val;
+    this.markDirty();
+  }
+
+  private _filtroCategoria: 'ACTIVO' | 'PASIVO' | '' = '';
+  get filtroCategoria(): 'ACTIVO' | 'PASIVO' | '' {
+    return this._filtroCategoria;
+  }
+  set filtroCategoria(val: 'ACTIVO' | 'PASIVO' | '') {
+    this._filtroCategoria = val;
+    this.markDirty();
+  }
+
+  private _filtroSubcomision = '';
+  get filtroSubcomision(): string {
+    return this._filtroSubcomision;
+  }
+  set filtroSubcomision(val: string) {
+    this._filtroSubcomision = val;
+    this.markDirty();
+  }
+
+  private _filtroGrupo = '';
+  get filtroGrupo(): string {
+    return this._filtroGrupo;
+  }
+  set filtroGrupo(val: string) {
+    this._filtroGrupo = val;
+    this.markDirty();
+  }
 
   subcomisiones: string[] = [];
   grupos: string[] = [];
 
-  paginaActual = 1;
-  tamanoPagina = 10;
-  opcionesTamano = [10, 25, 50, 100, 0];
+  private _paginaActual = 1;
+  get paginaActual(): number {
+    return this._paginaActual;
+  }
+  set paginaActual(val: number) {
+    this._paginaActual = val;
+    this._sociosPaginadosCache = null;
+    this.cdr.markForCheck();
+  }
 
-  soloAlertas = false;
+  private _tamanoPagina = 10;
+  get tamanoPagina(): number {
+    return this._tamanoPagina;
+  }
+  set tamanoPagina(val: number) {
+    this._tamanoPagina = val;
+    this.markDirty();
+  }
+
+  opcionesTamano = [10, 20, 50, 100, 0];
+  readonly pageSizeOptions = [10, 20, 50, 100];
+  totalRegistros = 0;
+  serverPaginated = false;
+  private hadServerPagination = false;
+
+  private _soloAlertas = false;
+  get soloAlertas(): boolean {
+    return this._soloAlertas;
+  }
+  set soloAlertas(val: boolean) {
+    this._soloAlertas = val;
+    this.markDirty();
+  }
 
   get tabActiva(): 'general' | 'alertas' {
     return this.soloAlertas ? 'alertas' : 'general';
@@ -51,11 +149,32 @@ export class RankingSociosComponent implements OnInit {
   cargando = false;
   error: string | null = null;
 
+  // Cached filtered and paginated arrays to avoid layout thrashing and pure getters
+  private _sociosOrdenadosCache: RankingSocio[] | null = null;
+  private _sociosPaginadosCache: RankingSocio[] | null = null;
+
+  readonly trackBySocioId = (index: number, item: RankingSocio): string =>
+    TrackByUtils.bySocio(index, item);
+
+  readonly trackByValue = (_index: number, item: string): string => item;
+
   constructor(
     public rankingService: RankingService,
     public dialog: MatDialog,
-    private notifications: NotificationService
+    private notifications: NotificationService,
+    private cdr: ChangeDetectorRef
   ) {}
+
+  private markDirty(): void {
+    this._sociosOrdenadosCache = null;
+    this._sociosPaginadosCache = null;
+    this.cdr?.markForCheck();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   // Ficha Institucional reemplazada por Detalle de expedientes (mejora UX ranking); se conserva sin uso.
   /*
@@ -118,63 +237,167 @@ export class RankingSociosComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (!this.searchDebounceSubInitialized) {
+      this.searchDebounceSubInitialized = true;
+      this.search$
+        .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+        .subscribe(() => {
+          this.paginaActual = 1;
+          this.cargarRanking();
+        });
+    }
+    this.cargarRanking();
+  }
+
+  private buildServerOrdering(): string {
+    if (!this.sortKey) {
+      return 'grupo,apellido,nombre';
+    }
+    const prefix = this.sortDir === 'desc' ? '-' : '';
+    switch (this.sortKey) {
+      case 'posicion':
+        return this.sortDir === 'desc' ? 'saldo' : '-saldo';
+      case 'socio':
+        return `${prefix}apellido,${prefix}nombre`;
+      case 'legajo':
+        return `${prefix}legajo`;
+      case 'categoria':
+        return `${prefix}categoria`;
+      case 'grupo':
+        return `${prefix}grupo`;
+      case 'subcomision':
+        return `${prefix}subcomision`;
+      case 'saldo':
+        return `${prefix}saldo`;
+      default:
+        return 'grupo,apellido,nombre';
+    }
+  }
+
+  cargarRanking(): void {
     this.cargando = true;
     this.error = null;
+    this.cdr?.markForCheck();
 
-    this.rankingService.obtenerRanking().subscribe({
-      next: (socios) => {
-        this.socios = socios;
+    const params: RankingPaginationParams = {
+      ordering: this.buildServerOrdering(),
+      search: this.filtroTexto.trim() || undefined,
+      categoria: this.filtroCategoria || undefined,
+      subcomision: this.filtroSubcomision || undefined,
+      grupo: this.filtroGrupo || undefined,
+      solo_alertas: this.soloAlertas ? true : undefined,
+    };
+    if (this.tamanoPagina === 0) {
+      params.all = true;
+    } else {
+      params.page = this.paginaActual;
+      params.page_size = this.tamanoPagina;
+    }
 
-        // Precompute fixed posicion across the entire padrón by saldo desc (tie-breaker: apellido asc, nombre asc)
-        const rankingOrdenado = [...this.socios].sort((a, b) => {
-          const diffSaldo = b.saldo - a.saldo;
-          if (diffSaldo !== 0) {
-            return diffSaldo;
+    this.rankingService
+      .obtenerRanking(params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const socios = Array.isArray(response) ? response : (response?.results ?? []);
+          const countVal =
+            !Array.isArray(response) && typeof response?.count === 'number'
+              ? response.count
+              : socios.length;
+
+          this.totalRegistros = countVal;
+          const esParcialServidor =
+            !Array.isArray(response) &&
+            (socios.length < countVal || (response?.current_page ?? 1) > 1);
+          this.serverPaginated = esParcialServidor;
+          if (esParcialServidor) {
+            this.hadServerPagination = true;
           }
-          const diffApellido = a.apellido.localeCompare(b.apellido, 'es');
-          if (diffApellido !== 0) {
-            return diffApellido;
+
+          if (!esParcialServidor && !this.hadServerPagination) {
+            // Precompute fixed posicion across the full client list by saldo desc (tie-breaker: apellido asc, nombre asc)
+            const rankingOrdenado = [...socios].sort((a, b) => {
+              const diffSaldo = b.saldo - a.saldo;
+              if (diffSaldo !== 0) {
+                return diffSaldo;
+              }
+              const diffApellido = a.apellido.localeCompare(b.apellido, 'es');
+              if (diffApellido !== 0) {
+                return diffApellido;
+              }
+              return a.nombre.localeCompare(b.nombre, 'es');
+            });
+
+            rankingOrdenado.forEach((socio, index) => {
+              socio.posicion = index + 1;
+            });
+          } else {
+            const offset =
+              this.tamanoPagina > 0 ? (this.paginaActual - 1) * this.tamanoPagina : 0;
+            socios.forEach((socio, index) => {
+              if (socio.posicion === undefined || socio.posicion === null) {
+                socio.posicion = offset + index + 1;
+              }
+            });
           }
-          return a.nombre.localeCompare(b.nombre, 'es');
-        });
 
-        rankingOrdenado.forEach((socio, index) => {
-          socio.posicion = index + 1;
-        });
+          this.socios = socios;
 
-        this.subcomisiones = [
-          ...new Set(this.socios.map((s) => s.subcomision).filter(Boolean))
-        ].sort((a, b) => a.localeCompare(b, 'es'));
+          // Refrescar catálogos manteniendo opciones vistas en páginas previas cuando hay paginación servidor
+          if (!this.hadServerPagination) {
+            this.subcomisionesAcumuladas.clear();
+            this.gruposAcumulados.clear();
+          }
+          socios.forEach((s) => {
+            if (s.subcomision && s.subcomision !== 'Sin Subcomisión') {
+              this.subcomisionesAcumuladas.add(s.subcomision);
+            }
+            if (s.grupo && s.grupo.trim() !== '' && s.grupo !== 'Sin grupo') {
+              this.gruposAcumulados.add(s.grupo);
+            }
+          });
+          if (!this.hadServerPagination) {
+            socios.forEach((s) => {
+              if (s.subcomision) this.subcomisionesAcumuladas.add(s.subcomision);
+            });
+          }
 
-        const gruposUnicos = [
-          ...new Set(
-            this.socios
-              .map((s) => s.grupo)
-              .filter((g): g is string => !!g && g.trim() !== '' && g !== 'Sin grupo')
-          )
-        ];
-        this.grupos = gruposUnicos.sort((a, b) => {
-          const numA = parseInt(a.replace(/\D/g, '') || '0', 10);
-          const numB = parseInt(b.replace(/\D/g, '') || '0', 10);
-          return numA - numB;
-        });
+          this.subcomisiones = [...this.subcomisionesAcumuladas].sort((a, b) =>
+            a.localeCompare(b, 'es')
+          );
+          this.grupos = [...this.gruposAcumulados].sort((a, b) => {
+            const numA = parseInt(a.replace(/\D/g, '') || '0', 10);
+            const numB = parseInt(b.replace(/\D/g, '') || '0', 10);
+            return numA - numB;
+          });
 
-        this.cargando = false;
-      },
-      error: () => {
-        this.socios = [];
-        this.subcomisiones = [];
-        this.grupos = [];
-        this.error = 'No se pudo cargar el ranking. Intentá nuevamente.';
-        this.notifications.error(this.error);
-        this.cargando = false;
-      }
-    });
+          this.cargando = false;
+          this.markDirty();
+        },
+        error: () => {
+          this.socios = [];
+          this.totalRegistros = 0;
+          if (!this.hadServerPagination) {
+            this.subcomisiones = [];
+            this.grupos = [];
+          }
+          this.error = 'No se pudo cargar el ranking. Intentá nuevamente.';
+          this.notifications.error(this.error);
+          this.cargando = false;
+          this.markDirty();
+        }
+      });
+  }
+
+  onFiltroSelectChange(): void {
+    this.paginaActual = 1;
+    this.cargarRanking();
   }
 
   onFiltroChange(texto: string): void {
     this.filtroTexto = texto;
     this.paginaActual = 1;
+    this.search$.next(texto);
   }
 
   limpiarFiltros(): void {
@@ -182,7 +405,13 @@ export class RankingSociosComponent implements OnInit {
     this.filtroCategoria = '';
     this.filtroSubcomision = '';
     this.filtroGrupo = '';
+    this.soloAlertas = false;
     this.paginaActual = 1;
+    if (this.serverPaginated || this.hadServerPagination) {
+      this.cargarRanking();
+    } else {
+      this.markDirty();
+    }
   }
 
   get ordenSaldo(): 'asc' | 'desc' | null {
@@ -222,6 +451,9 @@ export class RankingSociosComponent implements OnInit {
       }
     }
     this.paginaActual = 1;
+    if (this.serverPaginated || this.hadServerPagination) {
+      this.cargarRanking();
+    }
   }
 
   alternarOrdenSaldo(): void {
@@ -254,11 +486,17 @@ export class RankingSociosComponent implements OnInit {
   toggleFiltroAlerta(): void {
     this.soloAlertas = !this.soloAlertas;
     this.paginaActual = 1;
+    if (this.serverPaginated || this.hadServerPagination) {
+      this.cargarRanking();
+    }
   }
 
   setTab(tab: 'general' | 'alertas'): void {
     this.soloAlertas = tab === 'alertas';
     this.paginaActual = 1;
+    if (this.serverPaginated || this.hadServerPagination) {
+      this.cargarRanking();
+    }
   }
 
   get cantidadSociosEnAlerta(): number {
@@ -266,6 +504,13 @@ export class RankingSociosComponent implements OnInit {
   }
 
   get sociosOrdenados(): RankingSocio[] {
+    if (this.serverPaginated) {
+      return this.socios;
+    }
+    if (this._sociosOrdenadosCache) {
+      return this._sociosOrdenadosCache;
+    }
+
     let list = [...this.socios];
 
     if (this.soloAlertas) {
@@ -364,27 +609,49 @@ export class RankingSociosComponent implements OnInit {
       return a.nombre.localeCompare(b.nombre, 'es');
     });
 
+    this._sociosOrdenadosCache = list;
     return list;
   }
 
   get sociosPaginados(): RankingSocio[] {
+    if (this.serverPaginated) {
+      return this.socios;
+    }
+    if (this._sociosPaginadosCache) {
+      return this._sociosPaginadosCache;
+    }
     if (this.tamanoPagina === 0) {
-      return this.sociosOrdenados;
+      this._sociosPaginadosCache = this.sociosOrdenados;
+      return this._sociosPaginadosCache;
     }
     const inicio = (this.paginaActual - 1) * this.tamanoPagina;
-    return this.sociosOrdenados.slice(inicio, inicio + this.tamanoPagina);
+    this._sociosPaginadosCache = this.sociosOrdenados.slice(inicio, inicio + this.tamanoPagina);
+    return this._sociosPaginadosCache;
   }
 
   get totalPaginas(): number {
     if (this.tamanoPagina === 0) {
       return 1;
     }
-    return Math.max(1, Math.ceil(this.sociosOrdenados.length / this.tamanoPagina));
+    const total = this.serverPaginated ? this.totalRegistros : this.sociosOrdenados.length;
+    return Math.max(1, Math.ceil(total / this.tamanoPagina));
+  }
+
+  onMatPageChange(event: PageEvent): void {
+    const sizeChanged = event.pageSize !== this.tamanoPagina;
+    this.tamanoPagina = event.pageSize;
+    this.paginaActual = sizeChanged ? 1 : event.pageIndex + 1;
+    if (this.serverPaginated || this.hadServerPagination || this.totalRegistros > this.socios.length) {
+      this.cargarRanking();
+    }
   }
 
   cambiarPagina(pagina: number): void {
     if (pagina >= 1 && pagina <= this.totalPaginas) {
       this.paginaActual = pagina;
+      if (this.serverPaginated) {
+        this.cargarRanking();
+      }
     }
   }
 
@@ -399,10 +666,13 @@ export class RankingSociosComponent implements OnInit {
   cambiarTamanoPagina(tamano: number): void {
     this.tamanoPagina = Number(tamano);
     this.paginaActual = 1;
+    if (this.serverPaginated || this.hadServerPagination) {
+      this.cargarRanking();
+    }
   }
 
   get textoContador(): string {
-    const total = this.sociosOrdenados.length;
+    const total = this.serverPaginated ? this.totalRegistros : this.sociosOrdenados.length;
     if (total === 0) {
       return 'Mostrando 0 de 0 socios';
     }

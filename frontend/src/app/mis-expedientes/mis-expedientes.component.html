@@ -48,7 +48,7 @@
               <i class="material-icons">folder_open</i>
             </div>
             <p class="card-category">Total de Expedientes</p>
-            <h3 class="card-title">{{misExpedientes.length}}</h3>
+            <h3 class="card-title">{{ totalRegistros || misExpedientes.length }}</h3>
           </div>
         </div>
       </div>
@@ -63,8 +63,8 @@
               <h4 class="card-title text-white font-weight-bold mb-0">Mis Expedientes y Descargos</h4>
               <p class="card-category text-white-50 mb-0">Historial y estado de causas disciplinarias asociadas a tu legajo.</p>
             </div>
-            <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="misExpedientes.length > 0">
-              {{ misExpedientes.length }} expedientes
+            <span class="badge badge-pill badge-light text-dark font-weight-bold px-3 py-2" *ngIf="(totalRegistros || misExpedientes.length) > 0">
+              {{ totalRegistros || misExpedientes.length }} expedientes
             </span>
           </div>
           <div class="card-body">
@@ -101,7 +101,7 @@
                   <th class="text-right">ACCIONES</th>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let exp of expedientesOrdenados"
+                  <tr *ngFor="let exp of expedientesPaginados; trackBy: trackByExpediente"
                       tabindex="0"
                       role="row"
                       [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ' - ' + (exp.titulo || exp.motivo)"
@@ -163,6 +163,16 @@
                 </tbody>
               </table>
             </div>
+            <mat-paginator
+              *ngIf="(totalRegistros || misExpedientes.length) > 0"
+              [length]="totalRegistros || expedientesOrdenados.length"
+              [pageSize]="tamanoPagina"
+              [pageIndex]="paginaActual - 1"
+              [pageSizeOptions]="pageSizeOptions"
+              (page)="onPageChange($event)"
+              showFirstLastButtons
+              aria-label="Paginación de mis expedientes">
+            </mat-paginator>
           </div>
         </div>
       </div>
@@ -323,7 +333,7 @@
             <div *ngIf="historialT01.adecuaciones.length" class="mt-3">
               <h6 class="font-weight-bold text-dark mb-1">Adecuaciones del Tribunal</h6>
               <ul class="list-unstyled small mb-0">
-                <li *ngFor="let a of historialT01.adecuaciones" class="mb-2 adecuacion-t01">
+                <li *ngFor="let a of historialT01.adecuaciones; trackBy: trackByAdecuacion" class="mb-2 adecuacion-t01">
                   <span class="font-weight-bold">Versión {{a.version}}</span> · {{a.created_at | date:'dd/MM/yyyy'}} ·
                   Puntos {{a.puntos_anteriores}} → {{a.puntos_nuevos}}
                   <div class="text-muted">{{a.motivos}}</div>
@@ -361,7 +371,7 @@
             <div *ngIf="expedienteDetalle?.descargo?.evidencias && expedienteDetalle?.descargo?.evidencias?.length > 0" class="mb-3">
               <strong class="text-dark d-block mb-1">Documentos Adjuntos:</strong>
               <div class="list-group list-group-flush border rounded bg-white">
-                <div *ngFor="let ev of expedienteDetalle?.descargo?.evidencias" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                <div *ngFor="let ev of expedienteDetalle?.descargo?.evidencias; trackBy: trackByEvidencia" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
                   <div class="d-flex align-items-center">
                     <i class="material-icons text-primary mr-2" style="font-size: 20px;">insert_drive_file</i>
                     <div>
@@ -417,7 +427,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let log of historialDescargo">
+                <tr *ngFor="let log of historialDescargo; trackBy: trackByLog">
                   <td>
                     <span class="badge" [ngClass]="getBadgeClaseOperacion(log.operacion)">
                       {{log.accionLabel}}
@@ -597,7 +607,7 @@
               Documentos adjuntos ({{evidenciasExistentes.length}}):
             </label>
             <ul class="list-group list-group-flush bg-white rounded border">
-              <li *ngFor="let ev of evidenciasExistentes; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+              <li *ngFor="let ev of evidenciasExistentes; let i = index; trackBy: trackByEvidencia" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
                 <div class="d-flex align-items-center">
                   <i class="material-icons text-info mr-2" style="font-size: 18px;">description</i>
                   <span class="small font-weight-bold text-dark">{{ev.nombre_original || ev.name}}</span>
@@ -617,7 +627,7 @@
               Archivos seleccionados ({{archivosSeleccionados.length}}):
             </label>
             <ul class="list-group list-group-flush bg-white rounded border">
-              <li *ngFor="let file of archivosSeleccionados; let i = index" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+              <li *ngFor="let file of archivosSeleccionados; let i = index; trackBy: trackByFile" class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
                 <div class="d-flex align-items-center">
                   <i class="material-icons text-primary mr-2" style="font-size: 18px;">description</i>
                   <span class="small font-weight-bold text-dark">{{file.name}}</span>

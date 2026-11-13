@@ -2,6 +2,9 @@ import { ComponentsModule } from '../components/components.module';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
 import { environment } from '../../environments/environment';
 import { MisExpedientesComponent } from './mis-expedientes.component';
 import { NotificationService } from '../services/notification.service';
@@ -17,9 +20,13 @@ describe('MisExpedientesComponent', () => {
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule, ComponentsModule],
+      imports: [HttpClientTestingModule, FormsModule, ComponentsModule, MatPaginatorModule, NoopAnimationsModule],
       declarations: [MisExpedientesComponent],
-      providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
+      providers: [
+        TribunalDataService,
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
+        { provide: NotificationService, useValue: notifications }
+      ]
     }).compileComponents();
   }));
 
@@ -719,12 +726,12 @@ describe('MisExpedientesComponent', () => {
       /** Recarga la lista y responde solo la última petición, ignorando las del arranque del componente. */
       const recargarLista = (respuesta: any[]) => {
         component.cargarMisExpedientes();
-        const pendientes = http.match(listaUrl);
+        const pendientes = http.match(req => req.url === listaUrl);
         pendientes[pendientes.length - 1].flush(respuesta);
       };
 
       beforeEach(() => {
-        http.match(listaUrl).forEach(req => req.flush([]));
+        http.match(req => req.url === listaUrl).forEach(req => req.flush([]));
       });
 
       it('muestra el descargo recién presentado sin cerrar el detalle ni depender del almacén local', () => {

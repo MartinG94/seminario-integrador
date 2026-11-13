@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { AuthService } from '../services/auth.service';
 import {
@@ -14,7 +16,8 @@ import { httpErrorMessage, NotificationService } from '../services/notification.
   templateUrl: './reglamentos.component.html',
   styleUrls: ['./reglamentos.component.scss']
 })
-export class ReglamentosComponent implements OnInit {
+export class ReglamentosComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   tabActiva: TipoDocumentoReglamento = 'Reglamento Interno';
   busqueda = '';
   articulos: ArticuloReglamentoDTO[] = [];
@@ -41,6 +44,11 @@ export class ReglamentosComponent implements OnInit {
     this.cargarArticulos();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   puedeGestionar(): boolean {
     return this.authService.tieneRol('TD', 'CD', 'ADMIN');
   }
@@ -64,7 +72,7 @@ export class ReglamentosComponent implements OnInit {
       search: this.busqueda ? this.busqueda.trim() : undefined
     };
 
-    this.expedienteService.listarArticulosReglamento(params).subscribe({
+    this.expedienteService.listarArticulosReglamento(params).pipe(takeUntil(this.destroy$)).subscribe({
       next: (articulos) => {
         this.articulos = articulos || [];
         this.cargando = false;
@@ -123,7 +131,7 @@ export class ReglamentosComponent implements OnInit {
         cuerpo: cuerpoVal
       };
 
-      this.expedienteService.actualizarArticuloReglamento(this.articuloEnEdicionId, payload).subscribe({
+      this.expedienteService.actualizarArticuloReglamento(this.articuloEnEdicionId, payload).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.notificationService.success('Artículo modificado con éxito.');
           this.cerrarModal();
@@ -141,7 +149,7 @@ export class ReglamentosComponent implements OnInit {
         cuerpo: cuerpoVal
       };
 
-      this.expedienteService.crearArticuloReglamento(payload).subscribe({
+      this.expedienteService.crearArticuloReglamento(payload).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.notificationService.success('Artículo creado con éxito.');
           this.cerrarModal();
@@ -170,7 +178,7 @@ export class ReglamentosComponent implements OnInit {
     }
 
     const id = this.articuloAEliminar.id;
-    this.expedienteService.eliminarArticuloReglamento(id).subscribe({
+    this.expedienteService.eliminarArticuloReglamento(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.notificationService.success('Artículo eliminado con éxito.');
         this.cerrarModalEliminar();

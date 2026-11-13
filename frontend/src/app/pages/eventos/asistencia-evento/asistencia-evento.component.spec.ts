@@ -3,6 +3,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { SpanishPaginatorIntl } from '../../../shared/spanish-paginator-intl';
 import { of } from 'rxjs';
 import { AsistenciaEventoComponent } from './asistencia-evento.component';
 import { EventoService } from '../../../services/evento.service';
@@ -54,15 +57,23 @@ describe('AsistenciaEventoComponent (Rediseño 2 Pestañas / SCRUM-50)', () => {
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
     socioApiSpy = jasmine.createSpyObj('SocioApiService', ['searchSocios']);
 
-    eventoServiceSpy.getEventos.and.returnValue(of([mockEvento]));
-    eventoServiceSpy.getMisEventos.and.returnValue(of([mockEvento]));
+    eventoServiceSpy.getEventos.and.returnValue(of({ count: 1, total_pages: 1, current_page: 1, page_size: 20, next: null, previous: null, results: [mockEvento] } as any));
+    eventoServiceSpy.getMisEventos.and.returnValue(of({ count: 1, total_pages: 1, current_page: 1, page_size: 20, next: null, previous: null, results: [mockEvento] } as any));
     eventoServiceSpy.getAsistencias.and.returnValue(of(mockAsistencias));
     socioApiSpy.searchSocios.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
 
     await TestBed.configureTestingModule({
-      imports: [FormsModule, ReactiveFormsModule, HttpClientTestingModule, RouterTestingModule],
+      imports: [
+        FormsModule,
+        ReactiveFormsModule,
+        HttpClientTestingModule,
+        RouterTestingModule,
+        MatPaginatorModule,
+        NoopAnimationsModule
+      ],
       declarations: [AsistenciaEventoComponent],
       providers: [
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
         { provide: EventoService, useValue: eventoServiceSpy },
         { provide: NotificationService, useValue: notificationSpy },
         { provide: MatDialog, useValue: dialogSpy },
@@ -105,6 +116,23 @@ describe('AsistenciaEventoComponent (Rediseño 2 Pestañas / SCRUM-50)', () => {
 
     component.volverAMisEventos();
     expect(component.modoDetalle).toBeFalse();
+  });
+
+  it('debe renderizar correctamente total_convocados, total_presentes y total_ausentes en la tabla de mis eventos', () => {
+    const eventoConMetricas: EventoInstitucional = {
+      ...mockEvento,
+      total_convocados: 25,
+      total_presentes: 20,
+      total_ausentes: 5
+    };
+    eventoServiceSpy.getMisEventos.and.returnValue(of({ count: 1, total_pages: 1, current_page: 1, page_size: 20, next: null, previous: null, results: [eventoConMetricas] } as any));
+    component.setTab('mis-eventos');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Convocados: 25');
+    expect(el.textContent).toContain('Presentes: 20');
+    expect(el.textContent).toContain('Ausentes: 5');
   });
 
   it('debe exigir detalle_tarea cuando la categoría es ACTIVIDAD y permitir sanción personalizada', () => {

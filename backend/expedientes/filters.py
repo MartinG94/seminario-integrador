@@ -43,6 +43,7 @@ class ExpedienteFilter(django_filters.FilterSet):
         val = value.strip()
         return queryset.filter(
             Q(numero__icontains=val)
+            | Q(titulo__icontains=val)
             | Q(motivo__icontains=val)
             | Q(socio__legajo__icontains=val)
             | Q(socio__first_name__icontains=val)

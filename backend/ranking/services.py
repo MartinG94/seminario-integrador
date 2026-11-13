@@ -147,10 +147,12 @@ def filter_ranking_queryset(
     queryset: QuerySet[Socio],
     categoria: Optional[str] = None,
     subcomision: Optional[str] = None,
+    grupo: Optional[str] = None,
+    solo_alertas: Optional[bool] = None,
     search: Optional[str] = None,
     reconciliado: Optional[bool] = None,
 ) -> QuerySet[Socio]:
-    """Aplica filtros de búsqueda, categoría, subcomisión y estado de reconciliación."""
+    """Aplica filtros de búsqueda, categoría, subcomisión, grupo, alertas y reconciliación."""
     qs = queryset
 
     # Filtro por categoría estatutaria (ACTIVO / PASIVO)
@@ -160,6 +162,20 @@ def filter_ranking_queryset(
             qs = qs.filter(anoSocial__gte=4)
         elif cat_upper == "PASIVO":
             qs = qs.filter(Q(anoSocial__lt=4) | Q(anoSocial__isnull=True))
+
+    # Filtro por grupo institucional (ej. 'G58', '58', 'SIN_GRUPO')
+    if grupo:
+        g_clean = grupo.strip()
+        if g_clean.upper() in ("SIN_GRUPO", "SIN GRUPO", "NONE", "NULL"):
+            qs = qs.filter(grupo_id_calc__isnull=True)
+        else:
+            digits = "".join(ch for ch in g_clean if ch.isdigit())
+            if digits:
+                qs = qs.filter(grupo_id_calc=int(digits))
+
+    # Filtro por umbral de alerta disciplinaria (saldo <= -7.00 pts)
+    if solo_alertas is True:
+        qs = qs.filter(saldo_historico_calc__lte=Decimal("-7.00"))
 
     # Filtro por subcomisión (por nombre insensible a acentos, ID numérico o sin subcomisión)
     if subcomision:
@@ -251,8 +267,8 @@ def order_ranking_queryset(
 ) -> QuerySet[Socio]:
     """Aplica ordenamiento al ranking con orden por defecto descendente por saldo."""
     if not ordering:
-        # Por defecto: mayor saldo primero, desempata alfabéticamente por apellido y nombre
-        return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
+        # Por defecto: mayor saldo primero, desempata por apellido, nombre y nroSocio
+        return queryset.order_by("-saldo_historico_calc", "apellido", "nombre", "nroSocio")
 
     ordering_map: dict[str, tuple[str, ...]] = {
         "id": ("nroSocio",),
@@ -285,6 +301,9 @@ def order_ranking_queryset(
         "grupo": ("grupo_sort_calc", "apellido", "nombre"),
         "+grupo": ("grupo_sort_calc", "apellido", "nombre"),
         "-grupo": ("-grupo_sort_calc", "apellido", "nombre"),
+        "categoria": ("_categoria_sort", "apellido", "nombre"),
+        "+categoria": ("_categoria_sort", "apellido", "nombre"),
+        "-categoria": ("-_categoria_sort", "apellido", "nombre"),
         "diferencia": ("_signed_diff", "apellido", "nombre"),
         "+diferencia": ("_signed_diff", "apellido", "nombre"),
         "-diferencia": ("-_signed_diff", "apellido", "nombre"),
@@ -298,6 +317,15 @@ def order_ranking_queryset(
         return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
 
     qs = queryset
+    needs_categoria_annotation = any("categoria" in tok for tok in raw_tokens)
+    if needs_categoria_annotation:
+        qs = qs.annotate(
+            _categoria_sort=Case(
+                When(anoSocial__gte=4, then=Value("ACTIVO")),
+                default=Value("PASIVO"),
+                output_field=CharField(),
+            )
+        )
     needs_diff_annotations = any("diferencia" in tok or "reconciliado" in tok for tok in raw_tokens)
     if needs_diff_annotations:
         qs = qs.annotate(
@@ -323,9 +351,11 @@ def order_ranking_queryset(
                     combined_fields.append(f)
 
     if combined_fields:
+        if "nroSocio" not in seen:
+            combined_fields.append("nroSocio")
         return qs.order_by(*combined_fields)
 
-    return qs.order_by("-saldo_historico_calc", "apellido", "nombre")
+    return qs.order_by("-saldo_historico_calc", "apellido", "nombre", "nroSocio")
 
 
 from ranking.domain.threshold_alerts import (  # noqa: E402
