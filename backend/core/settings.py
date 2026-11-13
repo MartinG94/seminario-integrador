@@ -7,6 +7,7 @@ credentials, debug flag) are read from environment variables / a local
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -91,6 +92,13 @@ ASGI_APPLICATION = "core.asgi.application"
 
 # Database — MySQL 8.0 (con fallback opcional a SQLite para desarrollo desacoplado)
 USE_SQLITE = os.getenv("USE_SQLITE", "False").lower() in ("true", "1", "t")
+if (
+    not USE_SQLITE
+    and __name__ != "<run_path>"
+    and ("pytest" in sys.modules or any("pytest" in arg for arg in sys.argv))
+):
+    if os.getenv("DATABASE_HOST") is None and os.getenv("MYSQL_HOST") is None:
+        USE_SQLITE = True
 
 if USE_SQLITE:
     DATABASES = {
@@ -156,6 +164,7 @@ REST_FRAMEWORK = {
     # Deny by default (CA3): every endpoint must opt in to anonymous access
     # explicitly instead of opting out of authentication.
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "EXCEPTION_HANDLER": "core.pagination.problem_details_exception_handler",
 }
 
 # SimpleJWT Configuration

@@ -13,6 +13,10 @@ from expedientes.models import Expediente, Holiday, SolicitudT01
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.skipif(
+    connection.vendor != "mysql",
+    reason="La prueba de reversión y reaplicación de migraciones históricas requiere motor MySQL.",
+)
 @pytest.mark.parametrize(
     "previous_migration",
     ["0010_import_institutional_holidays", "0008_expediente_points_precision"],

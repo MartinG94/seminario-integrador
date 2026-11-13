@@ -1,6 +1,12 @@
 """Tests para los endpoints del tablero Kanban y transiciones de estado (S2-05)."""
 
+from datetime import timedelta
+from decimal import Decimal
+
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 from rest_framework import status
 
 from expedientes.models import (
@@ -356,6 +362,207 @@ class TestBoardExpedientesView:
         assert response.status_code == status.HTTP_200_OK
         cases = [case for column in response.data["columns"] for case in column["cases"]]
         assert [case["numero"] for case in cases] == ["EXP-0007/2026"]
+
+    def test_board_preview_limit_caps_cases_and_preserves_totals_and_ordering(
+        self, api_client, authenticate, td_user, socio_user
+    ):
+        """Valida /board/?preview_limit=2 con total_count, has_more y orden -created_at,-id."""
+        base_time = timezone.now() - timedelta(days=5)
+        emitidos = []
+        for idx in range(5):
+            exp = Expediente.objects.create(
+                numero=f"EXP-EM-{idx:03d}/2026",
+                socio=socio_user,
+                motivo=f"Emitido {idx}",
+                estado=EstadoExpedienteEnum.EMITIDO,
+            )
+            Expediente.objects.filter(pk=exp.id).update(
+                created_at=base_time + timedelta(minutes=idx)
+            )
+            emitidos.append(exp)
+
+        creados = []
+        for idx in range(3):
+            exp = Expediente.objects.create(
+                numero=f"EXP-CR-{idx:03d}/2026",
+                socio=socio_user,
+                motivo=f"Creado {idx}",
+                estado=EstadoExpedienteEnum.CREADO,
+            )
+            Expediente.objects.filter(pk=exp.id).update(
+                created_at=base_time + timedelta(minutes=10)
+            )
+            creados.append(exp)
+
+        justif = Expediente.objects.create(
+            numero="EXP-JU-000/2026",
+            socio=socio_user,
+            motivo="Unico justificando",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+        )
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/?preview_limit=2")
+        assert response.status_code == status.HTTP_200_OK
+
+        cols = {col["key"]: col for col in response.data["columns"]}
+        assert len(cols) == 6
+
+        assert cols[EstadoExpedienteEnum.EMITIDO]["total_count"] == 5
+        assert cols[EstadoExpedienteEnum.EMITIDO]["has_more"] is True
+        assert [c["id"] for c in cols[EstadoExpedienteEnum.EMITIDO]["cases"]] == [
+            emitidos[4].id,
+            emitidos[3].id,
+        ]
+
+        assert cols[EstadoExpedienteEnum.CREADO]["total_count"] == 3
+        assert cols[EstadoExpedienteEnum.CREADO]["has_more"] is True
+        # Mismo created_at: desempate determinístico por -id
+        assert [c["id"] for c in cols[EstadoExpedienteEnum.CREADO]["cases"]] == [
+            creados[2].id,
+            creados[1].id,
+        ]
+
+        assert cols[EstadoExpedienteEnum.JUSTIFICANDO]["total_count"] == 1
+        assert cols[EstadoExpedienteEnum.JUSTIFICANDO]["has_more"] is False
+        assert [c["id"] for c in cols[EstadoExpedienteEnum.JUSTIFICANDO]["cases"]] == [justif.id]
+
+        assert cols[EstadoExpedienteEnum.ESPERA_RESOLUCION]["total_count"] == 0
+        assert cols[EstadoExpedienteEnum.ESPERA_RESOLUCION]["has_more"] is False
+        assert cols[EstadoExpedienteEnum.ESPERA_RESOLUCION]["cases"] == []
+
+        # Sin preview_limit preserva comportamiento histórico completo
+        full_response = client.get("/api/v1/expedientes/board/")
+        assert full_response.status_code == status.HTTP_200_OK
+        full_cols = {col["key"]: col for col in full_response.data["columns"]}
+        assert len(full_cols[EstadoExpedienteEnum.EMITIDO]["cases"]) == 5
+        assert full_cols[EstadoExpedienteEnum.EMITIDO]["total_count"] == 5
+        assert full_cols[EstadoExpedienteEnum.EMITIDO]["has_more"] is False
+
+    def test_board_preview_limit_respects_filters_and_m2m_distinct_counts(
+        self, api_client, authenticate, td_user, socio_user, make_socio
+    ):
+        """Asegura que total_count use DISTINCT sobre M2M socios y respete filtros activos."""
+        co_socio = make_socio(legajo="55888", role=Role.SOCIO)
+        other_socio = make_socio(legajo="55999", role=Role.SOCIO)
+
+        for idx in range(3):
+            exp = Expediente.objects.create(
+                numero=f"EXP-M2M-{idx:03d}/2026",
+                socio=socio_user,
+                motivo="Causa colectiva",
+                estado=EstadoExpedienteEnum.EMITIDO,
+            )
+            exp.socios.add(socio_user, co_socio)
+
+        Expediente.objects.create(
+            numero="EXP-OTRO-001/2026",
+            socio=other_socio,
+            motivo="No debe contar",
+            estado=EstadoExpedienteEnum.EMITIDO,
+        )
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/?socio=55888&preview_limit=1")
+        assert response.status_code == status.HTTP_200_OK
+        cols = {col["key"]: col for col in response.data["columns"]}
+        assert cols[EstadoExpedienteEnum.EMITIDO]["total_count"] == 3
+        assert cols[EstadoExpedienteEnum.EMITIDO]["has_more"] is True
+        assert len(cols[EstadoExpedienteEnum.EMITIDO]["cases"]) == 1
+
+    @pytest.mark.parametrize("raw_limit", ["0", "-2", "51", "abc"])
+    def test_board_preview_limit_invalido_retorna_400(
+        self, api_client, authenticate, td_user, raw_limit
+    ):
+        client = authenticate(td_user)
+        response = client.get(f"/api/v1/expedientes/board/?preview_limit={raw_limit}")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_board_preview_limit_mantiene_queries_acotadas_con_muchos_emitidos(
+        self, api_client, authenticate, td_user, socio_user
+    ):
+        """Evita hidratar miles de emitidos en RAM/ORM cuando preview_limit está activo."""
+        for idx in range(20):
+            Expediente.objects.create(
+                numero=f"EXP-VOL-{idx:03d}/2026",
+                socio=socio_user,
+                motivo=f"Emitido masivo {idx}",
+                estado=EstadoExpedienteEnum.EMITIDO,
+            )
+
+        client = authenticate(td_user)
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get("/api/v1/expedientes/board/?preview_limit=2")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(ctx) <= 18
+        cols = {col["key"]: col for col in response.data["columns"]}
+        assert len(cols[EstadoExpedienteEnum.EMITIDO]["cases"]) == 2
+        assert cols[EstadoExpedienteEnum.EMITIDO]["total_count"] == 20
+        assert cols[EstadoExpedienteEnum.EMITIDO]["has_more"] is True
+
+    def test_board_cards_expose_es_llamado_and_es_felicitacion(
+        self, api_client, authenticate, td_user, socio_user
+    ):
+        """BoardExpedienteSerializer expone es_llamado y es_felicitacion con ±0.25, T01 y ±0.33."""
+        e_llamado = Expediente.objects.create(
+            numero="EXP-B-LL-1/2026",
+            socio=socio_user,
+            motivo="Llamado canon",
+            puntos=Decimal("-0.25"),
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        e_felic_t01 = Expediente.objects.create(
+            numero="EXP-B-FE-2/2026",
+            socio=socio_user,
+            motivo="Felicitacion T01",
+            puntos=Decimal("0.00"),
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        SolicitudT01.objects.create(
+            solicitante=td_user,
+            destinatarios_socios_ids=[socio_user.id],
+            tipo_accion=SolicitudT01.TipoAccion.MERIT,
+            puntaje_especial=SolicitudT01.PuntajeEspecial.FELICITACION,
+            puntos=Decimal("0.25"),
+            causal="Mérito destacado",
+            expediente=e_felic_t01,
+        )
+        e_hist = Expediente.objects.create(
+            numero="EXP-B-LL-3/2026",
+            socio=socio_user,
+            motivo="Llamado histórico",
+            puntos=Decimal("-0.33"),
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+        e_std = Expediente.objects.create(
+            numero="EXP-B-STD-4/2026",
+            socio=socio_user,
+            motivo="Puntos estándar",
+            puntos=Decimal("-1.00"),
+            estado=EstadoExpedienteEnum.CREADO,
+        )
+
+        client = authenticate(td_user)
+        response = client.get("/api/v1/expedientes/board/")
+        assert response.status_code == status.HTTP_200_OK
+        cards = {
+            c["id"]: c
+            for c in next(
+                col["cases"]
+                for col in response.data["columns"]
+                if col["key"] == EstadoExpedienteEnum.CREADO
+            )
+        }
+
+        assert cards[e_llamado.id]["es_llamado"] is True
+        assert cards[e_llamado.id]["es_felicitacion"] is False
+        assert cards[e_felic_t01.id]["es_felicitacion"] is True
+        assert cards[e_felic_t01.id]["es_llamado"] is False
+        assert cards[e_hist.id]["es_llamado"] is True
+        assert cards[e_hist.id]["es_felicitacion"] is False
+        assert cards[e_std.id]["es_llamado"] is False
+        assert cards[e_std.id]["es_felicitacion"] is False
 
 
 @pytest.mark.django_db

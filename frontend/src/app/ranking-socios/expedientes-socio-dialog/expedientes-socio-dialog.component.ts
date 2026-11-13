@@ -1,5 +1,7 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { formatCaseNumber, humanizeEstado } from '../../utils/case-number.util';
 
 import {
@@ -17,7 +19,8 @@ export interface ExpedientesSocioDialogData {
   templateUrl: './expedientes-socio-dialog.component.html',
   styleUrls: ['./expedientes-socio-dialog.component.scss']
 })
-export class ExpedientesSocioDialogComponent implements OnInit {
+export class ExpedientesSocioDialogComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   expedientes: ExpedienteRankingDetalle[] = [];
   cargando = true;
   error: string | null = null;
@@ -32,11 +35,16 @@ export class ExpedientesSocioDialogComponent implements OnInit {
     this.cargarExpedientes();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   cargarExpedientes(): void {
     this.cargando = true;
     this.error = null;
 
-    this.expedienteApiService.listarPorSocio(this.data.legajo).subscribe({
+    this.expedienteApiService.listarPorSocio(this.data.legajo).pipe(takeUntil(this.destroy$)).subscribe({
       next: (expedientes) => {
         this.expedientes = expedientes;
         this.cargando = false;

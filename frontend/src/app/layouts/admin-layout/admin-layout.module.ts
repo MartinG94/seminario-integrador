@@ -30,6 +30,8 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { SpanishPaginatorIntl } from '../../shared/spanish-paginator-intl';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
 import { ExpedientesSocioDialogComponent } from '../../ranking-socios/expedientes-socio-dialog/expedientes-socio-dialog.component';
 import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
@@ -60,6 +62,10 @@ import { ComponentsModule } from '../../components/components.module';
     MatDialogModule,
     MatExpansionModule,
     MatIconModule,
+    MatPaginatorModule,
+  ],
+  providers: [
+    { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
   ],
   declarations: [
     MisExpedientesComponent,

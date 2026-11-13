@@ -12,7 +12,7 @@ Implementa:
 import logging
 from typing import Any
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -23,8 +23,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.pagination import StandardResultsSetPagination
 from expedientes.models import (
     AtencionFelicitacion,
+    EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
@@ -60,11 +62,10 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
       Comisión Directiva, Administradores, Tribunal de Disciplina y Fiscalizadora.
     """
 
-    queryset = (
-        EventoInstitucional.objects.select_related("convocante", "subcomision", "reportado_por")
-        .prefetch_related("asistencias__socio")
-        .order_by("-fecha_programada")
-    )
+    queryset = EventoInstitucional.objects.select_related(
+        "convocante", "subcomision", "reportado_por"
+    ).order_by("-fecha_programada", "-id")
+    pagination_class = StandardResultsSetPagination
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
@@ -88,6 +89,8 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        if self.action != "list":
+            qs = qs.prefetch_related("asistencias__socio")
         params = self.request.query_params
 
         categoria = params.get("categoria")
@@ -138,39 +141,40 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
             if hasattr(self.request.user, "socio"):
                 qs = qs.filter(convocante=self.request.user.socio)
 
-        # Transiciones automáticas de ciclo de vida
-        ahora = timezone.now()
-        try:
-            limite_preaviso = MeetingComplianceService.calculate_notice_deadline(ahora)
-        except Exception:
-            limite_preaviso = ahora + timezone.timedelta(days=2)
+        # Transiciones automáticas de ciclo de vida (excluidas en list para persistencia O(1))
+        if self.action != "list":
+            ahora = timezone.now()
+            try:
+                limite_preaviso = MeetingComplianceService.calculate_notice_deadline(ahora)
+            except Exception:
+                limite_preaviso = ahora + timezone.timedelta(days=2)
 
-        # 1. Anulación automática: Si estaba en CREADO y falta menos de 2 días hábiles (o ya inició)
-        qs.filter(
-            estado=EstadoEventoEnum.CREADO,
-            fecha_programada__lte=limite_preaviso,
-        ).update(
-            estado=EstadoEventoEnum.ANULADO,
-            motivo_cancelacion=(
-                "Anulado automáticamente por falta de notificación dentro del plazo "
-                "mínimo reglamentario de 2 días hábiles."
-            ),
-        )
+            # 1. Anulación automática: En CREADO con menos de 2 días hábiles (o ya inició)
+            qs.filter(
+                estado=EstadoEventoEnum.CREADO,
+                fecha_programada__lte=limite_preaviso,
+            ).update(
+                estado=EstadoEventoEnum.ANULADO,
+                motivo_cancelacion=(
+                    "Anulado automáticamente por falta de notificación dentro del plazo "
+                    "mínimo reglamentario de 2 días hábiles."
+                ),
+            )
 
-        # 2. Apertura automática: Si estaba notificado y pasó la hora de inicio sin tener fecha fin
-        qs.filter(
-            estado=EstadoEventoEnum.NOTIFICADO,
-            fecha_fin__isnull=True,
-            fecha_programada__lte=ahora,
-        ).update(estado=EstadoEventoEnum.ABIERTO)
+            # 2. Apertura automática: Notificado y pasó hora de inicio sin fecha fin
+            qs.filter(
+                estado=EstadoEventoEnum.NOTIFICADO,
+                fecha_fin__isnull=True,
+                fecha_programada__lte=ahora,
+            ).update(estado=EstadoEventoEnum.ABIERTO)
 
-        # 3. En curso automático: Si estaba notificado y pasó inicio pero fecha fin es futura
-        qs.filter(
-            estado=EstadoEventoEnum.NOTIFICADO,
-            fecha_fin__isnull=False,
-            fecha_programada__lte=ahora,
-            fecha_fin__gt=ahora,
-        ).update(estado=EstadoEventoEnum.EN_CURSO)
+            # 3. En curso automático: Si estaba notificado y pasó inicio pero fecha fin es futura
+            qs.filter(
+                estado=EstadoEventoEnum.NOTIFICADO,
+                fecha_fin__isnull=False,
+                fecha_programada__lte=ahora,
+                fecha_fin__gt=ahora,
+            ).update(estado=EstadoEventoEnum.EN_CURSO)
 
         search = params.get("search")
         if search:
@@ -181,6 +185,27 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
                 | Q(lugar__icontains=search_clean)
                 | Q(ubicacion__icontains=search_clean)
             )
+
+        qs = qs.annotate(
+            total_convocados_calc=Count("asistencias", distinct=True),
+            total_presentes_calc=Count(
+                "asistencias",
+                filter=Q(
+                    asistencias__estado_asistencia__in=[
+                        EstadoAsistenciaEventoEnum.PRESENTE,
+                        EstadoAsistenciaEventoEnum.JUSTIFICADO,
+                        EstadoAsistenciaEventoEnum.TARDE_LEVE,
+                        EstadoAsistenciaEventoEnum.TARDE_GRAVE,
+                    ]
+                ),
+                distinct=True,
+            ),
+            total_ausentes_calc=Count(
+                "asistencias",
+                filter=Q(asistencias__estado_asistencia=EstadoAsistenciaEventoEnum.AUSENTE),
+                distinct=True,
+            ),
+        )
 
         return qs
 
