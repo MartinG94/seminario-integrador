@@ -245,6 +245,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         page_size: this.tamanoPagina,
         ordering: this.buildServerOrdering(),
         estado: this.filtroTab === 'resueltos' ? 'emitido' : undefined,
+        estado_ne: this.filtroTab === 'en_tramite' ? 'emitido' : undefined,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -259,10 +260,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
               : items.length;
           this.totalRegistros = countVal;
           this.serverPaginated =
-            !isArrayResp &&
-            (items.length < countVal || (expedientesApi?.current_page ?? 1) > 1);
+            !isArrayResp && typeof expedientesApi?.count === 'number';
 
-          if (items && Array.isArray(items) && items.length > 0) {
+          if (items && Array.isArray(items) && (items.length > 0 || this.serverPaginated)) {
             this.misExpedientes = items.map(e => this.mapearExpedienteApi(e));
             this.sincronizarDetalleAbierto();
             this.actualizarSaldoNeto();
@@ -342,8 +342,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       horasRestantes: raw.horas_restantes ?? 0,
       tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
       puntos: raw.puntos || 0,
-      esFelicitacion: !!raw.es_felicitacion || Math.abs(Number(raw.puntos) - 0.33) < 0.01,
-      esLlamado: !!raw.es_llamado || Math.abs(Number(raw.puntos) - (-0.33)) < 0.01,
+      esFelicitacion: this.esExpedienteFelicitacion(raw),
+      esLlamado: this.esExpedienteLlamado(raw),
+      puntaje_solicitado: raw.puntaje_solicitado || null,
+      puntajeSolicitado: raw.puntaje_solicitado || null,
       justificacionAprobada: justificacionAprobada,
       plazoInicioAt: raw.plazo_inicio_at,
       plazoLimiteAt: raw.plazo_limite_at,
@@ -389,6 +391,24 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.actualizarSaldoNeto();
   }
 
+  private esExpedienteFelicitacion(rawOrExp: any): boolean {
+    if (!rawOrExp) return false;
+    if (rawOrExp.esFelicitacion || rawOrExp.es_felicitacion) return true;
+    const solicitado = rawOrExp.puntaje_solicitado ?? rawOrExp.puntajeSolicitado;
+    if (solicitado === 'FELICITACION') return true;
+    const pts = Number(rawOrExp.puntos);
+    return !Number.isNaN(pts) && (Math.abs(pts - 0.25) < 0.01 || Math.abs(pts - 0.33) < 0.01);
+  }
+
+  private esExpedienteLlamado(rawOrExp: any): boolean {
+    if (!rawOrExp) return false;
+    if (rawOrExp.esLlamado || rawOrExp.es_llamado) return true;
+    const solicitado = rawOrExp.puntaje_solicitado ?? rawOrExp.puntajeSolicitado;
+    if (solicitado === 'LLAMADO_ATENCION') return true;
+    const pts = Number(rawOrExp.puntos);
+    return !Number.isNaN(pts) && (Math.abs(pts - (-0.25)) < 0.01 || Math.abs(pts - (-0.33)) < 0.01);
+  }
+
   /**
    * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
    * Aplica la exención de puntos para justificaciones aprobadas y la consolidación 3:1 de felicitaciones/llamados.
@@ -410,9 +430,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       }
 
       const pts = Number(exp.puntos || 0);
-      if (exp.esFelicitacion || Math.abs(pts - 0.33) < 0.01) {
+      if (this.esExpedienteFelicitacion(exp)) {
         felCount++;
-      } else if (exp.esLlamado || Math.abs(pts - (-0.33)) < 0.01) {
+      } else if (this.esExpedienteLlamado(exp)) {
         llamCount++;
       } else {
         puntosOrdinarios += pts;

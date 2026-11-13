@@ -781,6 +781,7 @@ export class ExpedienteApiService {
       'ordering',
       'search',
       'estado',
+      'estado_ne',
       'urgencia',
       'concepto',
       'socio',

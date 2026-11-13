@@ -614,6 +614,35 @@ describe('ExpedienteApiService', () => {
         results: [{ id: 1, numero: 'EXP-0001/2026', estado: 'emitido' }],
       });
     });
+
+    it('listarMisExpedientes propaga estado_ne en query params', () => {
+      service.listarMisExpedientes({ page: 1, page_size: 20, estado_ne: 'emitido' }).subscribe((res) => {
+        expect(res.count).toBe(2);
+        expect(res.results.length).toBe(2);
+      });
+
+      const req = http.expectOne(
+        (r) =>
+          r.url === `${environment.apiUrl}/expedientes/mis-expedientes/` &&
+          r.params.get('page') === '1' &&
+          r.params.get('page_size') === '20' &&
+          r.params.get('estado_ne') === 'emitido' &&
+          !r.params.has('estado')
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({
+        count: 2,
+        total_pages: 1,
+        current_page: 1,
+        page_size: 20,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, numero: 'EXP-0001/2026', estado: 'creado' },
+          { id: 2, numero: 'EXP-0002/2026', estado: 'justificando' },
+        ],
+      });
+    });
   });
 });
 

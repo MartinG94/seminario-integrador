@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
@@ -18,6 +19,7 @@ from expedientes.domain.descargo_rules import (
     MAX_DESCARGO_TEXT_LENGTH,
     descargo_text_too_long_message,
 )
+from expedientes.domain.puntaje_especial import PuntajeEspecial
 from expedientes.models import (
     ConceptoExpedienteEnum,
     DecisionCausalDescargo,
@@ -327,6 +329,67 @@ def _obtener_resolucion_reciente(obj: Expediente):
     return obj._resolucion_cache
 
 
+def _obtener_puntaje_solicitado(obj: Expediente) -> str | None:
+    """Devuelve el código de puntaje especial vigente sin disparar consultas adicionales."""
+    if obj.puntos == Decimal("-0.25"):
+        return PuntajeEspecial.LLAMADO_ATENCION.value
+    if obj.puntos == Decimal("0.25"):
+        return PuntajeEspecial.FELICITACION.value
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and solicitud.puntaje_especial:
+            return solicitud.puntaje_especial
+    except ObjectDoesNotExist:
+        return None
+    except Exception:
+        pass
+    return None
+
+
+def _matches_puntaje_especial(
+    obj: Expediente,
+    *,
+    canonical_point: float,
+    historical_point: float,
+    especial_code: str,
+) -> bool:
+    """Evalúa si un expediente corresponde a un puntaje especial por puntos efectivos o T01."""
+    try:
+        if obj.puntos is not None:
+            puntos = float(obj.puntos)
+            if abs(puntos - canonical_point) < 0.01 or abs(puntos - historical_point) < 0.01:
+                return True
+            if abs(puntos - (-canonical_point)) < 0.01 or abs(puntos - (-historical_point)) < 0.01:
+                return False
+    except (TypeError, ValueError):
+        pass
+    try:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        return bool(solicitud and solicitud.puntaje_especial == especial_code)
+    except ObjectDoesNotExist:
+        return False
+
+
+def _es_felicitacion(obj: Expediente) -> bool:
+    """Indica si el expediente corresponde a Felicitación (0.25, T01 o histórico 0.33)."""
+    return _matches_puntaje_especial(
+        obj,
+        canonical_point=0.25,
+        historical_point=0.33,
+        especial_code=PuntajeEspecial.FELICITACION.value,
+    )
+
+
+def _es_llamado(obj: Expediente) -> bool:
+    """Indica si el expediente corresponde a Llamado de atención (-0.25, T01 o histórico -0.33)."""
+    return _matches_puntaje_especial(
+        obj,
+        canonical_point=-0.25,
+        historical_point=-0.33,
+        especial_code=PuntajeEspecial.LLAMADO_ATENCION.value,
+    )
+
+
 class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
@@ -413,7 +476,6 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "evidencias",
             "descargos",
             "es_t01",
-            "puntaje_solicitado",
             "resolucion_estado",
             "firmantes_td",
             "vistos",
@@ -424,16 +486,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         ]
 
     def get_es_felicitacion(self, obj: Expediente) -> bool:
-        try:
-            return abs(float(obj.puntos) - 0.33) < 0.01
-        except (TypeError, ValueError):
-            return False
+        return _es_felicitacion(obj)
 
     def get_es_llamado(self, obj: Expediente) -> bool:
-        try:
-            return abs(float(obj.puntos) - (-0.33)) < 0.01
-        except (TypeError, ValueError):
-            return False
+        return _es_llamado(obj)
 
     def get_justificacion_aprobada(self, obj: Expediente) -> bool:
         for d in obj.descargos.all():
@@ -475,17 +531,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return _obtener_reglamentos_respaldantes(obj)
 
     def get_puntaje_solicitado(self, obj: Expediente) -> str | None:
-        if obj.puntos == Decimal("-0.25"):
-            return "LLAMADO_ATENCION"
-        if obj.puntos == Decimal("0.25"):
-            return "FELICITACION"
-        try:
-            solicitud = getattr(obj, "solicitud_t01", None)
-            if solicitud and solicitud.puntaje_especial:
-                return solicitud.puntaje_especial
-        except Exception:
-            pass
-        return None
+        return _obtener_puntaje_solicitado(obj)
 
     def _descargo_for_requester(self, obj: Expediente) -> DescargoExpediente | None:
         descargos = [d for d in obj.descargos.all() if d.es_vigente]
@@ -1407,6 +1453,8 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
     """Tarjeta compacta de expediente para el tablero Kanban del TD (S2-05 CA1 / S3-07)."""
 
     puntaje_solicitado = serializers.SerializerMethodField()
+    es_felicitacion = serializers.SerializerMethodField()
+    es_llamado = serializers.SerializerMethodField()
 
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
@@ -1455,6 +1503,8 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
             "concepto",
             "concepto_display",
             "puntos",
+            "es_felicitacion",
+            "es_llamado",
             "created_at",
             "plazo_limite_at",
             "transiciones_permitidas",
@@ -1502,17 +1552,13 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         return _obtener_reglamentos_respaldantes(obj)
 
     def get_puntaje_solicitado(self, obj: Expediente) -> str | None:
-        if obj.puntos == Decimal("-0.25"):
-            return "LLAMADO_ATENCION"
-        if obj.puntos == Decimal("0.25"):
-            return "FELICITACION"
-        try:
-            solicitud = getattr(obj, "solicitud_t01", None)
-            if solicitud and solicitud.puntaje_especial:
-                return solicitud.puntaje_especial
-        except Exception:
-            pass
-        return None
+        return _obtener_puntaje_solicitado(obj)
+
+    def get_es_felicitacion(self, obj: Expediente) -> bool:
+        return _es_felicitacion(obj)
+
+    def get_es_llamado(self, obj: Expediente) -> bool:
+        return _es_llamado(obj)
 
     def get_transiciones_permitidas(self, obj: Expediente) -> list[str]:
         return ALLOWED_TRANSITIONS.get(obj.estado, [])

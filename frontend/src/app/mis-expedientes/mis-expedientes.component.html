@@ -120,14 +120,14 @@
                     </td>
                     <td>
                       <ng-container *ngIf="exp.esFelicitacion; else checkLlamado">
-                        <span class="badge badge-success px-2 py-1 font-weight-bold" title="Felicitación (+0.33)">
+                        <span class="badge badge-success px-2 py-1 font-weight-bold" title="Felicitación">
                           <i class="material-icons" style="font-size: 14px; vertical-align: middle;">emoji_events</i> Felicitación
                         </span>
                       </ng-container>
                       <ng-template #checkLlamado>
                         <ng-container *ngIf="exp.esLlamado; else standardPts">
-                          <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold" title="Llamado de atención (-0.33)">
-                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">warning</i> Llamado
+                          <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold" title="Llamado de atención">
+                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">warning</i> Llamado de atención
                           </span>
                         </ng-container>
                         <ng-template #standardPts>
@@ -236,13 +236,13 @@
               <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje:</span>
               <ng-container *ngIf="expedienteDetalle.esFelicitacion; else modalCheckLlamado">
                 <span class="badge badge-success px-2 py-1 font-weight-bold">
-                  <i class="material-icons" style="font-size: 14px; vertical-align: middle;">emoji_events</i> Felicitación (+0.33)
+                  <i class="material-icons" style="font-size: 14px; vertical-align: middle;">emoji_events</i> Felicitación
                 </span>
               </ng-container>
               <ng-template #modalCheckLlamado>
                 <ng-container *ngIf="expedienteDetalle.esLlamado; else modalStandardPts">
                   <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold">
-                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">warning</i> Llamado (-0.33)
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">warning</i> Llamado de atención
                   </span>
                 </ng-container>
                 <ng-template #modalStandardPts>

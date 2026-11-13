@@ -94,4 +94,62 @@ describe('TribunalDataService (T-87.13 / SCRUM-118)', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockFlatArray);
   });
+
+  it('debería enviar preview_limit=5 por defecto en obtenerTablero, aceptar override y mapear esLlamado/esFelicitacion con total_count y has_more', () => {
+    service.obtenerTablero({ socio: '74907' }).subscribe((res) => {
+      expect(res.columns[0].total_count).toBe(12);
+      expect(res.columns[0].has_more).toBeTrue();
+    });
+
+    const reqDefault = httpMock.expectOne(
+      (r) =>
+        r.url === `${environment.apiUrl}/expedientes/board/` &&
+        r.params.get('socio') === '74907' &&
+        r.params.get('preview_limit') === '5'
+    );
+    reqDefault.flush({
+      columns: [
+        {
+          key: 'creado',
+          label: 'Expediente Creado',
+          total_count: 12,
+          has_more: true,
+          cases: [
+            {
+              id: 1,
+              numero: 'EXP-0001/2026',
+              socio: 10,
+              socio_nombre: 'Lucas G',
+              socio_legajo: '74907',
+              subcomision: 'Cómputos',
+              estado: 'creado',
+              estado_display: 'Expediente Creado',
+              puntos: -0.25,
+              es_llamado: true,
+              motivo: 'Apercibimiento',
+              created_at: '2026-03-01T10:00:00Z',
+              plazo_limite_at: null,
+              transiciones_permitidas: ['justificando'],
+            },
+          ],
+        },
+      ],
+    });
+
+    service.expedientes$.subscribe((list) => {
+      if (list.length > 0) {
+        expect(list[0].esLlamado).toBeTrue();
+        expect(list[0].esFelicitacion).toBeFalse();
+        expect(list[0].puntaje_solicitado).toBe('LLAMADO_ATENCION');
+      }
+    }).unsubscribe();
+
+    service.obtenerTablero({ preview_limit: 8 }).subscribe();
+    const reqOverride = httpMock.expectOne(
+      (r) =>
+        r.url === `${environment.apiUrl}/expedientes/board/` &&
+        r.params.get('preview_limit') === '8'
+    );
+    reqOverride.flush({ columns: [] });
+  });
 });

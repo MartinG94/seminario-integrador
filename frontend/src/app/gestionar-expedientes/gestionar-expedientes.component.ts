@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { PageEvent } from '@angular/material/paginator';
 import { 
   TribunalDataService, 
+  BoardResponseDTO,
   Expediente, 
   EstadoExpediente, 
   NivelUrgencia
@@ -270,10 +271,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     { key: 'urgente', label: 'Urgente' }
   ];
 
-  // Estado de colapso de columnas
+  // Estado de colapso de columnas (Creados, Pendiente de Envío y Emitidos colapsados por defecto)
   columnasColapsadas: { [estado: string]: boolean } = {
-    emitido: false
+    creado: true,
+    pendiente_correos: true,
+    emitido: true
   };
+
+  readonly PREVIEW_COLUMN_SIZE = 5;
+  private visibleLimitPorColumna: { [estado: string]: number } = {};
+  private cargandoMasPorColumna: { [estado: string]: boolean } = {};
+  private columnServerState: Record<string, {
+    totalCount: number;
+    hasMore: boolean;
+    nextPage: number;
+    pageSize: number;
+  }> = {};
+  private boardFiltersKey: string | null = null;
+  private columnaScrolledBottom: { [estado: string]: boolean } = {};
 
   // Modales
   private _modalDetalleAbierto = false;
@@ -711,8 +726,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else {
       const socio = exp.socio || 'Socio';
       const legajo = exp.legajo || 'S/L';
-      const puntos = exp.puntos > 0 ? `+${exp.puntos}` : `${exp.puntos}`;
-      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${puntos} pts`;
+      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${this.getPuntajeSolicitadoDisplay(exp)}`;
     }
 
     return `SE RESUELVE:\nARTÍCULO 1°.- APLICAR la resolución disciplinaria correspondiente a los socios involucrados en los presentes actuados:\n${detalleInvolucrados}\n\nARTÍCULO 2°.- NOTIFICAR fehacientemente a los interesados y comunicar lo resuelto a la Comisión Directiva para su efectivo registro en el cómputo institucional de puntos.\n\nARTÍCULO 3°.- REGÍSTRESE, cúmplase con las firmas digitales colegiadas de los representantes de los años sociales y archívese en Secretaría del Tribunal de Disciplina.`;
@@ -746,10 +760,189 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
     this.columnasColapsadas[estado] = !this.columnasColapsadas[estado];
+    this.cdr?.markForCheck();
   }
 
   isColumnaColapsada(estado: string): boolean {
     return !!this.columnasColapsadas[estado];
+  }
+
+  private getCurrentFiltersKey(): string {
+    return JSON.stringify({
+      socio: this.filtroSocio.trim(),
+      estado: this.filtroEstado.trim(),
+      urgencia: this.filtroUrgencia.trim(),
+      desde: this.filtroFechaDesde || '',
+      hasta: this.filtroFechaHasta || '',
+    });
+  }
+
+  private getDbStatesForUiColumn(uiEstado: EstadoExpediente): EstadoExpediente[] {
+    if (uiEstado === 'revision_resolucion') {
+      return ['revision_resolucion', 'espera_resolucion'];
+    }
+    if (uiEstado === 'pendiente_firma' || uiEstado === 'pendiente_correos') {
+      return ['pendiente_correos'];
+    }
+    return [uiEstado];
+  }
+
+  private aplicarMetadatosTablero(boardRes?: BoardResponseDTO | null): void {
+    this.columnServerState = {};
+    this.visibleLimitPorColumna = {};
+    this.cargandoMasPorColumna = {};
+    this.columnaScrolledBottom = {};
+    this.boardFiltersKey = this.getCurrentFiltersKey();
+
+    if (!boardRes || !Array.isArray(boardRes.columns)) {
+      return;
+    }
+    for (const col of boardRes.columns) {
+      const initialCases = Array.isArray(col.cases) ? col.cases.length : 0;
+      const hasMore = Boolean(col.has_more);
+      const totalCount = typeof col.total_count === 'number' ? col.total_count : initialCases;
+      const pageSize = initialCases > 0 && hasMore
+        ? Math.min(initialCases, 50)
+        : this.PREVIEW_COLUMN_SIZE;
+      const nextPage = initialCases > 0 && hasMore ? 2 : 1;
+      this.columnServerState[col.key] = {
+        totalCount,
+        hasMore,
+        nextPage,
+        pageSize,
+      };
+    }
+  }
+
+  getColumnVisibleLimit(estado: EstadoExpediente): number {
+    return this.visibleLimitPorColumna[estado] ?? this.PREVIEW_COLUMN_SIZE;
+  }
+
+  getExpedientesVisiblesPorEstado(estado: EstadoExpediente): Expediente[] {
+    return this.getExpedientesPorEstado(estado).slice(0, this.getColumnVisibleLimit(estado));
+  }
+
+  getTotalColumnCount(estado: EstadoExpediente): number {
+    const loaded = this.getExpedientesPorEstado(estado).length;
+    if (this.boardFiltersKey !== this.getCurrentFiltersKey()) {
+      return loaded;
+    }
+    if (estado === 'revision_resolucion') {
+      const rev = this.columnServerState['revision_resolucion'];
+      const esp = this.columnServerState['espera_resolucion'];
+      if (rev || esp) {
+        return Math.max((rev?.totalCount ?? 0) + (esp?.totalCount ?? 0), loaded);
+      }
+      return loaded;
+    }
+    if (estado === 'pendiente_firma') {
+      const explicitFirma = this.columnServerState['pendiente_firma'];
+      return explicitFirma ? Math.max(explicitFirma.totalCount, loaded) : loaded;
+    }
+    if (estado === 'pendiente_correos') {
+      const correos = this.columnServerState['pendiente_correos'];
+      if (!correos || !correos.hasMore) {
+        return loaded;
+      }
+      const firmaLoaded = this.getExpedientesPorEstado('pendiente_firma').length;
+      return Math.max(correos.totalCount - firmaLoaded, loaded);
+    }
+    const meta = this.columnServerState[estado];
+    return meta ? Math.max(meta.totalCount, loaded) : loaded;
+  }
+
+  tieneMasEnColumna(estado: EstadoExpediente): boolean {
+    const loaded = this.getExpedientesPorEstado(estado).length;
+    if (loaded > this.getColumnVisibleLimit(estado)) {
+      return true;
+    }
+    if (this.boardFiltersKey !== this.getCurrentFiltersKey()) {
+      return false;
+    }
+    return this.getDbStatesForUiColumn(estado).some(
+      dbEstado => Boolean(this.columnServerState[dbEstado]?.hasMore)
+    );
+  }
+
+  estaCargandoMas(estado: EstadoExpediente): boolean {
+    return Boolean(this.cargandoMasPorColumna[estado]);
+  }
+
+  onColumnaScroll(estado: EstadoExpediente, event: Event): void {
+    const el = event?.target as HTMLElement | null;
+    if (!el) return;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+    if (this.columnaScrolledBottom[estado] !== atBottom) {
+      this.columnaScrolledBottom[estado] = atBottom;
+      this.cdr?.markForCheck();
+    }
+  }
+
+  mostrarMasEnColumna(estado: EstadoExpediente): void {
+    if (this.cargandoMasPorColumna[estado]) return;
+    const loaded = this.getExpedientesPorEstado(estado);
+    const currentLimit = this.getColumnVisibleLimit(estado);
+
+    if (loaded.length > currentLimit) {
+      this.visibleLimitPorColumna[estado] = currentLimit + this.PREVIEW_COLUMN_SIZE;
+      this.cdr?.markForCheck();
+      return;
+    }
+
+    const targetDbState = this.getDbStatesForUiColumn(estado).find(
+      dbEstado => Boolean(this.columnServerState[dbEstado]?.hasMore)
+    );
+    if (!targetDbState) return;
+
+    const serverMeta = this.columnServerState[targetDbState];
+    this.cargandoMasPorColumna[estado] = true;
+    this.cdr?.markForCheck();
+
+    this.dataService
+      .listarExpedientes({
+        estado: targetDbState,
+        page: serverMeta.nextPage,
+        page_size: serverMeta.pageSize,
+        ordering: '-created_at',
+        search: this.filtroSocio.trim() || undefined,
+        urgencia: this.filtroUrgencia.trim() || undefined,
+        fecha_desde: this.filtroFechaDesde || undefined,
+        fecha_hasta: this.filtroFechaHasta || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const nuevos = Array.isArray(res?.results) ? res.results : [];
+          const porId = new Map<string, Expediente>();
+          for (const item of this.expedientes) {
+            porId.set(String(item.id), item);
+          }
+          for (const item of nuevos) {
+            porId.set(String(item.id), item);
+          }
+          this.expedientes = Array.from(porId.values());
+
+          serverMeta.hasMore =
+            Boolean(res?.next) ||
+            (typeof res?.current_page === 'number' &&
+              typeof res?.total_pages === 'number' &&
+              res.current_page < res.total_pages);
+          serverMeta.nextPage += 1;
+
+          const totalCargadosAhora = this.getExpedientesPorEstado(estado).length;
+          this.visibleLimitPorColumna[estado] = Math.max(
+            currentLimit + this.PREVIEW_COLUMN_SIZE,
+            totalCargadosAhora
+          );
+          this.cargandoMasPorColumna[estado] = false;
+          this.cdr?.markForCheck();
+        },
+        error: () => {
+          this.cargandoMasPorColumna[estado] = false;
+          this.notifications.error('No se pudieron cargar más expedientes de esta etapa.');
+          this.cdr?.markForCheck();
+        },
+      });
   }
 
   // Columnas visibles del tablero Kanban según filtro
@@ -775,7 +968,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (this.filtroFechaHasta) filtros.fecha_hasta = this.filtroFechaHasta;
 
     this.dataService.obtenerTablero(filtros).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
+      next: (boardRes) => {
+        this.aplicarMetadatosTablero(boardRes);
         this.cargando = false;
         this.cdr?.markForCheck();
       },
@@ -789,6 +983,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  refrescarVistaActual(): void {
+    if (this.vistaActual === 'tabla') {
+      this.cargarTablaPaginada();
+    } else {
+      this.cargarDatosTablero();
+    }
+  }
+
   limpiarFiltros(): void {
     this.filtroSocio = '';
     this.filtroEstado = '';
@@ -796,10 +998,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.filtroFechaDesde = '';
     this.filtroFechaHasta = '';
     this.tablaPage = 1;
-    this.cargarDatosTablero();
-    if (this.vistaActual === 'tabla') {
-      this.cargarTablaPaginada();
-    }
+    this.refrescarVistaActual();
   }
 
   cambiarVista(vista: 'kanban' | 'tabla'): void {
@@ -807,17 +1006,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (vista === 'tabla') {
       this.tablaPage = 1;
       this.cargarTablaPaginada();
+    } else {
+      this.cargarDatosTablero();
     }
     this.cdr?.markForCheck();
   }
 
   aplicarFiltros(): void {
     this.tablaPage = 1;
-    if (this.vistaActual === 'tabla') {
-      this.cargarTablaPaginada();
-    } else {
-      this.cargarDatosTablero();
-    }
+    this.refrescarVistaActual();
   }
 
   private buildServerOrdering(): string {
@@ -1019,7 +1216,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.dataService.transicionarExpediente(exp.id, nuevoEstado).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.mostrarNotificacion(`Expediente ${exp.numero} transicionado a "${labelDestino}".`);
-        this.cargarDatosTablero();
+        this.refrescarVistaActual();
         this.cdr?.markForCheck();
       },
       error: (err) => {
@@ -1299,7 +1496,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
             ? 'Adecuación registrada. Se abrió un nuevo plazo de apelación y se notificaron los motivos.'
             : 'Adecuación registrada. Se notificaron los motivos al solicitante y a los involucrados.'
         );
-        this.cargarDatosTablero();
+        this.refrescarVistaActual();
         this.cdr?.markForCheck();
       },
       error: err => {
@@ -1980,7 +2177,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       this.guardandoResolucion = false;
       this.mostrarNotificacion('Resolución oficial generada con éxito. Expediente pasa a Pendiente de Firma.');
       this.cerrarModales();
-      this.cargarDatosTablero();
+      this.refrescarVistaActual();
     };
 
     if (exp.id && !isNaN(Number(exp.id))) {
@@ -2055,7 +2252,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       }
       this.firmando = false;
       this.cerrarModales();
-      this.cargarDatosTablero();
+      this.refrescarVistaActual();
       this.cdr?.markForCheck();
     };
 
@@ -2161,7 +2358,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           this.expedienteSeleccionado.urgenciaDisplay = label;
         }
         this.mostrarNotificacion(`Urgencia actualizada a "${label}" exitosamente.`);
-        this.cargarDatosTablero();
+        this.refrescarVistaActual();
         this.cdr?.markForCheck();
       },
       error: (err) => {
@@ -2268,12 +2465,36 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return actual.rank < 0 ? 'Sanción' : 'Mérito';
   }
 
+  isLlamadoAtencion(exp: Expediente | null | undefined): boolean {
+    if (!exp) return false;
+    if (exp.esLlamado) return true;
+    const solicitado = exp.puntaje_solicitado ?? exp.puntajeSolicitado;
+    if (solicitado === 'LLAMADO_ATENCION') return true;
+    const p = Number(exp.puntos);
+    return !Number.isNaN(p) && (Math.abs(p - (-0.25)) < 0.01 || Math.abs(p - (-0.33)) < 0.01);
+  }
+
+  isFelicitacion(exp: Expediente | null | undefined): boolean {
+    if (!exp) return false;
+    if (exp.esFelicitacion) return true;
+    const solicitado = exp.puntaje_solicitado ?? exp.puntajeSolicitado;
+    if (solicitado === 'FELICITACION') return true;
+    const p = Number(exp.puntos);
+    return !Number.isNaN(p) && (Math.abs(p - 0.25) < 0.01 || Math.abs(p - 0.33) < 0.01);
+  }
+
+  getClasePuntajeExpediente(exp: Expediente | null | undefined): string {
+    if (this.isFelicitacion(exp) || (exp?.puntos ?? 0) > 0) return 'text-success';
+    if (this.isLlamadoAtencion(exp)) return 'text-warning';
+    return 'text-danger';
+  }
+
   getPuntajeSolicitadoDisplay(exp: Expediente | null | undefined): string {
     if (!exp) return '0 pts';
-    if (exp.puntaje_solicitado === 'LLAMADO_ATENCION' || exp.puntos === -0.25) {
-      return 'Llamado de Atención';
+    if (this.isLlamadoAtencion(exp)) {
+      return 'Llamado de atención';
     }
-    if (exp.puntaje_solicitado === 'FELICITACION' || exp.puntos === 0.25) {
+    if (this.isFelicitacion(exp)) {
       return 'Felicitación';
     }
     const p = exp.puntos ?? 0;

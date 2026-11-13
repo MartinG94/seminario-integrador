@@ -112,8 +112,8 @@ Desglose de tareas atómicas (< 30 min) organizadas en tajadas verticales (Verti
   *Hecho cuando:* Lista de chequeo contra `notasPO.md` y `DESIGN.md` satisfecha al 100%.
 
 - [x] **T-87.22 Ejecución de Suites Completas y Linter:**  
-  Ejecutar `pytest -q`, `ruff check .`, `ruff format --check .`, `npm test` y `npx ng build --configuration production`.  
-  *Hecho cuando:* Suites en verde (`pytest`: `1371 passed, 8 skipped` MySQL-only en SQLite local; `ruff check`/`format`: exit `0`; Karma `664/664 SUCCESS`; `ng build --configuration production`: exit `0`).
+  Ejecutar `pytest -q`, `ruff check .`, `ruff format --check backend/`, `npm test`, `npx tsc --skipLibCheck --noEmit` y `npx ng build --configuration production`.  
+  *Hecho cuando:* Suites en verde (`pytest`: `1387 passed, 8 skipped` MySQL-only en SQLite local; `ruff check .`: exit `0`; `ruff format --check backend/`: exit `0` sobre 235 archivos; Karma `672/672 SUCCESS`; `tsc --skipLibCheck --noEmit`: exit `0`; `ng build --configuration production`: exit `0`).
 
 ---
 

@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Count, Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -195,13 +195,9 @@ ALLOWED_EXPEDIENTE_ORDERING_FIELDS = {
 
 
 def _apply_expediente_collection_filters_and_ordering(queryset, query_params):
-    """Aplica filtros canónicos (estado, urgencia, search, fechas) y orden determinístico."""
+    """Aplica filtros canónicos (estado, estado_ne, urgencia, search, fechas) y orden."""
     filterset = ExpedienteFilter(query_params, queryset=queryset)
     qs = filterset.qs
-
-    search = (query_params.get("search") or "").strip()
-    if search:
-        qs = ExpedienteFilter().filter_socio(qs, "socio", search)
 
     ordering_raw = (query_params.get("ordering") or "").strip()
     order_fields: list[str] = []
@@ -269,7 +265,12 @@ class ExpedienteCollectionView(PaginatedAPIViewMixin, APIView):
         except IntegrityError as exc:
             raise DRFValidationError("No se pudo asignar el número de expediente.") from exc
         expediente = (
-            Expediente.objects.select_related("socio", "socio__subcomision")
+            Expediente.objects.select_related(
+                "socio",
+                "socio__subcomision",
+                "solicitud_t01",
+                "solicitud_t01__solicitante",
+            )
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .get(pk=expediente.pk)
         )
@@ -299,7 +300,12 @@ class TransicionExpedienteView(APIView):
                 exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             )
         expediente = (
-            Expediente.objects.select_related("socio", "socio__subcomision")
+            Expediente.objects.select_related(
+                "socio",
+                "socio__subcomision",
+                "solicitud_t01",
+                "solicitud_t01__solicitante",
+            )
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .get(pk=expediente.pk)
         )
@@ -1189,7 +1195,12 @@ class ExpedienteDetailView(APIView):
     def patch(self, request: Request, pk: int) -> Response:
         expediente = (
             Expediente.objects.filter(pk=pk)
-            .select_related("socio", "socio__subcomision")
+            .select_related(
+                "socio",
+                "socio__subcomision",
+                "solicitud_t01",
+                "solicitud_t01__solicitante",
+            )
             .prefetch_related(*EXPEDIENTE_LIST_PREFETCH)
             .first()
         )
@@ -1282,33 +1293,99 @@ class SolicitudT01EmitView(APIView):
         return Response(SolicitudT01Serializer(solicitud).data)
 
 
+MAX_BOARD_PREVIEW_LIMIT = 50
+
+
+def _parse_board_preview_limit(raw_value: str | None) -> int | None:
+    """Valida el parámetro opcional ``preview_limit`` (entero positivo hasta 50)."""
+    if raw_value is None or raw_value.strip() == "":
+        return None
+    try:
+        parsed = int(raw_value.strip())
+    except (TypeError, ValueError) as exc:
+        raise DRFValidationError(
+            {"preview_limit": "El parámetro preview_limit debe ser un entero positivo."}
+        ) from exc
+    if parsed <= 0 or parsed > MAX_BOARD_PREVIEW_LIMIT:
+        raise DRFValidationError(
+            {
+                "preview_limit": (
+                    f"El parámetro preview_limit debe estar entre 1 y {MAX_BOARD_PREVIEW_LIMIT}."
+                )
+            }
+        )
+    return parsed
+
+
+def _with_board_relations(queryset):
+    """Adjunta las relaciones requeridas para serializar tarjetas del tablero Kanban."""
+    return queryset.select_related(
+        "socio",
+        "socio__subcomision",
+        "solicitud_t01",
+        "solicitud_t01__solicitante",
+    ).prefetch_related(
+        Prefetch("socios", queryset=Socio.objects.select_related("subcomision")),
+        "cambios_estado",
+        "resoluciones",
+    )
+
+
 class BoardExpedientesView(APIView):
     """GET /api/v1/expedientes/board/
 
     Tablero de 6 columnas del TD con expedientes agrupados por estado (S2-05 CA1).
-    Soporta filtros por estado, socio (legajo/nombre) y rango de fechas (CA2).
+    Soporta filtros por estado, socio (legajo/nombre), rango de fechas y
+    límite de previsualización por columna ``preview_limit`` (CA2).
     """
 
     permission_classes = [permissions.IsAuthenticated, IsTribunalOrDirectiva]
 
     def get(self, request: Request) -> Response:
+        preview_limit = _parse_board_preview_limit(request.query_params.get("preview_limit"))
         DeadlineEnforcementService().close_expired_deadlines()
-        qs = (
-            Expediente.objects.select_related(
-                "socio",
-                "socio__subcomision",
-                "solicitud_t01",
-                "solicitud_t01__solicitante",
-            )
-            .prefetch_related(
-                Prefetch("socios", queryset=Socio.objects.select_related("subcomision")),
-                "cambios_estado",
-                "resoluciones",
-            )
-            .all()
+
+        if preview_limit is None:
+            qs = _with_board_relations(Expediente.objects.all())
+            filterset = ExpedienteFilter(request.query_params, queryset=qs)
+            payload = build_board_payload(filterset.qs)
+            return Response(payload, status=status.HTTP_200_OK)
+
+        base_filterset = ExpedienteFilter(request.query_params, queryset=Expediente.objects.all())
+        filtered_qs = base_filterset.qs
+
+        column_totals = {state.value: 0 for state in EstadoExpedienteEnum}
+        grouped_counts = (
+            filtered_qs.order_by().values("estado").annotate(total=Count("id", distinct=True))
         )
-        filterset = ExpedienteFilter(request.query_params, queryset=qs)
-        payload = build_board_payload(filterset.qs)
+        for row in grouped_counts:
+            estado_key = row["estado"]
+            if estado_key in column_totals:
+                column_totals[estado_key] = int(row["total"])
+
+        selected_ids: list[int] = []
+        for state in EstadoExpedienteEnum:
+            if column_totals[state.value] <= 0:
+                continue
+            top_rows = list(
+                filtered_qs.filter(estado=state.value)
+                .order_by("-created_at", "-id")
+                .values_list("id", "created_at")[:preview_limit]
+            )
+            selected_ids.extend(row[0] for row in top_rows)
+
+        if selected_ids:
+            preview_qs = _with_board_relations(
+                Expediente.objects.filter(pk__in=selected_ids)
+            ).order_by("-created_at", "-id")
+        else:
+            preview_qs = Expediente.objects.none()
+
+        payload = build_board_payload(
+            preview_qs,
+            preview_limit=preview_limit,
+            column_totals=column_totals,
+        )
         return Response(payload, status=status.HTTP_200_OK)
 
 

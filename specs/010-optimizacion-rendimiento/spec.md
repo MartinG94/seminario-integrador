@@ -211,16 +211,16 @@ Alcanzar una plataforma de alto rendimiento, escalable y ergonómica mediante:
 
 Para declarar formalmente concluida y aprobada la Épica **SCRUM-87**:
 
-- [ ] **DoD-01 (Paginación Server-Side):** Los endpoints `/api/v1/ranking/`, `/api/v1/expedientes/`, `/api/v1/expedientes/mis-expedientes/` y `/api/v1/expedientes/eventos/` retornan la envolvente canónica `{ count, total_pages, current_page, page_size, next, previous, results }` y respetan el límite de `page_size <= 100`.
-- [ ] **DoD-02 (MatPaginator Integrado):** La pantalla de Ranking de Socios, la tabla de Gestión de Expedientes y la tabla de Mis Expedientes exhiben el componente `MatPaginator` con selector de tamaño `[10, 20, 50, 100]`, reseteo automático a página 1 en filtros y preservación del diseño de `DESIGN.md`.
-- [ ] **DoD-03 (OnPush y trackBy 100%):** El 100% de los componentes principales declaran `ChangeDetectionStrategy.OnPush` y el 100% de las directivas `*ngFor` implementan funciones `trackBy` mediante `TrackByUtils`.
-- [ ] **DoD-04 (Eliminación de Getters Computados):** Ningún componente ejecuta `sort()` o `filter()` de arrays dentro de getters invocados en plantillas HTML.
-- [ ] **DoD-05 (Cero Fugas de Memoria en Frontend):** Todas las suscripciones manuales a observables implementan `.pipe(takeUntil(this.destroy$))` en `ngOnDestroy`. El delta de Heap en 10 navegaciones cíclicas es $\le 0.5\text{ MB}$ con 0 detached DOM nodes.
-- [ ] **DoD-06 (Erradicación de N+1 en Persistencia):**
+- [x] **DoD-01 (Paginación Server-Side):** Los endpoints `/api/v1/ranking/`, `/api/v1/expedientes/`, `/api/v1/expedientes/mis-expedientes/` y `/api/v1/expedientes/eventos/` retornan la envolvente canónica `{ count, total_pages, current_page, page_size, next, previous, results }` y respetan el límite de `page_size <= 100`.
+- [x] **DoD-02 (MatPaginator Integrado):** La pantalla de Ranking de Socios, la tabla de Gestión de Expedientes y la tabla de Mis Expedientes exhiben el componente `MatPaginator` con selector de tamaño `[10, 20, 50, 100]`, reseteo automático a página 1 en filtros y preservación del diseño de `DESIGN.md`.
+- [x] **DoD-03 (OnPush y trackBy 100%):** El 100% de los componentes principales declaran `ChangeDetectionStrategy.OnPush` y el 100% de las directivas `*ngFor` implementan funciones `trackBy` mediante `TrackByUtils`.
+- [x] **DoD-04 (Eliminación de Getters Computados):** Ningún componente ejecuta `sort()` o `filter()` de arrays dentro de getters invocados en plantillas HTML.
+- [x] **DoD-05 (Cero Fugas de Memoria en Frontend):** Todas las suscripciones manuales a observables implementan `.pipe(takeUntil(this.destroy$))` en `ngOnDestroy`. El delta de Heap en 10 navegaciones cíclicas es $\le 0.5\text{ MB}$ con 0 detached DOM nodes.
+- [x] **DoD-06 (Erradicación de N+1 en Persistencia):**
   - Eventos institucionales: de 62 a $\le 3$ consultas SQL.
   - Catálogo de antecedentes: de 101 a exactamente 1 consulta SQL.
   - Expedientes: prefetch diferido con `defer("contenido_blob")` sin cargar archivos binarios en memoria.
-- [ ] **DoD-07 (Salvaguarda del Esquema Legacy - Regla 6):** Cero mutaciones DDL, cero migraciones sobre tablas legacy (`socio_*`, `tribunal_*`) y `managed = False` inalterado.
-- [ ] **DoD-08 (Suites de Pruebas Automatizadas en Verde):**
+- [x] **DoD-07 (Salvaguarda del Esquema Legacy - Regla 6):** Cero mutaciones DDL, cero migraciones sobre tablas legacy (`socio_*`, `tribunal_*`) y `managed = False` inalterado.
+- [x] **DoD-08 (Suites de Pruebas Automatizadas en Verde):**
   - Backend: `pytest -q` finaliza con 0 fallos, incorporando tests de persistencia y número de queries con `django_assert_num_queries`.
   - Frontend: `npm test` finaliza con 0 fallos, validando desmonte de componentes, emisión de `PageEvent` y reactividad de filtros.

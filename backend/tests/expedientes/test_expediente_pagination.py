@@ -7,10 +7,14 @@ Valida:
 - Retrocompatibilidad con all=true y fallback sin paginar cuando no se solicita page/page_size.
 """
 
+from decimal import Decimal
+
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 
-from expedientes.models import EstadoExpedienteEnum, Expediente
+from expedientes.models import EstadoExpedienteEnum, Expediente, SolicitudT01
 from socios.models import Role
 
 
@@ -268,3 +272,207 @@ def test_mis_expedientes_supports_search_estado_and_ordering(
     )
     assert res_all.status_code == status.HTTP_200_OK
     assert [r["id"] for r in res_all.json()["results"]] == [e2.id, e1.id]
+
+
+@pytest.mark.django_db
+def test_gestion_and_mis_expedientes_exclude_estado_ne_emitido(
+    api_client, authenticate, cd_socio, regular_socio
+):
+    """Verifica exclusión de estado=emitido vía estado_ne en /gestion/ y /mis-expedientes/."""
+    e_creado = Expediente.objects.create(
+        numero="EXP-9201/2026",
+        titulo="Causa abierta uno",
+        motivo="Pendiente",
+        socio=regular_socio,
+        estado=EstadoExpedienteEnum.CREADO,
+    )
+    e_just = Expediente.objects.create(
+        numero="EXP-9202/2026",
+        titulo="Causa en descargo",
+        motivo="Justificando",
+        socio=regular_socio,
+        estado=EstadoExpedienteEnum.JUSTIFICANDO,
+    )
+    e_emitido = Expediente.objects.create(
+        numero="EXP-9203/2026",
+        titulo="Causa emitida",
+        motivo="Resuelta",
+        socio=regular_socio,
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+
+    authenticate(regular_socio)
+    res_mis = api_client.get(
+        "/api/v1/expedientes/mis-expedientes/?estado_ne=emitido&ordering=numero&page=1&page_size=10"
+    )
+    assert res_mis.status_code == status.HTTP_200_OK
+    data_mis = res_mis.json()
+    assert data_mis["count"] == 2
+    assert [item["id"] for item in data_mis["results"]] == [e_creado.id, e_just.id]
+    assert all(item["estado"] != EstadoExpedienteEnum.EMITIDO for item in data_mis["results"])
+
+    authenticate(cd_socio)
+    res_gestion = api_client.get(
+        "/api/v1/expedientes/gestion/?estado_ne=emitido&ordering=numero&page=1&page_size=10"
+    )
+    assert res_gestion.status_code == status.HTTP_200_OK
+    data_gestion = res_gestion.json()
+    assert data_gestion["count"] == 2
+    assert [item["id"] for item in data_gestion["results"]] == [e_creado.id, e_just.id]
+    assert e_emitido.id not in [item["id"] for item in data_gestion["results"]]
+
+
+@pytest.mark.django_db
+def test_collection_search_combines_with_estado_ne_and_m2m_via_single_filter(
+    api_client, authenticate, cd_socio, regular_socio, make_socio
+):
+    """Valida búsqueda unificada vía ExpedienteFilter (M2M + search + estado_ne)."""
+    co_imputado = make_socio(legajo="49999", role=Role.SOCIO)
+    exp_activo = Expediente.objects.create(
+        numero="EXP-9301/2026",
+        titulo="Falta compartida Sigma",
+        motivo="Ausencia plenaria",
+        socio=cd_socio,
+        estado=EstadoExpedienteEnum.JUSTIFICANDO,
+    )
+    exp_activo.socios.add(regular_socio, co_imputado)
+
+    exp_emitido = Expediente.objects.create(
+        numero="EXP-9302/2026",
+        titulo="Falta compartida Sigma cerrada",
+        motivo="Ausencia plenaria",
+        socio=cd_socio,
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+    exp_emitido.socios.add(regular_socio, co_imputado)
+
+    authenticate(cd_socio)
+    res_gestion = api_client.get(
+        "/api/v1/expedientes/gestion/?search=49999&estado_ne=emitido&page=1&page_size=10"
+    )
+    assert res_gestion.status_code == status.HTTP_200_OK
+    assert res_gestion.json()["count"] == 1
+    assert res_gestion.json()["results"][0]["id"] == exp_activo.id
+
+    authenticate(regular_socio)
+    res_mis = api_client.get(
+        "/api/v1/expedientes/mis-expedientes/?search=Sigma&estado_ne=emitido&page=1&page_size=10"
+    )
+    assert res_mis.status_code == status.HTTP_200_OK
+    assert res_mis.json()["count"] == 1
+    assert res_mis.json()["results"][0]["id"] == exp_activo.id
+
+
+@pytest.mark.django_db
+def test_list_serializers_detect_llamado_and_felicitacion_without_extra_queries(
+    api_client, authenticate, cd_socio, regular_socio
+):
+    """Bug #3 PO: reconoce ±0.25, SolicitudT01.puntaje_especial y ±0.33 históricos sin N+1."""
+    exp_llamado_canon = Expediente.objects.create(
+        numero="EXP-9401/2026",
+        titulo="Llamado canónico",
+        motivo="Incumplimiento menor",
+        socio=regular_socio,
+        puntos=Decimal("-0.25"),
+        estado=EstadoExpedienteEnum.JUSTIFICANDO,
+    )
+    exp_felic_canon = Expediente.objects.create(
+        numero="EXP-9402/2026",
+        titulo="Felicitación canónica",
+        motivo="Colaboración destacada",
+        socio=regular_socio,
+        puntos=Decimal("0.25"),
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+    exp_llamado_t01 = Expediente.objects.create(
+        numero="EXP-9403/2026",
+        titulo="Llamado desde T01",
+        motivo="Apercibimiento T01",
+        socio=regular_socio,
+        puntos=Decimal("0.00"),
+        estado=EstadoExpedienteEnum.CREADO,
+    )
+    SolicitudT01.objects.create(
+        solicitante=cd_socio,
+        destinatarios_socios_ids=[regular_socio.id],
+        tipo_accion=SolicitudT01.TipoAccion.SANCTION,
+        puntaje_especial=SolicitudT01.PuntajeEspecial.LLAMADO_ATENCION,
+        puntos=Decimal("-0.25"),
+        causal="Art. 14",
+        expediente=exp_llamado_t01,
+    )
+    exp_felic_t01 = Expediente.objects.create(
+        numero="EXP-9404/2026",
+        titulo="Felicitación desde T01",
+        motivo="Reconocimiento T01",
+        socio=regular_socio,
+        puntos=Decimal("0.00"),
+        estado=EstadoExpedienteEnum.CREADO,
+    )
+    SolicitudT01.objects.create(
+        solicitante=cd_socio,
+        destinatarios_socios_ids=[regular_socio.id],
+        tipo_accion=SolicitudT01.TipoAccion.MERIT,
+        puntaje_especial=SolicitudT01.PuntajeEspecial.FELICITACION,
+        puntos=Decimal("0.25"),
+        causal="Art. 15",
+        expediente=exp_felic_t01,
+    )
+    exp_llamado_legacy = Expediente.objects.create(
+        numero="EXP-9405/2026",
+        titulo="Llamado histórico",
+        motivo="Registro previo",
+        socio=regular_socio,
+        puntos=Decimal("-0.33"),
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+    exp_felic_legacy = Expediente.objects.create(
+        numero="EXP-9406/2026",
+        titulo="Felicitación histórica",
+        motivo="Registro previo",
+        socio=regular_socio,
+        puntos=Decimal("0.33"),
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+    exp_ordinario = Expediente.objects.create(
+        numero="EXP-9407/2026",
+        titulo="Sanción ordinaria",
+        motivo="Falta estándar",
+        socio=regular_socio,
+        puntos=Decimal("-1.00"),
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+
+    for user, endpoint in (
+        (regular_socio, "/api/v1/expedientes/mis-expedientes/?page=1&page_size=20"),
+        (cd_socio, "/api/v1/expedientes/gestion/?page=1&page_size=20"),
+    ):
+        authenticate(user)
+        with CaptureQueriesContext(connection) as ctx:
+            response = api_client.get(endpoint)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(ctx) <= 18
+        by_id = {item["id"]: item for item in response.json()["results"]}
+
+        assert by_id[exp_llamado_canon.id]["es_llamado"] is True
+        assert by_id[exp_llamado_canon.id]["es_felicitacion"] is False
+        assert by_id[exp_llamado_canon.id]["puntaje_solicitado"] == "LLAMADO_ATENCION"
+
+        assert by_id[exp_felic_canon.id]["es_felicitacion"] is True
+        assert by_id[exp_felic_canon.id]["es_llamado"] is False
+        assert by_id[exp_felic_canon.id]["puntaje_solicitado"] == "FELICITACION"
+
+        assert by_id[exp_llamado_t01.id]["es_llamado"] is True
+        assert by_id[exp_llamado_t01.id]["es_felicitacion"] is False
+
+        assert by_id[exp_felic_t01.id]["es_felicitacion"] is True
+        assert by_id[exp_felic_t01.id]["es_llamado"] is False
+
+        assert by_id[exp_llamado_legacy.id]["es_llamado"] is True
+        assert by_id[exp_llamado_legacy.id]["es_felicitacion"] is False
+
+        assert by_id[exp_felic_legacy.id]["es_felicitacion"] is True
+        assert by_id[exp_felic_legacy.id]["es_llamado"] is False
+
+        assert by_id[exp_ordinario.id]["es_llamado"] is False
+        assert by_id[exp_ordinario.id]["es_felicitacion"] is False

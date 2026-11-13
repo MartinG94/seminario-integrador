@@ -203,6 +203,46 @@ def test_ranking_pagination_deterministic_tie_breaker_across_pages(api_client, d
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("ordering_param", ["   ", " , "])
+def test_ranking_pagination_whitespace_ordering_uses_deterministic_tie_breaker(
+    api_client, db, ordering_param
+):
+    """ordering con espacios o comas vacías mantiene desempate determinístico por nroSocio."""
+    sub_comp = create_legacy_record(Subcomision, codSubcomision=13, nombre="Cómputos")
+    for idx in range(6):
+        s = create_legacy_record(
+            Socio,
+            nroSocio=8100 + idx,
+            nombre="Homónimo",
+            apellido="Espacios",
+            anoSocial=5,
+            subcomision=sub_comp,
+            idTipoSocio=1,
+        )
+        create_legacy_record(
+            PuntajeAplicado, idPuntajeAplicado=8100 + idx, socio=s, puntajeAplicado=10.0
+        )
+        create_legacy_record(PuntajeGeneral, idPuntajeGeneral=8100 + idx, socio=s, puntos=10.0)
+
+    r1 = api_client.get(
+        "/api/v1/ranking/",
+        {"search": "Espacios", "ordering": ordering_param, "page": 1, "page_size": 3},
+    )
+    r2 = api_client.get(
+        "/api/v1/ranking/",
+        {"search": "Espacios", "ordering": ordering_param, "page": 2, "page_size": 3},
+    )
+    assert r1.status_code == status.HTTP_200_OK
+    assert r2.status_code == status.HTTP_200_OK
+
+    ids1 = [item["id"] for item in r1.json()["results"]]
+    ids2 = [item["id"] for item in r2.json()["results"]]
+    assert ids1 == ["8100", "8101", "8102"]
+    assert ids2 == ["8103", "8104", "8105"]
+    assert set(ids1).isdisjoint(set(ids2))
+
+
+@pytest.mark.django_db
 def test_ranking_pagination_filters_grupo_solo_alertas_and_ordering_categoria(api_client, db):
     """Verifica filtros server-side por grupo, solo_alertas (<= -7) y ordering=categoria."""
     from django.utils import timezone

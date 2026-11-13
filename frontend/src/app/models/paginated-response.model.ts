@@ -22,6 +22,7 @@ export interface PaginationParams {
   ordering?: string;
   search?: string;
   estado?: string;
+  estado_ne?: string;
   urgencia?: string;
   concepto?: string;
   socio?: string;

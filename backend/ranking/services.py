@@ -314,7 +314,7 @@ def order_ranking_queryset(
 
     raw_tokens = [tok.strip().lower() for tok in ordering.split(",") if tok.strip()]
     if not raw_tokens:
-        return queryset.order_by("-saldo_historico_calc", "apellido", "nombre")
+        return queryset.order_by("-saldo_historico_calc", "apellido", "nombre", "nroSocio")
 
     qs = queryset
     needs_categoria_annotation = any("categoria" in tok for tok in raw_tokens)

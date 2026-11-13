@@ -121,8 +121,8 @@
           </button>
           <i class="material-icons text-muted col-icon-collapsed" aria-hidden="true">{{col.icon}}</i>
           <span class="col-title-vertical">{{col.titulo}}</span>
-          <span class="col-count mt-2" [attr.aria-label]="getExpedientesPorEstado(col.estado).length + ' expedientes'">
-            {{getExpedientesPorEstado(col.estado).length}}
+          <span class="col-count mt-2" [attr.aria-label]="getTotalColumnCount(col.estado) + ' expedientes'">
+            {{getTotalColumnCount(col.estado)}}
           </span>
         </div>
 
@@ -134,8 +134,8 @@
               <h4>{{col.titulo}}</h4>
             </div>
             <div class="d-flex align-items-center gap-1">
-              <span class="col-count" [attr.aria-label]="getExpedientesPorEstado(col.estado).length + ' expedientes'">
-                {{getExpedientesPorEstado(col.estado).length}}
+              <span class="col-count" [attr.aria-label]="getTotalColumnCount(col.estado) + ' expedientes'">
+                {{getTotalColumnCount(col.estado)}}
               </span>
               <button mat-icon-button 
                       type="button" 
@@ -148,45 +148,59 @@
             </div>
           </div>
 
-          <div *ngIf="getExpedientesPorEstado(col.estado).length === 0" class="text-center py-4 text-muted small">
-            Sin expedientes en esta etapa
-          </div>
-
-          <div *ngFor="let exp of getExpedientesPorEstado(col.estado); trackBy: trackByExpediente" 
-               class="kanban-card-mat" 
-               [class.kanban-card-urgente]="exp.urgencia === 'urgente'"
-               tabindex="0"
-               role="article"
-               [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ', Urgencia ' + getUrgenciaLabel(exp.urgencia)"
-               (click)="abrirDetalle(exp)"
-               (keydown)="onKanbanCardKeyDown($event, exp)">
-            <div class="card-top">
-              <span class="card-id">{{ formatCaseNumber(exp.numero) }}</span>
-              <span class="badge-mat badge-urgencia" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)" [title]="'Urgencia: ' + getUrgenciaLabel(exp.urgencia)">
-                {{ getUrgenciaLabel(exp.urgencia) }}
-              </span>
-              <span class="card-points">{{ exp.puntos > 0 ? '+' : '' }}{{ exp.puntos }} pts</span>
+          <div class="kanban-col-body" (scroll)="onColumnaScroll(col.estado, $event)">
+            <div *ngIf="getExpedientesVisiblesPorEstado(col.estado).length === 0" class="text-center py-4 text-muted small">
+              Sin expedientes en esta etapa
             </div>
-            <h5 class="card-title-text" [title]="exp.titulo || exp.motivo">{{ exp.titulo || exp.motivo }}</h5>
-            
-            <div class="card-bottom d-flex justify-content-between align-items-center">
-              <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
-              <div class="d-inline-flex align-items-center gap-2">
-                <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
-                  <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
-                  <span>{{ getCantidadInvolucrados(exp) }}</span>
+
+            <div *ngFor="let exp of getExpedientesVisiblesPorEstado(col.estado); trackBy: trackByExpediente" 
+                 class="kanban-card-mat" 
+                 [class.kanban-card-urgente]="exp.urgencia === 'urgente'"
+                 tabindex="0"
+                 role="article"
+                 [attr.aria-label]="'Expediente ' + formatCaseNumber(exp.numero) + ', Urgencia ' + getUrgenciaLabel(exp.urgencia)"
+                 (click)="abrirDetalle(exp)"
+                 (keydown)="onKanbanCardKeyDown($event, exp)">
+              <div class="card-top">
+                <span class="card-id">{{ formatCaseNumber(exp.numero) }}</span>
+                <span class="badge-mat badge-urgencia" [ngClass]="getUrgenciaBadgeClass(exp.urgencia)" [title]="'Urgencia: ' + getUrgenciaLabel(exp.urgencia)">
+                  {{ getUrgenciaLabel(exp.urgencia) }}
                 </span>
-                <!-- Botón visor ocultado temporalmente por requerimiento -->
-                <button *ngIf="false" 
-                        mat-button 
-                        class="btn btn-primary btn-link btn-just-icon p-0 m-0 btn-abrir-visor"
-                        style="min-width: 24px; width: 24px; height: 24px;"
-                        (click)="abrirVisor(exp, $event)" 
-                        title="Sustanciar / Visor de Expediente" 
-                        aria-label="Sustanciar / Visor">
-                  <i class="material-icons" style="font-size: 16px;">menu_book</i>
-                </button>
+                <span class="card-points" [ngClass]="getClasePuntajeExpediente(exp)">{{ getPuntajeSolicitadoDisplay(exp) }}</span>
               </div>
+              <h5 class="card-title-text" [title]="exp.titulo || exp.motivo">{{ exp.titulo || exp.motivo }}</h5>
+              
+              <div class="card-bottom d-flex justify-content-between align-items-center">
+                <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
+                <div class="d-inline-flex align-items-center gap-2">
+                  <span class="card-socios-count d-inline-flex align-items-center gap-1 text-muted small" [title]="'Involucrados: ' + getCantidadInvolucrados(exp)">
+                    <i class="material-icons" style="font-size: 14px;" aria-hidden="true">group</i>
+                    <span>{{ getCantidadInvolucrados(exp) }}</span>
+                  </span>
+                  <!-- Botón visor ocultado temporalmente por requerimiento -->
+                  <button *ngIf="false" 
+                          mat-button 
+                          class="btn btn-primary btn-link btn-just-icon p-0 m-0 btn-abrir-visor"
+                          style="min-width: 24px; width: 24px; height: 24px;"
+                          (click)="abrirVisor(exp, $event)" 
+                          title="Sustanciar / Visor de Expediente" 
+                          aria-label="Sustanciar / Visor">
+                    <i class="material-icons" style="font-size: 16px;">menu_book</i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="tieneMasEnColumna(col.estado)" class="kanban-col-load-more">
+              <button mat-stroked-button
+                      type="button"
+                      class="btn-mostrar-mas"
+                      (click)="mostrarMasEnColumna(col.estado)"
+                      [disabled]="estaCargandoMas(col.estado)"
+                      title="Mostrar más"
+                      aria-label="Mostrar más">
+                {{ estaCargandoMas(col.estado) ? '...' : '+' }}
+              </button>
             </div>
           </div>
         </ng-container>
@@ -252,8 +266,8 @@
                   <time [attr.datetime]="exp.fechaCreacion">{{ exp.fechaCreacion | date:'dd/MM/yyyy' }}</time>
                 </td>
                 <td>
-                  <span class="font-weight-bold" [ngClass]="exp.puntos > 0 ? 'text-success' : 'text-danger'">
-                    {{exp.puntos > 0 ? '+' : ''}}{{exp.puntos}} pts
+                  <span class="font-weight-bold" [ngClass]="getClasePuntajeExpediente(exp)">
+                    {{getPuntajeSolicitadoDisplay(exp)}}
                   </span>
                 </td>
                 <td>
@@ -395,8 +409,8 @@
 
             <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
               <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje Solicitado:</span>
-              <span class="font-weight-bold puntaje-solicitado-val" [ngClass]="expedienteSeleccionado.puntos > 0 ? 'text-success' : 'text-danger'">
-                {{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}}
+              <span class="font-weight-bold puntaje-solicitado-val" [ngClass]="getClasePuntajeExpediente(expedienteSeleccionado)">
+                {{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}
               </span>
             </div>
           </div>
@@ -757,7 +771,7 @@
                     <td class="nombre-cell">{{expedienteSeleccionado.socio}}</td>
                     <td class="grupo-cell">—</td>
                     <td class="estado-descargo-cell text-muted">Evaluado</td>
-                    <td class="font-weight-bold puntaje-final-cell">{{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts</td>
+                    <td class="font-weight-bold puntaje-final-cell">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</td>
                   </tr>
                 </tbody>
               </table>
