@@ -1,0 +1,164 @@
+.tabla-expedientes-container {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-main, #e2e8f0);
+  background-color: var(--color-surface-card, #ffffff);
+
+  .table-responsive {
+    margin: 0;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+}
+
+.table-expedientes-referenciados {
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: collapse;
+
+  thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-border-main, #e2e8f0);
+    border-top: none;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  tbody tr.fila-expediente {
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background-color: #f8fafc;
+    }
+  }
+
+  tbody td {
+    padding: 8px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+}
+
+.th-expediente, .td-expediente {
+  width: 125px;
+  min-width: 115px;
+}
+
+.th-tipo, .td-tipo {
+  width: 90px;
+  min-width: 80px;
+}
+
+.th-titulo, .td-titulo {
+  min-width: 220px;
+}
+
+.th-emision, .td-emision {
+  width: 100px;
+  min-width: 95px;
+}
+
+.th-reglamento, .td-reglamento {
+  min-width: 160px;
+}
+
+.th-accion, .td-accion {
+  width: 60px;
+  min-width: 55px;
+}
+
+.expediente-badge {
+  color: var(--color-primary, #151846);
+  font-weight: 600;
+
+  i {
+    font-size: 17px;
+    color: var(--color-accent, #6e9ddc);
+  }
+}
+
+.badge-tipo {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+
+  &.badge-tipo-sancion {
+    background-color: rgba(185, 28, 28, 0.12);
+    color: var(--color-danger, #b91c1c);
+    border: 1px solid rgba(185, 28, 28, 0.25);
+  }
+
+  &.badge-tipo-merito {
+    background-color: rgba(21, 128, 61, 0.12);
+    color: var(--color-success, #15803d);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+  }
+}
+
+.titulo-motivo-text {
+  line-height: 1.4;
+  word-break: break-word;
+  max-width: 400px;
+}
+
+.btn-quitar-art {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+
+  i {
+    font-size: 18px;
+  }
+
+  &:hover {
+    color: var(--color-danger, #b91c1c);
+    background-color: rgba(185, 28, 28, 0.08);
+  }
+}
+
+.empty-expedientes-state {
+  .empty-icon {
+    font-size: 28px;
+    opacity: 0.5;
+    display: block;
+  }
+}
+
+.tabla-compacta {
+  .table-expedientes-referenciados {
+    thead th {
+      padding: 6px 10px;
+      font-size: 10px;
+    }
+    tbody td {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+  }
+}

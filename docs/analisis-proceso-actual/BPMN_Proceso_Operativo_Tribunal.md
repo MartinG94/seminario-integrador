@@ -61,7 +61,7 @@
 
 ### 1.4. Formularios y Documentos Estructurados
 * **Formulario T01 con Hoja Anexo:** Solicitud de puntos (+/-) con fundamentación fáctica, fechas y testigos.
-* **Formulario Unificado de Justificaciones (T02/T03):** Interfaz unificada que conmuta entre *Justificación con Certificado* (motivos de salud, examen o laborales con comprobante obligatorio) y *Descargo Extraordinario* (exposición libre).
+* **Descargo Unificado (Tipificado vs Otros):** Interfaz unificada de ejercicio del derecho de defensa que distingue entre *Descargo Tipificado* (motivos de salud, examen o laborales con comprobante obligatorio) y *Descargo Tipo "Otros"* (exposición libre y prueba respaldante).
 * **Cédula de Votación Nominal:** Registro individual de votos de los tres jueces intervinientes.
 * **Resolución Oficial:** Documento formal estructurado en VISTOS, CONSIDERANDOS y RESOLUCIÓN con firmas digitales.
 * **Balance Cuatrimestral de Disciplina:** Informe oficial consolidado con estadísticas y rankings.

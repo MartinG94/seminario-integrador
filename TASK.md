@@ -334,6 +334,17 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS4-01.8 Suite de Tests Frontend (`visor-expediente.component.spec.ts`):** Tests unitarios en Karma/Jasmine para la vista dedicada.
 - [x] **TS4-01.9 Verificación Integral y Consistencia PO:** Chequeo estricto contra `notasPO.md` y preparación de instrucciones manuales para el usuario en bash.
 
+## 11.2 Sprint 4 — Desglose Atómico: S4-03 / SCRUM-53 (Valorar T03 mediante Antecedentes y Sana Crítica)
+
+> **Referencia:** Jira SCRUM-53 (S4-03).
+
+- [x] **TS4-03.1 a TS4-03.15 Backend y datos de prueba [TDD]:** Dominio, condición del padrón, modelos inmutables y migración `0017`, servicio de valoración, antecedentes emitidos, inhibición de partes interesadas, API, búsqueda de causas emitidas y escenarios `EXP-0905` y `EXP-0906`.
+- [x] **TS4-03.16 Verificación del backend:** Suite `pytest`, `ruff`, migraciones y control contra `notasPO.md`; reserva de la valoración frente a imputados con rol de autoridad.
+- [x] **TS4-03.17 Servicio frontend y DTOs [TDD]:** `listarValoracionesT03`, `registrarValoracionT03` y `buscarAntecedente` en `ExpedienteApiService`.
+- [x] **TS4-03.18 a TS4-03.20 Panel de valoración [TDD]:** Resultado, fundamento con contador, antecedentes, aviso orientativo no bloqueante e historial con la condición del autor.
+- [x] **TS4-03.21 Integración en la sala [TDD]:** Acción «Valorar T03», panel dentro del modal de descargo, «Pendiente de valoración» o resultado vigente en la tabla de involucrados, y buscador por número y motivo. El T03 valorado cuenta como descargo leído para generar la resolución.
+- [x] **TS4-03.22 Verificación final:** Suites completas, prueba manual de Axel y control contra `notasPO.md`; actualización contra `main` con la migración de merge `0019`.
+
 ---
 
 ## 12. Sprint 3 — Desglose Atómico: SCRUM-84 (Apertura y Cierre Sprint en Documentación)

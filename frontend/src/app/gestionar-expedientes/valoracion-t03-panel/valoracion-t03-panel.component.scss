@@ -1,0 +1,30 @@
+.seccion-titulo {
+  color: var(--color-primary);
+  font-family: var(--font-subtitle);
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: none;
+}
+
+.ficha-antecedente {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-main);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  padding: 8px;
+}
+
+.aviso-orientativo {
+  align-items: flex-start;
+  background: var(--color-surface-card);
+  border-left: 4px solid var(--color-info);
+  color: var(--color-text-primary);
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+
+  .material-icons {
+    color: var(--color-info);
+    font-size: 18px;
+  }
+}

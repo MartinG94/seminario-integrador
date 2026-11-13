@@ -3,46 +3,153 @@
 from django.db import migrations, models
 
 
+def sync_evento_columns_idempotently(apps, schema_editor):
+    """Add columns on tribunal_evento only when absent in the physical table.
+
+    docker/mysql/init/03-scrum50-eventos-asistencias-apercibimientos.sql already
+    creates some of these columns on fresh Docker volumes while omitting
+    tolerancia_retiro_minutos, whereas clean test databases created via 0012
+    do not have the 0014 columns yet.
+    """
+    EventoInstitucional = apps.get_model("expedientes", "EventoInstitucional")
+    table_name = EventoInstitucional._meta.db_table
+    with schema_editor.connection.cursor() as cursor:
+        existing_cols = {
+            col.name.lower()
+            for col in schema_editor.connection.introspection.get_table_description(
+                cursor, table_name
+            )
+        }
+
+    for field_name in (
+        "tolerancia_retiro_minutos",
+        "detalle_tarea",
+        "estado_social_convocado",
+        "motivo_cancelacion",
+        "puntos_sancion",
+    ):
+        field = EventoInstitucional._meta.get_field(field_name)
+        if field.column.lower() not in existing_cols:
+            schema_editor.add_field(EventoInstitucional, field)
+
+
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
-        ('expedientes', '0013_merge_evidence_and_events'),
+        ("expedientes", "0013_merge_evidence_and_events"),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='eventoinstitucional',
-            name='detalle_tarea',
-            field=models.TextField(blank=True, db_column='detalle_tarea', default='', help_text='Instrucciones concretas y especificación de la tarea para Actividades.'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],
+            state_operations=[
+                migrations.AddField(
+                    model_name="eventoinstitucional",
+                    name="detalle_tarea",
+                    field=models.TextField(
+                        blank=True,
+                        db_column="detalle_tarea",
+                        default="",
+                        help_text=(
+                            "Instrucciones concretas y especificación de la tarea para Actividades."
+                        ),
+                    ),
+                ),
+                migrations.AddField(
+                    model_name="eventoinstitucional",
+                    name="estado_social_convocado",
+                    field=models.CharField(
+                        blank=True,
+                        choices=[("JUNIORS", "Juniors"), ("SENIORS", "Seniors")],
+                        db_column="estado_social_convocado",
+                        help_text=(
+                            "Filtro de cohorte social cuando modo_convocatoria es ESTADO_SOCIAL."
+                        ),
+                        max_length=20,
+                        null=True,
+                    ),
+                ),
+                migrations.AddField(
+                    model_name="eventoinstitucional",
+                    name="motivo_cancelacion",
+                    field=models.TextField(
+                        blank=True,
+                        db_column="motivo_cancelacion",
+                        help_text="Fundamento formal de anulación del evento.",
+                        null=True,
+                    ),
+                ),
+                migrations.AddField(
+                    model_name="eventoinstitucional",
+                    name="puntos_sancion",
+                    field=models.DecimalField(
+                        blank=True,
+                        db_column="puntos_sancion",
+                        decimal_places=2,
+                        help_text=(
+                            "Puntos de penalidad por inasistencia o incumplimiento "
+                            "personalizables para Actividades."
+                        ),
+                        max_digits=4,
+                        null=True,
+                    ),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='eventoinstitucional',
-            name='estado_social_convocado',
-            field=models.CharField(blank=True, choices=[('JUNIORS', 'Juniors'), ('SENIORS', 'Seniors')], db_column='estado_social_convocado', help_text='Filtro de cohorte social cuando modo_convocatoria es ESTADO_SOCIAL.', max_length=20, null=True),
-        ),
-        migrations.AddField(
-            model_name='eventoinstitucional',
-            name='motivo_cancelacion',
-            field=models.TextField(blank=True, db_column='motivo_cancelacion', help_text='Fundamento formal de anulación del evento.', null=True),
-        ),
-        migrations.AddField(
-            model_name='eventoinstitucional',
-            name='puntos_sancion',
-            field=models.DecimalField(blank=True, db_column='puntos_sancion', decimal_places=2, help_text='Puntos de penalidad por inasistencia o incumplimiento personalizables para Actividades.', max_digits=4, null=True),
+        migrations.RunPython(
+            sync_evento_columns_idempotently,
+            reverse_code=migrations.RunPython.noop,
+            atomic=False,
         ),
         migrations.AlterField(
-            model_name='eventoinstitucional',
-            name='estado',
-            field=models.CharField(choices=[('CREADO', 'Creado'), ('NOTIFICADO', 'Notificado'), ('EN_CURSO', 'En Curso'), ('ABIERTO', 'Abierto'), ('FINALIZADO', 'Finalizado'), ('ANULADO', 'Anulado')], db_column='estado', default='CREADO', max_length=30),
+            model_name="eventoinstitucional",
+            name="estado",
+            field=models.CharField(
+                choices=[
+                    ("CREADO", "Creado"),
+                    ("NOTIFICADO", "Notificado"),
+                    ("EN_CURSO", "En Curso"),
+                    ("ABIERTO", "Abierto"),
+                    ("FINALIZADO", "Finalizado"),
+                    ("ANULADO", "Anulado"),
+                ],
+                db_column="estado",
+                default="CREADO",
+                max_length=30,
+            ),
         ),
         migrations.AlterField(
-            model_name='eventoinstitucional',
-            name='modo_convocatoria',
-            field=models.CharField(choices=[('GRUPO', 'Por Grupo Social Completo'), ('SUBCOMISION', 'Por Subcomisión Completa'), ('ESTADO_SOCIAL', 'Por Estado Social (Juniors / Seniors)'), ('PERSONALIZADA', 'Lista Personalizada de Socios')], db_column='modo_convocatoria', default='PERSONALIZADA', max_length=30),
+            model_name="eventoinstitucional",
+            name="modo_convocatoria",
+            field=models.CharField(
+                choices=[
+                    ("GRUPO", "Por Grupo Social Completo"),
+                    ("SUBCOMISION", "Por Subcomisión Completa"),
+                    ("ESTADO_SOCIAL", "Por Estado Social (Juniors / Seniors)"),
+                    ("PERSONALIZADA", "Lista Personalizada de Socios"),
+                ],
+                db_column="modo_convocatoria",
+                default="PERSONALIZADA",
+                max_length=30,
+            ),
         ),
         migrations.AlterField(
-            model_name='asistenciaevento',
-            name='estado_asistencia',
-            field=models.CharField(choices=[('PRESENTE', 'Presente'), ('TARDE_LEVE', 'Tardanza Leve (15-30 min)'), ('TARDE_GRAVE', 'Tardanza Grave (>30 min)'), ('RETIRO_ANTICIPADO_LEVE', 'Retiro Anticipado Leve (15-30 min)'), ('RETIRO_ANTICIPADO_GRAVE', 'Retiro Anticipado Grave (>30 min)'), ('AUSENTE', 'Ausente Injustificado'), ('JUSTIFICADO', 'Ausencia Justificada')], db_column='estado_asistencia', default='PRESENTE', max_length=30),
+            model_name="asistenciaevento",
+            name="estado_asistencia",
+            field=models.CharField(
+                choices=[
+                    ("PRESENTE", "Presente"),
+                    ("TARDE_LEVE", "Tardanza Leve (15-30 min)"),
+                    ("TARDE_GRAVE", "Tardanza Grave (>30 min)"),
+                    ("RETIRO_ANTICIPADO_LEVE", "Retiro Anticipado Leve (15-30 min)"),
+                    ("RETIRO_ANTICIPADO_GRAVE", "Retiro Anticipado Grave (>30 min)"),
+                    ("AUSENTE", "Ausente Injustificado"),
+                    ("JUSTIFICADO", "Ausencia Justificada"),
+                ],
+                db_column="estado_asistencia",
+                default="PRESENTE",
+                max_length=30,
+            ),
         ),
     ]

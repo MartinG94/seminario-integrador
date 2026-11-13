@@ -694,6 +694,118 @@ class DecisionCausalDescargo(models.Model):
         raise ValidationError("Una decisión registrada no puede eliminarse.")
 
 
+class ResultadoValoracionT03Enum(models.TextChoices):
+    ACCEPTED = "ACCEPTED", "Aprobada"
+    REJECTED = "REJECTED", "Desaprobada"
+
+
+class CondicionMiembroTribunalEnum(models.TextChoices):
+    TITULAR = "TITULAR", "Miembro Titular"
+    SUPLENTE = "SUPLENTE", "Miembro Suplente"
+    NO_INFORMADA = "NO_INFORMADA", "No informada en el padrón"
+
+
+class ValoracionT03(models.Model):
+    """Valoración extraordinaria, inmutable y versionada de un descargo T03 (S4-03).
+
+    Cada nueva valoración crea una versión; las anteriores se conservan (RF-6).
+    Guarda una copia del descargo valorado sin modificar el original (RF-7) y la
+    condición de Miembro Titular o Suplente del autor al momento de valorar (RF-5).
+    """
+
+    expediente = models.ForeignKey(
+        Expediente,
+        on_delete=models.PROTECT,
+        related_name="valoraciones_t03",
+    )
+    descargo = models.ForeignKey(
+        DescargoExpediente,
+        on_delete=models.PROTECT,
+        related_name="valoraciones_t03",
+    )
+    version = models.PositiveIntegerField()
+    resultado = models.CharField(max_length=10, choices=ResultadoValoracionT03Enum.choices)
+    fundamento = models.TextField()
+    puntaje_final = models.CharField(max_length=32, null=True, blank=True)
+    descargo_snapshot = models.JSONField(default=dict)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="valoraciones_t03",
+    )
+    autor_legajo = models.CharField(max_length=20)
+    autor_rol = models.CharField(max_length=20)
+    autor_condicion = models.CharField(max_length=15, choices=CondicionMiembroTribunalEnum.choices)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    class Meta:
+        db_table = "expedientes_valoracion_t03"
+        verbose_name = "Valoración extraordinaria T03"
+        verbose_name_plural = "Valoraciones extraordinarias T03"
+        ordering = ["descargo_id", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["descargo", "version"],
+                name="unique_valoracion_t03_version_per_descargo",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Descargo {self.descargo_id} v{self.version}: {self.get_resultado_display()}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError(
+                "Una valoración registrada es inmutable; registrá una nueva versión."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Una valoración registrada no puede eliminarse.")
+
+
+class ValoracionT03Antecedente(models.Model):
+    """Expediente emitido citado como antecedente de una valoración T03 (RF-11).
+
+    Solo guarda la referencia y la copia del número: nunca texto, causal ni evidencia (RF-20).
+    """
+
+    valoracion = models.ForeignKey(
+        ValoracionT03,
+        on_delete=models.PROTECT,
+        related_name="antecedentes",
+    )
+    expediente_antecedente = models.ForeignKey(
+        Expediente,
+        on_delete=models.PROTECT,
+        related_name="citado_en_valoraciones_t03",
+    )
+    numero_antecedente = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = "expedientes_valoracion_t03_antecedente"
+        verbose_name = "Antecedente de valoración T03"
+        verbose_name_plural = "Antecedentes de valoraciones T03"
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["valoracion", "expediente_antecedente"],
+                name="unique_antecedente_per_valoracion_t03",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Valoración {self.valoracion_id} cita {self.numero_antecedente}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self._state.adding:
+            raise ValidationError("Un antecedente vinculado es inmutable.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Un antecedente vinculado no puede eliminarse.")
+
+
 class CondicionIntegranteEnum(models.TextChoices):
     """Condición con la que un socio integra el cuerpo de una causa (Arts. 92 y 95)."""
 
@@ -821,6 +933,7 @@ class SolicitudT01(models.Model):
     motivo = models.TextField(blank=True)
     razon = models.TextField(blank=True, default="")
     reglamentos_respaldantes = models.JSONField(default=list, blank=True)
+    expedientes_referenciados = models.JSONField(default=list, blank=True)
     anexo_fecha = models.DateField(null=True, blank=True)
     anexo_lugar = models.CharField(max_length=255, blank=True)
     anexo_relato = models.TextField(blank=True)
@@ -1654,6 +1767,7 @@ class Resolucion(models.Model):
     considerandos = models.TextField(blank=True, default="")
     articulos_resolutivos = models.TextField(blank=True, default="")
     reglamentos_respaldantes = models.JSONField(default=list, blank=True)
+    expedientes_referenciados = models.JSONField(default=list, blank=True)
     puntos_finales = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     medidas = models.JSONField(default=list, blank=True)
     firmantes = models.JSONField(default=list, blank=True)

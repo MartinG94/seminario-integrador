@@ -470,3 +470,52 @@ class TestExpedienteDetailAPI:
             format="json",
         )
         assert res_a_favor.status_code == status.HTTP_201_CREATED
+
+        # Verificar que el detalle del expediente reporte leido=True y puntaje_ratificado=0.0
+        res_detalle = client.get(f"/api/v1/expedientes/{expediente2.id}/")
+        assert res_detalle.status_code == status.HTTP_200_OK
+        descargos_res = res_detalle.json().get("descargos", [])
+        assert len(descargos_res) == 1
+        assert descargos_res[0]["leido"] is True
+        assert descargos_res[0]["puntaje_ratificado"] == 0.0
+
+    def test_descargo_tipo_otros_reporta_leido_y_puntaje_ratificado(
+        self,
+        expediente_caso: Expediente,
+        socio_imputado: Socio,
+        vocal_td: Socio,
+    ):
+        """Descargos de tipo Otros evaluados por el TD reportan leido=True y puntaje_ratificado."""
+        from expedientes.models import DescargoExpediente, TipoDescargoEnum
+
+        expediente_caso.estado = EstadoExpedienteEnum.REVISION_RESOLUCION
+        expediente_caso.save()
+
+        descargo_otros = DescargoExpediente.objects.create(
+            expediente=expediente_caso,
+            socio=socio_imputado,
+            tipo=TipoDescargoEnum.T03_EXTRAORDINARIO,
+            causal="Otro",
+            texto="Descargo de tipo Otros con hechos extraordinarios.",
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+        url = f"/api/v1/expedientes/{expediente_caso.id}/descargos/{descargo_otros.id}/decisiones/"
+        res = client.post(
+            url,
+            {
+                "decision": "ACCEPTED",
+                "puntaje_final": 0.0,
+                "fundamento": "Se exime fundadamente por razones expuestas.",
+            },
+            format="json",
+        )
+        assert res.status_code == status.HTTP_201_CREATED
+
+        res_detalle = client.get(f"/api/v1/expedientes/{expediente_caso.id}/")
+        assert res_detalle.status_code == status.HTTP_200_OK
+        descargos = res_detalle.json().get("descargos", [])
+        assert len(descargos) == 1
+        assert descargos[0]["leido"] is True
+        assert descargos[0]["puntaje_ratificado"] == 0.0

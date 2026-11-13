@@ -54,6 +54,8 @@ export interface SolicitudMonitoreo {
   causal: string;
   razon: string;
   reglamentos_respaldantes: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   anexo_fecha: string | null;
   anexo_lugar: string;
   anexo_relato: string;
@@ -84,6 +86,8 @@ export interface SolicitudT01 {
   motivo: string;
   razon: string;
   reglamentos_respaldantes: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   anexo_fecha: string | null;
   anexo_lugar: string;
   anexo_relato: string;
@@ -121,6 +125,7 @@ export interface SolicitudT01Payload {
   motivo?: string;
   razon?: string;
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
   anexo_fecha?: string | null;
   anexo_lugar?: string;
   anexo_relato?: string;
@@ -200,6 +205,48 @@ export interface RegistrarDecisionCausalPayload {
   puntaje_final?: number | string | null;
 }
 
+/** Expediente emitido citado en una valoración T03: solo su id y su número. */
+export interface AntecedenteCitadoDTO {
+  expediente_id: number;
+  numero: string;
+}
+
+export interface ValoracionT03DTO {
+  id: number;
+  descargo: number;
+  version: number;
+  resultado: DecisionCausal;
+  resultado_display: string;
+  fundamento: string;
+  puntaje_final?: string | number | null;
+  antecedentes: AntecedenteCitadoDTO[];
+  autor: string;
+  autor_legajo: string;
+  autor_rol: string;
+  autor_condicion: string;
+  autor_condicion_display: string;
+  created_at: string;
+}
+
+export interface RegistrarValoracionT03Payload {
+  resultado: DecisionCausal;
+  fundamento: string;
+  antecedente_ids: number[];
+  puntaje_final?: number | string | null;
+}
+
+/** Ficha mínima de un antecedente emitido (S4-03, RF-16). */
+export interface AntecedenteT03DTO {
+  id: number;
+  numero: string;
+  fecha_emision: string;
+  motivo: string;
+  reglamento_invocado: string;
+  titulo?: string;
+  puntos?: number | null;
+  tipo_accion?: 'SANCTION' | 'MERIT' | string;
+}
+
 export interface FirmanteTdDTO {
   user_id?: number;
   legajo: string;
@@ -222,6 +269,8 @@ export interface ResolucionOficialDTO {
   considerandos: string;
   articulos_resolutivos: string;
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   puntos_finales?: Record<string, unknown> | null;
   medidas?: unknown[] | null;
   firmantes_td?: Array<FirmanteTdDTO | string>;
@@ -234,6 +283,7 @@ export interface ResolucionOficialDTO {
 }
 
 export type ResolucionDto = ResolucionOficialDTO;
+export type ResolucionDTO = ResolucionOficialDTO;
 
 export interface GuardarResolucionPayload {
   plantilla_version?: string;
@@ -241,6 +291,7 @@ export interface GuardarResolucionPayload {
   considerandos: string;
   articulos_resolutivos: string;
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
 }
 
 export interface DescargoDetalleDTO {
@@ -257,6 +308,7 @@ export interface DescargoDetalleDTO {
   evidencias: EvidenciaMetadata[];
   regla_sugerida?: DecisionCausal;
   decisiones_causal?: DecisionCausalDTO[];
+  valoraciones_t03?: ValoracionT03DTO[];
   leido?: boolean;
   puntaje_ratificado?: number | string | null;
 }
@@ -390,6 +442,8 @@ export interface ExpedienteDetalleDTO {
   socios?: SocioInvolucradoDetalleDTO[];
   descargos: DescargoDetalleDTO[];
   reglamentos_respaldantes?: string[];
+  expedientes_referenciados?: number[];
+  expedientes_referenciados_detalle?: AntecedenteT03DTO[];
   considerandos?: string;
   vistos?: string;
   articulos_resolutivos?: string;
@@ -835,6 +889,42 @@ export class ExpedienteApiService {
     return this.http.get<DescargoVersionDto[]>(`${this.apiUrl}/${expedienteId}/descargo/versiones/`);
   }
 
+  listarValoracionesT03(expedienteId: number | string, descargoId: number): Observable<ValoracionT03DTO[]> {
+    return this.http.get<ValoracionT03DTO[]>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/valoraciones-t03/`
+    );
+  }
+
+  registrarValoracionT03(
+    expedienteId: number | string,
+    descargoId: number,
+    payload: RegistrarValoracionT03Payload
+  ): Observable<ValoracionT03DTO> {
+    return this.http.post<ValoracionT03DTO>(
+      `${this.apiUrl}/${expedienteId}/descargos/${descargoId}/valoraciones-t03/`,
+      payload
+    );
+  }
+
+  buscarAntecedente(numero: string): Observable<AntecedenteT03DTO> {
+    const params = new HttpParams().set('numero', numero.trim());
+    return this.http.get<AntecedenteT03DTO>(`${this.apiUrl}/antecedentes/`, { params });
+  }
+
+
+  listarCatalogoAntecedentes(params?: { search?: string; tipo?: 'TODOS' | 'SANCTION' | 'MERIT' | string; exclude_id?: number }): Observable<AntecedenteT03DTO[]> {
+    let httpParams = new HttpParams().set('catalogo', '1');
+    if (params?.search) {
+      httpParams = httpParams.set('search', params.search.trim());
+    }
+    if (params?.tipo && params.tipo !== 'TODOS') {
+      httpParams = httpParams.set('tipo', params.tipo);
+    }
+    if (params?.exclude_id !== undefined && params.exclude_id !== null) {
+      httpParams = httpParams.set('exclude_id', String(params.exclude_id));
+    }
+    return this.http.get<AntecedenteT03DTO[]>(`${this.apiUrl}/antecedentes/`, { params: httpParams });
+  }
   obtenerHistorialT01(expedienteId: number | string): Observable<HistorialT01DTO> {
     return this.http.get<HistorialT01DTO>(`${this.apiUrl}/${expedienteId}/t01/historial/`);
   }

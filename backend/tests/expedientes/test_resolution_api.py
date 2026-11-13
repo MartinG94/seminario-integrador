@@ -416,3 +416,53 @@ def test_creacion_resolucion_guarda_reglamentos_respaldantes_y_los_expone(
     assert data["reglamentos_respaldantes"] == reglamentos
     assert data["reglamento_asociado"] == reglamentos[0]
     assert data["considerandos"] == "Considerando específico del TD."
+
+
+@pytest.mark.django_db
+def test_resolucion_guarda_y_valida_expedientes_referenciados(
+    causal_expediente, causal_vocal, authenticate, make_socio
+):
+    from expedientes.models import EstadoExpedienteEnum, Expediente
+
+    causal_expediente.estado = "revision_resolucion"
+    causal_expediente.save()
+
+    socio = make_socio(legajo="76088")
+    emitido = Expediente.objects.create(
+        numero="EXP-0555/2026",
+        titulo="Antecedente previo",
+        socio=socio,
+        motivo="Falta administrativa",
+        estado=EstadoExpedienteEnum.EMITIDO,
+    )
+    no_emitido = Expediente.objects.create(
+        numero="EXP-0556/2026",
+        socio=socio,
+        motivo="En trámite",
+        estado=EstadoExpedienteEnum.JUSTIFICANDO,
+    )
+
+    client = authenticate(causal_vocal)
+
+    # 1. Rechaza con 400 expediente no emitido
+    payload_invalido = {
+        "vistos": "Visto previo.",
+        "considerandos": "Considerando.",
+        "articulos_resolutivos": "Resuelve.",
+        "expedientes_referenciados": [no_emitido.id],
+    }
+    res_err = client.post(resolution_url(causal_expediente.pk), payload_invalido, format="json")
+    assert res_err.status_code == 400
+
+    # 2. Acepta expediente emitido y devuelve detalle
+    payload_valido = {
+        "vistos": "Visto previo.",
+        "considerandos": "Considerando.",
+        "articulos_resolutivos": "Resuelve.",
+        "expedientes_referenciados": [emitido.id],
+    }
+    res_ok = client.post(resolution_url(causal_expediente.pk), payload_valido, format="json")
+    assert res_ok.status_code == 201
+    assert res_ok.data["expedientes_referenciados"] == [emitido.id]
+    assert len(res_ok.data["expedientes_referenciados_detalle"]) == 1
+    assert res_ok.data["expedientes_referenciados_detalle"][0]["numero"] == "EXP-0555/2026"

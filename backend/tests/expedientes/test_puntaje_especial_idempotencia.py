@@ -84,6 +84,58 @@ class TestPuntajeEspecialDomainYModel:
         board_data = BoardExpedienteSerializer(exp).data
         assert board_data.get("puntaje_solicitado") == "LLAMADO_ATENCION"
 
+    def test_solicitud_t01_serializer_valida_expedientes_referenciados(self, make_socio):
+        from expedientes.models import EstadoExpedienteEnum
+
+        socio = make_socio(legajo="79004")
+        emitido = Expediente.objects.create(
+            numero="EXP-0991/2026",
+            titulo="Precedente relevante",
+            socio=socio,
+            motivo="Motivo precedente",
+            estado=EstadoExpedienteEnum.EMITIDO,
+        )
+        no_emitido = Expediente.objects.create(
+            numero="EXP-0992/2026",
+            socio=socio,
+            motivo="No emitido",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+        )
+
+        # 1. Rechaza no emitido
+        s_invalido = SolicitudT01Serializer(
+            data={
+                "solicitante": socio.id,
+                "destinatarios_socios_ids": [socio.id],
+                "tipo_accion": "SANCTION",
+                "puntos": "-1.00",
+                "titulo": "Falta",
+                "motivo": "Motivo",
+                "expedientes_referenciados": [no_emitido.id],
+            }
+        )
+        assert not s_invalido.is_valid()
+        assert "expedientes_referenciados" in s_invalido.errors
+
+        # 2. Acepta emitido y expone detalle
+        s_valido = SolicitudT01Serializer(
+            data={
+                "solicitante": socio.id,
+                "destinatarios_socios_ids": [socio.id],
+                "tipo_accion": "SANCTION",
+                "puntos": "-1.00",
+                "titulo": "Falta",
+                "motivo": "Motivo",
+                "expedientes_referenciados": [emitido.id],
+            }
+        )
+        assert s_valido.is_valid(), s_invalido.errors
+        instancia = s_valido.save(solicitante=socio)
+        data = SolicitudT01Serializer(instancia).data
+        assert data["expedientes_referenciados"] == [emitido.id]
+        assert len(data["expedientes_referenciados_detalle"]) == 1
+        assert data["expedientes_referenciados_detalle"][0]["numero"] == "EXP-0991/2026"
+
 
 @pytest.mark.django_db
 class TestCausalResolutionIdempotencia:
