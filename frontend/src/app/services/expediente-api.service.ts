@@ -778,8 +778,8 @@ export class ExpedienteApiService {
     );
   }
 
-  listarPorSocio(legajo: string): Observable<ExpedienteRankingDetalle[]> {
-    const params = new HttpParams().set('legajo', legajo);
+  listarPorSocio(numeroSocio: string): Observable<ExpedienteRankingDetalle[]> {
+    const params = new HttpParams().set('legajo', numeroSocio);
     return this.http.get<ExpedienteRankingDetalle[]>(`${this.apiUrl}/por-socio/`, { params });
   }
 

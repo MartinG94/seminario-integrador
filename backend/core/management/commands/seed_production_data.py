@@ -308,20 +308,30 @@ class Command(BaseCommand):
                     user.set_password(DEMO_PASSWORD)
                     user.save(update_fields=["password"])
 
-                socio, created_socio = Socio.objects.get_or_create(
-                    legajo=legajo,
-                    defaults={
-                        "user": user,
-                        "first_name": nombre,
-                        "last_name": apellido,
-                        "email": email,
-                        "subcomision": sub,
-                        "social_year": social_year,
-                        "role": role,
-                        "is_enabled": True,
-                    },
-                )
-                if not created_socio:
+                socio = Socio.objects.filter(numero_socio=nro_socio).first()
+                if socio is None:
+                    socio = Socio.objects.filter(user=user).first()
+                if socio is not None and socio.user_id not in (None, user.id):
+                    self.stderr.write("Conflicto de identidad institucional; registro omitido.")
+                    continue
+                if socio is not None and socio.numero_socio not in (None, nro_socio):
+                    self.stderr.write("Conflicto de numero_socio existente; registro omitido.")
+                    continue
+                if socio is None:
+                    socio = Socio.objects.create(
+                        user=user,
+                        legajo=legajo,
+                        numero_socio=nro_socio,
+                        first_name=nombre,
+                        last_name=apellido,
+                        email=email,
+                        subcomision=sub,
+                        social_year=social_year,
+                        role=role,
+                        is_enabled=True,
+                    )
+                else:
+                    socio.numero_socio = nro_socio
                     socio.user = user
                     socio.first_name = nombre
                     socio.last_name = apellido
@@ -671,14 +681,13 @@ class Command(BaseCommand):
             # Mapear socio_id de expedientes_expediente (socios_socio.id) a nroSocio institucional
             for exp_id, numero, s_id, puntos in emitidos:
                 emitidos_ids.add(exp_id)
-                cursor.execute("SELECT legajo FROM socios_socio WHERE id = %s", [s_id])
+                cursor.execute("SELECT numero_socio FROM socios_socio WHERE id = %s", [s_id])
                 row = cursor.fetchone()
                 if not row:
                     continue
-                legajo = row[0]
-                if not legajo.isdigit():
+                nro_socio = row[0]
+                if nro_socio is None:
                     continue
-                nro_socio = int(legajo)
 
                 # Asegurar existencia en tribunal_expediente para respetar la FK
                 cursor.execute(

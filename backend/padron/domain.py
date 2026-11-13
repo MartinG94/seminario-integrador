@@ -78,6 +78,8 @@ class SocioInstitucionalDTO:
     category: SocioCategoryEnum
     is_active: bool
     membership_status: MembershipStatusEnum
+    # Identificador institucional AVEIT; legajo permanece exclusivamente académico.
+    numero_socio: Optional[int] = None
     grupo: Optional[str] = None
 
 

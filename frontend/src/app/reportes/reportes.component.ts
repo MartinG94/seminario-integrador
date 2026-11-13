@@ -265,9 +265,9 @@ export class ReportesComponent implements OnInit, OnDestroy {
       }
 
       csvContent += '\r\nNÓMINA DE SOCIOS Y PUNTOS\r\n';
-      csvContent += 'Posición;Legajo;Apellido;Nombre;Grupo;Puntos Asignados 2026;Puntos Totales\r\n';
+      csvContent += 'Posición;N.º de socio;Legajo académico;Apellido;Nombre;Grupo;Puntos Asignados 2026;Puntos Totales\r\n';
       for (const s of this.metricasSubcomision.tabla_socios) {
-        csvContent += `${s.posicion};${s.legajo};${s.apellido};${s.nombre};${s.grupo};${s.puntos_asignados_ciclo};${s.puntos_totales}\r\n`;
+        csvContent += `${s.posicion};${s.numero_socio ?? ''};${s.legajo ?? ''};${s.apellido};${s.nombre};${s.grupo};${s.puntos_asignados_ciclo};${s.puntos_totales}\r\n`;
       }
       nombreArchivo = `subcomision_${sub.nombre.toLowerCase().replace(/\\s+/g, '_')}`;
     } else if (this.tabActiva === 'historico' && this.historicoRecords) {

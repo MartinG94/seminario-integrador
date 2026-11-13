@@ -20,7 +20,8 @@ describe('RankingSociosComponent', () => {
   const sociosMock: RankingSocio[] = [
     {
       id: '1',
-      legajo: '1001',
+      numero_socio: 1001,
+      legajo: '85421',
       nombre: 'Ana',
       apellido: 'Gómez',
       categoria: 'ACTIVO',
@@ -34,7 +35,8 @@ describe('RankingSociosComponent', () => {
     },
     {
       id: '2',
-      legajo: '1002',
+      numero_socio: 1002,
+      legajo: '89123',
       nombre: 'Bruno',
       apellido: 'Pérez',
       categoria: 'PASIVO',
@@ -413,11 +415,30 @@ describe('RankingSociosComponent', () => {
       width: '100%',
       maxWidth: '700px',
       data: {
-        legajo: '1001',
+        numeroSocio: '1001',
         nombreSocio: 'Ana Gómez',
         saldo: 5
       }
     });
+  });
+
+  it('usa el número de socio institucional al abrir expedientes', () => {
+    fixture.detectChanges();
+    const socio = {
+      ...component.socios[0],
+      id: '89123',
+      numero_socio: 1002,
+      legajo: '89123'
+    };
+
+    component.abrirExpedientesSocio(socio);
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ExpedientesSocioDialogComponent,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({ numeroSocio: '1002' })
+      })
+    );
   });
 
   it('onRowKeyDown debe abrir expedientes al presionar Enter o Space', () => {

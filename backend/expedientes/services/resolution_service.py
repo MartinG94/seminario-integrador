@@ -142,17 +142,22 @@ def registrar_firma_resolucion(resolucion: Resolucion, user) -> Resolucion:
         raise ValidationError("Una resolución emitida ya no admite nuevas firmas.")
 
     socio = getattr(user, "socio", None)
+    numero_socio = getattr(socio, "numero_socio", None)
     legajo = str(getattr(socio, "legajo", "") or getattr(user, "username", "")).strip()
     first_name = (getattr(socio, "first_name", "") or getattr(user, "first_name", "")).strip()
     last_name = (getattr(socio, "last_name", "") or getattr(user, "last_name", "")).strip()
     full_name = f"{first_name} {last_name}".strip() or getattr(user, "username", str(user))
 
     mapa_grupos = cargar_mapa_grupos()
-    grupo = mapa_grupos.get(legajo, "")
+    grupo = mapa_grupos.get(str(numero_socio), "") or mapa_grupos.get(legajo, "")
 
     firmantes_existentes = list(resolucion.firmantes or [])
     for f in firmantes_existentes:
-        if f.get("user_id") == user.id or (f.get("legajo") and f.get("legajo") == legajo):
+        if (
+            f.get("user_id") == user.id
+            or (f.get("numero_socio") and f.get("numero_socio") == numero_socio)
+            or (f.get("legajo") and f.get("legajo") == legajo)
+        ):
             raise ValidationError("El usuario ya ha firmado esta resolución.")
 
     anios_ocupados = {
@@ -185,6 +190,7 @@ def registrar_firma_resolucion(resolucion: Resolucion, user) -> Resolucion:
     ahora_iso = timezone.now().isoformat()
     registro_firma = {
         "user_id": user.id,
+        "numero_socio": numero_socio,
         "legajo": legajo,
         "full_name": full_name,
         "social_year": social_year,

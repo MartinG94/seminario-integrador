@@ -660,6 +660,7 @@ class DatabasePadronAdapter:
 
         return SocioInstitucionalDTO(
             socio_id=socio.nroSocio,
+            numero_socio=socio.nroSocio,
             legajo=legajo,
             dni=dni,
             first_name=socio.nombre,

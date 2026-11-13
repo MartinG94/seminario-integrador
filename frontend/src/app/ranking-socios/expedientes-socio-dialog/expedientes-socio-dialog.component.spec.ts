@@ -66,7 +66,7 @@ describe('ExpedientesSocioDialogComponent', () => {
         {
           provide: MAT_DIALOG_DATA,
           useValue: {
-            legajo: '74907',
+            numeroSocio: '74907',
             nombreSocio: 'Lucas Gastiaburu'
           }
         }
@@ -78,7 +78,7 @@ describe('ExpedientesSocioDialogComponent', () => {
     fixture.detectChanges();
   });
 
-  it('debe consultar los expedientes usando el legajo recibido', () => {
+  it('debe consultar los expedientes usando el número de socio recibido', () => {
     expect(expedienteApiSpy.listarPorSocio).toHaveBeenCalledWith('74907');
     expect(component.expedientes).toEqual(expedientesMock);
     expect(component.cargando).toBeFalse();

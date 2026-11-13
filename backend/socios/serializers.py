@@ -19,6 +19,7 @@ class SocioLegajoSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "legajo",
+            "numero_socio",
             "first_name",
             "last_name",
             "email",
