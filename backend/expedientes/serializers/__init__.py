@@ -1326,9 +1326,6 @@ class EmitirT01Serializer(serializers.Serializer):
         }
         solicitud.estado = SolicitudT01.Estado.ISSUED
         solicitud.issued_at = timezone.now()
-        solicitud.numero_expediente = (
-            f"T01-{solicitud.issued_at:%Y}-{solicitud.id.hex[:12].upper()}"
-        )
 
         # Apertura atómica y vinculación formal con Expediente
         # Resolver socios (ya sea por PK local de Socio o por padrón institucional)
@@ -1388,6 +1385,7 @@ class EmitirT01Serializer(serializers.Serializer):
                 points=solicitud.puntos,
             )
             solicitud.expediente = expediente
+            solicitud.numero_expediente = expediente.numero
 
         solicitud.save()
         if solicitud.expediente_id:
