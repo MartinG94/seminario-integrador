@@ -2270,7 +2270,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.getCategoriaPuntajeLabel()).toBe('Sanción');
 
       component.opcionPuntajeFinal = 'LLAMADO_ATENCION';
-      expect(component.getCategoriaPuntajeLabel()).toBe('Apercibimiento');
+      expect(component.getCategoriaPuntajeLabel()).toBe('Llamado de Atención');
 
       component.opcionPuntajeFinal = '0.0';
       expect(component.getCategoriaPuntajeLabel()).toBe('Eximición');

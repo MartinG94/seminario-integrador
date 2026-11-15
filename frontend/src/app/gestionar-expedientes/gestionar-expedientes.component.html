@@ -58,7 +58,7 @@
           <!-- 2. Estado -->
           <div class="filtro-item filtro-control-select">
             <label class="filtro-label" for="filtro-estado">Estado:</label>
-            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado">
+            <select id="filtro-estado" class="form-control selector-filtro-aveit" [(ngModel)]="filtroEstado">
               <option *ngFor="let est of estadosDisponibles" [value]="est.key">{{est.label}}</option>
             </select>
           </div>
@@ -66,7 +66,7 @@
           <!-- 3. Urgencia -->
           <div class="filtro-item filtro-control-select">
             <label class="filtro-label" for="filtro-urgencia">Urgencia:</label>
-            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia">
+            <select id="filtro-urgencia" class="form-control selector-filtro-aveit" [(ngModel)]="filtroUrgencia">
               <option *ngFor="let urg of urgenciasDisponibles" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
@@ -367,7 +367,7 @@
                 <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i>
                 {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
               </span>
-              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2" role="group" aria-label="Cambiar Urgencia">
+              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2 selector-urgencia-aveit" role="group" aria-label="Cambiar Urgencia">
                 <button type="button" 
                         class="btn btn-sm py-0 px-2"
                         [ngClass]="expedienteSeleccionado.urgencia === 'baja' ? 'btn-success' : 'btn-outline-secondary'"
@@ -1290,7 +1290,7 @@
               <div class="puntaje-controls-group">
                 <div class="input-group-stepper-vertical">
                   <select id="opcionPuntajeFinal" 
-                          class="form-control font-weight-bold select-puntaje-escala" 
+                          class="form-control font-weight-bold select-puntaje-escala selector-puntaje-aveit"
                           [(ngModel)]="opcionPuntajeFinal"
                           (ngModelChange)="onOpcionPuntajeFinalChange($event)"
                           [disabled]="!puedeModificarPuntaje">

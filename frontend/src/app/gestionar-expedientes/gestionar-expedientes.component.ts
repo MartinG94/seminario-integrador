@@ -1954,7 +1954,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   getCategoriaPuntajeLabel(): string {
     const actual = this.getOpcionPuntajeActual();
-    if (actual.valor === 'LLAMADO_ATENCION') return 'Apercibimiento';
+    if (actual.valor === 'LLAMADO_ATENCION') return 'Llamado de Atención';
     if (actual.valor === 'FELICITACION') return 'Reconocimiento';
     if (actual.rank === 0) return 'Eximición';
     return actual.rank < 0 ? 'Sanción' : 'Mérito';
