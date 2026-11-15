@@ -451,7 +451,8 @@
               <thead>
                 <tr>
                   <th scope="col">N° de Socio</th>
-                  <th scope="col">Nombre Completo</th>
+                  <th scope="col">Apellido</th>
+                  <th scope="col">Nombre</th>
                   <th scope="col">Grupo</th>
                   <th scope="col">Estado de Descargo</th>
                   <th scope="col">Puntaje Final</th>
@@ -461,7 +462,8 @@
               <tbody>
                 <tr *ngFor="let fila of involucradosJustificacion">
                   <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
-                  <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
+                  <td class="apellido-cell">{{fila.apellido || '—'}}</td>
+                  <td class="nombre-cell">{{fila.nombre || '—'}}</td>
                   <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                   <td class="estado-descargo-cell">
                     <span class="estado-descargo-badge" [ngClass]="{
@@ -493,7 +495,7 @@
                   </td>
                 </tr>
                 <tr *ngIf="involucradosJustificacion.length === 0">
-                  <td colspan="6" class="text-center text-muted py-2">No hay involucrados registrados en el expediente.</td>
+                  <td colspan="7" class="text-center text-muted py-2">No hay involucrados registrados en el expediente.</td>
                 </tr>
               </tbody>
             </table>
@@ -720,7 +722,8 @@
                 <thead class="bg-light">
                   <tr>
                     <th scope="col" class="font-weight-bold">N° de Socio</th>
-                    <th scope="col" class="font-weight-bold">Nombre y Apellido</th>
+                    <th scope="col" class="font-weight-bold">Apellido</th>
+                    <th scope="col" class="font-weight-bold">Nombre</th>
                     <th scope="col" class="font-weight-bold">Grupo</th>
                     <th scope="col" class="font-weight-bold">Estado de Descargo</th>
                     <th scope="col" class="font-weight-bold">Puntaje Final Consolidado</th>
@@ -729,7 +732,8 @@
                 <tbody>
                   <tr *ngFor="let fila of involucradosJustificacion">
                     <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
-                    <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
+                    <td class="apellido-cell">{{fila.apellido || '—'}}</td>
+                    <td class="nombre-cell">{{fila.nombre || '—'}}</td>
                     <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                     <td class="estado-descargo-cell">
                       <span class="estado-descargo-badge" [ngClass]="{
@@ -744,7 +748,8 @@
                   </tr>
                   <tr *ngIf="involucradosJustificacion.length === 0">
                     <td class="font-weight-bold legajo-cell">{{expedienteSeleccionado.numero_socio ?? '—'}}</td>
-                    <td class="nombre-cell">{{expedienteSeleccionado.socio}}</td>
+                    <td class="apellido-cell">{{expedienteSeleccionado.socio || '—'}}</td>
+                    <td class="nombre-cell">—</td>
                     <td class="grupo-cell">—</td>
                     <td class="estado-descargo-cell text-muted">Evaluado</td>
                     <td class="font-weight-bold puntaje-final-cell">{{expedienteSeleccionado.puntos > 0 ? '+' : ''}}{{expedienteSeleccionado.puntos}} pts</td>

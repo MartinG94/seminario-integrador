@@ -124,6 +124,8 @@ export interface TopHistoricoItem {
   posicion: number;
   socio_numero: number;
   nombre_completo: string;
+  apellido?: string;
+  nombre?: string;
   subcomision: string;
   puntaje_historico: number;
   record_destacado: boolean;

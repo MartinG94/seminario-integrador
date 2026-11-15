@@ -59,6 +59,7 @@
       <table class="table table-sm table-hover border">
         <thead class="thead-light">
           <tr>
+            <th>N.º de Socio</th>
             <th>Socio</th>
             <th>Asistencia</th>
             <th>Actuación Prevista</th>
@@ -68,10 +69,8 @@
         </thead>
         <tbody>
           <tr *ngFor="let item of actuacionesPrevistas" [class.table-warning]="item.tipoActuacion === 'APERCIBIMIENTO'" [class.table-danger]="item.tipoActuacion === 'EXPEDIENTE'">
-            <td>
-              <strong>{{ item.socioNombre }}</strong>
-            <small class="d-block text-muted">N.º de Socio: {{ item.socioNumeroSocio ?? '—' }}</small>
-            </td>
+            <td class="tabular-nums"><strong>{{ item.socioNumeroSocio ?? '—' }}</strong></td>
+            <td><strong>{{ item.socioNombre }}</strong></td>
             <td>
               <span class="badge" [ngClass]="{
                 'badge-success': item.estadoAsistencia === 'PRESENTE',

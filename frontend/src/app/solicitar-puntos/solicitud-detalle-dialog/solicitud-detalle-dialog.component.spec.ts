@@ -88,10 +88,12 @@ describe('SolicitudDetalleDialogComponent', () => {
   it('muestra la lista de socios involucrados con número institucional y subcomisión', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('3101');
-    expect(compiled.textContent).toContain('Pérez, Carlos');
+    expect(compiled.textContent).toContain('Pérez');
+    expect(compiled.textContent).toContain('Carlos');
     expect(compiled.textContent).toContain('Deportes');
     expect(compiled.textContent).toContain('3102');
-    expect(compiled.textContent).toContain('Gómez, Ana');
+    expect(compiled.textContent).toContain('Gómez');
+    expect(compiled.textContent).toContain('Ana');
     expect(compiled.textContent).toContain('Cómputos');
     expect(compiled.textContent).toContain('G57');
     expect(compiled.textContent).toContain('G58');

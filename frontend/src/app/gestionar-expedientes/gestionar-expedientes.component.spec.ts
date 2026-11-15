@@ -1752,7 +1752,8 @@ describe('GestionarExpedientesComponent', () => {
 
       const ths = Array.from(tabla.querySelectorAll('thead th')).map((el: any) => el.textContent.trim());
       expect(ths).toContain('N° de Socio');
-      expect(ths).toContain('Nombre Completo');
+      expect(ths).toContain('Apellido');
+      expect(ths).toContain('Nombre');
       expect(ths).toContain('Grupo');
       expect(ths).toContain('Estado de Descargo');
       expect(ths).toContain('Puntaje Final');
@@ -2535,7 +2536,8 @@ describe('GestionarExpedientesComponent', () => {
       // Debe contener la tabla de puntajes finales consolidados en Artículo 1°
       const tablaPuntajes = modalEl.querySelector('.tabla-puntajes-consolidados');
       expect(tablaPuntajes).toBeTruthy();
-      expect(tablaPuntajes.textContent).toContain('Lucas Gómez');
+      expect(tablaPuntajes.textContent).toContain('Lucas');
+      expect(tablaPuntajes.textContent).toContain('Gómez');
       expect(tablaPuntajes.textContent).toContain('-1');
 
       // Botón selector de catálogo para VISTO presente, sin textarea libre de Visto

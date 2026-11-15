@@ -290,6 +290,8 @@ describe('ValoracionT03PanelComponent', () => {
       expect(item).toContain('408917');
       expect(item).toContain('Miembro Titular');
       expect(item).toContain('20/10/2026');
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('.tabla-antecedentes-historial tbody tr').length).toBe(1);
+      expect(consultar('.tabla-antecedentes-historial tbody td')?.textContent?.trim()).toBe('7/2026');
     });
 
     it('conserva el orden recibido, de la más nueva a la más vieja', () => {
