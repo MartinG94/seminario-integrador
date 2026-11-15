@@ -142,6 +142,7 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
             responsables.append(
                 {
                     "titulo": titulo,
+                    "numero_socio": soc.numero_socio,
                     "legajo": legajo,
                     "nombre": nombre,
                     "grupo": grupo,
@@ -154,6 +155,7 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
             responsables.append(
                 {
                     "titulo": titulo,
+                    "numero_socio": None,
                     "legajo": fb["legajo"],
                     "nombre": fb["nombre"],
                     "grupo": fb["grupo"],
@@ -685,6 +687,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             involucrados_data.append(
                 {
                     "id": soc.id,
+                    "numero_socio": soc.numero_socio,
                     "legajo": legajo,
                     "nombre": f"{soc.first_name} {soc.last_name}".strip(),
                     "first_name": soc.first_name,

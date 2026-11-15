@@ -460,7 +460,7 @@
               </thead>
               <tbody>
                 <tr *ngFor="let fila of involucradosJustificacion">
-                  <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
+                  <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
                   <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
                   <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                   <td class="estado-descargo-cell">
@@ -728,7 +728,7 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let fila of involucradosJustificacion">
-                    <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
+                    <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
                     <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
                     <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                     <td class="estado-descargo-cell">
@@ -743,7 +743,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="involucradosJustificacion.length === 0">
-                    <td class="font-weight-bold legajo-cell">{{expedienteSeleccionado.legajo || '—'}}</td>
+                    <td class="font-weight-bold legajo-cell">{{expedienteSeleccionado.numero_socio ?? '—'}}</td>
                     <td class="nombre-cell">{{expedienteSeleccionado.socio}}</td>
                     <td class="grupo-cell">—</td>
                     <td class="estado-descargo-cell text-muted">Evaluado</td>
@@ -1065,14 +1065,14 @@
         <div class="table-responsive">
           <table class="table table-hover table-mat">
             <thead>
-              <th>N° de Socio / Legajo</th>
+              <th>N° de Socio</th>
               <th>Nombre y Apellido</th>
               <th>Grupo</th>
               <th>Estado</th>
             </thead>
             <tbody>
               <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || [])">
-                <td class="font-weight-bold text-dark">{{s.legajo}}</td>
+                  <td class="font-weight-bold text-dark">{{s.numero_socio ?? '—'}}</td>
                 <td>{{s.nombre}}</td>
                 <td>{{s.grupo || '-'}}</td>
                 <td>{{s.estado || 'Activo'}}</td>

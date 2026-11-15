@@ -1669,6 +1669,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             return [
                 {
                     "socio_id": s.get("socio_id"),
+                    "numero_socio": s.get("numero_socio"),
                     "legajo": s.get("legajo", "S/D"),
                     "first_name": s.get("first_name", ""),
                     "last_name": s.get("last_name", ""),
@@ -1686,6 +1687,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             return [
                 {
                     "socio_id": s.get("socio_id"),
+                    "numero_socio": s.get("numero_socio"),
                     "legajo": s.get("legajo", "S/D"),
                     "first_name": s.get("first_name", ""),
                     "last_name": s.get("last_name", ""),
@@ -1706,6 +1708,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
         return [
             {
                 "socio_id": s.id,
+                "numero_socio": s.numero_socio,
                 "legajo": s.legajo,
                 "first_name": s.first_name,
                 "last_name": s.last_name,

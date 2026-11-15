@@ -27,6 +27,7 @@ export const CATALOGO_CONCEPTOS_EXPEDIENTE = [
 
 export interface SocioInvolucrado {
   socio_id?: number;
+  numero_socio?: number | null;
   legajo?: string;
   first_name?: string;
   last_name?: string;
@@ -315,6 +316,7 @@ export interface DescargoDetalleDTO {
 
 export interface SocioInvolucradoDetalleDTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   first_name?: string;
@@ -326,6 +328,7 @@ export interface SocioInvolucradoDetalleDTO {
 
 export interface ResponsableTdDTO {
   titulo: string;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   grupo: string;
@@ -366,6 +369,7 @@ export interface DescargoVisorDTO {
 
 export interface InvolucradoVisorDTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   first_name?: string;
@@ -453,6 +457,7 @@ export interface ExpedienteDetalleDTO {
 
 export interface SocioT01DTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
 }
@@ -779,7 +784,7 @@ export class ExpedienteApiService {
   }
 
   listarPorSocio(numeroSocio: string): Observable<ExpedienteRankingDetalle[]> {
-    const params = new HttpParams().set('legajo', numeroSocio);
+    const params = new HttpParams().set('numero_socio', numeroSocio);
     return this.http.get<ExpedienteRankingDetalle[]>(`${this.apiUrl}/por-socio/`, { params });
   }
 

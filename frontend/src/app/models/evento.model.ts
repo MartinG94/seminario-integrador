@@ -67,6 +67,7 @@ export type EstadoRegistroApercibimiento =
 export interface ConvocadoAsistenciaDTO {
   socio_id: number;
   socio_nombre: string;
+  socio_numero_socio?: number | null;
   socio_legajo: string;
   socio_email?: string;
   socio_subcomision?: string;
@@ -88,6 +89,7 @@ export interface AsistenciaEvento {
   evento?: number | string;
   socio_id: number;
   socio_nombre?: string;
+  socio_numero_socio?: number | null;
   socio_legajo?: string;
   socio_email?: string;
   socio_subcomision?: string;
@@ -149,6 +151,7 @@ export interface RegistroApercibimiento {
   id: number;
   socio_id: number;
   socio_nombre?: string;
+  socio_numero_socio?: number | null;
   socio_legajo?: string;
   origen_tipo: string;
   asistencia_id?: number | null;
@@ -207,6 +210,7 @@ export interface ReportarAsistenciaPayload {
 export interface ReportarAsistenciaResultadoDetalle {
   socio_id: number;
   socio_nombre?: string;
+  socio_numero_socio?: number | null;
   socio_legajo?: string;
   estado_asistencia: EstadoAsistenciaEvento;
   motivo?: string;

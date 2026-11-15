@@ -70,7 +70,7 @@
           <tr *ngFor="let item of actuacionesPrevistas" [class.table-warning]="item.tipoActuacion === 'APERCIBIMIENTO'" [class.table-danger]="item.tipoActuacion === 'EXPEDIENTE'">
             <td>
               <strong>{{ item.socioNombre }}</strong>
-              <small class="d-block text-muted">Leg: {{ item.socioLegajo }}</small>
+            <small class="d-block text-muted">N.º de Socio: {{ item.socioNumeroSocio ?? '—' }}</small>
             </td>
             <td>
               <span class="badge" [ngClass]="{

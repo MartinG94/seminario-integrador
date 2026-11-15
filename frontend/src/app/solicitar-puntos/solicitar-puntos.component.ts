@@ -255,7 +255,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     const idsYaSeleccionados = new Set(this.sociosSeleccionados.map(s => s.socio_id));
     this.sociosFiltrados = this.socios.filter(socio =>
       !idsYaSeleccionados.has(socio.socio_id) &&
-      [socio.legajo, socio.first_name, socio.last_name]
+      [socio.numero_socio?.toString(), socio.legajo, socio.first_name, socio.last_name]
         .some(valor => valor && valor.toLowerCase().includes(texto))
     );
   }
@@ -364,6 +364,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     } else if (solicitud.involucrados && solicitud.involucrados.length > 0) {
       this.sociosSeleccionados = solicitud.involucrados.map(inv => ({
         socio_id: inv.socio_id || 0,
+        numero_socio: inv.numero_socio ?? null,
         legajo: inv.legajo || '',
         first_name: inv.first_name || '',
         last_name: inv.last_name || '',

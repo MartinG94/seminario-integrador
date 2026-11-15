@@ -132,12 +132,12 @@
                   <th role="button"
                       tabindex="0"
                       class="sortable-th"
-                      (click)="alternarOrden('legajo')"
-                      (keydown.enter)="alternarOrden('legajo')"
-                      (keydown.space)="alternarOrden('legajo'); $event.preventDefault()"
+                      (click)="alternarOrden('numero_socio')"
+                      (keydown.enter)="alternarOrden('numero_socio')"
+                      (keydown.space)="alternarOrden('numero_socio'); $event.preventDefault()"
                       title="Ordenar por número de socio"
-                      [attr.aria-sort]="sortKey === 'legajo' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
-                    N° de Socio <i class="material-icons">{{getIconoOrden('legajo')}}</i>
+                      [attr.aria-sort]="sortKey === 'numero_socio' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    N° de Socio <i class="material-icons">{{getIconoOrden('numero_socio')}}</i>
                   </th>
 
                   <!-- 4. Categoría -->

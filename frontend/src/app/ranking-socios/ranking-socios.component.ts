@@ -11,7 +11,7 @@ import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expe
 export type RankingColumnaOrden =
   | 'posicion'
   | 'socio'
-  | 'legajo'
+  | 'numero_socio'
   | 'categoria'
   | 'grupo'
   | 'subcomision'
@@ -317,10 +317,15 @@ export class RankingSociosComponent implements OnInit {
               a.apellido.localeCompare(b.apellido, 'es') ||
               a.nombre.localeCompare(b.nombre, 'es');
             break;
-          case 'legajo': {
-            const numA = parseInt(a.legajo.replace(/\D/g, '') || '0', 10);
-            const numB = parseInt(b.legajo.replace(/\D/g, '') || '0', 10);
+          case 'numero_socio': {
+            const numA = a.numero_socio ?? Number.MAX_SAFE_INTEGER;
+            const numB = b.numero_socio ?? Number.MAX_SAFE_INTEGER;
             diff = numA - numB;
+            if (diff === 0 && (a.numero_socio == null || b.numero_socio == null)) {
+              diff =
+                a.apellido.localeCompare(b.apellido, 'es') ||
+                a.nombre.localeCompare(b.nombre, 'es');
+            }
             break;
           }
           case 'categoria':

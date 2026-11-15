@@ -96,6 +96,7 @@ class SocioProfileSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(read_only=True)
     legajo = serializers.CharField()
+    numero_socio = serializers.IntegerField(allow_null=True, read_only=True)
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     email = serializers.EmailField()

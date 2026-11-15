@@ -25,6 +25,7 @@ def test_setup(db):
         social_year: int = 2,
         is_enabled: bool = True,
         email: str | None = None,
+        numero_socio: int | None = None,
     ) -> Socio:
         email = email or f"{legajo}@aveit.test"
         user = UserModel.objects.create_user(
@@ -33,6 +34,7 @@ def test_setup(db):
         return Socio.objects.create(
             user=user,
             legajo=legajo,
+            numero_socio=numero_socio,
             first_name=first_name,
             last_name=last_name,
             email=email,
@@ -97,6 +99,22 @@ def test_search_by_legajo(test_setup, authenticate):
     results = res.data["results"]
     assert len(results) == 1
     assert results[0]["legajo"] == "74907"
+
+
+@pytest.mark.django_db
+def test_search_by_numero_socio_preserves_legajo(test_setup, authenticate):
+    create = test_setup["create_socio"]
+    td_user = create("408917", "Nicolás", "Rosales", role=Role.TD)
+    create("UTN-74907", "Lucas", "Gastiaburu", numero_socio=3002)
+
+    client = authenticate(td_user)
+    res = client.get("/api/v1/socios/?search=3002")
+
+    assert res.status_code == 200
+    results = res.data["results"]
+    assert len(results) == 1
+    assert results[0]["numero_socio"] == 3002
+    assert results[0]["legajo"] == "UTN-74907"
 
 
 @pytest.mark.django_db

@@ -1123,6 +1123,7 @@ describe('GestionarExpedientesComponent', () => {
       spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
       filaPrueba = {
         socioId: 10,
+        numero_socio: 7010,
         legajo: '74907',
         nombre: 'Diego Gabriel',
         apellido: 'Sánchez',
@@ -1142,7 +1143,7 @@ describe('GestionarExpedientesComponent', () => {
     it('genera el encabezado correcto con id de expediente, legajo y nombre completo', () => {
       component.involucradoSeleccionado = filaPrueba;
       const encabezado = component.getEncabezadoModalDescargo();
-      expect(encabezado).toBe('Descargo exp 888 y 74907, Diego Gabriel Sánchez');
+      expect(encabezado).toBe('Descargo exp 888 y 7010, Diego Gabriel Sánchez');
     });
 
     it('inicializa puntajeFinalInput con los puntos del expediente al abrir el descargo', () => {
@@ -1280,8 +1281,8 @@ describe('GestionarExpedientesComponent', () => {
       puntos: -1.5,
       cantidadSocios: 2,
       sociosInvolucrados: [
-        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
-        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
+        { id: '2', numero_socio: 7011, legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
+        { id: '3', numero_socio: 7012, legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
       ]
     };
 
@@ -1337,9 +1338,9 @@ describe('GestionarExpedientesComponent', () => {
       const modal = compiled.querySelector('.modal-backdrop-custom');
       expect(modal).toBeTruthy();
       expect(modal?.textContent).toContain('Socios Involucrados');
-      expect(modal?.textContent).toContain('85194');
+      expect(modal?.textContent).toContain('7011');
       expect(modal?.textContent).toContain('Lucas Martín Guillén');
-      expect(modal?.textContent).toContain('87414');
+      expect(modal?.textContent).toContain('7012');
       expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
       expect(modal?.textContent).toContain('59');
       expect(modal?.textContent).toContain('Activo');
@@ -1764,6 +1765,31 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.formatGrupoInvolucrado(fila1.grupo)).toBe('59');
       expect(component.getEstadoDescargo(fila1)).toBe('Sin descargo');
       expect(component.getPuntajeFinalInvolucrado(fila1)).toBe(-1.5);
+    });
+
+    it('muestra el número institucional sin usar el legajo como número de socio', () => {
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 202,
+        numero: '7/2026',
+        estado: 'revision_resolucion',
+        socios: [{
+          id: 77,
+          numero_socio: 1002,
+          legajo: '89123',
+          nombre: 'Lucía Gómez',
+          first_name: 'Lucía',
+          last_name: 'Gómez',
+          grupo: '59'
+        }],
+        descargos: []
+      }));
+
+      component.abrirDetalle(expBase);
+      fixture.detectChanges();
+
+      const tabla = fixture.nativeElement.querySelector('.tabla-involucrados') as HTMLElement;
+      expect(tabla.textContent).toContain('1002');
+      expect(tabla.textContent).not.toContain('89123');
     });
 
     it('debe calcular correctamente Estado de Descargo (Leído, No Leído, Sin descargo) y Puntaje Final', () => {

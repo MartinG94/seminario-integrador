@@ -193,9 +193,11 @@ class ExpedienteCollectionView(APIView):
 
         # SCRUM-82: el legajo puede corresponder al socio principal o a cualquiera
         # de los socios involucrados/adicionales.
-        legajo = request.query_params.get("legajo")
-        if legajo is not None and legajo.strip():
-            queryset = filter_expedientes_by_legajo(queryset, legajo.strip())
+        identificador = request.query_params.get("numero_socio") or request.query_params.get(
+            "legajo"
+        )
+        if identificador is not None and identificador.strip():
+            queryset = filter_expedientes_by_legajo(queryset, identificador.strip())
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -276,7 +278,7 @@ class MisExpedientesView(APIView):
 
 class ExpedientesPorSocioView(APIView):
     """
-    Endpoint GET /api/v1/expedientes/por-socio/?legajo=<legajo>
+    Endpoint GET /api/v1/expedientes/por-socio/?numero_socio=<numero_socio>
     Consulta de solo lectura de expedientes de un socio para cualquier usuario autenticado.
     """
 
@@ -284,16 +286,18 @@ class ExpedientesPorSocioView(APIView):
 
     def get(self, request: Request) -> Response:
         DeadlineEnforcementService().close_expired_deadlines()
-        legajo = request.query_params.get("legajo")
-        if not legajo or not legajo.strip():
+        identificador = request.query_params.get("numero_socio") or request.query_params.get(
+            "legajo"
+        )
+        if not identificador or not identificador.strip():
             return Response(
                 {"error": "El parámetro 'legajo' es obligatorio."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        legajo = legajo.strip()
+        identificador = identificador.strip()
         queryset = Expediente.objects.select_related("solicitud_t01").order_by("-created_at")
-        queryset = filter_expedientes_by_legajo(queryset, legajo)
+        queryset = filter_expedientes_by_legajo(queryset, identificador)
         serializer = ExpedienteResumenSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
