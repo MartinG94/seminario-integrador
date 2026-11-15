@@ -329,6 +329,67 @@ def test_firmar_resolucion_endpoint_agrega_firma_y_emite_al_completar(
 
 
 @pytest.mark.django_db
+def test_firmar_resolucion_api_con_es_suplente_explicito(
+    causal_expediente, make_socio, authenticate
+):
+    causal_expediente.estado = "pendiente_correos"
+    causal_expediente.save()
+
+    s4 = make_socio(legajo="40201", role=Role.TD, social_year=4)
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerandos de prueba.",
+        articulos_resolutivos="Artículo 1: sanción.",
+        created_by=s4.user,
+    )
+    client = authenticate(s4)
+
+    # Firmar indicando explícitamente suplencia ad-hoc
+    response = client.post(
+        sign_url(causal_expediente.pk),
+        {"es_suplente": True},
+        format="json",
+    )
+    assert response.status_code == 200
+    firmante = response.data["firmantes_td"][0]
+    assert firmante["es_suplente"] is True
+    assert firmante["condicion"] == "SUPLENTE"
+    assert firmante["etiqueta"].endswith(" (Sup.)")
+
+
+@pytest.mark.django_db
+def test_firmar_resolucion_api_con_anio_social_ad_hoc(causal_expediente, make_socio, authenticate):
+    causal_expediente.estado = "pendiente_correos"
+    causal_expediente.save()
+
+    s4 = make_socio(legajo="40201", role=Role.TD, social_year=4)
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerandos de prueba.",
+        articulos_resolutivos="Artículo 1: sanción.",
+        created_by=s4.user,
+    )
+    client = authenticate(s4)
+
+    # Firmar asignando año social 5
+    response = client.post(
+        sign_url(causal_expediente.pk),
+        {"anio_social": 5},
+        format="json",
+    )
+    assert response.status_code == 200
+    firmante = response.data["firmantes_td"][0]
+    assert firmante["social_year"] == 5
+    assert firmante["anio_social"] == 5
+
+
+@pytest.mark.django_db
 def test_expediente_list_serializer_expone_datos_resolucion(causal_expediente, causal_vocal):
     from expedientes.serializers import ExpedienteListSerializer
 

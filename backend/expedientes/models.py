@@ -468,6 +468,35 @@ class DescargoExpediente(models.Model):
         db_index=True,
         help_text="False cuando el socio retiró el descargo dentro del plazo (baja lógica).",
     )
+    puntaje_ratificado = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="Puntaje final ratificado por el Tribunal de Disciplina tras la evaluación.",
+    )
+    esta_excluido = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True si el socio fue excluido de la causa por el Tribunal de Disciplina.",
+    )
+    motivo_exclusion = models.TextField(
+        blank=True,
+        default="",
+        help_text="Fundamento formal de la exclusión dictada por el TD (mínimo 10 caracteres).",
+    )
+    excluido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="exclusiones_involucrados",
+        help_text="Usuario integrante del TD que dictó la exclusión.",
+    )
+    excluido_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora de registro de la exclusión fundada.",
+    )
 
     class Meta:
         db_table = "expedientes_descargo"
@@ -1809,6 +1838,37 @@ class Resolucion(models.Model):
         ):
             raise ValidationError("Una resolución emitida es inmutable.")
         return super().delete(*args, **kwargs)
+
+
+class EnmiendaResolucion(models.Model):
+    """Registro inmutable de trazabilidad de enmienda sobre una resolución emitida (SCRUM-103)."""
+
+    resolucion_anterior = models.ForeignKey(
+        Resolucion, on_delete=models.PROTECT, related_name="enmiendas_posteriores"
+    )
+    resolucion_nueva = models.OneToOneField(
+        Resolucion, on_delete=models.PROTECT, related_name="enmienda_origen"
+    )
+    motivo_enmienda = models.TextField(
+        help_text="Fundamento formal de la rectificación por error material o hecho sobreviniente."
+    )
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="enmiendas_solicitadas"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "expedientes_enmienda_resolucion"
+        verbose_name = "Enmienda de Resolución"
+        verbose_name_plural = "Enmiendas de Resoluciones"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        num = self.resolucion_anterior.numero_expediente_snapshot
+        return (
+            f"Enmienda Res.{self.resolucion_anterior.version} -> "
+            f"Res.{self.resolucion_nueva.version} ({num})"
+        )
 
 
 # Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy

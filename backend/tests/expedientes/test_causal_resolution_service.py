@@ -137,7 +137,20 @@ class TestDescargoInalterado:
             causal_descargo, causal_vocal.user, CausalDecision.REJECTED, fundamento=GROUNDS
         )
 
-        assert DescargoExpediente.objects.filter(pk=causal_descargo.pk).values().get() == antes
+        despues = DescargoExpediente.objects.filter(pk=causal_descargo.pk).values().get()
+        # El contenido probatorio del descargo presentado por el socio permanece inalterado
+        campos_inmutables = (
+            "expediente_id",
+            "socio_id",
+            "tipo",
+            "causal",
+            "archivo",
+            "texto",
+            "es_vigente",
+        )
+        for campo in campos_inmutables:
+            assert despues[campo] == antes[campo]
+        assert despues["puntaje_ratificado"] is not None
         causal_evidencia.refresh_from_db()
         assert causal_evidencia.es_vigente is True
         assert decision.descargo_snapshot["causal"] == causal_descargo.causal
@@ -368,3 +381,67 @@ class TestFundamentoSegunPuntajeFinal:
         assert decision.fundamento == "Agravamiento motivado por reincidencia formal."
         assert decision.descargo_snapshot["puntaje_final"] == -2.0
         assert decision.se_aparta_de_regla is True
+
+
+@pytest.mark.django_db
+class TestPuntajeRatificadoPersistencia:
+    def test_puntaje_ratificado_persiste_numerico(self, causal_descargo, causal_vocal) -> None:
+        causal_descargo.expediente.puntos = -1
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.REJECTED,
+            fundamento="Fundamento válido para puntaje.",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final=-1.5,
+        )
+        causal_descargo.refresh_from_db()
+        assert causal_descargo.puntaje_ratificado == "-1.5"
+
+    def test_puntaje_ratificado_persiste_llamado_atencion(
+        self, causal_descargo, causal_vocal
+    ) -> None:
+        CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.REJECTED,
+            fundamento="Apercibimiento formal por falta leve.",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final="LLAMADO_ATENCION",
+        )
+        causal_descargo.refresh_from_db()
+        assert causal_descargo.puntaje_ratificado == "LLAMADO_ATENCION"
+
+    def test_puntaje_ratificado_persiste_felicitacion(self, causal_descargo, causal_vocal) -> None:
+        CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.ACCEPTED,
+            fundamento="Mérito institucional extraordinario.",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+            puntaje_final="FELICITACION",
+        )
+        causal_descargo.refresh_from_db()
+        assert causal_descargo.puntaje_ratificado == "FELICITACION"
+
+    def test_puntaje_ratificado_persiste_en_decision_estandar_aceptada(
+        self, causal_descargo, causal_vocal
+    ) -> None:
+        causal_descargo.expediente.puntos = -2
+        causal_descargo.expediente.save(update_fields=["puntos"])
+
+        CausalResolutionService.decide(
+            expediente_id=causal_descargo.expediente_id,
+            descargo_id=causal_descargo.id,
+            decision=CausalDecision.ACCEPTED,
+            fundamento="Se acepta la causal y no se aplican sanciones.",
+            evidencia_ids=None,
+            user=causal_vocal.user,
+        )
+        causal_descargo.refresh_from_db()
+        assert causal_descargo.puntaje_ratificado == "0.0"

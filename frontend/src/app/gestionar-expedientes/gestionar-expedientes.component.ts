@@ -76,6 +76,9 @@ export interface InvolucradoJustificacion {
   nombre: string;
   apellido: string;
   descargo: DescargoDetalleDTO | null;
+  esta_excluido?: boolean;
+  motivo_exclusion?: string;
+  excluido_at?: string | null;
 }
 
 export interface OpcionPuntajeEscala {
@@ -183,6 +186,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   fechaActualResolucion = new Date();
   guardandoResolucion = false;
   firmando = false;
+  esSuplenteFirma = false;
+  anioSocialFirma: number | null = null;
 
   // Catálogo reglamentario en Modal Generar Resolución (Sustento VISTO)
   modalCatalogoResolucionAbierto = false;
@@ -266,6 +271,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   composicion: ComposicionTribunalDTO | null = null;
   cargandoComposicion = false;
 
+  // Modal de Exclusión Fundada (SCRUM-102)
+  mostrarModalExclusion = false;
+  involucradoAExcluir: InvolucradoJustificacion | null = null;
+  motivoExclusion = '';
+  excluyendoInvolucrado = false;
+  errorExclusion = '';
+
+  // Modal de Enmienda Trazable (SCRUM-103)
+  mostrarModalEnmienda = false;
+  motivoEnmienda = '';
+  considerandosEnmienda = '';
+  enmendandoResolucion = false;
+  errorEnmienda = '';
+
   // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
   readonly escalaPuntajes = ESCALA_PUNTAJES;
   opcionPuntajeFinal: string = '0.0';
@@ -306,6 +325,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get buscandoAntecedente(): boolean {
     return this.busquedasEnCurso > 0;
+  }
+
+  get esMiembroTD(): boolean {
+    return this.auth.tieneRol('TD');
   }
 
   get puedeVotarOFirmar(): boolean {
@@ -350,6 +373,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   get puedeVerResolucion(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
     return estado === 'emitido' || estado === 'pendiente_correos';
+  }
+
+  get puedeEnmendarResolucion(): boolean {
+    if (!this.puedeResolverExpedienteSeleccionado || !this.expedienteSeleccionado) return false;
+    return this.expedienteSeleccionado.estado === 'emitido' && this.esMiembroTD;
   }
 
   get mostrarConsiderandosEnDetalle(): boolean {
@@ -1120,14 +1148,20 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   private construirInvolucrados(detalle: ExpedienteDetalleDTO): InvolucradoJustificacion[] {
     const descargos = detalle.descargos || [];
     const porSocio = new Map(descargos.map(d => [d.socio_id, d]));
-    const filas: InvolucradoJustificacion[] = (detalle.socios || []).map(s => ({
-      socioId: s.id,
-      legajo: s.legajo,
-      grupo: s.grupo || '',
-      nombre: s.first_name ?? s.nombre,
-      apellido: s.last_name ?? '',
-      descargo: porSocio.get(s.id) || null
-    }));
+    const filas: InvolucradoJustificacion[] = (detalle.socios || []).map(s => {
+      const d = porSocio.get(s.id);
+      return {
+        socioId: s.id,
+        legajo: s.legajo,
+        grupo: s.grupo || '',
+        nombre: s.first_name ?? s.nombre,
+        apellido: s.last_name ?? '',
+        descargo: d || null,
+        esta_excluido: !!(s.esta_excluido || d?.esta_excluido),
+        motivo_exclusion: s.motivo_exclusion || d?.motivo_exclusion || '',
+        excluido_at: s.excluido_at || d?.excluido_at || null
+      };
+    });
     // Descargos de socios que no figuran en el padrón del expediente (datos previos).
     descargos
       .filter(d => !filas.some(f => f.socioId === d.socio_id))
@@ -1137,7 +1171,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         grupo: '',
         nombre: d.socio_first_name ?? d.socio_nombre,
         apellido: d.socio_last_name ?? '',
-        descargo: d
+        descargo: d,
+        esta_excluido: !!d.esta_excluido,
+        motivo_exclusion: d.motivo_exclusion || '',
+        excluido_at: d.excluido_at || null
       }));
     return filas;
   }
@@ -1152,6 +1189,161 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   esEvaluable(fila: InvolucradoJustificacion): boolean {
     return !!fila.descargo;
+  }
+
+  puedeExcluirInvolucrado(fila: InvolucradoJustificacion): boolean {
+    if (!this.esMiembroTD) return false;
+    if (fila.esta_excluido) return false;
+    if (!this.expedienteSeleccionado) return false;
+    return this.expedienteSeleccionado.estado !== 'emitido';
+  }
+
+  abrirModalExclusion(fila: InvolucradoJustificacion): void {
+    this.involucradoAExcluir = fila;
+    this.motivoExclusion = '';
+    this.errorExclusion = '';
+    this.mostrarModalExclusion = true;
+  }
+
+  cerrarModalExclusion(): void {
+    this.mostrarModalExclusion = false;
+    this.involucradoAExcluir = null;
+    this.motivoExclusion = '';
+    this.errorExclusion = '';
+    this.excluyendoInvolucrado = false;
+  }
+
+  confirmarExclusion(): void {
+    if (!this.involucradoAExcluir || !this.expedienteSeleccionado) return;
+    const motivo = (this.motivoExclusion || '').trim();
+    if (motivo.length < 10) {
+      this.errorExclusion = 'El motivo de exclusión es obligatorio y debe tener al menos 10 caracteres.';
+      return;
+    }
+
+    this.excluyendoInvolucrado = true;
+    this.errorExclusion = '';
+
+    const expId = Number(this.expedienteSeleccionado.id);
+    const socioId = this.involucradoAExcluir.socioId;
+
+    this.expedienteApi.excluirInvolucrado(expId, socioId, motivo).subscribe({
+      next: (resp) => {
+        this.excluyendoInvolucrado = false;
+        this.notifications.success(
+          `Socio ${this.involucradoAExcluir?.legajo} excluido fundadamente de la causa.`
+        );
+        this.cerrarModalExclusion();
+
+        // Actualizar reactivamente la fila en la tabla
+        const filaActualizada = this.involucradosJustificacion.find(f => f.socioId === socioId);
+        if (filaActualizada) {
+          filaActualizada.esta_excluido = true;
+          filaActualizada.motivo_exclusion = motivo;
+          if (filaActualizada.descargo) {
+            filaActualizada.descargo.esta_excluido = true;
+            filaActualizada.descargo.puntaje_ratificado = '0.00';
+          }
+        }
+
+        // Si se archivó administrativamente por exclusión de todos los involucrados
+        if (resp.expediente_archivado && this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.estado = 'emitido';
+          this.expedienteSeleccionado.puntos = 0;
+          this.notifications.success(
+            'Al no quedar imputados activos, la causa ha sido archivada sin efecto.'
+          );
+        }
+
+        // Recargar el detalle completo del expediente para sincronizar estados
+        this.cargarJustificaciones(expId);
+      },
+      error: (err) => {
+        this.excluyendoInvolucrado = false;
+        const msg = err?.error?.detail || httpErrorMessage(err, 'No se pudo registrar la exclusión del socio.');
+        this.errorExclusion = msg;
+        this.notifications.error(msg);
+      }
+    });
+  }
+
+  abrirModalEnmienda(exp?: Expediente | null): void {
+    if (exp) {
+      this.expedienteSeleccionado = exp;
+    }
+    if (!this.expedienteSeleccionado) return;
+    this.motivoEnmienda = '';
+    this.considerandosEnmienda = this.expedienteSeleccionado.considerandos || '';
+    this.errorEnmienda = '';
+    this.enmendandoResolucion = false;
+    this.modalDetalleAbierto = false;
+    this.modalResolucionAbierto = false;
+    this.mostrarModalEnmienda = true;
+    this.scrollLock.lock();
+    this.enfocarModalActivo();
+  }
+
+  cerrarModalEnmienda(): void {
+    this.mostrarModalEnmienda = false;
+    this.motivoEnmienda = '';
+    this.considerandosEnmienda = '';
+    this.errorEnmienda = '';
+    this.enmendandoResolucion = false;
+    if (this.expedienteSeleccionado) {
+      this.modalDetalleAbierto = true;
+    }
+    this.enfocarModalActivo();
+  }
+
+  confirmarEnmienda(): void {
+    if (!this.expedienteSeleccionado || this.enmendandoResolucion) return;
+    const motivo = (this.motivoEnmienda || '').trim();
+    if (motivo.length < 10) {
+      this.errorEnmienda = 'El motivo de enmienda es obligatorio y debe tener al menos 10 caracteres.';
+      return;
+    }
+
+    this.enmendandoResolucion = true;
+    this.errorEnmienda = '';
+
+    const expId = Number(this.expedienteSeleccionado.id);
+    const payload = {
+      motivo_enmienda: motivo,
+      considerandos: this.considerandosEnmienda.trim() || undefined
+    };
+
+    this.expedienteApi.enmendarResolucion(expId, payload).subscribe({
+      next: (resp) => {
+        this.enmendandoResolucion = false;
+        this.notifications.success(
+          'Enmienda formal solicitada con éxito. El expediente retornó a Pendiente de Firma.'
+        );
+        this.cerrarModalEnmienda();
+        if (this.expedienteSeleccionado) {
+          this.expedienteSeleccionado.estado = 'pendiente_correos';
+          this.expedienteSeleccionado.estadoDisplay = 'Pendiente de Firma';
+          if (resp?.resolucion_nueva_detalle?.considerandos) {
+            this.expedienteSeleccionado.considerandos = resp.resolucion_nueva_detalle.considerandos;
+          }
+          this.expedienteSeleccionado.firmas = {
+            juecesFirmantes: [],
+            hashCriptografico: '',
+            timestamp: ''
+          };
+        }
+        this.cerrarModales();
+        this.cargarDatosTablero();
+      },
+      error: (err) => {
+        this.enmendandoResolucion = false;
+        const msg =
+          err?.error?.detail ||
+          (err?.error && typeof err.error === 'object' && Object.values(err.error)[0]) ||
+          httpErrorMessage(err, 'No se pudo registrar la enmienda de la resolución.');
+        this.errorEnmienda = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        this.notifications.error(this.errorEnmienda);
+      }
+    });
   }
 
   accionDescargo(fila: InvolucradoJustificacion): string {
@@ -1462,6 +1654,23 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalCatalogoResolucionAbierto = false;
     this.modalFirmaAbierto = true;
     this.firmando = false;
+
+    // Inferencia de condición y año desde composición o perfil (EARS-99.2)
+    const perfil = this.usuarioActualPerfil;
+    const legajoNum = perfil?.legajo ? Number(perfil.legajo) : null;
+    const asiento = this.composicion?.asientos?.find(a =>
+      (legajoNum != null && !isNaN(legajoNum) && a.nro_socio === legajoNum) ||
+      (perfil?.first_name && a.nombre && a.nombre.toLowerCase().includes(perfil.first_name.toLowerCase()))
+    );
+
+    if (asiento) {
+      this.esSuplenteFirma = asiento.condicion === 'SUPLENTE';
+      this.anioSocialFirma = asiento.anio_social || null;
+    } else {
+      this.esSuplenteFirma = false;
+      this.anioSocialFirma = null;
+    }
+
     this.scrollLock.lock();
     this.enfocarModalActivo();
   }
@@ -1498,6 +1707,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalCatalogoResolucionAbierto = false;
     this.modalExpedientesResolucionAbierto = false;
     this.modalExpedientesDescargoAbierto = false;
+    this.mostrarModalExclusion = false;
+    this.mostrarModalEnmienda = false;
+    this.motivoEnmienda = '';
+    this.considerandosEnmienda = '';
+    this.errorEnmienda = '';
+    this.enmendandoResolucion = false;
     this.reglamentacionExpandida = false;
     this.expedienteSeleccionado = null;
     this.reglamentosSeleccionadosResolucion = [];
@@ -1749,7 +1964,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     };
 
     if (exp.id && !isNaN(Number(exp.id))) {
-      this.expedienteApi.firmarResolucionOficial(exp.id).subscribe({
+      const payload = {
+        es_suplente: this.esSuplenteFirma,
+        ...(this.anioSocialFirma ? { anio_social: this.anioSocialFirma } : {})
+      };
+      this.expedienteApi.firmarResolucionOficial(exp.id, payload).subscribe({
         next: res => {
           const firmas = Array.isArray(res.firmantes_td)
             ? res.firmantes_td.map(f => typeof f === 'string' ? f : (f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`))
@@ -1758,7 +1977,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         },
         error: () => {
           const perfil = this.auth.getCurrentUser();
-          const nombre = perfil ? `${perfil.legajo || ''} - ${perfil.first_name || ''} ${perfil.last_name || ''} - ${perfil.category || 'G58'}`.replace(/\s+/g, ' ').trim() : 'Firma TD';
+          const sufijo = this.esSuplenteFirma ? ' (Sup.)' : '';
+          const nombre = perfil ? `${perfil.legajo || ''} - ${perfil.first_name || ''} ${perfil.last_name || ''} - ${perfil.category || 'G58'}${sufijo}`.replace(/\s+/g, ' ').trim() : `Firma TD${sufijo}`;
           const resLocal = this.dataService.firmarResolucion(exp.id, nombre);
           finalizarExito(exp.firmas?.juecesFirmantes || [nombre], resLocal.completo ? 'ISSUED' : 'DRAFT');
         }
@@ -2004,7 +2224,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getPuntajeFinalInvolucradoDisplay(fila: InvolucradoJustificacion): string {
-    const val = fila.descargo?.puntaje_ratificado;
+    const val = fila.descargo?.puntaje_ratificado ?? fila.descargo?.decisiones_causal?.[0]?.puntaje_final;
     if (val != null) {
       if (val === 'LLAMADO_ATENCION') return 'Llamado de Atención';
       if (val === 'FELICITACION') return 'Felicitación';
@@ -2019,8 +2239,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getPuntajeFinalInvolucrado(fila: InvolucradoJustificacion): number {
-    if (fila.descargo?.puntaje_ratificado != null) {
-      const val = fila.descargo.puntaje_ratificado;
+    const val = fila.descargo?.puntaje_ratificado ?? fila.descargo?.decisiones_causal?.[0]?.puntaje_final;
+    if (val != null) {
       if (val === 'LLAMADO_ATENCION') return 0;
       if (val === 'FELICITACION') return 0;
       const num = Number(val);

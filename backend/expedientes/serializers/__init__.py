@@ -3,6 +3,7 @@
 import logging
 from datetime import date
 from decimal import Decimal
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.utils import timezone
@@ -596,11 +597,24 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         horas = int(diff.total_seconds() // 3600)
         return max(0, horas)
 
-    def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
+    def get_socios(self, obj: Expediente) -> list[dict[str, Any]]:
         socios = list(obj.socios.all())
         if not socios and obj.socio:
             socios = [obj.socio]
-        return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
+        excluidos_map = {
+            d.socio_id: d for d in obj.descargos.all() if getattr(d, "esta_excluido", False)
+        }
+        res = []
+        for socio in socios:
+            s_data = _serializar_socio_involucrado(socio, self.context)
+            d_excl = excluidos_map.get(socio.id)
+            s_data["esta_excluido"] = bool(d_excl)
+            s_data["motivo_exclusion"] = d_excl.motivo_exclusion if d_excl else ""
+            s_data["excluido_at"] = (
+                d_excl.excluido_at.isoformat() if d_excl and d_excl.excluido_at else None
+            )
+            res.append(s_data)
+        return res
 
     def get_evidencias(self, obj: Expediente) -> list[dict]:
         request = self.context.get("request")
@@ -651,7 +665,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
         ) or user.is_staff
 
-        descargos_list = [d for d in obj.descargos.all() if d.es_vigente]
+        descargos_list = [
+            d for d in obj.descargos.all() if d.es_vigente or getattr(d, "esta_excluido", False)
+        ]
         if not is_authority and socio:
             descargos_list = [d for d in descargos_list if d.socio_id == socio.pk]
         elif not is_authority:
@@ -670,7 +686,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             )
             leido = bool(decisiones_qs) or bool(valoraciones_qs)
             puntaje_ratificado = None
-            if decisiones_qs:
+            if getattr(d, "esta_excluido", False):
+                puntaje_ratificado = 0.0
+            elif decisiones_qs:
                 primera = decisiones_qs[0]
                 snapshot = primera.descargo_snapshot or {}
                 if "puntaje_final" in snapshot and snapshot["puntaje_final"] is not None:
@@ -708,6 +726,11 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 "evidencias": EvidenciaMetadataSerializer(evs, many=True).data,
                 "leido": leido,
                 "puntaje_ratificado": puntaje_ratificado,
+                "esta_excluido": getattr(d, "esta_excluido", False),
+                "motivo_exclusion": getattr(d, "motivo_exclusion", ""),
+                "excluido_at": (
+                    d.excluido_at.isoformat() if getattr(d, "excluido_at", None) else None
+                ),
             }
             # La valoración del TD es reservada hasta la emisión (confidencialidad).
             if is_authority:
@@ -837,7 +860,16 @@ class DescargoVersionSerializer(serializers.ModelSerializer):
 class DescargoExpedienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DescargoExpediente
-        fields = ["id", "socio", "tipo", "causal", "archivo", "texto", "presentado_at"]
+        fields = [
+            "id",
+            "socio",
+            "tipo",
+            "causal",
+            "archivo",
+            "texto",
+            "presentado_at",
+            "puntaje_ratificado",
+        ]
 
 
 class DecisionCausalSerializer(serializers.ModelSerializer):
@@ -1477,11 +1509,24 @@ class BoardExpedienteSerializer(serializers.ModelSerializer):
         count = len(socios)
         return count if count > 0 else 1
 
-    def get_socios(self, obj: Expediente) -> list[dict[str, int | str]]:
+    def get_socios(self, obj: Expediente) -> list[dict[str, Any]]:
         socios = list(obj.socios.all())
         if not socios and obj.socio:
             socios = [obj.socio]
-        return [_serializar_socio_involucrado(socio, self.context) for socio in socios]
+        excluidos_map = {
+            d.socio_id: d for d in obj.descargos.all() if getattr(d, "esta_excluido", False)
+        }
+        res = []
+        for socio in socios:
+            s_data = _serializar_socio_involucrado(socio, self.context)
+            d_excl = excluidos_map.get(socio.id)
+            s_data["esta_excluido"] = bool(d_excl)
+            s_data["motivo_exclusion"] = d_excl.motivo_exclusion if d_excl else ""
+            s_data["excluido_at"] = (
+                d_excl.excluido_at.isoformat() if d_excl and d_excl.excluido_at else None
+            )
+            res.append(s_data)
+        return res
 
     def get_creador(self, obj: Expediente) -> str:
         return _obtener_creador_expediente(obj, context=self.context)

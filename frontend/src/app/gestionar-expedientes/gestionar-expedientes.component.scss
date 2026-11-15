@@ -512,6 +512,34 @@ body.dark-edition,
   font-size: 12px;
 }
 
+.fila-excluida {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+  opacity: 0.75;
+
+  .legajo-cell,
+  .nombre-cell {
+    text-decoration: line-through;
+  }
+}
+
+.badge-excluido {
+  font-size: 11px;
+  background-color: #64748b;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.btn-excluir-involucrado {
+  border-color: #ef4444;
+  color: #ef4444;
+
+  &:hover,
+  &:focus {
+    background-color: #ef4444;
+    color: #fff;
+  }
+}
+
 .btn-evaluar-justificacion,
 .btn-ver-comprobante,
 .btn-aprobar-causal,
@@ -1307,3 +1335,81 @@ body.dark-edition,
   background-color: #F8FAFC;
   border-top: 1px solid var(--color-border-main, #E2E8F0);
 }
+
+// Selector accesible de condición Titular / Suplente (Art. 95)
+.selector-condicion-firma {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border-main, #E2E8F0);
+  border-radius: 8px;
+
+  .condicion-firma-opciones {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+
+  .condicion-opcion-card {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    margin-right: 14px;
+    margin-bottom: 6px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    background-color: #F8FAFC;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease-in-out;
+
+    .condicion-radio-icon {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 8px;
+      color: #94A3B8;
+
+      .material-icons {
+        font-size: 20px;
+        vertical-align: middle;
+      }
+    }
+
+    .condicion-texto {
+      font-size: 0.88rem;
+      color: #334155;
+    }
+
+    &:hover {
+      border-color: #CBD5E1;
+      background-color: #F1F5F9;
+    }
+
+    &.activa {
+      border-color: var(--color-primary, #{$aveit-navy});
+      background-color: rgba(21, 24, 70, 0.06);
+
+      .condicion-radio-icon {
+        color: var(--color-primary, #{$aveit-navy});
+      }
+
+      .condicion-texto {
+        color: var(--color-primary, #{$aveit-navy});
+      }
+    }
+
+    &.opcion-suplente.activa {
+      border-color: #D97706;
+      background-color: #FFFBEB;
+
+      .condicion-radio-icon {
+        color: #D97706;
+      }
+
+      .condicion-texto {
+        color: #B45309;
+      }
+    }
+  }
+}
+

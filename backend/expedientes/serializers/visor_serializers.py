@@ -296,6 +296,32 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
                 }
             )
 
+    # 5b. Exclusiones fundadas de involucrados por TD (SCRUM-102)
+    for d in expediente.descargos.all():
+        if getattr(d, "esta_excluido", False):
+            fecha_excl = d.excluido_at or d.presentado_at or expediente.created_at or timezone.now()
+            soc_display = formatear_actor(d.socio.legajo) if d.socio else "Socio imputado"
+            actor_excl = "Tribunal de Disciplina"
+            if d.excluido_por:
+                soc_excl = getattr(d.excluido_por, "socio", None)
+                actor_excl = formatear_actor(
+                    soc_excl.legajo if soc_excl and soc_excl.legajo else d.excluido_por.username
+                )
+            desc_motivo = d.motivo_exclusion or "Exclusión fundada por TD."
+            hitos.append(
+                {
+                    "id": f"exclusion-{d.id}",
+                    "fecha_hora": fecha_excl.isoformat(),
+                    "tipo": "EXCLUSION_INVOLUCRADO",
+                    "tipo_display": "Exclusión fundada de causa",
+                    "titulo": f"Socio {soc_display} excluido de la causa",
+                    "descripcion": f"Motivo formal: {desc_motivo}",
+                    "actor": actor_excl,
+                    "icono": "person_remove",
+                    "color": "#dc2626",
+                }
+            )
+
     # 6. Descargas y consultas de documentos probatorios auditadas (AuditoriaDescargaEvidencia)
     descargas = (
         AuditoriaDescargaEvidencia.objects.filter(evidencia__descargo__expediente=expediente)
@@ -345,6 +371,11 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
     regla_sugerida_display = serializers.CharField(
         source="get_regla_sugerida_display", read_only=True
     )
+    puntaje_final = serializers.SerializerMethodField()
+
+    def get_puntaje_final(self, obj: DecisionCausalDescargo) -> Any:
+        snapshot = getattr(obj, "descargo_snapshot", {}) or {}
+        return snapshot.get("puntaje_final")
 
     class Meta:
         model = DecisionCausalDescargo
@@ -359,6 +390,7 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
             "se_aparta_de_regla",
             "fundamento",
             "evidencias_valoradas",
+            "puntaje_final",
             "autor_id",
             "autor_legajo",
             "autor_rol",
@@ -608,14 +640,31 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                     soc.get_category_display() if hasattr(soc, "get_category_display") else "Activo"
                 )
 
-            # Buscar descargo vigente del socio
-            descargo_vigente = next(
-                (d for d in descargos_all if d.socio_id == soc.id and d.es_vigente),
+            # Buscar descargo (vigente o con exclusión) del socio
+            descargo_registro = next(
+                (d for d in descargos_all if d.socio_id == soc.id),
                 None,
+            )
+            esta_excluido = bool(
+                descargo_registro and getattr(descargo_registro, "esta_excluido", False)
+            )
+            motivo_exclusion = descargo_registro.motivo_exclusion if esta_excluido else ""
+            excluido_at = (
+                descargo_registro.excluido_at.isoformat()
+                if esta_excluido and descargo_registro.excluido_at
+                else None
+            )
+
+            descargo_vigente = (
+                descargo_registro if (descargo_registro and descargo_registro.es_vigente) else None
             )
 
             descargo_dto = None
-            if descargo_vigente:
+            if esta_excluido:
+                tiene_descargo = False
+                estado_descargo = "EXCLUIDO"
+                estado_descargo_display = "Excluido de la causa"
+            elif descargo_vigente:
                 tiene_descargo = True
                 estado_descargo = "PRESENTADO"
                 estado_descargo_display = "Descargo presentado"
@@ -669,6 +718,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                     "evidencias": evidencias_final,
                     "regla_sugerida": regla_sugerida_val,
                     "decisiones_causal": decisiones_causal_data,
+                    "puntaje_ratificado": descargo_vigente.puntaje_ratificado,
                 }
             else:
                 tiene_descargo = False
@@ -695,6 +745,9 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
                     "estado_descargo": estado_descargo,
                     "estado_descargo_display": estado_descargo_display,
                     "descargo": descargo_dto,
+                    "esta_excluido": esta_excluido,
+                    "motivo_exclusion": motivo_exclusion,
+                    "excluido_at": excluido_at,
                 }
             )
 

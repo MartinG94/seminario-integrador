@@ -115,6 +115,7 @@ from expedientes.views.evento_views import (
     RegistroApercibimientoViewSet,
     SocioApercibimientosView,
 )
+from expedientes.views.exclusion_views import ExcluirInvolucradoView
 from expedientes.views.reglamento_views import (
     ArticuloReglamentoDetailView,
     ArticuloReglamentoListCreateView,
@@ -1396,6 +1397,7 @@ __all__ = [
     "ArticuloReglamentoDetailView",
     "ArticuloReglamentoListCreateView",
     "EventoInstitucionalViewSet",
+    "ExcluirInvolucradoView",
     "ExpedientesPorSocioView",
     "RegistroApercibimientoViewSet",
     "ReglamentosVigentesView",

@@ -9,7 +9,11 @@ from rest_framework.views import APIView
 
 from expedientes.models import CambioEstadoExpediente, EstadoExpedienteEnum, Expediente, Resolucion
 from expedientes.permissions import CanTransitionExpedientes
-from expedientes.resolution_serializers import ResolucionSerializer
+from expedientes.resolution_serializers import (
+    EnmiendaResolucionSerializer,
+    ResolucionSerializer,
+)
+from expedientes.services.enmienda_service import EnmiendaService
 from expedientes.services.resolution_pdf import build_resolution_preview_pdf
 from expedientes.services.resolution_service import (
     DictamenNoCerradoError,
@@ -156,8 +160,31 @@ class ResolucionFirmarView(APIView):
                 {"detail": "Resolución no encontrada."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        data = request.data if isinstance(request.data, dict) else {}
+        es_suplente_raw = data.get("es_suplente")
+        if es_suplente_raw is not None:
+            if isinstance(es_suplente_raw, str):
+                es_suplente = es_suplente_raw.strip().lower() in ("true", "1", "yes")
+            else:
+                es_suplente = bool(es_suplente_raw)
+        else:
+            es_suplente = None
+
+        anio_social_raw = data.get("anio_social") or data.get("social_year")
+        anio_social = None
+        if anio_social_raw is not None:
+            try:
+                anio_social = int(anio_social_raw)
+            except (ValueError, TypeError):
+                raise DRFValidationError(
+                    {"anio_social": "El año social debe ser un número entero (4, 5 o 6)."}
+                )
+
         try:
-            resolucion = registrar_firma_resolucion(resolucion, request.user)
+            resolucion = registrar_firma_resolucion(
+                resolucion, request.user, es_suplente=es_suplente, anio_social=anio_social
+            )
         except ValidationError as exc:
             msg = exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             raise DRFValidationError(msg) from exc
@@ -206,3 +233,31 @@ class ResolucionPreviewView(APIView):
             f'inline; filename="resolucion-preview-{expediente_id}.pdf"'
         )
         return response
+
+
+class EnmiendaResolucionView(APIView):
+    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+
+    @transaction.atomic
+    def post(self, request, expediente_id):
+        data = request.data if isinstance(request.data, dict) else {}
+        motivo_enmienda = data.get("motivo_enmienda", "")
+        considerandos = data.get("considerandos")
+        nuevos_puntajes = data.get("nuevos_puntajes")
+
+        try:
+            enmienda, _ = EnmiendaService.solicitar_enmienda(
+                expediente_id=expediente_id,
+                user=request.user,
+                motivo_enmienda=motivo_enmienda,
+                considerandos=considerandos,
+                nuevos_puntajes=nuevos_puntajes,
+            )
+        except ValidationError as exc:
+            msg = exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            raise DRFValidationError(msg) from exc
+
+        return Response(
+            EnmiendaResolucionSerializer(enmienda).data,
+            status=status.HTTP_201_CREATED,
+        )
