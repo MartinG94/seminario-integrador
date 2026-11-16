@@ -246,4 +246,5 @@ export interface EventoFiltros {
   mis_eventos?: boolean;
   search?: string;
   page?: number;
+  page_size?: number;
 }

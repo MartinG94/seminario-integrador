@@ -1,4 +1,10 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -21,13 +27,29 @@ import {
   parseReglamentosList,
   ReglamentoCiteView
 } from '../../utils/reglamento-format.util';
+import { TrackByUtils } from '../../utils/track-by.util';
 
 @Component({
   selector: 'app-visor-expediente',
   templateUrl: './visor-expediente.component.html',
   styleUrls: ['./visor-expediente.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VisorExpedienteComponent implements OnInit, OnDestroy {
+  private readonly activeTimers = new Set<number>();
+  private readonly createdObjectUrls = new Set<string>();
+  readonly trackByConcepto = (index: number, c: { codigo: string; nombre: string }): string =>
+    c?.codigo ?? String(index);
+  readonly trackByVocal = (index: number, v: any): any =>
+    v?.legajo ?? v?.nombre ?? index;
+  readonly trackByInvolucrado = (index: number, inv: InvolucradoVisorDTO): any =>
+    inv?.id ?? inv?.legajo ?? index;
+  readonly trackByEvidencia = (index: number, ev: EvidenciaVisorDTO): any =>
+    ev?.id ?? index;
+  readonly trackByDecision = (index: number, dec: any): any =>
+    dec?.id ?? dec?.version ?? index;
+  readonly trackByTimeline = (index: number, hito: any): any =>
+    hito?.id ?? hito?.fecha_hora ?? index;
   expedienteId: number | null = null;
   visorData: ExpedienteVisorData | null = null;
   cargando = true;
@@ -46,6 +68,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
 
   toggleExpandirReglamento(raw: string): void {
     this.reglamentoExpandido = this.reglamentoExpandido === raw ? null : raw;
+    this.cdr?.markForCheck();
   }
 
   // Clasificación de concepto institucional (SCRUM-63)
@@ -76,7 +99,8 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
     private expedienteApi: ExpedienteApiService,
     private auth: AuthService,
     private notifications: NotificationService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -93,12 +117,30 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.activeTimers.forEach((timerId) => window.clearTimeout(timerId));
+    this.activeTimers.clear();
+    if (this.previewUrlRaw) {
+      URL.revokeObjectURL(this.previewUrlRaw);
+      this.previewUrlRaw = null;
+      this.previewUrlSafe = null;
+    }
+    this.createdObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+    this.createdObjectUrls.clear();
+  }
+
+  private scheduleTimer(callback: () => void, delayMs: number): void {
+    const timerId = window.setTimeout(() => {
+      this.activeTimers.delete(timerId);
+      callback();
+    }, delayMs);
+    this.activeTimers.add(timerId);
   }
 
   cargarDatosVisor(): void {
     if (!this.expedienteId) return;
     this.cargando = true;
     this.errorCarga = null;
+    this.cdr?.markForCheck();
 
     this.expedienteApi
       .obtenerVisorExpediente(this.expedienteId)
@@ -107,6 +149,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.visorData = data;
           this.cargando = false;
+          this.cdr?.markForCheck();
         },
         error: (err) => {
           this.cargando = false;
@@ -120,6 +163,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
             this.errorCarga = 'Ocurrió un error al cargar los datos del expediente. Intente nuevamente.';
             this.notifications.error('Error al cargar la causa disciplinaria.');
           }
+          this.cdr?.markForCheck();
         },
       });
   }
@@ -130,6 +174,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
 
   toggleAnexo(): void {
     this.anexoExpandido = !this.anexoExpandido;
+    this.cdr?.markForCheck();
   }
 
   descargarEvidencia(ev: EvidenciaVisorDTO): void {
@@ -141,14 +186,18 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (blob) => {
           const url = URL.createObjectURL(blob);
+          this.createdObjectUrls.add(url);
           const enlace = document.createElement('a');
           enlace.href = url;
           enlace.download = ev.nombre_original || 'evidencia_custodiada';
           enlace.click();
-          setTimeout(() => URL.revokeObjectURL(url), 30000);
+          this.scheduleTimer(() => {
+            URL.revokeObjectURL(url);
+            this.createdObjectUrls.delete(url);
+          }, 30000);
           this.notifications.info(`Descargando comprobante: ${ev.nombre_original}`);
           // Recargar el visor para reflejar la auditoría de descarga en el timeline
-          setTimeout(() => {
+          this.scheduleTimer(() => {
             if (this.expedienteId) {
               this.cargarDatosVisor();
             }
@@ -160,15 +209,22 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
           } else {
             this.notifications.error('No se pudo descargar el archivo probatorio.');
           }
+          this.cdr?.markForCheck();
         },
       });
   }
 
   verEvidencia(ev: EvidenciaVisorDTO): void {
     if (!this.expedienteId) return;
+    if (this.previewUrlRaw) {
+      URL.revokeObjectURL(this.previewUrlRaw);
+      this.previewUrlRaw = null;
+      this.previewUrlSafe = null;
+    }
     this.evidenciaPreview = ev;
     this.cargandoPreview = true;
     this.modalPreviewAbierto = true;
+    this.cdr?.markForCheck();
 
     this.expedienteApi
       .descargarEvidencia(this.expedienteId, ev.id, 'ver')
@@ -180,8 +236,9 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
           const blobConMime = new Blob([blob], { type: mime });
           this.previewUrlRaw = URL.createObjectURL(blobConMime);
           this.previewUrlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrlRaw);
+          this.cdr?.markForCheck();
           // Actualizar auditoría en timeline
-          setTimeout(() => {
+          this.scheduleTimer(() => {
             if (this.expedienteId) this.cargarDatosVisor();
           }, 500);
         },
@@ -193,6 +250,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
           } else {
             this.notifications.error('No se pudo abrir el documento probatorio.');
           }
+          this.cdr?.markForCheck();
         },
       });
   }
@@ -205,6 +263,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
       this.previewUrlSafe = null;
     }
     this.evidenciaPreview = null;
+    this.cdr?.markForCheck();
   }
 
   esPdf(ev: EvidenciaVisorDTO | null): boolean {
@@ -228,12 +287,14 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
       fundamento: '',
     };
     this.modalCausalAbierto = true;
+    this.cdr?.markForCheck();
   }
 
   cerrarModalCausal(): void {
     this.modalCausalAbierto = false;
     this.involucradoSeleccionado = null;
     this.borradorCausal = { decision: '', fundamento: '' };
+    this.cdr?.markForCheck();
   }
 
   guardarDecisionCausal(): void {
@@ -255,6 +316,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
     }
 
     this.registrandoCausal = true;
+    this.cdr?.markForCheck();
     const idsEvidencias = (descargo.evidencias || []).filter((e) => e.es_vigente).map((e) => e.id);
 
     this.expedienteApi
@@ -270,11 +332,13 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
           this.cerrarModalCausal();
           this.notifications.success('Decisión de causal registrada correctamente.');
           this.cargarDatosVisor();
+          this.cdr?.markForCheck();
         },
         error: (err) => {
           this.registrandoCausal = false;
           const msg = err.error?.detail || err.error?.error || 'No se pudo registrar la decisión.';
           this.notifications.error(msg);
+          this.cdr?.markForCheck();
         },
       });
   }
@@ -294,6 +358,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
   actualizarConcepto(nuevoConcepto: string | null): void {
     if (!this.expedienteId || !this.visorData || this.actualizandoConcepto) return;
     this.actualizandoConcepto = true;
+    this.cdr?.markForCheck();
 
     this.expedienteApi
       .actualizarConceptoExpediente(this.expedienteId, nuevoConcepto)
@@ -311,6 +376,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
             'Concepto institucional actualizado correctamente.',
             'Tribunal de Disciplina'
           );
+          this.cdr?.markForCheck();
         },
         error: (err) => {
           this.actualizandoConcepto = false;
@@ -320,6 +386,7 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
             err.error?.error ||
             'No se pudo actualizar el concepto del expediente.';
           this.notifications.showError(msg);
+          this.cdr?.markForCheck();
         },
       });
   }

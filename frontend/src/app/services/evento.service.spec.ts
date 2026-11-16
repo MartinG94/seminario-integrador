@@ -33,7 +33,8 @@ describe('EventoService', () => {
 
   it('getEventos debe solicitar GET con parámetros de filtro', () => {
     service.getEventos({ categoria: 'REUNION', tipo: 'ORDINARIA', estado: 'EN_CURSO', search: 'Consejo' }).subscribe(res => {
-      expect(res.length).toBe(1);
+      expect(res.results.length).toBe(1);
+      expect(res.count).toBe(1);
     });
 
     const req = httpMock.expectOne(request =>
@@ -45,6 +46,35 @@ describe('EventoService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush([{ id: 1, titulo: 'Reunión Ordinaria', categoria: 'REUNION' }]);
+  });
+
+  it('getEventos debe procesar respuesta canónica paginada de 7 campos', () => {
+    const mockPaged = {
+      count: 25,
+      total_pages: 2,
+      current_page: 1,
+      page_size: 20,
+      next: 'http://test/eventos/?page=2',
+      previous: null,
+      results: [{ id: 1, titulo: 'Reunión Paginada', categoria: 'REUNION' as const }]
+    };
+
+    service.getEventos({ page: 1, page_size: 20 }).subscribe(res => {
+      expect(res.count).toBe(25);
+      expect(res.total_pages).toBe(2);
+      expect(res.current_page).toBe(1);
+      expect(res.page_size).toBe(20);
+      expect(res.results.length).toBe(1);
+      expect(res.results[0].titulo).toBe('Reunión Paginada');
+    });
+
+    const req = httpMock.expectOne(request =>
+      request.url === `${baseUrl}/` &&
+      request.params.get('page') === '1' &&
+      request.params.get('page_size') === '20'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPaged);
   });
 
   it('getEventoById debe solicitar GET por id', () => {
@@ -138,7 +168,8 @@ describe('EventoService', () => {
 
   it('getMisEventos debe solicitar GET con mis_eventos=true', () => {
     service.getMisEventos().subscribe(res => {
-      expect(res.length).toBe(1);
+      expect(res.results.length).toBe(1);
+      expect(res.count).toBe(1);
     });
 
     const req = httpMock.expectOne(request =>
