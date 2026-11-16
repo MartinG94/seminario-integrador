@@ -903,6 +903,7 @@ class DecisionCausalSerializer(serializers.ModelSerializer):
         source="get_regla_sugerida_display", read_only=True
     )
     autor = serializers.CharField(source="autor.get_username", read_only=True)
+    autor_numero_socio = serializers.SerializerMethodField()
 
     class Meta:
         model = DecisionCausalDescargo
@@ -920,10 +921,15 @@ class DecisionCausalSerializer(serializers.ModelSerializer):
             "descargo_snapshot",
             "autor",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "created_at",
         ]
         read_only_fields = fields
+
+    def get_autor_numero_socio(self, obj: DecisionCausalDescargo) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class RegistrarDecisionCausalSerializer(serializers.Serializer):
@@ -960,6 +966,7 @@ class ValoracionT03Serializer(serializers.ModelSerializer):
 
     resultado_display = serializers.CharField(source="get_resultado_display", read_only=True)
     autor = serializers.CharField(source="autor.get_username", read_only=True)
+    autor_numero_socio = serializers.SerializerMethodField()
     autor_condicion_display = serializers.CharField(
         source="get_autor_condicion_display", read_only=True
     )
@@ -978,12 +985,17 @@ class ValoracionT03Serializer(serializers.ModelSerializer):
             "antecedentes",
             "autor",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "autor_condicion",
             "autor_condicion_display",
             "created_at",
         ]
         read_only_fields = fields
+
+    def get_autor_numero_socio(self, obj: ValoracionT03) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class AntecedenteT03Serializer(serializers.Serializer):

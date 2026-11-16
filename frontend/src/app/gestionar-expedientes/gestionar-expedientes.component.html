@@ -999,7 +999,7 @@
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div>
               <span class="text-muted small text-uppercase font-weight-bold d-block">Miembro TD en Sesión Activa</span>
-              <strong class="text-dark">{{ usuarioActualPerfil.legajo }} - {{ usuarioActualPerfil.first_name }} {{ usuarioActualPerfil.last_name }}</strong>
+              <strong class="text-dark">{{ usuarioActualPerfil.numero_socio ?? '—' }} - {{ usuarioActualPerfil.first_name }} {{ usuarioActualPerfil.last_name }}</strong>
               <span class="badge badge-primary ml-2">{{ usuarioActualPerfil.category || 'TD' }}</span>
             </div>
             <div *ngIf="usuarioYaFirmoResolucion" class="text-success small font-weight-bold d-flex align-items-center">

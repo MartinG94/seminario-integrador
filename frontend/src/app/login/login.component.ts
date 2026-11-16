@@ -16,11 +16,11 @@ export class LoginComponent implements OnInit {
   enviando = false;
 
   cuentasDemo = [
-    { legajo: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
-    { legajo: '85194', rol: 'FISCALIZADORA', nombre: 'Lucas Guillén' },
-    { legajo: '87414', rol: 'CD', nombre: 'Diego Sánchez' },
-    { legajo: '408917', rol: 'TD', nombre: 'Nicolás Rosales' },
-    { legajo: '403655', rol: 'ADMIN', nombre: 'Axel Villegas' },
+    { numero_socio: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
+    { numero_socio: '85194', rol: 'FISCALIZADORA', nombre: 'Lucas Guillén' },
+    { numero_socio: '87414', rol: 'CD', nombre: 'Diego Sánchez' },
+    { numero_socio: '408917', rol: 'TD', nombre: 'Nicolás Rosales' },
+    { numero_socio: '403655', rol: 'ADMIN', nombre: 'Axel Villegas' },
   ];
 
   private volverA = '/mis-expedientes';
@@ -50,8 +50,8 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  seleccionarDemo(legajo: string): void {
-    this.formulario.patchValue({ identifier: legajo });
+  seleccionarDemo(numeroSocio: string): void {
+    this.formulario.patchValue({ identifier: numeroSocio });
     this.ingresar();
   }
 

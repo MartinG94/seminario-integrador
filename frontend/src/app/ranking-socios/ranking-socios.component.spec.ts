@@ -462,7 +462,7 @@ describe('RankingSociosComponent', () => {
 
   it('no usa legajo ni PK local como fallback del número institucional', () => {
     const socioSinNumero = { ...sociosMock[0], id: '777', numero_socio: null, legajo: '89123' };
-    rankingServiceSpy.obtenerRanking.and.returnValue(of([socioSinNumero]));
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated([socioSinNumero])));
     fixture.detectChanges();
 
     expect(component.socios[0].numero_socio).toBeNull();

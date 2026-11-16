@@ -196,6 +196,7 @@ export interface DecisionCausalDTO {
   evidencias_valoradas: EvidenciaValorada[];
   autor: string;
   autor_legajo: string;
+  autor_numero_socio?: number | null;
   autor_rol: string;
   created_at: string;
 }
@@ -224,6 +225,7 @@ export interface ValoracionT03DTO {
   antecedentes: AntecedenteCitadoDTO[];
   autor: string;
   autor_legajo: string;
+  autor_numero_socio?: number | null;
   autor_rol: string;
   autor_condicion: string;
   autor_condicion_display: string;

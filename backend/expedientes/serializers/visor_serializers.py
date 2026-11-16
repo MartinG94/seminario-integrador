@@ -347,6 +347,7 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
     regla_sugerida_display = serializers.CharField(
         source="get_regla_sugerida_display", read_only=True
     )
+    autor_numero_socio = serializers.SerializerMethodField()
 
     class Meta:
         model = DecisionCausalDescargo
@@ -363,9 +364,14 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
             "evidencias_valoradas",
             "autor_id",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "created_at",
         ]
+
+    def get_autor_numero_socio(self, obj: DecisionCausalDescargo) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class EvidenciaVisorSerializer(serializers.ModelSerializer):

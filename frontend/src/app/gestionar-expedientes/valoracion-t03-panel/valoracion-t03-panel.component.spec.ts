@@ -32,6 +32,7 @@ describe('ValoracionT03PanelComponent', () => {
     antecedentes: [{ expediente_id: 7, numero: 'EXP-0007/2026' }],
     autor: 'miembro.td',
     autor_legajo: '408917',
+    autor_numero_socio: 1201,
     autor_rol: 'TD',
     autor_condicion: 'TITULAR',
     autor_condicion_display: 'Miembro Titular',
@@ -287,7 +288,7 @@ describe('ValoracionT03PanelComponent', () => {
       expect(item).toContain('Aprobada');
       expect(item).toContain(fundamento);
       expect(item).toContain('7/2026');
-      expect(item).toContain('408917');
+      expect(item).toContain('1201');
       expect(item).toContain('Miembro Titular');
       expect(item).toContain('20/10/2026');
       expect((fixture.nativeElement as HTMLElement).querySelectorAll('.tabla-antecedentes-historial tbody tr').length).toBe(1);
