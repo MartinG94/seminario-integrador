@@ -10,4 +10,4 @@
 - [x] **T8 (Frontend TDD — Tarjetas de parámetros):** Pantalla con tarjetas Plazos, Umbrales, Correos y Adjuntos, guardado por parámetro e historial.
 - [x] **T9 (Frontend TDD — Miembros del TD):** Tabla atómica, alta con búsqueda reactiva y revocación con confirmación.
 - [x] **T10 (Frontend TDD — Límites de adjuntos en Mis Expedientes):** Reemplazo de las constantes locales por los límites vigentes.
-- [ ] **T11 (Verificación integral):** `pytest`, `ruff check`, `ruff format --check`, Karma, `npm run build` y control contra `notasPO.md`.
+- [x] **T11 (Verificación integral):** `pytest`, `ruff check`, `ruff format --check`, Karma, `npm run build` y control contra `notasPO.md`.

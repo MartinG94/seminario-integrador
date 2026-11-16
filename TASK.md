@@ -433,6 +433,16 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 14.1 Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
+
+> **Tareas:** [`specs/010-panel-administracion/tasks.md`](specs/010-panel-administracion/tasks.md)
+
+- [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `ParametroSistema` de solo inserción, `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, alertas, correos y comprobantes.
+- [x] **TS5-03.2 Pantalla de administración exclusiva para ADMIN [TDD]:** Ruta `/admin/parametros` con `TribunalGuard`, entrada "Administración" en el menú y tarjetas temáticas Plazos, Umbrales, Correos y Adjuntos.
+- [x] **TS5-03.3 Miembros con rol TD [TDD]:** Tabla atómica, alta con búsqueda reactiva, revocación a Socio Ordinario y auditoría inmutable `CambioRolTribunal` vía `GET/POST/DELETE /api/v1/admin/usuarios-td/`.
+
+---
+
 ## 15. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
