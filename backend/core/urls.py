@@ -3,6 +3,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from core.api.urls import admin_urlpatterns, public_urlpatterns
 from core.views import HealthCheckView
 
 urlpatterns = [
@@ -18,4 +19,6 @@ urlpatterns = [
     path("api/ranking", include(("ranking.urls", "ranking"), namespace="ranking-noslash")),
     path("api/v1/expedientes/", include("expedientes.urls")),
     path("api/v1/eventos/", include("expedientes.urls_eventos")),
+    path("api/v1/admin/", include((admin_urlpatterns, "core"), namespace="core-admin")),
+    path("api/v1/parametros/", include((public_urlpatterns, "core"), namespace="core-parametros")),
 ]
