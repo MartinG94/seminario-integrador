@@ -111,9 +111,11 @@ class MeetingNoticeNotificationService:
         )
 
         subject = f"Convocatoria Institucional a {categoria_label}: {evento.titulo}"
+        socio_identificador = socio.numero_socio or socio.legajo
 
         body_text = (
-            f"Estimado/a {socio.first_name} {socio.last_name} (Legajo: {socio.legajo}):\n\n"
+            f"Estimado/a {socio.first_name} {socio.last_name} "
+            f"(N.º de socio: {socio_identificador}):\n\n"
             f"Se le notifica formalmente la citación para el siguiente evento institucional:\n\n"
             f"• Denominación: {evento.titulo}\n"
             f"• Categoría: {categoria_label} ({subtipo_label})\n"
@@ -133,7 +135,7 @@ class MeetingNoticeNotificationService:
             "<div style='font-family: Roboto, Arial, sans-serif; color: #151846;'>"
             "<h2 style='color: #151846; border-bottom: 2px solid #6E9DDC;'>Convocatoria</h2>"
             f"<p>Estimado/a <strong>{socio.first_name} {socio.last_name}</strong> "
-            f"(Legajo: {socio.legajo}),</p>"
+            f"(N.º de socio: {socio_identificador}),</p>"
             "<p>Se le notifica formalmente la citación para el siguiente evento:</p>"
             "<div style='background: #F8FAFC; border-left: 4px solid #6E9DDC; padding: 12px;'>"
             f"<p><strong>Denominación:</strong> {evento.titulo}</p>"
@@ -228,8 +230,10 @@ class MeetingNoticeNotificationService:
 
         outbox_items: list[EmailOutbox] = []
         for socio in convocados:
+            socio_identificador = socio.numero_socio or socio.legajo
             body_text = (
-                f"Estimado/a {socio.first_name} {socio.last_name} (Legajo: {socio.legajo}):\n\n"
+                f"Estimado/a {socio.first_name} {socio.last_name} "
+                f"(N.º de socio: {socio_identificador}):\n\n"
                 "Le notificamos formalmente que la convocatoria al siguiente evento institucional "
                 "ha sido CANCELADA:\n\n"
                 f"• Denominación: {evento.titulo}\n"
@@ -248,7 +252,7 @@ class MeetingNoticeNotificationService:
                 "<h2 style='color: #DC2626; border-bottom: 2px solid #DC2626;'>"
                 "Aviso de Cancelación</h2>"
                 f"<p>Estimado/a <strong>{socio.first_name} {socio.last_name}</strong> "
-                f"(Legajo: {socio.legajo}),</p>"
+                f"(N.º de socio: {socio_identificador}),</p>"
                 "<p>Le informamos que la siguiente convocatoria institucional ha sido "
                 "<strong>CANCELADA</strong> y queda sin efecto:</p>"
                 "<div style='background: #FEF2F2; border-left: 4px solid #DC2626; "

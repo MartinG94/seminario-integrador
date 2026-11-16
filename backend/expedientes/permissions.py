@@ -27,6 +27,7 @@ __all__ = [
     "CanOpenExpedientes",
     "CanResolveCausal",
     "CanTransitionExpedientes",
+    "CanValueT03",
     "CanViewReportes",
     "IsComisionDirectivaOrAdmin",
     "IsImputadoOrTribunal",
@@ -81,6 +82,12 @@ class CanTransitionExpedientes(HasAnyRole):
 
 class CanResolveCausal(HasAnyRole):
     """Sólo los miembros del Tribunal resuelven causales T02 (S4-02)."""
+
+    allowed_roles = (Role.TD,)
+
+
+class CanValueT03(HasAnyRole):
+    """Sólo los Miembros Titulares o Suplentes del Tribunal valoran descargos T03 (S4-03)."""
 
     allowed_roles = (Role.TD,)
 

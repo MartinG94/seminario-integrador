@@ -16,6 +16,7 @@ export type RolRbac =
 
 export interface PerfilSocio {
   legajo: string;
+  numero_socio?: number | null;
   first_name: string;
   last_name: string;
   email: string;

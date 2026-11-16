@@ -1,10 +1,12 @@
+import re
 from types import SimpleNamespace
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rest_framework.test import APIClient
 
-from expedientes.models import Expediente, SolicitudT01
+from expedientes.models import Expediente, ExpedienteNumberSequence, SolicitudT01
 from padron.models import Socio as PadronSocio
 from padron.models import SocioEstudio
 from socios.models import Role
@@ -89,15 +91,50 @@ def test_actualizar_borrador(expediente_client):
 
 
 @pytest.mark.django_db
+def test_borradores_no_consumen_numero_y_patch_no_lo_cambia(expediente_client):
+    first = create_draft(expediente_client).data
+    second = create_draft(expediente_client).data
+    assert first["numero_expediente"] is None
+    assert second["numero_expediente"] is None
+    response = expediente_client.patch(
+        f"/api/v1/expedientes/{first['id']}/",
+        {"numero_expediente": "EXP-9999/2099", "motivo": "Cambio permitido"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.data["numero_expediente"] is None
+
+
+@pytest.mark.django_db
+def test_eliminar_borrador_no_reutiliza_numero(expediente_client):
+    first = create_draft(expediente_client).data
+    expediente_client.delete(f"/api/v1/expedientes/{first['id']}/")
+    second = create_draft(expediente_client).data
+    assert first["numero_expediente"] is None
+    assert second["numero_expediente"] is None
+
+
+@pytest.mark.django_db
 def test_emitir_sin_anexo_congela_version(padron_repo, expediente_client):
     data = create_draft(expediente_client, destinatario_socio_id=9001).data
+    year = timezone.localdate().year
+    sequence_before = (
+        ExpedienteNumberSequence.objects.filter(year=year)
+        .values_list("last_value", flat=True)
+        .first()
+        or 0
+    )
     response = expediente_client.post(
         f"/api/v1/expedientes/{data['id']}/emitir/", {}, format="json"
     )
     assert response.status_code == 200, response.data
     solicitud = SolicitudT01.objects.get(pk=data["id"])
+    sequence_after = ExpedienteNumberSequence.objects.get(year=year).last_value
     assert solicitud.estado == "ISSUED"
-    assert solicitud.numero_expediente.startswith("T01-")
+    assert solicitud.numero_expediente
+    assert re.fullmatch(r"\d+/\d{4}", solicitud.numero_expediente)
+    assert solicitud.expediente.numero == solicitud.numero_expediente
+    assert sequence_after == sequence_before + 1
     assert solicitud.issued_at is not None
     assert solicitud.snapshot_destinatario["socio_id"] == 9001
     assert solicitud.snapshot_emitido["puntos"] == "-2.00"

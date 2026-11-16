@@ -51,4 +51,11 @@ describe('LoginComponent feedback', () => {
     component.ingresar();
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/mis-expedientes');
   });
+  it('permite iniciar sesión desde los chips demo usando numero_socio', () => {
+    auth.login.and.returnValue(of({} as never));
+    const chips: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('.btn-demo-chip');
+    expect(chips.length).toBe(5);
+    chips[0].click();
+    expect(auth.login).toHaveBeenCalledWith('74907');
+  });
 });

@@ -104,6 +104,8 @@ describe('ReportesComponent (SCRUM-63)', () => {
         posicion: 1,
         socio_numero: 11779,
         nombre_completo: 'Diego Gabriel Sánchez Turu Michel',
+        apellido: 'Sánchez Turu Michel',
+        nombre: 'Diego Gabriel',
         subcomision: 'Gestión Social y Ambiental',
         puntaje_historico: 25.0,
         record_destacado: true,

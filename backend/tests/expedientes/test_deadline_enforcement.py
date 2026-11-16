@@ -173,3 +173,35 @@ class TestDeadlineEnforcementService:
         call_command("close_expired_deadlines", stdout=out)
         salida = out.getvalue()
         assert "Se cerraron 1 expediente(s) con plazo vencido" in salida
+
+    def test_mis_expedientes_endpoint_auto_transitions_expired_cases(
+        self, socio_fixture: Socio
+    ) -> None:
+        """Al consultar mis-expedientes, caso vencido pasa a revision_resolucion."""
+        from rest_framework import status
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(user=socio_fixture.user)
+
+        limite_vencido = timezone.now() - timedelta(hours=1)
+        exp = Expediente.objects.create(
+            numero="EXP-106/2026",
+            socio=socio_fixture,
+            motivo="Causa con plazo de justificación vencido",
+            estado=EstadoExpedienteEnum.JUSTIFICANDO,
+            plazo_limite_at=limite_vencido,
+            descargo_presentado=False,
+        )
+
+        response = client.get("/api/v1/expedientes/mis-expedientes/")
+        assert response.status_code == status.HTTP_200_OK
+
+        # En la base de datos pasó automáticamente a revision_resolucion
+        exp.refresh_from_db()
+        assert exp.estado == EstadoExpedienteEnum.REVISION_RESOLUCION
+
+        # En el payload se expone revision_resolucion (no existe justificando plazo vencido)
+        data = response.json()
+        item = next(x for x in data if x["numero"] == "EXP-106/2026")
+        assert item["estado"] == "revision_resolucion"

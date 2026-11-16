@@ -15,12 +15,18 @@ from expedientes.models import (
 
 
 class ExpedienteFilter(django_filters.FilterSet):
-    """Filtros del tablero: estado, socio, urgencia, concepto y rango de fechas (CA2)."""
+    """Filtros del tablero: estado, exclusión, socio, urgencia, concepto y fechas (CA2)."""
 
     estado = django_filters.ChoiceFilter(choices=EstadoExpedienteEnum.choices)
+    estado_ne = django_filters.ChoiceFilter(
+        field_name="estado",
+        exclude=True,
+        choices=EstadoExpedienteEnum.choices,
+    )
     urgencia = django_filters.ChoiceFilter(choices=UrgenciaExpedienteEnum.choices)
     concepto = django_filters.ChoiceFilter(choices=ConceptoExpedienteEnum.choices)
     socio = django_filters.CharFilter(method="filter_socio")
+    search = django_filters.CharFilter(method="filter_socio")
     socio_legajo = django_filters.CharFilter(field_name="socio__legajo", lookup_expr="icontains")
     fecha_desde = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
     fecha_hasta = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
@@ -41,8 +47,11 @@ class ExpedienteFilter(django_filters.FilterSet):
         if not value:
             return queryset
         val = value.strip()
+        if not val:
+            return queryset
         return queryset.filter(
             Q(numero__icontains=val)
+            | Q(titulo__icontains=val)
             | Q(motivo__icontains=val)
             | Q(socio__legajo__icontains=val)
             | Q(socio__first_name__icontains=val)

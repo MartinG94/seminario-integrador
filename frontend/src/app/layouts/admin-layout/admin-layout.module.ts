@@ -6,6 +6,7 @@ import { AdminLayoutRoutes } from './admin-layout.routing';
 import { MisExpedientesComponent } from '../../mis-expedientes/mis-expedientes.component';
 import { ReglamentosComponent } from '../../reglamentos/reglamentos.component';
 import { GestionarExpedientesComponent } from '../../gestionar-expedientes/gestionar-expedientes.component';
+import { ValoracionT03PanelComponent } from '../../gestionar-expedientes/valoracion-t03-panel/valoracion-t03-panel.component';
 import { VisorExpedienteComponent } from '../../gestionar-expedientes/visor-expediente/visor-expediente.component';
 
 import { ReportesComponent } from '../../reportes/reportes.component';
@@ -29,6 +30,8 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { SpanishPaginatorIntl } from '../../shared/spanish-paginator-intl';
 import { SocioLegajoDialogComponent } from '../../ranking-socios/socio-legajo-dialog/socio-legajo-dialog.component';
 import { ExpedientesSocioDialogComponent } from '../../ranking-socios/expedientes-socio-dialog/expedientes-socio-dialog.component';
 import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
@@ -60,11 +63,16 @@ import { ComponentsModule } from '../../components/components.module';
     MatDialogModule,
     MatExpansionModule,
     MatIconModule,
+    MatPaginatorModule,
+  ],
+  providers: [
+    { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
   ],
   declarations: [
     MisExpedientesComponent,
     ReglamentosComponent,
     GestionarExpedientesComponent,
+    ValoracionT03PanelComponent,
     ReportesComponent,
     RankingSociosComponent,
     SocioLegajoDialogComponent,

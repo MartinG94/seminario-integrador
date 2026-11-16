@@ -27,6 +27,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
     """
 
     id = serializers.SerializerMethodField()
+    numero_socio = serializers.SerializerMethodField()
     legajo = serializers.SerializerMethodField()
     nombre = serializers.CharField()
     apellido = serializers.CharField()
@@ -43,6 +44,7 @@ class RankingSocioSerializer(serializers.ModelSerializer):
         model = Socio
         fields = (
             "id",
+            "numero_socio",
             "legajo",
             "nombre",
             "apellido",
@@ -58,6 +60,9 @@ class RankingSocioSerializer(serializers.ModelSerializer):
 
     def get_id(self, obj: Socio) -> str:
         return str(obj.nroSocio)
+
+    def get_numero_socio(self, obj: Socio) -> int:
+        return obj.nroSocio
 
     def get_legajo(self, obj: Socio) -> str:
         legajo_val = getattr(obj, "legajo_calc", None)

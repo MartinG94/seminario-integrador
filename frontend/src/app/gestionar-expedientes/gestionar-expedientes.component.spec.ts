@@ -9,21 +9,26 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { of, throwError } from 'rxjs';
+import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
+import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
 import { GestionarExpedientesComponent, InvolucradoJustificacion } from './gestionar-expedientes.component';
 import { AuthService } from '../services/auth.service';
 import { TribunalDataService, BoardResponseDTO, Expediente, EstadoExpediente } from '../services/tribunal-data.service';
 import {
+  AntecedenteT03DTO,
   ComposicionTribunalDTO,
   DecisionCausalDTO,
   DescargoDetalleDTO,
   ExpedienteApiService,
-  HistorialT01DTO
+  HistorialT01DTO,
+  ValoracionT03DTO
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
+import { ValoracionT03PanelComponent } from './valoracion-t03-panel/valoracion-t03-panel.component';
 
 describe('GestionarExpedientesComponent', () => {
   let component: GestionarExpedientesComponent;
@@ -58,10 +63,12 @@ describe('GestionarExpedientesComponent', () => {
         MatAutocompleteModule,
         MatFormFieldModule,
         MatInputModule,
+        MatPaginatorModule,
         NoopAnimationsModule
       ],
-      declarations: [GestionarExpedientesComponent],
+      declarations: [GestionarExpedientesComponent, ValoracionT03PanelComponent],
       providers: [
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
         { provide: NotificationService, useValue: notifications },
         TribunalDataService,
         AuthService
@@ -85,6 +92,7 @@ describe('GestionarExpedientesComponent', () => {
       ]
     }));
     spyOn(dataService, 'obtenerTablero').and.returnValue(of(mockBoardResponse));
+    spyOn(expedienteApi, 'listarCatalogoAntecedentes').and.returnValue(of([]));
 
     fixture.detectChanges();
   });
@@ -106,12 +114,18 @@ describe('GestionarExpedientesComponent', () => {
     ]);
   });
 
-  it('debe permitir colapsar y expandir columnas en el tablero Kanban', () => {
+  it('debe inicializar colapsadas creado, pendiente_correos y emitido y permitir colapsar y expandir columnas', () => {
+    expect(component.isColumnaColapsada('creado')).toBeTrue();
+    expect(component.isColumnaColapsada('pendiente_correos')).toBeTrue();
+    expect(component.isColumnaColapsada('emitido')).toBeTrue();
+    expect(component.isColumnaColapsada('justificando')).toBeFalse();
+    expect(component.isColumnaColapsada('revision_resolucion')).toBeFalse();
+    expect(component.isColumnaColapsada('pendiente_firma')).toBeFalse();
+
+    component.toggleColapsar('emitido');
     expect(component.isColumnaColapsada('emitido')).toBeFalse();
     component.toggleColapsar('emitido');
     expect(component.isColumnaColapsada('emitido')).toBeTrue();
-    component.toggleColapsar('emitido');
-    expect(component.isColumnaColapsada('emitido')).toBeFalse();
   });
 
   it('columnasKanbanVisibles debe mostrar únicamente la columna filtrada si filtroEstado está activo', () => {
@@ -283,6 +297,7 @@ describe('GestionarExpedientesComponent', () => {
         firmas: { juecesFirmantes: ['Juez 1', 'Juez 2', 'Juez 3'] },
         ...overrides
       };
+      component.columnasColapsadas[expediente.estado] = false;
       component.expedientes = [expediente];
       fixture.detectChanges();
       return expediente;
@@ -482,7 +497,8 @@ describe('GestionarExpedientesComponent', () => {
       causal: '',
       evidencias: [],
       regla_sugerida: undefined,
-      decisiones_causal: undefined
+      decisiones_causal: undefined,
+      valoraciones_t03: []
     });
 
     const detalle = (estado = 'revision_resolucion') => ({
@@ -683,7 +699,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(tabla.textContent).toContain('Pérez');
       const botones = tabla.querySelectorAll('.btn-ver-descargo');
       expect(botones.length).toBe(2);
-      expect(botones[0].textContent).toContain('Ver Descargo');
+      expect(botones[0].textContent).toContain('Descargo');
     });
 
     it('abre el modal de descargo al hacer clic en Ver Descargo y permite volver al detalle', () => {
@@ -705,6 +721,395 @@ describe('GestionarExpedientesComponent', () => {
       component.volverADetalleDesdeDescargo();
       expect(component.modalDescargoAbierto).toBeFalse();
       expect(component.modalDetalleAbierto).toBeTrue();
+    });
+
+    describe('Valoración T03 en la sala (S4-03)', () => {
+      const valoracion = (overrides: Partial<ValoracionT03DTO> = {}): ValoracionT03DTO => ({
+        id: 1,
+        descargo: 6,
+        version: 1,
+        resultado: 'ACCEPTED',
+        resultado_display: 'Aprobada',
+        fundamento,
+        antecedentes: [],
+        autor: 'miembro.td',
+        autor_legajo: '408917',
+        autor_rol: 'TD',
+        autor_condicion: 'TITULAR',
+        autor_condicion_display: 'Miembro Titular',
+        created_at: '2026-10-20T15:30:00Z',
+        ...overrides
+      });
+
+      const antecedente: AntecedenteT03DTO = {
+        id: 7,
+        numero: 'EXP-0007/2026',
+        fecha_emision: '2026-09-15T12:00:00Z',
+        motivo: 'Inasistencia a la reunión plenaria',
+        reglamento_invocado: 'Art. 86 del Reglamento Interno'
+      };
+
+      const payload = { resultado: 'ACCEPTED' as const, fundamento, antecedente_ids: [7] };
+
+      function abrirConT03(valoraciones: ValoracionT03DTO[] = [], rol = 'TD', estado = 'revision_resolucion') {
+        const base = detalle(estado);
+        base.descargos[1].valoraciones_t03 = valoraciones;
+        spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes(rol as any));
+        spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of(base));
+        component.abrirDetalle({ ...expRevision, estado } as Expediente);
+        return component.involucradosJustificacion.find(f => f.descargo?.id === 6)!;
+      }
+
+      function valorarT03(valoraciones: ValoracionT03DTO[] = []) {
+        const fila = abrirConT03(valoraciones);
+        component.verDescargo(fila);
+        return fila;
+      }
+
+      it('permite valorar un T03 vigente', () => {
+        expect(component.esEvaluable(abrirConT03())).toBeTrue();
+      });
+
+      it('muestra el T03 sin valorar como pendiente de evaluación', () => {
+        expect(component.estadoJustificacion(abrirConT03())).toBe('Pendiente de evaluación');
+      });
+
+      it('muestra el resultado de la versión vigente del T03', () => {
+        const fila = abrirConT03([
+          valoracion({ id: 2, version: 2, resultado: 'REJECTED', resultado_display: 'Desaprobada' }),
+          valoracion()
+        ]);
+
+        expect(component.estadoJustificacion(fila)).toBe('Desaprobada');
+      });
+
+      it('no revela la valoración a la autoridad imputada, que no la recibe del servidor', () => {
+        const fila = abrirConT03();
+        delete fila.descargo?.valoraciones_t03;
+
+        expect(component.estadoJustificacion(fila)).toBe('Descargo - Otros');
+      });
+
+      it('ofrece la acción de valorar el T03 y conserva Ver Descargo en el T02', () => {
+        abrirConT03();
+        fixture.detectChanges();
+
+        const acciones = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.btn-ver-descargo'));
+        expect(acciones.length).toBe(2);
+        acciones.forEach(accion => {
+          expect(accion.textContent).toContain('Descargo');
+        });
+      });
+
+      it('sólo ofrece ver el descargo a quien no puede valorar', () => {
+        const fila = abrirConT03([], 'CD', 'emitido');
+
+        expect(component.accionDescargo(fila)).toBe('Ver Descargo');
+      });
+
+      it('muestra el estado de la valoración en la fila del T03', () => {
+        abrirConT03();
+        fixture.detectChanges();
+
+        const estados = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.estado-justificacion'));
+        expect(estados.length).toBeGreaterThan(0);
+      });
+
+      it('integra la evaluación unificada de puntaje final para el T03 sin panel redundante', () => {
+        valorarT03();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.btn-guardar-volver')).toBeTruthy();
+      });
+
+      it('no muestra el panel de valoración para el T02', () => {
+        abrirConT03();
+        component.verDescargo(filaT02());
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-valoracion-t03-panel')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.seccion-evaluacion-descargo')).toBeTruthy();
+      });
+
+      it('no da por leído un T03 sin valorar', () => {
+        expect(component.getEstadoDescargo(abrirConT03())).toBe('No Leído');
+      });
+
+      it('da por leído un T03 valorado', () => {
+        expect(component.getEstadoDescargo(abrirConT03([valoracion()]))).toBe('Leído');
+      });
+
+      it('no permite generar la resolución con un T03 sin valorar', () => {
+        const base = abrirConT03();
+        filaT02().descargo!.leido = true;
+
+        expect(component.getEstadoDescargo(base)).toBe('No Leído');
+        expect(component.puedeGenerarResolucion).toBeFalse();
+      });
+
+      it('permite generar la resolución cuando se valoró el T03', () => {
+        spyOn(api, 'registrarValoracionT03').and.returnValue(of(valoracion()));
+        valorarT03();
+        filaT02().descargo!.leido = true;
+
+        component.registrarValoracionT03(payload);
+
+        expect(component.puedeGenerarResolucion).toBeTrue();
+      });
+
+      it('agrega el antecedente encontrado', () => {
+        spyOn(api, 'buscarAntecedente').and.returnValue(of(antecedente));
+        valorarT03();
+
+        component.buscarAntecedenteT03('7/2026');
+
+        expect(api.buscarAntecedente).toHaveBeenCalledOnceWith('7/2026');
+        expect(component.antecedentesT03).toEqual([antecedente]);
+      });
+
+      it('no vincula dos veces el mismo antecedente aunque se escriba distinto', () => {
+        spyOn(api, 'buscarAntecedente').and.returnValue(of(antecedente));
+        valorarT03();
+        component.buscarAntecedenteT03('7/2026');
+
+        component.buscarAntecedenteT03('EXP-0007/2026');
+
+        expect(component.antecedentesT03.length).toBe(1);
+        expect(notifications.error).toHaveBeenCalledOnceWith('Ese antecedente ya está vinculado.');
+      });
+
+      it('notifica el error cuando el antecedente no existe', () => {
+        const detail = 'No existe un expediente emitido con ese número.';
+        spyOn(api, 'buscarAntecedente').and.returnValue(throwError(() => ({ status: 404, error: { detail } })));
+        valorarT03();
+
+        component.buscarAntecedenteT03('999/2026');
+
+        expect(component.antecedentesT03).toEqual([]);
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      it('quita un antecedente de la valoración', () => {
+        valorarT03();
+        component.antecedentesT03 = [antecedente];
+
+        component.quitarAntecedenteT03(7);
+
+        expect(component.antecedentesT03).toEqual([]);
+      });
+
+      it('registra la valoración, suma la versión al historial y limpia los antecedentes', () => {
+        const nueva = valoracion({ id: 2, version: 2 });
+        spyOn(api, 'registrarValoracionT03').and.returnValue(of(nueva));
+        const anterior = valoracion();
+        const fila = valorarT03([anterior]);
+        component.antecedentesT03 = [antecedente];
+
+        component.registrarValoracionT03(payload);
+
+        expect(api.registrarValoracionT03).toHaveBeenCalledOnceWith('12', 6, payload);
+        expect(fila.descargo?.valoraciones_t03).toEqual([nueva, anterior]);
+        expect(component.antecedentesT03).toEqual([]);
+        expect(component.registrandoValoracion).toBeFalse();
+        expect(notifications.success).toHaveBeenCalledOnceWith('Valoración registrada (versión 2).');
+      });
+
+      it('conserva el borrador si el registro falla', () => {
+        const detail = 'No podés valorar: sos parte interesada en esta causa.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 403, error: { detail } })));
+        const fila = valorarT03();
+        component.antecedentesT03 = [antecedente];
+
+        component.registrarValoracionT03(payload);
+
+        expect(fila.descargo?.valoraciones_t03).toEqual([]);
+        expect(component.antecedentesT03).toEqual([antecedente]);
+        expect(component.registrandoValoracion).toBeFalse();
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      describe('respuestas tardías de la búsqueda de antecedentes', () => {
+        let respuesta: Subject<AntecedenteT03DTO>;
+
+        beforeEach(() => {
+          respuesta = new Subject<AntecedenteT03DTO>();
+          spyOn(api, 'buscarAntecedente').and.returnValue(respuesta);
+        });
+
+        it('no la suma al borrador de otro involucrado', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.verDescargo(filaT02());
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma después de volver al listado', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.volverADetalleDesdeDescargo();
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma después de cerrar el expediente', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.cerrarModales();
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no la suma al borrador que sigue a un registro', () => {
+          spyOn(api, 'registrarValoracionT03').and.returnValue(of(valoracion()));
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.registrarValoracionT03(payload);
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03).toEqual([]);
+        });
+
+        it('no notifica el error de una búsqueda descartada', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('999/2026');
+
+          component.volverADetalleDesdeDescargo();
+          respuesta.error({ status: 404, error: { detail: 'No existe.' } });
+
+          expect(notifications.error).not.toHaveBeenCalled();
+        });
+
+        it('cancela la búsqueda en curso al destruir la sala', () => {
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.ngOnDestroy();
+
+          expect(respuesta.observers.length).toBe(0);
+        });
+
+        it('conserva dos búsquedas seguidas del mismo borrador', () => {
+          const segunda = new Subject<AntecedenteT03DTO>();
+          (api.buscarAntecedente as jasmine.Spy).and.returnValues(respuesta, segunda);
+          const otroAntecedente = { ...antecedente, id: 8, numero: 'EXP-0008/2026' };
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+          component.buscarAntecedenteT03('8/2026');
+
+          segunda.next(otroAntecedente);
+          respuesta.next(antecedente);
+
+          expect(component.antecedentesT03.map(a => a.id)).toEqual([8, 7]);
+        });
+      });
+
+      describe('registro y búsquedas en curso', () => {
+        it('informa la búsqueda en curso hasta que responde', () => {
+          const respuesta = new Subject<AntecedenteT03DTO>();
+          spyOn(api, 'buscarAntecedente').and.returnValue(respuesta);
+          valorarT03();
+
+          component.buscarAntecedenteT03('7/2026');
+          expect(component.buscandoAntecedente).toBeTrue();
+
+          respuesta.next(antecedente);
+          respuesta.complete();
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('deja de informar la búsqueda cuando falla', () => {
+          spyOn(api, 'buscarAntecedente').and.returnValue(throwError(() => ({ status: 404 })));
+          valorarT03();
+
+          component.buscarAntecedenteT03('999/2026');
+
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('deja de informar la búsqueda cuando se descarta el borrador', () => {
+          spyOn(api, 'buscarAntecedente').and.returnValue(new Subject<AntecedenteT03DTO>());
+          valorarT03();
+          component.buscarAntecedenteT03('7/2026');
+
+          component.volverADetalleDesdeDescargo();
+
+          expect(component.buscandoAntecedente).toBeFalse();
+        });
+
+        it('no borra el borrador de otro involucrado si el registro responde tarde', () => {
+          const respuesta = new Subject<ValoracionT03DTO>();
+          spyOn(api, 'registrarValoracionT03').and.returnValue(respuesta);
+          const fila = valorarT03();
+          component.registrarValoracionT03(payload);
+
+          component.verDescargo(filaT02());
+          component.antecedentesT03 = [antecedente];
+          respuesta.next(valoracion());
+
+          expect(component.antecedentesT03).toEqual([antecedente]);
+          expect(fila.descargo?.valoraciones_t03?.length).toBe(1);
+        });
+
+        it('mantiene el bloqueo de doble envío aunque se cierre el expediente', () => {
+          const respuesta = new Subject<ValoracionT03DTO>();
+          spyOn(api, 'registrarValoracionT03').and.returnValue(respuesta);
+          valorarT03();
+          component.registrarValoracionT03(payload);
+
+          component.cerrarModales();
+          expect(component.registrandoValoracion).toBeTrue();
+
+          respuesta.next(valoracion());
+          expect(component.registrandoValoracion).toBeFalse();
+        });
+      });
+
+      it('muestra el motivo cuando el padrón no está disponible', () => {
+        const detail = 'No se pudo confirmar tu condición en el padrón. Intentá nuevamente.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 503, error: { detail } })));
+        valorarT03();
+
+        component.registrarValoracionT03(payload);
+
+        expect(notifications.error).toHaveBeenCalledOnceWith(detail);
+      });
+
+      it('mantiene el mensaje genérico ante otros errores del servidor', () => {
+        const detail = 'Traza interna del servidor.';
+        spyOn(api, 'registrarValoracionT03').and.returnValue(throwError(() => ({ status: 500, error: { detail } })));
+        valorarT03();
+
+        component.registrarValoracionT03(payload);
+
+        expect(notifications.error).toHaveBeenCalledOnceWith('No se pudo registrar la valoración.');
+      });
+
+      it('descarta los antecedentes al volver al listado', () => {
+        valorarT03();
+        component.antecedentesT03 = [antecedente];
+
+        component.volverADetalleDesdeDescargo();
+
+        expect(component.antecedentesT03).toEqual([]);
+      });
+
+      it('indica en el buscador que se puede buscar por número y motivo', () => {
+        fixture.detectChanges();
+
+        const buscador: HTMLInputElement = fixture.nativeElement.querySelector('input[placeholder*="Buscar por"]');
+        expect(buscador.placeholder).toContain('número');
+        expect(buscador.placeholder).toContain('motivo');
+      });
     });
   });
 
@@ -729,6 +1134,7 @@ describe('GestionarExpedientesComponent', () => {
       spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
       filaPrueba = {
         socioId: 10,
+        numero_socio: 7010,
         legajo: '74907',
         nombre: 'Diego Gabriel',
         apellido: 'Sánchez',
@@ -748,7 +1154,7 @@ describe('GestionarExpedientesComponent', () => {
     it('genera el encabezado correcto con id de expediente, legajo y nombre completo', () => {
       component.involucradoSeleccionado = filaPrueba;
       const encabezado = component.getEncabezadoModalDescargo();
-      expect(encabezado).toBe('Descargo exp 888 y 74907, Diego Gabriel Sánchez');
+      expect(encabezado).toBe('Descargo exp 888 y 7010, Diego Gabriel Sánchez');
     });
 
     it('inicializa puntajeFinalInput con los puntos del expediente al abrir el descargo', () => {
@@ -886,8 +1292,8 @@ describe('GestionarExpedientesComponent', () => {
       puntos: -1.5,
       cantidadSocios: 2,
       sociosInvolucrados: [
-        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
-        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
+        { id: '2', numero_socio: 7011, legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
+        { id: '3', numero_socio: 7012, legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
       ]
     };
 
@@ -943,9 +1349,9 @@ describe('GestionarExpedientesComponent', () => {
       const modal = compiled.querySelector('.modal-backdrop-custom');
       expect(modal).toBeTruthy();
       expect(modal?.textContent).toContain('Socios Involucrados');
-      expect(modal?.textContent).toContain('85194');
+      expect(modal?.textContent).toContain('7011');
       expect(modal?.textContent).toContain('Lucas Martín Guillén');
-      expect(modal?.textContent).toContain('87414');
+      expect(modal?.textContent).toContain('7012');
       expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
       expect(modal?.textContent).toContain('59');
       expect(modal?.textContent).toContain('Activo');
@@ -1357,7 +1763,8 @@ describe('GestionarExpedientesComponent', () => {
 
       const ths = Array.from(tabla.querySelectorAll('thead th')).map((el: any) => el.textContent.trim());
       expect(ths).toContain('N° de Socio');
-      expect(ths).toContain('Nombre Completo');
+      expect(ths).toContain('Apellido');
+      expect(ths).toContain('Nombre');
       expect(ths).toContain('Grupo');
       expect(ths).toContain('Estado de Descargo');
       expect(ths).toContain('Puntaje Final');
@@ -1370,6 +1777,31 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.formatGrupoInvolucrado(fila1.grupo)).toBe('59');
       expect(component.getEstadoDescargo(fila1)).toBe('Sin descargo');
       expect(component.getPuntajeFinalInvolucrado(fila1)).toBe(-1.5);
+    });
+
+    it('muestra el número institucional sin usar el legajo como número de socio', () => {
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 202,
+        numero: '7/2026',
+        estado: 'revision_resolucion',
+        socios: [{
+          id: 77,
+          numero_socio: 1002,
+          legajo: '89123',
+          nombre: 'Lucía Gómez',
+          first_name: 'Lucía',
+          last_name: 'Gómez',
+          grupo: '59'
+        }],
+        descargos: []
+      }));
+
+      component.abrirDetalle(expBase);
+      fixture.detectChanges();
+
+      const tabla = fixture.nativeElement.querySelector('.tabla-involucrados') as HTMLElement;
+      expect(tabla.textContent).toContain('1002');
+      expect(tabla.textContent).not.toContain('89123');
     });
 
     it('debe calcular correctamente Estado de Descargo (Leído, No Leído, Sin descargo) y Puntaje Final', () => {
@@ -1782,6 +2214,85 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.opcionPuntajeFinal).toBe('0.0');
     });
 
+    it('fijarPuntajeCero establece la escala en 0.0 pts (Eximición) y sincroniza puntajeFinalInput', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      component.opcionPuntajeFinal = '-1.5';
+      component.puntajeFinalInput = -1.5;
+
+      component.fijarPuntajeCero();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+      expect(component.puntajeFinalInput).toBe(0);
+    });
+
+    it('fijarPuntajeCero no opera si el expediente no permite modificar puntaje', () => {
+      component.expedienteSeleccionado = expEnTramite;
+      component.opcionPuntajeFinal = '-1.5';
+      component.puntajeFinalInput = -1.5;
+
+      component.fijarPuntajeCero();
+      expect(component.opcionPuntajeFinal).toBe('-1.5');
+      expect(component.puntajeFinalInput).toBe(-1.5);
+    });
+
+    it('guarda el puntaje seleccionado sin revertir al valor previo al evaluar un descargo', () => {
+      component.expedienteSeleccionado = expEnRevision;
+      const fila = {
+        socioId: 87414,
+        legajo: '87414',
+        nombre: 'Diego',
+        apellido: 'Sánchez',
+        grupo: '59',
+        descargo: {
+          id: 7,
+          socio_id: 87414,
+          socio_legajo: '87414',
+          tipo: 'T02_CERTIFICADO',
+          causal: 'Compromiso Laboral Comprobable',
+          texto: 'Presento certificado',
+          presentado_at: '2026-03-01',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: []
+        }
+      } as any;
+      component.verDescargo(fila);
+      expect(component.opcionPuntajeFinal).toBe('-1.0');
+
+      // Usuario selecciona 0.0 con el botón fijar o dropdown
+      component.fijarPuntajeCero();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+
+      spyOn(expedienteApi, 'registrarDecisionCausal').and.returnValue(of({ id: 101, version: 1 } as any));
+      component.guardarYVolverDescargo();
+
+      expect(expedienteApi.registrarDecisionCausal).toHaveBeenCalledWith(
+        '12',
+        7,
+        jasmine.objectContaining({
+          puntaje_final: 0
+        })
+      );
+      expect(fila.descargo.puntaje_ratificado).toBe(0);
+      expect(fila.descargo.leido).toBeTrue();
+    });
+
+    it('getCategoriaPuntajeLabel devuelve la categoría semántica sin duplicar el valor numérico', () => {
+      component.opcionPuntajeFinal = '-1.5';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Sanción');
+
+      component.opcionPuntajeFinal = 'LLAMADO_ATENCION';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Llamado de Atención');
+
+      component.opcionPuntajeFinal = '0.0';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Eximición');
+
+      component.opcionPuntajeFinal = 'FELICITACION';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Reconocimiento');
+
+      component.opcionPuntajeFinal = '1.5';
+      expect(component.getCategoriaPuntajeLabel()).toBe('Mérito');
+    });
+
     it('getTipoDescargoDisplay muestra la causal tipificada como tipo principal', () => {
       const descT02 = {
         id: 1,
@@ -2036,7 +2547,8 @@ describe('GestionarExpedientesComponent', () => {
       // Debe contener la tabla de puntajes finales consolidados en Artículo 1°
       const tablaPuntajes = modalEl.querySelector('.tabla-puntajes-consolidados');
       expect(tablaPuntajes).toBeTruthy();
-      expect(tablaPuntajes.textContent).toContain('Lucas Gómez');
+      expect(tablaPuntajes.textContent).toContain('Lucas');
+      expect(tablaPuntajes.textContent).toContain('Gómez');
       expect(tablaPuntajes.textContent).toContain('-1');
 
       // Botón selector de catálogo para VISTO presente, sin textarea libre de Visto
@@ -2307,8 +2819,337 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
       component.onModalKeydown(escEv);
       expect(component.modalDetalleAbierto).toBeFalse();
     }));
-
-
   });
 
+  describe('expedientes referenciados y descargo extraordinario T03 unificado', () => {
+    it('abre el modal de expedientes para VISTO y permite seleccionar y remover', () => {
+      component.abrirModalExpedientesResolucion();
+      expect(component.modalExpedientesResolucionAbierto).toBeTrue();
+
+      const antecedente: AntecedenteT03DTO = {
+        id: 99,
+        numero: '99/2026',
+        fecha_emision: '2026-03-01',
+        motivo: 'Motivo antecedente',
+        reglamento_invocado: 'Art. 10'
+      };
+      component.onExpedientesResolucionChange([antecedente]);
+      expect(component.expedientesSeleccionadosResolucion.length).toBe(1);
+
+      component.quitarExpedienteResolucion(99);
+      expect(component.expedientesSeleccionadosResolucion.length).toBe(0);
+    });
+
+    it('inicializa opcionPuntajeFinal y antecedentes en verDescargo para T03_EXTRAORDINARIO', () => {
+      const expTest: Expediente = {
+        id: '200',
+        numero: '200/2026',
+        titulo: 'Causa T03',
+        puntos: -1.0,
+        estado: 'revision_resolucion',
+        urgencia: 'normal',
+        fechaCreacion: '2026-03-01',
+        socio: 'Juan Pérez',
+        legajo: '1001',
+        subcomision: 'GVP',
+        motivo: 'Causa',
+        horasRestantes: 72,
+        tipo: 'falta'
+      };
+      component.expedienteSeleccionado = expTest;
+
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '1001',
+        grupo: 'G57',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        descargo: {
+          id: 50,
+          socio_id: 10,
+          socio_legajo: '1001',
+          socio_nombre: 'Juan Pérez',
+          tipo: 'T03_EXTRAORDINARIO',
+          causal: 'Otro',
+          texto: 'Presento descargo extraordinario',
+          presentado_at: '2026-03-05',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: [],
+          valoraciones_t03: [
+            {
+              id: 1,
+              descargo: 50,
+              version: 1,
+              resultado: 'ACCEPTED',
+              resultado_display: 'Aprobada',
+              fundamento: 'Fundamento valoracion previa',
+              puntaje_final: '0.0',
+              antecedentes: [{ expediente_id: 99, numero: '99/2026' }],
+              autor: 'TD',
+              autor_legajo: '11239',
+              autor_rol: 'TD',
+              autor_condicion: 'REGULAR',
+              autor_condicion_display: 'Titular',
+              created_at: '2026-03-06'
+            }
+          ]
+        }
+      };
+
+      component.verDescargo(fila);
+      expect(component.modalDescargoAbierto).toBeTrue();
+      expect(component.opcionPuntajeFinal).toBe('0.0');
+      expect(component.fundamentoPuntajeInput).toBe('Fundamento valoracion previa');
+      expect(component.antecedentesT03.length).toBe(1);
+      expect(component.antecedentesT03[0].id).toBe(99);
+    });
+
+    it('registra decision causal y puntaje_final al guardar descargo', () => {
+      spyOn(expedienteApi, 'registrarDecisionCausal').and.returnValue(of({
+        id: 2,
+        descargo: 50,
+        version: 2,
+        decision: 'ACCEPTED',
+        decision_display: 'Aceptado',
+        fundamento: 'Fundamento suficiente para validar',
+        puntaje_final: '0.0',
+        evidencias_valoradas: [],
+        regla_sugerida: null,
+        regla_sugerida_display: null,
+        se_aparta_de_regla: false,
+        autor: 'TD',
+        autor_legajo: '11239',
+        autor_rol: 'TD',
+        created_at: '2026-03-06'
+      }));
+
+      const expTest: Expediente = {
+        id: '200',
+        numero: '200/2026',
+        titulo: 'Causa Descargo',
+        puntos: -1.0,
+        estado: 'revision_resolucion',
+        urgencia: 'normal',
+        fechaCreacion: '2026-03-01',
+        socio: 'Juan Pérez',
+        legajo: '1001',
+        subcomision: 'GVP',
+        motivo: 'Causa',
+        horasRestantes: 72,
+        tipo: 'falta'
+      };
+      component.expedienteSeleccionado = expTest;
+
+      const fila: InvolucradoJustificacion = {
+        socioId: 10,
+        legajo: '1001',
+        grupo: 'G57',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        descargo: {
+          id: 50,
+          socio_id: 10,
+          socio_legajo: '1001',
+          socio_nombre: 'Juan Pérez',
+          tipo: 'T02_CERTIFICADO',
+          causal: 'Otro',
+          texto: 'Presento descargo',
+          presentado_at: '2026-03-05',
+          leido: false,
+          puntaje_ratificado: null,
+          evidencias: []
+        }
+      };
+      component.involucradoSeleccionado = fila;
+      component.opcionPuntajeFinal = '0.0';
+      component.fundamentoPuntajeInput = 'Fundamentación válida con más de diez caracteres';
+
+      component.guardarYVolverDescargo();
+      expect(expedienteApi.registrarDecisionCausal).toHaveBeenCalledWith(
+        '200',
+        50,
+        jasmine.objectContaining({
+          puntaje_final: 0
+        })
+      );
+      expect(fila.descargo.leido).toBeTrue();
+      expect(component.modalDescargoAbierto).toBeFalse();
+    });
+  });
+
+  describe('Sugerencias y correcciones PO PR #76 (Kanban preview, Mostrar más +, Llamado/Felicitación y refrescarVistaActual)', () => {
+    const makeExp = (id: number, overrides: Partial<Expediente> = {}): Expediente => ({
+      id: String(id),
+      numero: `EXP-${String(id).padStart(4, '0')}/2026`,
+      socio: 'Socio Prueba',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: `Motivo ${id}`,
+      fechaCreacion: '2026-03-01',
+      estado: 'justificando',
+      urgencia: 'normal',
+      horasRestantes: 24,
+      tipo: 'falta',
+      puntos: -1,
+      ...overrides,
+    });
+
+    it('renderiza vista previa de 5 tarjetas, total_count real del backend en .col-count y carga más al pulsar + sin duplicar', () => {
+      const iniciales = [1, 2, 3, 4, 5].map(id => makeExp(id));
+      const mockBoardConConteo: BoardResponseDTO = {
+        columns: [
+          { key: 'creado', label: 'Expediente Creado', cases: [], total_count: 8, has_more: true },
+          {
+            key: 'justificando',
+            label: 'Justificando',
+            total_count: 7,
+            has_more: true,
+            cases: iniciales.map(e => ({
+              id: Number(e.id),
+              numero: e.numero,
+              socio: 1,
+              socio_nombre: e.socio,
+              socio_legajo: e.legajo,
+              subcomision: e.subcomision,
+              estado: 'justificando',
+              estado_display: 'Justificando',
+              puntos: -1,
+              motivo: e.motivo,
+              created_at: e.fechaCreacion,
+              plazo_limite_at: null,
+              transiciones_permitidas: [],
+            })),
+          },
+          { key: 'revision_resolucion', label: 'En Revisión', cases: [], total_count: 0, has_more: false },
+          { key: 'espera_resolucion', label: 'Espera Resolución', cases: [], total_count: 0, has_more: false },
+          { key: 'pendiente_correos', label: 'Pendiente de Envío', cases: [], total_count: 0, has_more: false },
+          { key: 'emitido', label: 'Emitidos', cases: [], total_count: 0, has_more: false },
+        ],
+      };
+
+      (dataService.obtenerTablero as jasmine.Spy).and.returnValue(of(mockBoardConConteo));
+      component.expedientes = iniciales;
+      component.cargarDatosTablero();
+      fixture.detectChanges();
+
+      const colJustificando = fixture.nativeElement.querySelector('.kanban-col-mat[aria-label="Justificando"]') as HTMLElement;
+      expect(colJustificando).toBeTruthy();
+      expect(colJustificando.querySelector('.col-count')?.textContent?.trim()).toBe('7');
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(5);
+
+      const btnMas = colJustificando.querySelector('button.btn-mostrar-mas') as HTMLButtonElement;
+      expect(btnMas).toBeTruthy();
+      expect(btnMas.textContent?.trim()).toBe('+');
+      expect(btnMas.getAttribute('title')).toBe('Mostrar más');
+      expect(btnMas.getAttribute('aria-label')).toBe('Mostrar más');
+
+      const listarSpy = spyOn(dataService, 'listarExpedientes').and.returnValue(of({
+        count: 7,
+        total_pages: 2,
+        current_page: 2,
+        page_size: 5,
+        next: null,
+        previous: null,
+        results: [makeExp(5), makeExp(6), makeExp(7)], // incluye ID 5 duplicado para validar deduplicación
+      }));
+
+      btnMas.click();
+      fixture.detectChanges();
+
+      expect(listarSpy).toHaveBeenCalledWith(jasmine.objectContaining({
+        estado: 'justificando',
+        page: 2,
+        page_size: 5,
+        ordering: '-created_at',
+      }));
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(7);
+      expect(colJustificando.querySelector('button.btn-mostrar-mas')).toBeNull();
+    });
+
+    it('expande slice local de memoria al pulsar + cuando hay más de 5 tarjetas locales sin llamar a listarExpedientes', () => {
+      const listarSpy = spyOn(dataService, 'listarExpedientes');
+      component.expedientes = [1, 2, 3, 4, 5, 6, 7].map(id => makeExp(id));
+      fixture.detectChanges();
+
+      const colJustificando = fixture.nativeElement.querySelector('.kanban-col-mat[aria-label="Justificando"]') as HTMLElement;
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(5);
+      const btnMas = colJustificando.querySelector('button.btn-mostrar-mas') as HTMLButtonElement;
+      expect(btnMas).toBeTruthy();
+
+      btnMas.click();
+      fixture.detectChanges();
+
+      expect(listarSpy).not.toHaveBeenCalled();
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(7);
+      expect(colJustificando.querySelector('button.btn-mostrar-mas')).toBeNull();
+    });
+
+    it('muestra "Llamado de atención" y "Felicitación" para ±0.25 en tarjetas Kanban y vista tabla', () => {
+      component.expedientes = [
+        makeExp(101, { puntos: -0.25, esLlamado: true, puntaje_solicitado: 'LLAMADO_ATENCION' }),
+        makeExp(102, { puntos: 0.25, esFelicitacion: true, puntaje_solicitado: 'FELICITACION' }),
+      ];
+      component.vistaActual = 'kanban';
+      fixture.detectChanges();
+
+      const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.kanban-card-mat'));
+      expect(cards.length).toBe(2);
+      const textosCards = cards.map(c => c.querySelector('.card-points')?.textContent?.trim());
+      expect(textosCards).toContain('Llamado de atención');
+      expect(textosCards).toContain('Felicitación');
+      expect(textosCards.join(' ')).not.toContain('0.25');
+
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+      const tablaText = fixture.nativeElement.querySelector('table')?.textContent || '';
+      expect(tablaText).toContain('Llamado de atención');
+      expect(tablaText).toContain('Felicitación');
+      expect(tablaText).not.toContain('0.25');
+    });
+
+    it('refrescarVistaActual llama a cargarTablaPaginada en acciones mutadoras cuando vistaActual === "tabla"', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const cargarTablaSpy = spyOn(component, 'cargarTablaPaginada');
+      const cargarTableroSpy = spyOn(component, 'cargarDatosTablero');
+
+      component.vistaActual = 'tabla';
+
+      // 1. cambiarUrgenciaExpediente
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(of({}));
+      const exp = makeExp(10, { estado: 'pendiente_firma' });
+      component.expedienteSeleccionado = exp;
+      component.cambiarUrgenciaExpediente('urgente');
+      expect(cargarTablaSpy).toHaveBeenCalledTimes(1);
+      expect(cargarTableroSpy).not.toHaveBeenCalled();
+
+      // 2. confirmarFirma
+      spyOn(expedienteApi, 'firmarResolucionOficial').and.returnValue(of({
+        id: 1,
+        expediente: 10,
+        version: 1,
+        plantilla_version: 'v1',
+        estado: 'DRAFT',
+        numero_expediente_snapshot: 'EXP-0010/2026',
+        vistos: '',
+        considerandos: '',
+        articulos_resolutivos: '',
+        firmantes_td: ['74907 - Juez 1 - G1'],
+        created_by: 1,
+        created_at: '',
+        updated_at: '',
+        contenido_hash: 'hash-ok',
+      }));
+      component.expedienteSeleccionado = exp;
+      component.confirmarFirma();
+      expect(cargarTablaSpy).toHaveBeenCalledTimes(2);
+      expect(cargarTableroSpy).not.toHaveBeenCalled();
+
+      // 3. transicionarEstado
+      spyOn(dataService, 'transicionarExpediente').and.returnValue(of({ detail: 'Ok' }));
+      component.transicionarEstado(exp, 'justificando');
+      expect(cargarTablaSpy).toHaveBeenCalledTimes(3);
+      expect(cargarTableroSpy).not.toHaveBeenCalled();
+    });
+  });
 });
