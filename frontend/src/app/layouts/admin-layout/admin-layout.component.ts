@@ -1,17 +1,21 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
-import { Location, LocationStrategy, PathLocationStrategy, PopStateEvent } from '@angular/common';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Location, PopStateEvent } from '@angular/common';
 import { Router, NavigationEnd, NavigationStart } from '@angular/router';
 import PerfectScrollbar from 'perfect-scrollbar';
 import * as $ from "jquery";
-import { filter, Subscription } from 'rxjs';
+import { Subject } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-admin-layout',
   templateUrl: './admin-layout.component.html',
   styleUrls: ['./admin-layout.component.scss']
 })
-export class AdminLayoutComponent implements OnInit {
-  private _router: Subscription;
+export class AdminLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  private locationSub: { unsubscribe: () => void } | null = null;
+  private psMainPanel: PerfectScrollbar | null = null;
+  private psSidebar: PerfectScrollbar | null = null;
   private lastPoppedUrl: string;
   private yScrollStack: number[] = [];
 
@@ -30,10 +34,10 @@ export class AdminLayoutComponent implements OnInit {
       const elemMainPanel = <HTMLElement>document.querySelector('.main-panel');
       const elemSidebar = <HTMLElement>document.querySelector('.sidebar .sidebar-wrapper');
 
-      this.location.subscribe((ev:PopStateEvent) => {
+      this.locationSub = this.location.subscribe((ev:PopStateEvent) => {
           this.lastPoppedUrl = ev.url;
-      });
-       this.router.events.subscribe((event:any) => {
+      }) as { unsubscribe: () => void };
+      this.router.events.pipe(takeUntil(this.destroy$)).subscribe((event:any) => {
           if (event instanceof NavigationStart) {
              if (event.url != this.lastPoppedUrl)
                  this.yScrollStack.push(window.scrollY);
@@ -45,13 +49,20 @@ export class AdminLayoutComponent implements OnInit {
                  window.scrollTo(0, 0);
          }
       });
-      this._router = this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe((event: NavigationEnd) => {
-           elemMainPanel.scrollTop = 0;
-           elemSidebar.scrollTop = 0;
+      this.router.events.pipe(
+        filter(event => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      ).subscribe(() => {
+           if (elemMainPanel) elemMainPanel.scrollTop = 0;
+           if (elemSidebar) elemSidebar.scrollTop = 0;
       });
       if (window.matchMedia(`(min-width: 960px)`).matches && !this.isMac()) {
-          let ps = new PerfectScrollbar(elemMainPanel);
-          ps = new PerfectScrollbar(elemSidebar);
+          if (elemMainPanel) {
+            this.psMainPanel = new PerfectScrollbar(elemMainPanel);
+          }
+          if (elemSidebar) {
+            this.psSidebar = new PerfectScrollbar(elemSidebar);
+          }
       }
 
       const window_width = $(window).width();
@@ -67,7 +78,7 @@ export class AdminLayoutComponent implements OnInit {
 
       }
 
-      $('.fixed-plugin a').click(function(event){
+      $('.fixed-plugin a').on('click.adminLayout', function(event){
         // Alex if we click on switch, stop propagation of the event, so the dropdown will not be hide, otherwise we set the  section active
           if($(this).hasClass('switch-trigger')){
               if(event.stopPropagation){
@@ -79,7 +90,7 @@ export class AdminLayoutComponent implements OnInit {
           }
       });
 
-      $('.fixed-plugin .badge').click(function(){
+      $('.fixed-plugin .badge').on('click.adminLayout', function(){
           let $full_page_background = $('.full-page-background');
 
 
@@ -97,7 +108,7 @@ export class AdminLayoutComponent implements OnInit {
           }
       });
 
-      $('.fixed-plugin .img-holder').click(function(){
+      $('.fixed-plugin .img-holder').on('click.adminLayout', function(){
           let $full_page_background = $('.full-page-background');
 
           $(this).parent('li').siblings().removeClass('active');
@@ -142,9 +153,25 @@ export class AdminLayoutComponent implements OnInit {
   runOnRouteChange(): void {
     if (window.matchMedia(`(min-width: 960px)`).matches && !this.isMac()) {
       const elemMainPanel = <HTMLElement>document.querySelector('.main-panel');
-      const ps = new PerfectScrollbar(elemMainPanel);
-      ps.update();
+      if (elemMainPanel) {
+        if (!this.psMainPanel) {
+          this.psMainPanel = new PerfectScrollbar(elemMainPanel);
+        } else {
+          this.psMainPanel.update();
+        }
+      }
     }
+  }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.locationSub?.unsubscribe();
+    this.locationSub = null;
+    this.psMainPanel?.destroy();
+    this.psMainPanel = null;
+    this.psSidebar?.destroy();
+    this.psSidebar = null;
+    $('.fixed-plugin a, .fixed-plugin .badge, .fixed-plugin .img-holder').off('.adminLayout');
   }
   isMac(): boolean {
       let bool = false;

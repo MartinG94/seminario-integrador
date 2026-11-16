@@ -263,7 +263,7 @@
                          placeholder="Escribí al menos 3 caracteres...">
                   <mat-icon matSuffix>person_search</mat-icon>
                   <mat-autocomplete #sociosAuto="matAutocomplete" (optionSelected)="agregarSocio($event.option.value)">
-                    <mat-option *ngFor="let socio of sociosFiltrados" [value]="socio">
+                    <mat-option *ngFor="let socio of sociosFiltrados; trackBy: trackBySocio" [value]="socio">
                       {{ nombreSocio(socio) }}<ng-container *ngIf="socio.legajo"> (Legajo {{ socio.legajo }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
                     </mat-option>
                   </mat-autocomplete>
@@ -282,7 +282,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let s of sociosSeleccionados">
+                      <tr *ngFor="let s of sociosSeleccionados; trackBy: trackBySocio">
                         <td><span class="badge-mat badge-mat-info tabular-nums">{{ s.legajo || 'S/D' }}</span></td>
                         <td class="font-weight-bold text-dark">{{ s.last_name }}, {{ s.first_name }}</td>
                         <td class="tabular-nums">{{ s.grupo || 'S/D' }}</td>
@@ -446,7 +446,7 @@
                     <th class="text-right">Acciones</th>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let s of misSolicitudesOrdenadas"
+                    <tr *ngFor="let s of misSolicitudesOrdenadas; trackBy: trackBySolicitud"
                         tabindex="0"
                         role="row"
                         [attr.aria-label]="'Solicitud ' + formatSolicitudExpediente(s) + ' - ' + (s.titulo || s.motivo)"
@@ -698,7 +698,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let s of solicitudSeleccionada.involucrados">
+                <tr *ngFor="let s of solicitudSeleccionada.involucrados; trackBy: trackByInvolucrado">
                   <td class="font-weight-bold legajo-cell">{{ s.legajo || '—' }}</td>
                   <td class="nombre-cell">{{ s.last_name ? (s.last_name + ', ' + s.first_name) : (s.nombre || '—') }}</td>
                   <td class="grupo-cell">{{ s.grupo || '—' }}</td>
@@ -834,7 +834,7 @@
       </div>
 
       <div class="catalogo-articulos-list" *ngIf="articulosModalFiltrados.length > 0">
-        <div *ngFor="let item of articulosModalFiltrados"
+        <div *ngFor="let item of articulosModalFiltrados; trackBy: trackByArticulo"
              class="catalogo-articulo-card"
              [class.selected]="esReglamentoSeleccionado(item.raw)"
              (click)="toggleReglamento(item.raw)">

@@ -5,6 +5,97 @@ from django.db import migrations, models
 
 def create_tables_if_not_exists(apps, schema_editor):
     connection = schema_editor.connection
+    if connection.vendor == "sqlite":
+        with connection.cursor() as cursor:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS `tribunal_categoriaevento` (
+              `idCategoria` integer PRIMARY KEY AUTOINCREMENT,
+              `codigo` varchar(20) NOT NULL UNIQUE,
+              `nombre` varchar(50) NOT NULL
+            );
+            """)
+            cursor.execute("""
+            INSERT OR IGNORE INTO `tribunal_categoriaevento` (`idCategoria`, `codigo`, `nombre`) VALUES
+            (1, 'REUNION', 'Reunión Institucional'),
+            (2, 'ACTIVIDAD', 'Actividad Operativa y Voluntariado');
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS `tribunal_evento` (
+              `idEvento` integer PRIMARY KEY AUTOINCREMENT,
+              `nombre` varchar(128) NOT NULL,
+              `descripcion` text NOT NULL,
+              `categoria_id` integer DEFAULT 1,
+              `categoria` varchar(20) NOT NULL DEFAULT 'REUNION',
+              `tipo` varchar(30) NOT NULL DEFAULT 'ORDINARIA',
+              `modalidad` varchar(30) NOT NULL DEFAULT 'PRESENCIAL_SEDE',
+              `ubicacion` varchar(255) DEFAULT NULL,
+              `lugar` varchar(200) NOT NULL DEFAULT 'Sede Central AVEIT',
+              `fecha_publicacion` datetime NOT NULL,
+              `fechaHoraInicio` datetime NOT NULL,
+              `fechaHoraFin` datetime DEFAULT NULL,
+              `tieneHoraFin` bool NOT NULL DEFAULT 0,
+              `fecha_hora_cierre_efectivo` datetime DEFAULT NULL,
+              `fecha_reporte` datetime DEFAULT NULL,
+              `toleranciaLeveMinutos` integer NOT NULL DEFAULT 15,
+              `toleranciaGraveMinutos` integer NOT NULL DEFAULT 30,
+              `tolerancia_retiro_minutos` integer NOT NULL DEFAULT 15,
+              `estado` varchar(30) NOT NULL DEFAULT 'PROGRAMADA',
+              `estadoEvento_id` integer NOT NULL DEFAULT 1,
+              `modo_convocatoria` varchar(30) NOT NULL DEFAULT 'PERSONALIZADA',
+              `afectados_id` integer NOT NULL DEFAULT 20,
+              `tipoEvento_id` integer DEFAULT NULL,
+              `sancionPersonalizada_id` integer DEFAULT NULL,
+              `grupo_convocado` varchar(10) DEFAULT NULL,
+              `es_obligatoria` bool NOT NULL DEFAULT 1,
+              `es_sancionable` bool NOT NULL DEFAULT 0,
+              `motivo_no_sancionable` text DEFAULT NULL,
+              `responsable_id` integer NOT NULL,
+              `reportado_por_id` integer DEFAULT NULL,
+              `subcomision_id` integer DEFAULT NULL,
+              `created_at` datetime NOT NULL,
+              `updated_at` datetime NOT NULL
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS `tribunal_evento_convocado` (
+              `idConvocado` integer PRIMARY KEY AUTOINCREMENT,
+              `evento_id` integer NOT NULL,
+              `socio_id` integer NOT NULL,
+              `created_at` datetime NOT NULL,
+              UNIQUE (`evento_id`, `socio_id`)
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS `tribunal_asistente` (
+              `idAsistente` integer PRIMARY KEY AUTOINCREMENT,
+              `evento_id` integer NOT NULL,
+              `socio_id` integer NOT NULL,
+              `fechaHoraLlegada` datetime DEFAULT NULL,
+              `fechaHoraSalida` datetime DEFAULT NULL,
+              `notificado` bool NOT NULL DEFAULT 0,
+              `fechaNotificacion` date DEFAULT NULL,
+              `estado_asistencia` varchar(30) NOT NULL DEFAULT 'PRESENTE',
+              `minutos_tardanza` integer NOT NULL DEFAULT 0,
+              `minutos_retiro_anticipado` integer NOT NULL DEFAULT 0,
+              `metodo_captura` varchar(20) NOT NULL DEFAULT 'MANUAL',
+              `dispositivo_id` varchar(100) DEFAULT NULL,
+              `motivo` text NOT NULL,
+              `observaciones` text NOT NULL,
+              `procesado_disciplinario` bool NOT NULL DEFAULT 0,
+              `expediente_generado_id` integer DEFAULT NULL,
+              `created_at` datetime NOT NULL,
+              UNIQUE (`evento_id`, `socio_id`)
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS `atencionFelicitacion` (
+              `nroSocio` integer NOT NULL PRIMARY KEY,
+              `felicitaciones` integer NOT NULL DEFAULT 0,
+              `llamadosAtencion` integer NOT NULL DEFAULT 0
+            );
+            """)
+        return
+
     with connection.cursor() as cursor:
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS `tribunal_categoriaevento` (

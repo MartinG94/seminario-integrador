@@ -197,7 +197,8 @@ class Command(BaseCommand):
 
             if init_sql_path.exists():
                 self.stdout.write(f"Cargando padrón institucional desde: {init_sql_path}")
-                if "socio_lista" in connection.introspection.table_names():
+                is_mysql = connection.vendor != "sqlite"
+                if is_mysql and "socio_lista" in connection.introspection.table_names():
                     from ranking.management.commands.load_legacy_schema import (
                         Command as LoadCommand,
                     )

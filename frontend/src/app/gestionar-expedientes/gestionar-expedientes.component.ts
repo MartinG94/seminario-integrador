@@ -1,11 +1,20 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { Router } from '@angular/router';
+import { PageEvent } from '@angular/material/paginator';
 import { 
   TribunalDataService, 
+  BoardResponseDTO,
   Expediente, 
   EstadoExpediente, 
   NivelUrgencia
 } from '../services/tribunal-data.service';
+import { TrackByUtils } from '../utils/track-by.util';
 import { AuthService, PerfilSocio } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
 import {
@@ -26,7 +35,7 @@ import {
 } from '../services/expediente-api.service';
 import { SocioApiService, SocioListItemDTO } from '../services/socio-api.service';
 import { Subject, Subscription, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
 import { formatCaseNumber as formatCaseNumberUtil } from '../utils/case-number.util';
 import {
   parseReglamentoCite,
@@ -106,18 +115,130 @@ export const ESCALA_PUNTAJES: OpcionPuntajeEscala[] = [
 @Component({
   selector: 'app-gestionar-expedientes',
   templateUrl: './gestionar-expedientes.component.html',
-  styleUrls: ['./gestionar-expedientes.component.scss']
+  styleUrls: ['./gestionar-expedientes.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GestionarExpedientesComponent implements OnInit, OnDestroy {
-  expedientes: Expediente[] = [];
-  vistaActual: 'kanban' | 'tabla' = 'kanban';
+  private readonly destroy$ = new Subject<void>();
+  private readonly activeTimers = new Set<number>();
+  private readonly activeObjectUrls = new Set<string>();
 
-  // Filtros explícitos (CA2 / S3-07)
-  filtroSocio: string = '';
-  filtroEstado: string = '';
-  filtroUrgencia: string = '';
-  filtroFechaDesde: string = `${new Date().getFullYear()}-01-01`;
-  filtroFechaHasta: string = '';
+  private scheduleTimer(fn: () => void, delayMs: number): void {
+    const id = window.setTimeout(() => {
+      this.activeTimers.delete(id);
+      fn();
+    }, delayMs);
+    this.activeTimers.add(id);
+  }
+
+  private createTrackedObjectUrl(blob: Blob): string {
+    const url = URL.createObjectURL(blob);
+    this.activeObjectUrls.add(url);
+    return url;
+  }
+
+  private revokeTrackedObjectUrl(url: string): void {
+    if (this.activeObjectUrls.has(url)) {
+      this.activeObjectUrls.delete(url);
+    }
+    URL.revokeObjectURL(url);
+  }
+
+  private _expedientesFiltradosCache: Expediente[] | null = null;
+  private _expedientesPorEstadoCache: { [estado: string]: Expediente[] } | null = null;
+
+  readonly trackByExpediente = (index: number, item: Expediente): string =>
+    TrackByUtils.byExpediente(index, item);
+  readonly trackById = (index: number, item: any): string =>
+    TrackByUtils.byId(index, item);
+  readonly trackByValue = (index: number, item: any): string =>
+    TrackByUtils.byValue(index, item);
+  readonly trackBySocioInvolucrado = (index: number, item: any): string =>
+    item?.socioId ? String(item.socioId) : TrackByUtils.byValue(index, item);
+  readonly trackByColumna = (index: number, item: any): string =>
+    item?.estado || String(index);
+  readonly trackByOpcion = (index: number, item: any): string =>
+    item?.key ?? item?.valor ?? String(index);
+  readonly trackByFirma = (index: number, item: any): string =>
+    item?.anioSocial ? String(item.anioSocial) : String(index);
+  readonly trackByArticulo = (index: number, item: any): string =>
+    item?.raw || item?.citaCorta || String(index);
+
+  markExpedientesDirty(): void {
+    this._expedientesFiltradosCache = null;
+    this._expedientesPorEstadoCache = null;
+    this.cdr?.markForCheck();
+  }
+
+  private _expedientes: Expediente[] = [];
+  get expedientes(): Expediente[] {
+    return this._expedientes;
+  }
+  set expedientes(val: Expediente[]) {
+    this._expedientes = val;
+    this.markExpedientesDirty();
+  }
+
+  private _vistaActual: 'kanban' | 'tabla' = 'kanban';
+  get vistaActual(): 'kanban' | 'tabla' {
+    return this._vistaActual;
+  }
+  set vistaActual(v: 'kanban' | 'tabla') {
+    this._vistaActual = v;
+    this.cdr?.markForCheck();
+  }
+  tablaExpedientes: Expediente[] = [];
+  tablaPage = 1;
+  tablaPageSize = 20;
+  tablaTotalRegistros = 0;
+  readonly pageSizeOptions = [10, 20, 50, 100];
+  usandoPaginacionTabla = false;
+
+  // Filtros explícitos (CA2 / S3-07) con invalidación reactiva de caché
+  private _filtroSocio = '';
+  get filtroSocio(): string {
+    return this._filtroSocio;
+  }
+  set filtroSocio(v: string) {
+    this._filtroSocio = v;
+    this.markExpedientesDirty();
+  }
+
+  private _filtroEstado = '';
+  get filtroEstado(): string {
+    return this._filtroEstado;
+  }
+  set filtroEstado(v: string) {
+    this._filtroEstado = v;
+    this.markExpedientesDirty();
+  }
+
+  private _filtroUrgencia = '';
+  get filtroUrgencia(): string {
+    return this._filtroUrgencia;
+  }
+  set filtroUrgencia(v: string) {
+    this._filtroUrgencia = v;
+    this.markExpedientesDirty();
+  }
+
+  private _filtroFechaDesde = `${new Date().getFullYear()}-01-01`;
+  get filtroFechaDesde(): string {
+    return this._filtroFechaDesde;
+  }
+  set filtroFechaDesde(v: string) {
+    this._filtroFechaDesde = v;
+    this.markExpedientesDirty();
+  }
+
+  private _filtroFechaHasta = '';
+  get filtroFechaHasta(): string {
+    return this._filtroFechaHasta;
+  }
+  set filtroFechaHasta(v: string) {
+    this._filtroFechaHasta = v;
+    this.markExpedientesDirty();
+  }
 
   // Ordenamiento de tabla
   columnaOrden = 'numero';
@@ -150,20 +271,56 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     { key: 'urgente', label: 'Urgente' }
   ];
 
-  // Estado de colapso de columnas
+  // Estado de colapso de columnas (Creados, Pendiente de Envío y Emitidos colapsados por defecto)
   columnasColapsadas: { [estado: string]: boolean } = {
-    emitido: false
+    creado: true,
+    pendiente_correos: true,
+    emitido: true
   };
 
+  readonly PREVIEW_COLUMN_SIZE = 5;
+  private visibleLimitPorColumna: { [estado: string]: number } = {};
+  private cargandoMasPorColumna: { [estado: string]: boolean } = {};
+  private columnServerState: Record<string, {
+    totalCount: number;
+    hasMore: boolean;
+    nextPage: number;
+    pageSize: number;
+  }> = {};
+  private boardFiltersKey: string | null = null;
+  private columnaScrolledBottom: { [estado: string]: boolean } = {};
+
   // Modales
-  modalDetalleAbierto = false;
-  modalVotacionAbierto = false;
-  modalFirmaAbierto = false;
-  modalSociosAbierto = false;
-  modalResolucionAbierto = false;
-  modalDescargoAbierto = false;
+  private _modalDetalleAbierto = false;
+  get modalDetalleAbierto(): boolean { return this._modalDetalleAbierto; }
+  set modalDetalleAbierto(v: boolean) { this._modalDetalleAbierto = v; this.cdr?.markForCheck(); }
+
+  private _modalVotacionAbierto = false;
+  get modalVotacionAbierto(): boolean { return this._modalVotacionAbierto; }
+  set modalVotacionAbierto(v: boolean) { this._modalVotacionAbierto = v; this.cdr?.markForCheck(); }
+
+  private _modalFirmaAbierto = false;
+  get modalFirmaAbierto(): boolean { return this._modalFirmaAbierto; }
+  set modalFirmaAbierto(v: boolean) { this._modalFirmaAbierto = v; this.cdr?.markForCheck(); }
+
+  private _modalSociosAbierto = false;
+  get modalSociosAbierto(): boolean { return this._modalSociosAbierto; }
+  set modalSociosAbierto(v: boolean) { this._modalSociosAbierto = v; this.cdr?.markForCheck(); }
+
+  private _modalResolucionAbierto = false;
+  get modalResolucionAbierto(): boolean { return this._modalResolucionAbierto; }
+  set modalResolucionAbierto(v: boolean) { this._modalResolucionAbierto = v; this.cdr?.markForCheck(); }
+
+  private _modalDescargoAbierto = false;
+  get modalDescargoAbierto(): boolean { return this._modalDescargoAbierto; }
+  set modalDescargoAbierto(v: boolean) { this._modalDescargoAbierto = v; this.cdr?.markForCheck(); }
+
   reglamentacionExpandida = false;
-  expedienteSeleccionado: Expediente | null = null;
+
+  private _expedienteSeleccionado: Expediente | null = null;
+  get expedienteSeleccionado(): Expediente | null { return this._expedienteSeleccionado; }
+  set expedienteSeleccionado(v: Expediente | null) { this._expedienteSeleccionado = v; this.cdr?.markForCheck(); }
+
   private elementoFocoPrevio: HTMLElement | null = null;
 
   // Votación y Reglamentos Respaldantes
@@ -301,7 +458,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     private expedienteApi: ExpedienteApiService,
     private socioApi: SocioApiService,
     private router: Router,
-    private scrollLock: ModalScrollLockService
+    private scrollLock: ModalScrollLockService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   get buscandoAntecedente(): boolean {
@@ -362,12 +520,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const sub = this.dataService.expedientes$.subscribe(list => {
-      this.expedientes = list;
-    });
+    const sub = this.dataService.expedientes$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(list => {
+        this.expedientes = list;
+      });
     this.subs.push(sub);
 
     this.subs.push(this.busquedaSocio$.pipe(
+      takeUntil(this.destroy$),
       debounceTime(300),
       distinctUntilChanged(),
       switchMap(termino => termino.trim().length < 3
@@ -379,6 +540,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     ).subscribe(socios => {
       const actuales = new Set(this.borradorAdecuacion.socios.map(s => s.id));
       this.candidatosAdecuacion = socios.filter(s => !actuales.has(s.id));
+      this.cdr?.markForCheck();
     }));
 
     this.cargarDatosTablero();
@@ -386,14 +548,16 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   cargarReglamentosDisponibles(): void {
-    this.expedienteService.listarReglamentos().subscribe({
+    this.expedienteService.listarReglamentos().pipe(takeUntil(this.destroy$)).subscribe({
       next: res => {
         this.reglamentosDisponibles = res?.reglamentos || [];
         this.articulosDisponibles = (res as any)?.articulos || [];
         this.actualizarCatalogoItemsModal();
+        this.cdr?.markForCheck();
       },
       error: err => {
         console.warn('No se pudieron cargar los reglamentos vigentes', err);
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -562,8 +726,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else {
       const socio = exp.socio || 'Socio';
       const legajo = exp.legajo || 'S/L';
-      const puntos = exp.puntos > 0 ? `+${exp.puntos}` : `${exp.puntos}`;
-      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${puntos} pts`;
+      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${this.getPuntajeSolicitadoDisplay(exp)}`;
     }
 
     return `SE RESUELVE:\nARTÍCULO 1°.- APLICAR la resolución disciplinaria correspondiente a los socios involucrados en los presentes actuados:\n${detalleInvolucrados}\n\nARTÍCULO 2°.- NOTIFICAR fehacientemente a los interesados y comunicar lo resuelto a la Comisión Directiva para su efectivo registro en el cómputo institucional de puntos.\n\nARTÍCULO 3°.- REGÍSTRESE, cúmplase con las firmas digitales colegiadas de los representantes de los años sociales y archívese en Secretaría del Tribunal de Disciplina.`;
@@ -581,6 +744,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.activeTimers.forEach(id => window.clearTimeout(id));
+    this.activeTimers.clear();
+    this.activeObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    this.activeObjectUrls.clear();
     this.scrollLock.reset();
     this.subs.forEach(s => s.unsubscribe());
     this.busquedasAntecedente.unsubscribe();
@@ -591,10 +760,189 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
     this.columnasColapsadas[estado] = !this.columnasColapsadas[estado];
+    this.cdr?.markForCheck();
   }
 
   isColumnaColapsada(estado: string): boolean {
     return !!this.columnasColapsadas[estado];
+  }
+
+  private getCurrentFiltersKey(): string {
+    return JSON.stringify({
+      socio: this.filtroSocio.trim(),
+      estado: this.filtroEstado.trim(),
+      urgencia: this.filtroUrgencia.trim(),
+      desde: this.filtroFechaDesde || '',
+      hasta: this.filtroFechaHasta || '',
+    });
+  }
+
+  private getDbStatesForUiColumn(uiEstado: EstadoExpediente): EstadoExpediente[] {
+    if (uiEstado === 'revision_resolucion') {
+      return ['revision_resolucion', 'espera_resolucion'];
+    }
+    if (uiEstado === 'pendiente_firma' || uiEstado === 'pendiente_correos') {
+      return ['pendiente_correos'];
+    }
+    return [uiEstado];
+  }
+
+  private aplicarMetadatosTablero(boardRes?: BoardResponseDTO | null): void {
+    this.columnServerState = {};
+    this.visibleLimitPorColumna = {};
+    this.cargandoMasPorColumna = {};
+    this.columnaScrolledBottom = {};
+    this.boardFiltersKey = this.getCurrentFiltersKey();
+
+    if (!boardRes || !Array.isArray(boardRes.columns)) {
+      return;
+    }
+    for (const col of boardRes.columns) {
+      const initialCases = Array.isArray(col.cases) ? col.cases.length : 0;
+      const hasMore = Boolean(col.has_more);
+      const totalCount = typeof col.total_count === 'number' ? col.total_count : initialCases;
+      const pageSize = initialCases > 0 && hasMore
+        ? Math.min(initialCases, 50)
+        : this.PREVIEW_COLUMN_SIZE;
+      const nextPage = initialCases > 0 && hasMore ? 2 : 1;
+      this.columnServerState[col.key] = {
+        totalCount,
+        hasMore,
+        nextPage,
+        pageSize,
+      };
+    }
+  }
+
+  getColumnVisibleLimit(estado: EstadoExpediente): number {
+    return this.visibleLimitPorColumna[estado] ?? this.PREVIEW_COLUMN_SIZE;
+  }
+
+  getExpedientesVisiblesPorEstado(estado: EstadoExpediente): Expediente[] {
+    return this.getExpedientesPorEstado(estado).slice(0, this.getColumnVisibleLimit(estado));
+  }
+
+  getTotalColumnCount(estado: EstadoExpediente): number {
+    const loaded = this.getExpedientesPorEstado(estado).length;
+    if (this.boardFiltersKey !== this.getCurrentFiltersKey()) {
+      return loaded;
+    }
+    if (estado === 'revision_resolucion') {
+      const rev = this.columnServerState['revision_resolucion'];
+      const esp = this.columnServerState['espera_resolucion'];
+      if (rev || esp) {
+        return Math.max((rev?.totalCount ?? 0) + (esp?.totalCount ?? 0), loaded);
+      }
+      return loaded;
+    }
+    if (estado === 'pendiente_firma') {
+      const explicitFirma = this.columnServerState['pendiente_firma'];
+      return explicitFirma ? Math.max(explicitFirma.totalCount, loaded) : loaded;
+    }
+    if (estado === 'pendiente_correos') {
+      const correos = this.columnServerState['pendiente_correos'];
+      if (!correos || !correos.hasMore) {
+        return loaded;
+      }
+      const firmaLoaded = this.getExpedientesPorEstado('pendiente_firma').length;
+      return Math.max(correos.totalCount - firmaLoaded, loaded);
+    }
+    const meta = this.columnServerState[estado];
+    return meta ? Math.max(meta.totalCount, loaded) : loaded;
+  }
+
+  tieneMasEnColumna(estado: EstadoExpediente): boolean {
+    const loaded = this.getExpedientesPorEstado(estado).length;
+    if (loaded > this.getColumnVisibleLimit(estado)) {
+      return true;
+    }
+    if (this.boardFiltersKey !== this.getCurrentFiltersKey()) {
+      return false;
+    }
+    return this.getDbStatesForUiColumn(estado).some(
+      dbEstado => Boolean(this.columnServerState[dbEstado]?.hasMore)
+    );
+  }
+
+  estaCargandoMas(estado: EstadoExpediente): boolean {
+    return Boolean(this.cargandoMasPorColumna[estado]);
+  }
+
+  onColumnaScroll(estado: EstadoExpediente, event: Event): void {
+    const el = event?.target as HTMLElement | null;
+    if (!el) return;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+    if (this.columnaScrolledBottom[estado] !== atBottom) {
+      this.columnaScrolledBottom[estado] = atBottom;
+      this.cdr?.markForCheck();
+    }
+  }
+
+  mostrarMasEnColumna(estado: EstadoExpediente): void {
+    if (this.cargandoMasPorColumna[estado]) return;
+    const loaded = this.getExpedientesPorEstado(estado);
+    const currentLimit = this.getColumnVisibleLimit(estado);
+
+    if (loaded.length > currentLimit) {
+      this.visibleLimitPorColumna[estado] = currentLimit + this.PREVIEW_COLUMN_SIZE;
+      this.cdr?.markForCheck();
+      return;
+    }
+
+    const targetDbState = this.getDbStatesForUiColumn(estado).find(
+      dbEstado => Boolean(this.columnServerState[dbEstado]?.hasMore)
+    );
+    if (!targetDbState) return;
+
+    const serverMeta = this.columnServerState[targetDbState];
+    this.cargandoMasPorColumna[estado] = true;
+    this.cdr?.markForCheck();
+
+    this.dataService
+      .listarExpedientes({
+        estado: targetDbState,
+        page: serverMeta.nextPage,
+        page_size: serverMeta.pageSize,
+        ordering: '-created_at',
+        search: this.filtroSocio.trim() || undefined,
+        urgencia: this.filtroUrgencia.trim() || undefined,
+        fecha_desde: this.filtroFechaDesde || undefined,
+        fecha_hasta: this.filtroFechaHasta || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const nuevos = Array.isArray(res?.results) ? res.results : [];
+          const porId = new Map<string, Expediente>();
+          for (const item of this.expedientes) {
+            porId.set(String(item.id), item);
+          }
+          for (const item of nuevos) {
+            porId.set(String(item.id), item);
+          }
+          this.expedientes = Array.from(porId.values());
+
+          serverMeta.hasMore =
+            Boolean(res?.next) ||
+            (typeof res?.current_page === 'number' &&
+              typeof res?.total_pages === 'number' &&
+              res.current_page < res.total_pages);
+          serverMeta.nextPage += 1;
+
+          const totalCargadosAhora = this.getExpedientesPorEstado(estado).length;
+          this.visibleLimitPorColumna[estado] = Math.max(
+            currentLimit + this.PREVIEW_COLUMN_SIZE,
+            totalCargadosAhora
+          );
+          this.cargandoMasPorColumna[estado] = false;
+          this.cdr?.markForCheck();
+        },
+        error: () => {
+          this.cargandoMasPorColumna[estado] = false;
+          this.notifications.error('No se pudieron cargar más expedientes de esta etapa.');
+          this.cdr?.markForCheck();
+        },
+      });
   }
 
   // Columnas visibles del tablero Kanban según filtro
@@ -619,17 +967,28 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (this.filtroFechaDesde) filtros.fecha_desde = this.filtroFechaDesde;
     if (this.filtroFechaHasta) filtros.fecha_hasta = this.filtroFechaHasta;
 
-    this.dataService.obtenerTablero(filtros).subscribe({
-      next: () => {
+    this.dataService.obtenerTablero(filtros).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (boardRes) => {
+        this.aplicarMetadatosTablero(boardRes);
         this.cargando = false;
+        this.cdr?.markForCheck();
       },
       error: () => {
         // En caso de error o backend no disponible, se mantiene la colección local
         this.cargando = false;
         this.failedToLoadBoard = true;
         this.notifications.error('No se pudo cargar el tablero. Intentá nuevamente.');
+        this.cdr?.markForCheck();
       }
     });
+  }
+
+  refrescarVistaActual(): void {
+    if (this.vistaActual === 'tabla') {
+      this.cargarTablaPaginada();
+    } else {
+      this.cargarDatosTablero();
+    }
   }
 
   limpiarFiltros(): void {
@@ -638,10 +997,103 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.filtroUrgencia = '';
     this.filtroFechaDesde = '';
     this.filtroFechaHasta = '';
-    this.cargarDatosTablero();
+    this.tablaPage = 1;
+    this.refrescarVistaActual();
+  }
+
+  cambiarVista(vista: 'kanban' | 'tabla'): void {
+    this.vistaActual = vista;
+    if (vista === 'tabla') {
+      this.tablaPage = 1;
+      this.cargarTablaPaginada();
+    } else {
+      this.cargarDatosTablero();
+    }
+    this.cdr?.markForCheck();
+  }
+
+  aplicarFiltros(): void {
+    this.tablaPage = 1;
+    this.refrescarVistaActual();
+  }
+
+  private buildServerOrdering(): string {
+    const campoMap: Record<string, string> = {
+      numero: 'numero',
+      titulo: 'titulo',
+      creador: 'created_at',
+      cantidadSocios: 'created_at',
+      fechaCreacion: 'created_at',
+      puntos: 'puntos',
+      urgencia: 'urgencia',
+      estado: 'estado',
+    };
+    const campo = campoMap[this.columnaOrden] || 'created_at';
+    return this.ordenAscendente ? campo : `-${campo}`;
+  }
+
+  cargarTablaPaginada(): void {
+    this.cargando = true;
+    this.cdr?.markForCheck();
+    this.dataService
+      .listarExpedientes({
+        page: this.tablaPage,
+        page_size: this.tablaPageSize,
+        ordering: this.buildServerOrdering(),
+        search: this.filtroSocio.trim() || undefined,
+        estado: this.filtroEstado.trim() || undefined,
+        urgencia: this.filtroUrgencia.trim() || undefined,
+        fecha_desde: this.filtroFechaDesde || undefined,
+        fecha_hasta: this.filtroFechaHasta || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.tablaExpedientes = res?.results || [];
+          this.tablaTotalRegistros =
+            typeof res?.count === 'number' ? res.count : this.tablaExpedientes.length;
+          this.usandoPaginacionTabla = true;
+          this.cargando = false;
+          this.cdr?.markForCheck();
+        },
+        error: () => {
+          this.usandoPaginacionTabla = false;
+          this.cargando = false;
+          this.cdr?.markForCheck();
+        },
+      });
+  }
+
+  onTablaPageChange(event: PageEvent): void {
+    const sizeChanged = event.pageSize !== this.tablaPageSize;
+    this.tablaPageSize = event.pageSize;
+    this.tablaPage = sizeChanged ? 1 : event.pageIndex + 1;
+    if (
+      this.usandoPaginacionTabla ||
+      sizeChanged ||
+      this.expedientesFiltrados.length > this.tablaPageSize
+    ) {
+      this.cargarTablaPaginada();
+    }
+    this.cdr?.markForCheck();
+  }
+
+  get expedientesTablaPaginados(): Expediente[] {
+    if (this.usandoPaginacionTabla) {
+      return this.tablaExpedientes;
+    }
+    const lista = this.expedientesFiltrados;
+    if (lista.length <= this.tablaPageSize && this.tablaPage === 1) {
+      return lista;
+    }
+    const inicio = (this.tablaPage - 1) * this.tablaPageSize;
+    return lista.slice(inicio, inicio + this.tablaPageSize);
   }
 
   get expedientesFiltrados(): Expediente[] {
+    if (this._expedientesFiltradosCache) {
+      return this._expedientesFiltradosCache;
+    }
     let result = [...this.expedientes];
 
     // Filtro por socio/creador/título en memoria (fallback / reactivo)
@@ -711,20 +1163,29 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       return 0;
     });
 
+    this._expedientesFiltradosCache = result;
     return result;
   }
 
   getExpedientesPorEstado(estado: EstadoExpediente): Expediente[] {
+    if (!this._expedientesPorEstadoCache) {
+      this._expedientesPorEstadoCache = {};
+    }
+    if (this._expedientesPorEstadoCache[estado]) {
+      return this._expedientesPorEstadoCache[estado];
+    }
+    let filtered: Expediente[];
     if (estado === 'revision_resolucion') {
-      return this.expedientesFiltrados.filter(e => e.estado === 'revision_resolucion' || e.estado === 'espera_resolucion');
+      filtered = this.expedientesFiltrados.filter(e => e.estado === 'revision_resolucion' || e.estado === 'espera_resolucion');
+    } else if (estado === 'pendiente_firma') {
+      filtered = this.expedientesFiltrados.filter(e => e.estado === 'pendiente_firma' || (e.estado === 'pendiente_correos' && (!e.firmas || !e.firmas.juecesFirmantes || e.firmas.juecesFirmantes.length < 3)));
+    } else if (estado === 'pendiente_correos') {
+      filtered = this.expedientesFiltrados.filter(e => (e.estado === 'pendiente_correos' && (!!e.firmas && !!e.firmas.juecesFirmantes && e.firmas.juecesFirmantes.length >= 3)) || (e.estado as string) === 'pendiente_envio');
+    } else {
+      filtered = this.expedientesFiltrados.filter(e => e.estado === estado);
     }
-    if (estado === 'pendiente_firma') {
-      return this.expedientesFiltrados.filter(e => e.estado === 'pendiente_firma' || (e.estado === 'pendiente_correos' && (!e.firmas || !e.firmas.juecesFirmantes || e.firmas.juecesFirmantes.length < 3)));
-    }
-    if (estado === 'pendiente_correos') {
-      return this.expedientesFiltrados.filter(e => (e.estado === 'pendiente_correos' && (!!e.firmas && !!e.firmas.juecesFirmantes && e.firmas.juecesFirmantes.length >= 3)) || (e.estado as string) === 'pendiente_envio');
-    }
-    return this.expedientesFiltrados.filter(e => e.estado === estado);
+    this._expedientesPorEstadoCache[estado] = filtered;
+    return filtered;
   }
 
   cambiarOrden(col: string): void {
@@ -733,6 +1194,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else {
       this.columnaOrden = col;
       this.ordenAscendente = true;
+    }
+    this.tablaPage = 1;
+    this.markExpedientesDirty();
+    if (this.vistaActual === 'tabla' && this.usandoPaginacionTabla) {
+      this.cargarTablaPaginada();
     }
   }
 
@@ -747,13 +1213,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
     const labelDestino = this.getEstadoLabel(nuevoEstado);
-    this.dataService.transicionarExpediente(exp.id, nuevoEstado).subscribe({
+    this.dataService.transicionarExpediente(exp.id, nuevoEstado).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.mostrarNotificacion(`Expediente ${exp.numero} transicionado a "${labelDestino}".`);
-        this.cargarDatosTablero();
+        this.refrescarVistaActual();
+        this.cdr?.markForCheck();
       },
       error: (err) => {
         this.notifications.error(httpErrorMessage(err, 'No se pudo realizar la transición.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -932,14 +1400,17 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   cargarHistorialT01(expedienteId: number | string): void {
     this.cargandoT01 = true;
-    this.expedienteApi.obtenerHistorialT01(expedienteId).subscribe({
+    this.cdr?.markForCheck();
+    this.expedienteApi.obtenerHistorialT01(expedienteId).pipe(takeUntil(this.destroy$)).subscribe({
       next: historial => {
         this.cargandoT01 = false;
         this.aplicarHistorialT01(historial);
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.cargandoT01 = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el historial del T01.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1006,12 +1477,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       return;
     }
     this.adecuando = true;
+    this.cdr?.markForCheck();
     this.expedienteApi.adecuarT01(this.expedienteSeleccionado.id, {
       puntos: Number(borrador.puntos),
       socios: borrador.socios.map(s => s.id),
       motivos,
       reabrir_plazo: borrador.reabrirPlazo
-    }).subscribe({
+    }).pipe(takeUntil(this.destroy$)).subscribe({
       next: historial => {
         this.adecuando = false;
         this.aplicarHistorialT01(historial);
@@ -1024,11 +1496,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
             ? 'Adecuación registrada. Se abrió un nuevo plazo de apelación y se notificaron los motivos.'
             : 'Adecuación registrada. Se notificaron los motivos al solicitante y a los involucrados.'
         );
-        this.cargarDatosTablero();
+        this.refrescarVistaActual();
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.adecuando = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la adecuación.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1053,14 +1527,17 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   cargarComposicion(expedienteId: number | string): void {
     this.cargandoComposicion = true;
-    this.expedienteApi.obtenerComposicionTribunal(expedienteId).subscribe({
+    this.cdr?.markForCheck();
+    this.expedienteApi.obtenerComposicionTribunal(expedienteId).pipe(takeUntil(this.destroy$)).subscribe({
       next: composicion => {
         this.cargandoComposicion = false;
         this.composicion = composicion;
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.cargandoComposicion = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la composición del Tribunal.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1072,7 +1549,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   cargarJustificaciones(expedienteId: number | string): void {
     this.cargandoJustificaciones = true;
-    this.expedienteApi.obtenerDetalleExpediente(expedienteId).subscribe({
+    this.cdr?.markForCheck();
+    this.expedienteApi.obtenerDetalleExpediente(expedienteId).pipe(takeUntil(this.destroy$)).subscribe({
       next: detalle => {
         this.involucradosJustificacion = this.construirInvolucrados(detalle);
         if (this.expedienteSeleccionado) {
@@ -1109,10 +1587,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           }
         }
         this.cargandoJustificaciones = false;
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.cargandoJustificaciones = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar las justificaciones.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1211,9 +1691,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!this.expedienteSeleccionado) return;
     // La ventana se abre en el gesto del usuario para que el navegador no la bloquee.
     const ventana = window.open('', '_blank');
-    this.expedienteApi.descargarEvidencia(this.expedienteSeleccionado.id, evidencia.id).subscribe({
+    this.expedienteApi.descargarEvidencia(this.expedienteSeleccionado.id, evidencia.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: blob => {
-        const url = URL.createObjectURL(blob);
+        const url = this.createTrackedObjectUrl(blob);
         if (ventana) {
           ventana.location.href = url;
         } else {
@@ -1222,7 +1702,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           enlace.download = evidencia.nombre_original || 'comprobante';
           enlace.click();
         }
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        this.scheduleTimer(() => this.revokeTrackedObjectUrl(url), 60000);
       },
       error: err => {
         ventana?.close();
@@ -1246,21 +1726,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
 
     this.registrandoCausal = true;
+    this.cdr?.markForCheck();
     this.expedienteApi.registrarDecisionCausal(this.expedienteSeleccionado.id, descargo.id, {
       decision: borrador.decision,
       fundamento,
       // Se valoran los comprobantes vigentes que el miembro del TD puede inspeccionar en el panel.
       evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
-    }).subscribe({
+    }).pipe(takeUntil(this.destroy$)).subscribe({
       next: decision => {
         this.registrandoCausal = false;
         descargo.decisiones_causal = [decision, ...(descargo.decisiones_causal || [])];
         this.borradorCausal = { decision: '', fundamento: '' };
         this.notifications.success(`Decisión registrada (versión ${decision.version}).`);
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.registrandoCausal = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la decisión.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1274,8 +1757,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   buscarAntecedenteT03(numero: string): void {
     this.busquedasEnCurso++;
+    this.cdr?.markForCheck();
     const busqueda = this.expedienteApi.buscarAntecedente(numero).pipe(
-      finalize(() => this.busquedasEnCurso--)
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.busquedasEnCurso--;
+        this.cdr?.markForCheck();
+      })
     ).subscribe({
       next: antecedente => {
         // El número admite varias escrituras: el repetido sólo se detecta con la ficha.
@@ -1284,6 +1772,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           return;
         }
         this.antecedentesT03 = [...this.antecedentesT03, antecedente];
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.notifications.error(httpErrorMessage(err, 'No se pudo consultar el antecedente.'));
@@ -1301,7 +1790,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!this.expedienteSeleccionado || !descargo || this.registrandoValoracion) return;
 
     this.registrandoValoracion = true;
-    this.expedienteApi.registrarValoracionT03(this.expedienteSeleccionado.id, descargo.id, payload).subscribe({
+    this.cdr?.markForCheck();
+    this.expedienteApi.registrarValoracionT03(this.expedienteSeleccionado.id, descargo.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
       next: valoracion => {
         this.registrandoValoracion = false;
         descargo.valoraciones_t03 = [valoracion, ...(descargo.valoraciones_t03 || [])];
@@ -1310,12 +1800,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           this.descartarBorradorT03();
         }
         this.notifications.success(`Valoración registrada (versión ${valoracion.version}).`);
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.registrandoValoracion = false;
         // El 503 trae un mensaje pensado para el miembro; el resto de los 5xx sigue siendo genérico.
         const motivo = err?.status === 503 ? err.error?.detail : null;
         this.notifications.error(motivo || httpErrorMessage(err, 'No se pudo registrar la valoración.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1372,7 +1864,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.seResuelveTexto = exp.seResuelve || exp.votacion?.seResuelve || this.construirSeResuelvePorDefecto(exp);
 
     if (exp.id && !isNaN(Number(exp.id))) {
-      this.expedienteApi.obtenerResolucion(exp.id).subscribe({
+      this.expedienteApi.obtenerResolucion(exp.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: res => {
           if (res) {
             if (res.vistos) this.vistosTexto = res.vistos;
@@ -1386,8 +1878,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
               this.expedientesSeleccionadosResolucion = [...res.expedientes_referenciados_detalle];
             }
           }
+          this.cdr?.markForCheck();
         },
-        error: () => {}
+        error: () => {
+          this.cdr?.markForCheck();
+        }
       });
     }
   }
@@ -1435,16 +1930,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   cargarCatalogoExpedientes(): void {
     this.cargandoCatalogoExpedientes = true;
+    this.cdr?.markForCheck();
     const excludeId = this.expedienteSeleccionado?.id ? Number(this.expedienteSeleccionado.id) : undefined;
-    this.expedienteApi.listarCatalogoAntecedentes({ exclude_id: excludeId }).subscribe({
+    this.expedienteApi.listarCatalogoAntecedentes({ exclude_id: excludeId }).pipe(takeUntil(this.destroy$)).subscribe({
       next: catalogo => {
         this.catalogoExpedientesModal = catalogo;
         this.cargandoCatalogoExpedientes = false;
         this.catalogoExpedientesCargado = true;
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.cargandoCatalogoExpedientes = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el catálogo de expedientes.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1516,10 +2014,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   private enfocarModalActivo(): void {
+    this.cdr?.markForCheck();
     if (!this.elementoFocoPrevio && typeof document !== 'undefined') {
       this.elementoFocoPrevio = document.activeElement as HTMLElement;
     }
-    setTimeout(() => {
+    this.scheduleTimer(() => {
       if (typeof document === 'undefined') return;
       const activeDialog = document.querySelector(
         '.modal-backdrop-custom .modal-dialog-custom'
@@ -1678,46 +2177,53 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       this.guardandoResolucion = false;
       this.mostrarNotificacion('Resolución oficial generada con éxito. Expediente pasa a Pendiente de Firma.');
       this.cerrarModales();
-      this.cargarDatosTablero();
+      this.refrescarVistaActual();
     };
 
     if (exp.id && !isNaN(Number(exp.id))) {
-      this.expedienteApi.crearResolucion(exp.id, payload).subscribe({
+      this.expedienteApi.crearResolucion(exp.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
         next: res => {
           actualizarLocalYFinalizar(res?.contenido_hash);
+          this.cdr?.markForCheck();
         },
         error: (errCrear) => {
           // Si ya existe borrador previo (409 Conflict), actualizar mediante PATCH
           if (errCrear?.status === 409) {
-            this.expedienteApi.actualizarResolucion(exp.id, payload).subscribe({
-              next: res => actualizarLocalYFinalizar(res?.contenido_hash),
+            this.expedienteApi.actualizarResolucion(exp.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
+              next: res => {
+                actualizarLocalYFinalizar(res?.contenido_hash);
+                this.cdr?.markForCheck();
+              },
               error: (errPatch) => {
                 this.guardandoResolucion = false;
                 this.notifications.error(httpErrorMessage(errPatch, 'Error al actualizar la resolución oficial.'));
+                this.cdr?.markForCheck();
               }
             });
           } else {
             this.guardandoResolucion = false;
             this.notifications.error(httpErrorMessage(errCrear, 'Error al generar la resolución oficial en el servidor.'));
+            this.cdr?.markForCheck();
           }
         }
       });
     } else {
       actualizarLocalYFinalizar();
+      this.cdr?.markForCheck();
     }
   }
 
   descargarPdfResolucion(): void {
     if (!this.expedienteSeleccionado) return;
     const expId = this.expedienteSeleccionado.id;
-    this.expedienteApi.descargarPreviewResolucionPdf(expId).subscribe({
+    this.expedienteApi.descargarPreviewResolucionPdf(expId).pipe(takeUntil(this.destroy$)).subscribe({
       next: blob => {
-        const url = URL.createObjectURL(blob);
+        const url = this.createTrackedObjectUrl(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `resolucion-${expId}.pdf`;
         a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        this.scheduleTimer(() => this.revokeTrackedObjectUrl(url), 10000);
       },
       error: err => {
         this.notifications.error(httpErrorMessage(err, 'No se pudo descargar la vista previa de la resolución en PDF.'));
@@ -1729,6 +2235,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!this.expedienteSeleccionado || this.firmando) return;
     const exp = this.expedienteSeleccionado;
     this.firmando = true;
+    this.cdr?.markForCheck();
 
     const finalizarExito = (firmasActualizadas: string[], estadoRes?: string, hash?: string, issuedAt?: string) => {
       exp.firmas = {
@@ -1745,11 +2252,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       }
       this.firmando = false;
       this.cerrarModales();
-      this.cargarDatosTablero();
+      this.refrescarVistaActual();
+      this.cdr?.markForCheck();
     };
 
     if (exp.id && !isNaN(Number(exp.id))) {
-      this.expedienteApi.firmarResolucionOficial(exp.id).subscribe({
+      this.expedienteApi.firmarResolucionOficial(exp.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: res => {
           const firmas = Array.isArray(res.firmantes_td)
             ? res.firmantes_td.map(f => typeof f === 'string' ? f : (f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`))
@@ -1843,17 +2351,19 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   cambiarUrgenciaExpediente(nuevaUrgencia: NivelUrgencia): void {
     if (!this.expedienteSeleccionado) return;
     const label = this.getUrgenciaLabel(nuevaUrgencia);
-    this.dataService.actualizarUrgencia(this.expedienteSeleccionado.id, nuevaUrgencia).subscribe({
+    this.dataService.actualizarUrgencia(this.expedienteSeleccionado.id, nuevaUrgencia).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         if (this.expedienteSeleccionado) {
           this.expedienteSeleccionado.urgencia = nuevaUrgencia;
           this.expedienteSeleccionado.urgenciaDisplay = label;
         }
         this.mostrarNotificacion(`Urgencia actualizada a "${label}" exitosamente.`);
-        this.cargarDatosTablero();
+        this.refrescarVistaActual();
+        this.cdr?.markForCheck();
       },
       error: (err) => {
         this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar la urgencia.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -1955,12 +2465,36 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return actual.rank < 0 ? 'Sanción' : 'Mérito';
   }
 
+  isLlamadoAtencion(exp: Expediente | null | undefined): boolean {
+    if (!exp) return false;
+    if (exp.esLlamado) return true;
+    const solicitado = exp.puntaje_solicitado ?? exp.puntajeSolicitado;
+    if (solicitado === 'LLAMADO_ATENCION') return true;
+    const p = Number(exp.puntos);
+    return !Number.isNaN(p) && (Math.abs(p - (-0.25)) < 0.01 || Math.abs(p - (-0.33)) < 0.01);
+  }
+
+  isFelicitacion(exp: Expediente | null | undefined): boolean {
+    if (!exp) return false;
+    if (exp.esFelicitacion) return true;
+    const solicitado = exp.puntaje_solicitado ?? exp.puntajeSolicitado;
+    if (solicitado === 'FELICITACION') return true;
+    const p = Number(exp.puntos);
+    return !Number.isNaN(p) && (Math.abs(p - 0.25) < 0.01 || Math.abs(p - 0.33) < 0.01);
+  }
+
+  getClasePuntajeExpediente(exp: Expediente | null | undefined): string {
+    if (this.isFelicitacion(exp) || (exp?.puntos ?? 0) > 0) return 'text-success';
+    if (this.isLlamadoAtencion(exp)) return 'text-warning';
+    return 'text-danger';
+  }
+
   getPuntajeSolicitadoDisplay(exp: Expediente | null | undefined): string {
     if (!exp) return '0 pts';
-    if (exp.puntaje_solicitado === 'LLAMADO_ATENCION' || exp.puntos === -0.25) {
-      return 'Llamado de Atención';
+    if (this.isLlamadoAtencion(exp)) {
+      return 'Llamado de atención';
     }
-    if (exp.puntaje_solicitado === 'FELICITACION' || exp.puntos === 0.25) {
+    if (this.isFelicitacion(exp)) {
       return 'Felicitación';
     }
     const p = exp.puntos ?? 0;
@@ -2163,6 +2697,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     }
 
     this.guardandoDescargo = true;
+    this.cdr?.markForCheck();
     const decision: DecisionCausal =
       actual.rank >= pedido && actual.rank >= 0 ? 'ACCEPTED' : (descargo.regla_sugerida || 'ACCEPTED');
 
@@ -2171,7 +2706,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       fundamento,
       puntaje_final: puntajeFinalPayload,
       evidencia_ids: (descargo.evidencias || []).map(ev => ev.id)
-    }).subscribe({
+    }).pipe(takeUntil(this.destroy$)).subscribe({
       next: (resp) => {
         this.guardandoDescargo = false;
         descargo.leido = true;
@@ -2181,11 +2716,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         }
         this.notifications.success('Evaluación del descargo guardada con éxito.');
         this.volverADetalleDesdeDescargo();
+        this.cdr?.markForCheck();
       },
       error: (err) => {
         this.guardandoDescargo = false;
         if (err.status === 400 && err.error?.detail) {
           this.notifications.error(err.error.detail);
+          this.cdr?.markForCheck();
           return;
         }
         // Fallback local en entornos mock / dev
@@ -2193,6 +2730,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         descargo.puntaje_ratificado = puntajeFinalPayload;
         this.notifications.success('Evaluación del descargo guardada.');
         this.volverADetalleDesdeDescargo();
+        this.cdr?.markForCheck();
       }
     });
   }

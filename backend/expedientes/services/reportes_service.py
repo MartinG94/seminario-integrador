@@ -289,14 +289,26 @@ class ReportesService:
             .order_by("-pts_ciclo")
         )
 
+        top_socios = list(socios_qs[:15])
+        socio_usernames = []
+        for s in top_socios:
+            try:
+                socio_usernames.append(int(s.user.username))
+            except (ValueError, TypeError, AttributeError):
+                pass
+
+        pg_map = {}
+        if socio_usernames:
+            for pg in PuntajeGeneral.objects.filter(socio_id__in=socio_usernames):
+                pg_map[pg.socio_id] = float(pg.puntos)
+
         tabla_socios: list[dict[str, Any]] = []
         pos = 1
-        for s in socios_qs[:15]:
+        for s in top_socios:
             pts_ciclo_val = float(s.pts_ciclo or Decimal("0.00"))
-            # Puntos totales acumulados (desde PuntajeGeneral si existe, o estimado)
             try:
-                pg = PuntajeGeneral.objects.filter(socio_id=int(s.user.username)).first()
-                pts_totales_val = float(pg.puntos) if pg else pts_ciclo_val
+                uid = int(s.user.username)
+                pts_totales_val = pg_map.get(uid, pts_ciclo_val)
             except Exception:
                 pts_totales_val = pts_ciclo_val
 

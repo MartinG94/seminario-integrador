@@ -1,4 +1,14 @@
-import { Component, OnInit, OnDestroy, Renderer2 } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  NgZone,
+  OnInit,
+  OnDestroy,
+  Optional,
+  Renderer2
+} from '@angular/core';
+import { PageEvent } from '@angular/material/paginator';
 import { TribunalDataService, Expediente, LogJustificativo } from '../services/tribunal-data.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
@@ -12,7 +22,8 @@ import {
   PeriodoApelacionDTO,
   ResolucionPublicadaDTO
 } from '../services/expediente-api.service';
-import { Subscription, interval } from 'rxjs';
+import { Subject, Subscription, interval } from 'rxjs';
+import { distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { formatCaseNumber, humanizeEstado } from '../utils/case-number.util';
 import {
   parseReglamentoCite,
@@ -20,14 +31,55 @@ import {
   ReglamentoCiteView
 } from '../utils/reglamento-format.util';
 import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
+import { TrackByUtils } from '../utils/track-by.util';
 
 @Component({
   selector: 'app-mis-expedientes',
   templateUrl: './mis-expedientes.component.html',
-  styleUrls: ['./mis-expedientes.component.scss']
+  styleUrls: ['./mis-expedientes.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MisExpedientesComponent implements OnInit, OnDestroy {
-  misExpedientes: Expediente[] = [];
+  private readonly destroy$ = new Subject<void>();
+  private readonly activeTimers = new Set<number>();
+  private _expedientesOrdenadosCache: Expediente[] | null = null;
+
+  private scheduleTimer(fn: () => void, delayMs: number): void {
+    const id = window.setTimeout(() => {
+      this.activeTimers.delete(id);
+      fn();
+    }, delayMs);
+    this.activeTimers.add(id);
+  }
+
+  markOrdenadosDirty(): void {
+    this._expedientesOrdenadosCache = null;
+  }
+
+  readonly trackByExpediente = (index: number, item: Expediente): string =>
+    TrackByUtils.byExpediente(index, item);
+  readonly trackById = (index: number, item: any): string =>
+    TrackByUtils.byId(index, item);
+  readonly trackByValue = (index: number, item: any): string =>
+    TrackByUtils.byValue(index, item);
+  readonly trackByAdecuacion = (index: number, a: any): string =>
+    a?.version ? String(a.version) : TrackByUtils.byId(index, a);
+  readonly trackByEvidencia = (index: number, ev: any): string =>
+    ev?.id ? String(ev.id) : (ev?.nombre_original || ev?.name || String(index));
+  readonly trackByLog = (index: number, log: any): string =>
+    log?.id ? String(log.id) : `${log?.timestamp || ''}_${log?.operacion || ''}_${index}`;
+  readonly trackByFile = (index: number, file: any): string =>
+    file ? (file.name + '_' + file.size) : String(index);
+
+  private _misExpedientes: Expediente[] = [];
+  get misExpedientes(): Expediente[] {
+    return this._misExpedientes;
+  }
+  set misExpedientes(v: Expediente[]) {
+    this._misExpedientes = v;
+    this.markOrdenadosDirty();
+  }
+
   socioActual = '';
   saldoNeto = 0;
   felicitaciones = 0;
@@ -39,13 +91,23 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   cargandoResolucion = false;
   descargandoResolucionPdf = false;
 
-  // Ordenamiento de tabla
+  // Ordenamiento y paginación server-side de tabla
   columnaOrden = 'numero';
   ordenAscendente = true;
   filtroTab: 'todos' | 'en_tramite' | 'resueltos' = 'todos';
+  paginaActual = 1;
+  tamanoPagina = 20;
+  totalRegistros = 0;
+  readonly pageSizeOptions = [10, 20, 50, 100];
+  serverPaginated = false;
 
   setFiltroTab(tab: 'todos' | 'en_tramite' | 'resueltos'): void {
     this.filtroTab = tab;
+    this.paginaActual = 1;
+    this.markOrdenadosDirty();
+    if (this.serverPaginated) {
+      this.cargarMisExpedientes();
+    }
   }
 
   get cantidadEnTramite(): number {
@@ -91,23 +153,82 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     private renderer: Renderer2,
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService,
-    private scrollLock: ModalScrollLockService
+    private scrollLock: ModalScrollLockService,
+    private cdr: ChangeDetectorRef,
+    @Optional() private ngZone?: NgZone
   ) {}
 
   ngOnInit(): void {
-    const subPerfil = this.auth.perfil$.subscribe(perfil => {
-      this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
-      this.cargarMisExpedientes();
-      this.cargarSaldo();
-    });
+    const subPerfil = this.auth.perfil$
+      .pipe(
+        distinctUntilChanged((a, b) =>
+          (a?.legajo ?? '') === (b?.legajo ?? '') &&
+          (a?.first_name ?? '') === (b?.first_name ?? '') &&
+          (a?.last_name ?? '') === (b?.last_name ?? '') &&
+          (a?.role ?? '') === (b?.role ?? '')
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(perfil => {
+        this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
+        this.cargarMisExpedientes();
+        this.cargarSaldo();
+        this.cdr?.markForCheck();
+      });
     this.subs.push(subPerfil);
 
-    // Actualizador dinámico del reloj cada segundo (evita memory leaks desuscribiéndose en ngOnDestroy)
-    this.tickerSub = interval(1000).subscribe(() => {
-      this.ahoraMs = Date.now();
-    });
+    // Actualizador dinámico del reloj fuera de NgZone para evitar detección global cada 1s sin plazos activos
+    const startTicker = () => {
+      this.tickerSub = interval(1000).pipe(takeUntil(this.destroy$)).subscribe(() => {
+        const hayPlazoActivo =
+          this.modalDetalleAbierto ||
+          this.misExpedientes.some(
+            e => (e.estado === 'justificando' && !this.esPlazoVencido(e)) || (e.esT01 && e.estado !== 'emitido')
+          );
+        if (!hayPlazoActivo) {
+          return;
+        }
+        const actualizar = () => {
+          this.ahoraMs = Date.now();
+          this.cdr?.markForCheck();
+        };
+        if (this.ngZone) {
+          this.ngZone.run(actualizar);
+        } else {
+          actualizar();
+        }
+      });
+    };
+    if (this.ngZone) {
+      this.ngZone.runOutsideAngular(startTicker);
+    } else {
+      startTicker();
+    }
+  }
 
-    this.cargarMisExpedientes();
+  private buildServerOrdering(): string {
+    const campoMap: Record<string, string> = {
+      numero: 'numero',
+      titulo: 'titulo',
+      fechaCreacion: 'created_at',
+      fecha: 'created_at',
+      puntos: 'puntos',
+      urgencia: 'urgencia',
+      estado: 'estado',
+      involucrados: 'created_at',
+    };
+    const campo = campoMap[this.columnaOrden] || 'created_at';
+    return this.ordenAscendente ? campo : `-${campo}`;
+  }
+
+  onPageChange(event: PageEvent): void {
+    const sizeChanged = event.pageSize !== this.tamanoPagina;
+    this.tamanoPagina = event.pageSize;
+    this.paginaActual = sizeChanged ? 1 : event.pageIndex + 1;
+    this.markOrdenadosDirty();
+    if (this.serverPaginated || sizeChanged || this.totalRegistros > this.misExpedientes.length) {
+      this.cargarMisExpedientes();
+    }
   }
 
   /**
@@ -115,24 +236,52 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
    * una respuesta vacía o fallida nunca se reemplaza por otra lista local.
    */
   cargarMisExpedientes(): void {
-    this.expedienteApi.listarMisExpedientes().subscribe({
-      next: (expedientesApi) => {
-        this.misExpedientes = Array.isArray(expedientesApi)
-          ? expedientesApi.map(e => this.mapearExpedienteApi(e))
-          : [];
-        this.sincronizarDetalleAbierto();
-      },
-      error: err => {
-        this.misExpedientes = [];
-        this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar tus expedientes.'));
-      }
-    });
+    this.expedienteApi
+      .listarMisExpedientes({
+        page: this.paginaActual,
+        page_size: this.tamanoPagina,
+        ordering: this.buildServerOrdering(),
+        estado: this.filtroTab === 'resueltos' ? 'emitido' : undefined,
+        estado_ne: this.filtroTab === 'en_tramite' ? 'emitido' : undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (expedientesApi: any) => {
+          const isArrayResp = Array.isArray(expedientesApi);
+          const items = isArrayResp
+            ? expedientesApi
+            : (expedientesApi?.results ?? []);
+          const countVal =
+            !isArrayResp && typeof expedientesApi?.count === 'number'
+              ? expedientesApi.count
+              : items.length;
+          this.totalRegistros = countVal;
+          this.serverPaginated =
+            !isArrayResp && typeof expedientesApi?.count === 'number';
+
+          this.misExpedientes = Array.isArray(items)
+            ? items.map((e: any) => this.mapearExpedienteApi(e))
+            : [];
+          this.sincronizarDetalleAbierto();
+          this.cdr?.markForCheck();
+        },
+        error: err => {
+          this.serverPaginated = false;
+          this.misExpedientes = [];
+          this.totalRegistros = 0;
+          this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar tus expedientes.'));
+          this.cdr?.markForCheck();
+        }
+      });
   }
 
   /** Saldo y llamados/felicitaciones pendientes del libro mayor (Spec 011, RF-12). */
   cargarSaldo(): void {
-    this.expedienteApi.obtenerMiSaldo().subscribe({
-      next: saldo => this.aplicarSaldo(saldo),
+    this.expedienteApi.obtenerMiSaldo().pipe(takeUntil(this.destroy$)).subscribe({
+      next: saldo => {
+        this.aplicarSaldo(saldo);
+        this.cdr?.markForCheck();
+      },
       error: err => this.notifications.error(httpErrorMessage(err, 'No se pudo cargar tu saldo de puntos.'))
     });
   }
@@ -160,15 +309,17 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.modalResolucionAbierto = true;
     this.resolucionPublicada = null;
     this.cargandoResolucion = true;
-    this.expedienteApi.obtenerResolucionPublicada(exp.id).subscribe({
+    this.expedienteApi.obtenerResolucionPublicada(exp.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: publicacion => {
         this.resolucionPublicada = publicacion;
         this.cargandoResolucion = false;
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.cargandoResolucion = false;
         this.modalResolucionAbierto = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo abrir la resolución.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -182,9 +333,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     const publicacion = this.resolucionPublicada;
     if (!publicacion || this.descargandoResolucionPdf) return;
     this.descargandoResolucionPdf = true;
-    this.expedienteApi.descargarResolucionPublicadaPdf(publicacion.expediente_id).subscribe({
+    this.expedienteApi.descargarResolucionPublicadaPdf(publicacion.expediente_id).pipe(takeUntil(this.destroy$)).subscribe({
       next: blob => {
         this.descargandoResolucionPdf = false;
+        this.cdr?.markForCheck();
         const url = URL.createObjectURL(blob);
         const enlace = document.createElement('a');
         enlace.href = url;
@@ -194,6 +346,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.descargandoResolucionPdf = false;
+        this.cdr?.markForCheck();
         this.notifications.error(httpErrorMessage(err, 'No se pudo descargar la resolución.'));
       }
     });
@@ -270,8 +423,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       horasRestantes: raw.horas_restantes ?? 0,
       tipo: (raw.puntos || 0) < 0 ? 'falta' : 'merito',
       puntos: raw.puntos || 0,
-      esFelicitacion: !!raw.es_felicitacion || Math.abs(Number(raw.puntos) - 0.33) < 0.01,
-      esLlamado: !!raw.es_llamado || Math.abs(Number(raw.puntos) - (-0.33)) < 0.01,
+      esFelicitacion: this.esExpedienteFelicitacion(raw),
+      esLlamado: this.esExpedienteLlamado(raw),
+      puntaje_solicitado: raw.puntaje_solicitado || null,
+      puntajeSolicitado: raw.puntaje_solicitado || null,
       puntosAplicados: raw.puntos_aplicados !== null && raw.puntos_aplicados !== undefined
         ? Number(raw.puntos_aplicados)
         : null,
@@ -300,12 +455,35 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     };
   }
 
+  private esExpedienteFelicitacion(rawOrExp: any): boolean {
+    if (!rawOrExp) return false;
+    if (rawOrExp.esFelicitacion || rawOrExp.es_felicitacion) return true;
+    const solicitado = rawOrExp.puntaje_solicitado ?? rawOrExp.puntajeSolicitado;
+    if (solicitado === 'FELICITACION') return true;
+    const pts = Number(rawOrExp.puntos);
+    return !Number.isNaN(pts) && (Math.abs(pts - 0.25) < 0.01 || Math.abs(pts - 0.33) < 0.01);
+  }
+
+  private esExpedienteLlamado(rawOrExp: any): boolean {
+    if (!rawOrExp) return false;
+    if (rawOrExp.esLlamado || rawOrExp.es_llamado) return true;
+    const solicitado = rawOrExp.puntaje_solicitado ?? rawOrExp.puntajeSolicitado;
+    if (solicitado === 'LLAMADO_ATENCION') return true;
+    const pts = Number(rawOrExp.puntos);
+    return !Number.isNaN(pts) && (Math.abs(pts - (-0.25)) < 0.01 || Math.abs(pts - (-0.33)) < 0.01);
+  }
+
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.activeTimers.forEach(id => window.clearTimeout(id));
+    this.activeTimers.clear();
     if (this.tickerSub) {
       this.tickerSub.unsubscribe();
       this.tickerSub = null;
     }
     this.subs.forEach(s => s.unsubscribe());
+    this.scrollLock.reset();
     this.removerScrollBloqueo();
   }
 
@@ -351,8 +529,23 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   // Modal Detalle
-  modalDetalleAbierto = false;
-  expedienteDetalle: Expediente | null = null;
+  private _modalDetalleAbierto = false;
+  get modalDetalleAbierto(): boolean {
+    return this._modalDetalleAbierto;
+  }
+  set modalDetalleAbierto(val: boolean) {
+    this._modalDetalleAbierto = val;
+    this.cdr?.markForCheck();
+  }
+
+  private _expedienteDetalle: Expediente | null = null;
+  get expedienteDetalle(): Expediente | null {
+    return this._expedienteDetalle;
+  }
+  set expedienteDetalle(val: Expediente | null) {
+    this._expedienteDetalle = val;
+    this.cdr?.markForCheck();
+  }
   reglamentoExpandidoModal: string | null = null;
 
   /** Historial inmutable del descargo, proveniente del backend (no del estado local). */
@@ -388,15 +581,20 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     } else {
       this.cargarHistorialDescargo(exp.id);
     }
-    this.expedienteApi.obtenerDetalleExpediente(exp.id, 'mis_expedientes').subscribe({
-      next: (detalle) => {
-        if (this.modalDetalleAbierto && this.expedienteDetalle?.id === String(detalle.id)) {
-          this.expedienteDetalle = this.mapearExpedienteApi(detalle);
+    this.expedienteApi.obtenerDetalleExpediente(exp.id, 'mis_expedientes')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (detalle) => {
+          if (this.modalDetalleAbierto && this.expedienteDetalle?.id === String(detalle.id)) {
+            this.expedienteDetalle = this.mapearExpedienteApi(detalle);
+          }
+          this.cdr?.markForCheck();
+        },
+        error: () => {
+          this.cdr?.markForCheck();
         }
-      },
-      error: () => {}
-    });
-    setTimeout(() => {
+      });
+    this.scheduleTimer(() => {
       const modalBody = (document.querySelector('.modal-dialog-tribunal .modal-detalle-body') ||
                          document.querySelector('.modal-dialog-custom .card-body') ||
                          document.querySelector('.modal-dialog-custom')) as HTMLElement;
@@ -413,6 +611,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.historialDescargo = [];
     this.limpiarApelacion();
     this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
   }
 
   // --- Apelación del T01 (PB-02): reemplaza al descargo T02/T03 ---
@@ -447,19 +646,26 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   private cargarHistorialT01(expedienteId: string): void {
-    this.expedienteApi.obtenerHistorialT01(expedienteId).subscribe({
-      next: historial => {
-        if (this.expedienteDetalle?.id === expedienteId) {
-          this.historialT01 = historial;
+    this.expedienteApi.obtenerHistorialT01(expedienteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: historial => {
+          if (this.expedienteDetalle?.id === expedienteId) {
+            this.historialT01 = historial;
+          }
+          this.cdr?.markForCheck();
+        },
+        error: err => {
+          this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la apelación.'));
+          this.cdr?.markForCheck();
         }
-      },
-      error: err => this.notifications.error(httpErrorMessage(err, 'No se pudo cargar la apelación.'))
-    });
+      });
   }
 
   abrirApelacion(): void {
     this.textoApelacion = this.ultimaApelacion?.texto || '';
     this.apelacionAbierta = true;
+    this.cdr?.markForCheck();
   }
 
   enviarApelacion(): void {
@@ -475,34 +681,44 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       return;
     }
     this.enviandoApelacion = true;
-    this.expedienteApi.apelarT01(exp.id, texto).subscribe({
-      next: historial => {
-        this.enviandoApelacion = false;
-        this.apelacionAbierta = false;
-        this.historialT01 = historial;
-        this.notifications.success('Apelación registrada. Te enviamos la constancia por mail.');
-      },
-      error: err => {
-        this.enviandoApelacion = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la apelación.'));
-      }
-    });
+    this.cdr?.markForCheck();
+    this.expedienteApi.apelarT01(exp.id, texto)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: historial => {
+          this.enviandoApelacion = false;
+          this.apelacionAbierta = false;
+          this.historialT01 = historial;
+          this.notifications.success('Apelación registrada. Te enviamos la constancia por mail.');
+          this.cdr?.markForCheck();
+        },
+        error: err => {
+          this.enviandoApelacion = false;
+          this.notifications.error(httpErrorMessage(err, 'No se pudo registrar la apelación.'));
+          this.cdr?.markForCheck();
+        }
+      });
   }
 
   /** Consulta las versiones del descargo y las mapea a las filas de la tabla de auditoría. */
   private cargarHistorialDescargo(expedienteId: string): void {
-    this.expedienteApi.obtenerVersionesDescargo(expedienteId).subscribe({
-      next: (versiones) => {
-        if (this.expedienteDetalle?.id !== expedienteId) {
-          return;
+    this.expedienteApi.obtenerVersionesDescargo(expedienteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (versiones) => {
+          if (this.expedienteDetalle?.id !== expedienteId) {
+            this.cdr?.markForCheck();
+            return;
+          }
+          this.historialDescargo = versiones.map(v => this.mapearVersionAFila(v));
+          this.cdr?.markForCheck();
+        },
+        error: () => {
+          this.historialDescargo = [];
+          this.notifications.error('No se pudo cargar el historial del descargo.');
+          this.cdr?.markForCheck();
         }
-        this.historialDescargo = versiones.map(v => this.mapearVersionAFila(v));
-      },
-      error: () => {
-        this.historialDescargo = [];
-        this.notifications.error('No se pudo cargar el historial del descargo.');
-      }
-    });
+      });
   }
 
   private refrescarHistorialSiEstaAbierto(expedienteId: string): void {
@@ -671,21 +887,25 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         const legajo = perfil?.legajo || '';
 
         // El retiro es una baja lógica en el backend: solo se refleja en pantalla si el servidor lo acepta.
-        this.expedienteApi.eliminarDescargo(exp.id).subscribe({
-          next: () => {
-            this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
-            this.cargarMisExpedientes();
-            this.refrescarHistorialSiEstaAbierto(exp.id);
-            this.notifications.info(
-              `Descargo del expediente ${this.formatCaseNumber(exp.numero)} retirado. Queda registrado en el historial.`
-            );
-          },
-          error: (err) => {
-            this.notifications.error(
-              this.extraerMensajeError(err, 'No se pudo retirar el descargo. Intenta nuevamente.')
-            );
-          }
-        });
+        this.expedienteApi.eliminarDescargo(exp.id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.dataService.eliminarDescargo(exp.id, { nombre, legajo });
+              this.cargarMisExpedientes();
+              this.refrescarHistorialSiEstaAbierto(exp.id);
+              this.notifications.info(
+                `Descargo del expediente ${this.formatCaseNumber(exp.numero)} retirado. Queda registrado en el historial.`
+              );
+              this.cdr?.markForCheck();
+            },
+            error: (err) => {
+              this.notifications.error(
+                this.extraerMensajeError(err, 'No se pudo retirar el descargo. Intenta nuevamente.')
+              );
+              this.cdr?.markForCheck();
+            }
+          });
       }
     );
   }
@@ -879,22 +1099,24 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   descargarEvidencia(ev: any): void {
     if (!this.expedienteDetalle) return;
-    this.expedienteApi.descargarEvidencia(this.expedienteDetalle.id, ev.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = ev.nombre_original || 'comprobante';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        this.notifications.info(`Descargando comprobante: ${ev.nombre_original}`);
-      },
-      error: () => {
-        this.notifications.error('Error al descargar el comprobante probatorio.');
-      }
-    });
+    this.expedienteApi.descargarEvidencia(this.expedienteDetalle.id, ev.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = ev.nombre_original || 'comprobante';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          this.notifications.info(`Descargando comprobante: ${ev.nombre_original}`);
+        },
+        error: () => {
+          this.notifications.error('Error al descargar el comprobante probatorio.');
+        }
+      });
   }
 
   enviarDescargo(): void {
@@ -962,30 +1184,40 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.notifications.error(
         this.extraerMensajeError(err, 'No se pudo registrar el descargo. Intenta nuevamente.')
       );
+      this.cdr?.markForCheck();
     };
 
     if (this.archivosSeleccionados.length > 0) {
       this.subiendoArchivos = true;
-      this.expedienteApi.subirEvidencias(expId, this.archivosSeleccionados, this.tipoDescargo).subscribe({
-        next: (nuevasEvidencias) => {
-          const todasLasEvidencias = [...this.evidenciasExistentes, ...nuevasEvidencias];
-          const ids = todasLasEvidencias.map(e => e.id);
-          this.expedienteApi.presentarDescargo(expId, {
-            tipo: this.tipoDescargo,
-            causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
-            texto: textoAEnviar,
-            evidencia_ids: ids
-          }).subscribe({
-            next: () => guardarEnDataService(todasLasEvidencias),
-            error: manejarRechazo
-          });
-        },
-        error: (err) => {
-          this.subiendoArchivos = false;
-          const msg = err?.error?.detail || 'Error al guardar los documentos.';
-          this.notifications.error(msg);
-        }
-      });
+      this.cdr?.markForCheck();
+      this.expedienteApi.subirEvidencias(expId, this.archivosSeleccionados, this.tipoDescargo)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (nuevasEvidencias) => {
+            const todasLasEvidencias = [...this.evidenciasExistentes, ...nuevasEvidencias];
+            const ids = todasLasEvidencias.map(e => e.id);
+            this.expedienteApi.presentarDescargo(expId, {
+              tipo: this.tipoDescargo,
+              causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
+              texto: textoAEnviar,
+              evidencia_ids: ids
+            })
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  guardarEnDataService(todasLasEvidencias);
+                  this.cdr?.markForCheck();
+                },
+                error: manejarRechazo
+              });
+          },
+          error: (err) => {
+            this.subiendoArchivos = false;
+            const msg = err?.error?.detail || 'Error al guardar los documentos.';
+            this.notifications.error(msg);
+            this.cdr?.markForCheck();
+          }
+        });
     } else {
       const ids = this.evidenciasExistentes.map(e => e.id);
       this.expedienteApi.presentarDescargo(expId, {
@@ -993,10 +1225,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         causal: this.tipoDescargo === 'T02_CERTIFICADO' ? this.causalSeleccionada : undefined,
         texto: textoAEnviar,
         evidencia_ids: ids
-      }).subscribe({
-        next: () => guardarEnDataService(this.evidenciasExistentes),
-        error: manejarRechazo
-      });
+      })
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            guardarEnDataService(this.evidenciasExistentes);
+            this.cdr?.markForCheck();
+          },
+          error: manejarRechazo
+        });
     }
   }
 
@@ -1123,6 +1360,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get expedientesOrdenados(): Expediente[] {
+    if (this.serverPaginated) {
+      return this.misExpedientes;
+    }
+    if (this._expedientesOrdenadosCache) {
+      return this._expedientesOrdenadosCache;
+    }
     let lista = [...this.misExpedientes];
     if (this.filtroTab === 'en_tramite') {
       lista = lista.filter((e) => e.estado !== 'emitido');
@@ -1183,7 +1426,20 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       if (valA > valB) return this.ordenAscendente ? 1 : -1;
       return 0;
     });
+    this._expedientesOrdenadosCache = lista;
     return lista;
+  }
+
+  get expedientesPaginados(): Expediente[] {
+    if (this.serverPaginated) {
+      return this.misExpedientes;
+    }
+    const lista = this.expedientesOrdenados;
+    if (lista.length <= this.tamanoPagina && this.paginaActual === 1) {
+      return lista;
+    }
+    const inicio = (this.paginaActual - 1) * this.tamanoPagina;
+    return lista.slice(inicio, inicio + this.tamanoPagina);
   }
 
   cambiarOrden(col: string): void {
@@ -1192,6 +1448,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     } else {
       this.columnaOrden = col;
       this.ordenAscendente = true;
+    }
+    this.paginaActual = 1;
+    this.markOrdenadosDirty();
+    if (this.serverPaginated) {
+      this.cargarMisExpedientes();
     }
   }
 

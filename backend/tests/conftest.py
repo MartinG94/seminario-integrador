@@ -1,3 +1,8 @@
+import os
+
+if os.getenv("DATABASE_HOST") is None and os.getenv("MYSQL_HOST") is None:
+    os.environ.setdefault("USE_SQLITE", "True")
+
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient

@@ -13,6 +13,10 @@ from tests.legacy_schema import create_seed_support_tables
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.skipif(
+    connection.vendor != "mysql",
+    reason="El comando import_socios_y_puntos requiere motor MySQL.",
+)
 class TestImportSociosYPuntosCommand:
     """Verifica la correcta ingestión del padrón, expedientes y saldos."""
 

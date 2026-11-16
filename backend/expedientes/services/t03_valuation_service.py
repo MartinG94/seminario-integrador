@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from django.db import DatabaseError, transaction
-from django.db.models import Max, Q
+from django.db.models import F, Max, OuterRef, Prefetch, Q, Subquery
+from django.db.models.functions import Coalesce
 
 from expedientes.domain.ports import TribunalConditionPort
 from expedientes.domain.t03_valuation import (
@@ -20,6 +21,7 @@ from expedientes.models import (
     DescargoExpediente,
     EstadoExpedienteEnum,
     Expediente,
+    Resolucion,
     SolicitudT01,
     TipoDescargoEnum,
     ValoracionT03,
@@ -119,6 +121,9 @@ class AntecedentLookup:
 
 def _emission_date(expediente: Expediente) -> datetime:
     """Último cambio de estado hacia `emitido`; si no hay, la última actualización (D6)."""
+    fecha_calc = getattr(expediente, "fecha_emision_calc", None)
+    if fecha_calc is not None:
+        return fecha_calc
     last_emission = (
         CambioEstadoExpediente.objects.filter(
             expediente=expediente, estado_nuevo=EstadoExpedienteEnum.EMITIDO
@@ -142,6 +147,16 @@ def _emitted_antecedents(antecedent_ids: list[int]) -> list[Expediente]:
     return [found[pk] for pk in antecedent_ids]
 
 
+def _resoluciones_reglamento_prefetch() -> Prefetch:
+    """Precarga sólo los campos de Resolucion usados por _obtener_reglamento_asociado."""
+    return Prefetch(
+        "resoluciones",
+        queryset=Resolucion.objects.only(
+            "id", "expediente_id", "version", "reglamentos_respaldantes"
+        ),
+    )
+
+
 def _default_condition_provider() -> TribunalConditionPort:
     from padron.adapters import DbTribunalConditionProvider
 
@@ -157,6 +172,7 @@ class T03ValuationService:
             raise T03ValuationValidationError(str(exc)) from exc
         expediente = (
             Expediente.objects.select_related("solicitud_t01")
+            .prefetch_related(_resoluciones_reglamento_prefetch())
             .filter(numero=normalized, estado=EstadoExpedienteEnum.EMITIDO)
             .first()
         )
@@ -171,10 +187,20 @@ class T03ValuationService:
         tipo: str = "TODOS",
         exclude_id: int | None = None,
     ) -> list[AntecedentLookup]:
+        subquery_emision = Subquery(
+            CambioEstadoExpediente.objects.filter(
+                expediente=OuterRef("pk"),
+                estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+            )
+            .order_by("-fecha_hora", "-id")
+            .values("fecha_hora")[:1]
+        )
+
         qs = (
             Expediente.objects.select_related("solicitud_t01", "socio")
-            .prefetch_related("socios")
+            .prefetch_related(_resoluciones_reglamento_prefetch())
             .filter(estado=EstadoExpedienteEnum.EMITIDO)
+            .annotate(fecha_emision_calc=Coalesce(subquery_emision, F("updated_at")))
         )
         if exclude_id is not None:
             qs = qs.exclude(pk=exclude_id)
@@ -199,7 +225,11 @@ class T03ValuationService:
             ).distinct()
 
         qs = qs.order_by("-updated_at", "-id")[:100]
-        return [AntecedentLookup(expediente=exp, fecha_emision=_emission_date(exp)) for exp in qs]
+        results = []
+        for exp in qs:
+            fecha = getattr(exp, "fecha_emision_calc", None) or _emission_date(exp)
+            results.append(AntecedentLookup(expediente=exp, fecha_emision=fecha))
+        return results
 
     @staticmethod
     def get_descargo(expediente_id: int, descargo_id: int) -> DescargoExpediente:
@@ -291,16 +321,28 @@ def build_expedientes_referenciados_detalle(ids: list[int] | None) -> list[dict]
         return []
     from expedientes.serializers import AntecedenteT03Serializer
 
-    found_map = {
-        exp.id: exp
-        for exp in Expediente.objects.select_related("solicitud_t01").filter(
-            pk__in=ids, estado=EstadoExpedienteEnum.EMITIDO
+    subquery_emision = Subquery(
+        CambioEstadoExpediente.objects.filter(
+            expediente=OuterRef("pk"),
+            estado_nuevo=EstadoExpedienteEnum.EMITIDO,
         )
-    }
+        .order_by("-fecha_hora", "-id")
+        .values("fecha_hora")[:1]
+    )
+
+    qs = (
+        Expediente.objects.select_related("solicitud_t01")
+        .prefetch_related(_resoluciones_reglamento_prefetch())
+        .filter(pk__in=ids, estado=EstadoExpedienteEnum.EMITIDO)
+        .annotate(fecha_emision_calc=Coalesce(subquery_emision, F("updated_at")))
+    )
+    found_map = {exp.id: exp for exp in qs}
+
     ordered_items = []
     for pk in ids:
         if pk in found_map:
             exp = found_map[pk]
-            lookup = AntecedentLookup(expediente=exp, fecha_emision=_emission_date(exp))
+            fecha = getattr(exp, "fecha_emision_calc", None) or _emission_date(exp)
+            lookup = AntecedentLookup(expediente=exp, fecha_emision=fecha)
             ordered_items.append(lookup)
     return AntecedenteT03Serializer(ordered_items, many=True).data
