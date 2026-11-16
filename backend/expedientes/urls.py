@@ -1,6 +1,11 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from expedientes.publication_views import (
+    MiSaldoView,
+    ResolucionPublicadaPdfView,
+    ResolucionPublicadaView,
+)
 from expedientes.resolution_views import (
     ResolucionEmitirView,
     ResolucionFirmarView,
@@ -61,6 +66,18 @@ router.register(r"eventos", EventoInstitucionalViewSet, basename="evento")
 router.register(r"apercibimientos", RegistroApercibimientoViewSet, basename="apercibimiento")
 
 urlpatterns = [
+    # Libro mayor del socio y publicación oficial protegida (Spec 011)
+    path("mis-expedientes/saldo/", MiSaldoView.as_view(), name="mis-expedientes-saldo"),
+    path(
+        "<int:expediente_id>/resolucion/publicada/",
+        ResolucionPublicadaView.as_view(),
+        name="resolucion-publicada",
+    ),
+    path(
+        "<int:expediente_id>/resolucion/publicada/pdf/",
+        ResolucionPublicadaPdfView.as_view(),
+        name="resolucion-publicada-pdf",
+    ),
     path(
         "<int:expediente_id>/resolucion/preview/",
         ResolucionPreviewView.as_view(),

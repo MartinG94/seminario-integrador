@@ -16,6 +16,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from expedientes.domain.causal_resolution import suggested_decision
+from expedientes.domain.medical_redaction import contiene_datos_salud
 from expedientes.models import (
     AuditoriaDescargaEvidencia,
     DecisionCausalDescargo,
@@ -47,22 +48,7 @@ def check_evidencia_integrity(ev: EvidenciaDescargo) -> tuple[bool, bool]:
 
 def es_causal_medica(causal: str, texto: str = "") -> bool:
     """Detecta si una causal o descargo contiene información médica o de salud protegida."""
-    target = f"{causal or ''} {texto or ''}".lower()
-    keywords = [
-        "médic",
-        "medic",
-        "salud",
-        "enfermedad",
-        "diagnóstic",
-        "diagnostic",
-        "reposo",
-        "tratamiento",
-        "clínic",
-        "clinic",
-        "hospital",
-        "certificado médico",
-    ]
-    return any(kw in target for kw in keywords)
+    return contiene_datos_salud(f"{causal or ''} {texto or ''}")
 
 
 def tiene_acceso_medico(user: Any, socio_imputado_id: int) -> bool:

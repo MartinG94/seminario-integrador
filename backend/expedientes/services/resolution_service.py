@@ -1,6 +1,5 @@
 """Casos de uso transaccionales de resolución oficial."""
 
-import hashlib
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -18,6 +17,11 @@ from expedientes.models import (
     SolicitudT01,
 )
 from expedientes.serializers.visor_serializers import cargar_mapa_grupos
+from expedientes.services.publication_service import calcular_hash_resolucion
+
+RANKS_MEDIDA_ESPECIAL = frozenset(
+    {Decimal("-0.25"), Decimal("0.25"), Decimal("-0.33"), Decimal("0.33")}
+)
 
 
 class DictamenNoCerradoError(Exception):
@@ -73,14 +77,15 @@ class ExpedienteConsolidatedDecisionProvider:
             if ultima_decision:
                 snapshot = ultima_decision.descargo_snapshot or {}
                 ptos_val = snapshot.get("puntaje_final")
+                # Regla 3:1 (Notas del PO): las medidas especiales nunca son puntos fraccionarios.
                 if ptos_val == "LLAMADO_ATENCION":
                     if "Llamado de atención" not in medidas:
                         medidas.append("Llamado de atención")
-                    puntos = Decimal("-0.25")
+                    puntos = Decimal("0.00")
                 elif ptos_val == "FELICITACION":
                     if "Felicitación" not in medidas:
                         medidas.append("Felicitación")
-                    puntos = Decimal("0.25")
+                    puntos = Decimal("0.00")
                 elif ptos_val is not None:
                     try:
                         puntos = Decimal(str(ptos_val))
@@ -93,6 +98,12 @@ class ExpedienteConsolidatedDecisionProvider:
                         puntos = Decimal(str(expediente.puntos))
 
         puntos_finales = puntos.quantize(Decimal("0.01"))
+        if puntos_finales in RANKS_MEDIDA_ESPECIAL:
+            # ±0,25 / ±0,33 identifican la medida especial pedida: no son puntos.
+            etiqueta = "Llamado de atención" if puntos_finales < 0 else "Felicitación"
+            if etiqueta not in medidas:
+                medidas.append(etiqueta)
+            puntos_finales = Decimal("0.00")
         if puntos_finales < Decimal("0.00") or "Llamado de atención" in medidas:
             resultado = "SANCTION"
         elif puntos_finales > Decimal("0.00") or "Felicitación" in medidas:
@@ -242,17 +253,7 @@ def emitir_resolucion(
     resolucion.estado = EstadoResolucionEnum.ISSUED
     resolucion.issued_by = emisor
     resolucion.issued_at = timezone.now()
-    payload = "|".join(
-        (
-            resolucion.numero_expediente_snapshot,
-            resolucion.vistos,
-            resolucion.considerandos,
-            resolucion.articulos_resolutivos,
-            str(resolucion.puntos_finales),
-            repr(resolucion.medidas),
-        )
-    )
-    resolucion.contenido_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    resolucion.contenido_hash = calcular_hash_resolucion(resolucion)
     resolucion.save()
 
     expediente = resolucion.expediente
@@ -270,5 +271,10 @@ def emitir_resolucion(
             actor=actor_name,
             motivo="Resolución emitida con la totalidad de firmas requeridas.",
         )
+
+    # Libro mayor inmutable en la misma transacción de la emisión (Spec 011, RF-01).
+    from expedientes.services.ledger_service import LedgerService
+
+    LedgerService.registrar_resolucion(resolucion, emisor)
 
     return resolucion
