@@ -29,6 +29,10 @@ export class SolicitudDetalleDialogComponent {
     return formatCaseNumber(numero);
   }
 
+  numeroExpedienteVisible(numero: string | null | undefined): string {
+    return numero ? `Exp ${this.formatCaseNumber(numero)}` : 'Borrador sin número';
+  }
+
   get reglamentosCitas(): ReglamentoCiteView[] {
     return parseReglamentosList(this.solicitud?.reglamentos_respaldantes);
   }

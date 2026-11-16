@@ -24,7 +24,7 @@ from expedientes.models import (
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 from socios.models import Role
 
-NUMERO_PATTERN = re.compile(r"^EXP-(\d{4})/(\d{4})$")
+NUMERO_PATTERN = re.compile(r"^(\d+)/(\d{4})$")
 
 
 def _sequence_of(numero: str) -> int:
@@ -166,14 +166,40 @@ class TestExpedienteNumbering:
         assert match
         assert int(match.group(2)) == timezone.localdate().year
 
-    def test_format_numero_pads_to_four_digits_with_year(self) -> None:
-        assert ExpedienteWorkflowService.format_numero(1, 2026) == "EXP-0001/2026"
+    def test_format_numero_uses_canonical_number_with_year(self) -> None:
+        assert ExpedienteWorkflowService.format_numero(1, 2026) == "1/2026"
 
     def test_counter_restarts_every_year(self) -> None:
         assert ExpedienteNumberSequence.next_value(2030) == 1
         assert ExpedienteNumberSequence.next_value(2030) == 2
         assert ExpedienteNumberSequence.next_value(2031) == 1
         assert ExpedienteNumberSequence.next_value(2030) == 3
+
+
+@pytest.mark.skipif(
+    connection.vendor != "mysql",
+    reason="CA4 requiere bloqueo de filas real (MySQL/InnoDB).",
+)
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_sequence_initialization_never_duplicates_numbers() -> None:
+    """La primera creación de la fila anual también debe ser segura."""
+    year = timezone.localdate().year
+    ExpedienteNumberSequence.objects.filter(year=year).delete()
+    workers = 2
+    barrier = Barrier(workers)
+
+    def reserve_one(_: int) -> int:
+        try:
+            barrier.wait()
+            return ExpedienteNumberSequence.next_value(year)
+        finally:
+            connections.close_all()
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        values = list(pool.map(reserve_one, range(workers)))
+
+    assert sorted(values) == [1, 2]
+    assert ExpedienteNumberSequence.objects.get(year=year).last_value == 2
 
 
 @pytest.mark.skipif(
@@ -227,7 +253,7 @@ class TestExpedienteWorkflow:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["numero"].startswith("EXP-")
+        assert re.fullmatch(r"\d+/\d{4}", data["numero"])
         assert data["estado"] == EstadoExpedienteEnum.CREADO
         assert {member["id"] for member in data["socios"]} == {
             first_member.id,

@@ -2,7 +2,7 @@
   <!-- Cabecera del Modal (idéntica a Gestionar Expedientes) -->
   <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
     <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
-      <ng-container *ngIf="solicitud.numero_expediente">Exp: {{ formatCaseNumber(solicitud.numero_expediente) }} &bull; </ng-container>Solicitud {{ solicitud.numero }}
+      {{ numeroExpedienteVisible(solicitud.numero_expediente) }} &bull; Solicitud {{ solicitud.numero }}
     </span>
     <div class="modal-titulo-central flex-grow-1 text-center px-3">
       <h4 class="card-title mb-0 font-weight-bold text-white">

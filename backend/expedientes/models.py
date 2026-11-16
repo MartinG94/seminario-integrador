@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, connection, models, transaction
+from django.db.utils import OperationalError
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
@@ -212,7 +213,7 @@ class ClasificacionExpedienteEnum(models.TextChoices):
 
 
 class ExpedienteNumberSequence(models.Model):
-    """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
+    """Contador correlativo anual de expedientes (CA1/CA4): N/YYYY.
 
     Una fila por año bloqueada con SELECT ... FOR UPDATE serializa la asignación:
     a diferencia del AUTO_INCREMENT de InnoDB, un rollback devuelve el número y
@@ -233,18 +234,37 @@ class ExpedienteNumberSequence(models.Model):
         año nuevo crea la suya. Ante una creación simultánea, la restricción única de
         `year` hace que sólo una inserción prospere y el resto relea la fila bloqueada.
         """
-        with transaction.atomic():
-            sequence = cls.objects.select_for_update().filter(year=year).first()
-            if sequence is None:
-                try:
-                    with transaction.atomic():
-                        cls.objects.create(year=year)
-                except IntegrityError:
-                    pass
-                sequence = cls.objects.select_for_update().get(year=year)
-            sequence.last_value += 1
-            sequence.save(update_fields=["last_value"])
-            return sequence.last_value
+        for attempt in range(3):
+            try:
+                with transaction.atomic():
+                    sequence = cls.objects.select_for_update().filter(year=year).first()
+                    if sequence is None:
+                        if connection.vendor == "mysql":
+                            table = connection.ops.quote_name(cls._meta.db_table)
+                            year_column = connection.ops.quote_name("year")
+                            value_column = connection.ops.quote_name("last_value")
+                            with connection.cursor() as cursor:
+                                cursor.execute(
+                                    f"INSERT INTO {table} ({year_column}, {value_column}) "
+                                    f"VALUES (%s, 0) ON DUPLICATE KEY UPDATE "
+                                    f"{year_column} = VALUES({year_column})",
+                                    [year],
+                                )
+                        else:
+                            try:
+                                cls.objects.create(year=year)
+                            except IntegrityError:
+                                pass
+                        sequence = cls.objects.select_for_update().get(year=year)
+                    sequence.last_value += 1
+                    sequence.save(update_fields=["last_value"])
+                    return sequence.last_value
+            except OperationalError as error:
+                code = error.args[0] if error.args else None
+                if code not in (1205, 1213) or attempt == 2:
+                    raise
+                if connection.in_atomic_block:
+                    raise
 
 
 class Expediente(models.Model):
