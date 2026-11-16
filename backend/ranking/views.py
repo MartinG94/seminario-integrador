@@ -6,6 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.pagination import PaginatedAPIViewMixin, StandardResultsSetPagination
 from ranking.serializers import RankingSocioSerializer
 from ranking.services import (
     filter_ranking_queryset,
@@ -14,7 +15,7 @@ from ranking.services import (
 )
 
 
-class RankingListView(APIView):
+class RankingListView(PaginatedAPIViewMixin, APIView):
     """
     Endpoint GET /api/v1/ranking/ y /api/ranking/
     Retorna la lista completa del Ranking Oficial Reconciliado con soporte para:
@@ -23,10 +24,12 @@ class RankingListView(APIView):
     - Búsqueda textual (q o search sobre nombre, apellido, legajo)
     - Ordenamiento por saldo, apellido, nombre o legajo
     - Filtro opcional por reconciliado (true / false)
+    - Paginación server-side estándar (page, page_size) con envolvente de 7 campos
     """
 
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    pagination_class = StandardResultsSetPagination
 
     VALID_ORDERING_FIELDS = {
         "id",
@@ -59,6 +62,9 @@ class RankingListView(APIView):
         "grupo",
         "+grupo",
         "-grupo",
+        "categoria",
+        "+categoria",
+        "-categoria",
         "diferencia",
         "+diferencia",
         "-diferencia",
@@ -158,6 +164,21 @@ class RankingListView(APIView):
         if subcomision is not None and not subcomision.strip():
             subcomision = None
 
+        grupo = request.query_params.get("grupo") or request.query_params.get("filtroGrupo")
+        if grupo is not None and not grupo.strip():
+            grupo = None
+
+        solo_alertas_param = request.query_params.get("solo_alertas")
+        solo_alertas_bool = None
+        if solo_alertas_param is not None and solo_alertas_param.strip().lower() in (
+            "true",
+            "1",
+            "si",
+            "sí",
+            "yes",
+        ):
+            solo_alertas_bool = True
+
         search = (
             request.query_params.get("search")
             or request.query_params.get("q")
@@ -174,6 +195,8 @@ class RankingListView(APIView):
             qs,
             categoria=cat_clean,
             subcomision=subcomision,
+            grupo=grupo,
+            solo_alertas=solo_alertas_bool,
             search=search,
             reconciliado=reconciliado_bool,
         )
@@ -181,6 +204,18 @@ class RankingListView(APIView):
         # 3. Aplicar ordenamiento
         qs = order_ranking_queryset(qs, ordering=ord_clean)
 
-        # 4. Serializar al contrato RankingSocio
+        # 4. Paginación canónica server-side (SCRUM-118 / T-87.09)
+        is_paginated_requested = bool(
+            "page" in request.query_params or "page_size" in request.query_params
+        )
+        is_all_requested = request.query_params.get("all", "").lower() in ("true", "1", "yes")
+
+        if is_paginated_requested and not is_all_requested:
+            page = self.paginate_queryset(qs)
+            if page is not None:
+                serializer = RankingSocioSerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+        # 5. Serializar al contrato RankingSocio (fallback no paginado / all=true)
         serializer = RankingSocioSerializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

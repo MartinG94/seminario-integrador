@@ -44,6 +44,7 @@ class Socio(models.Model):
         related_name="socio",
     )
     legajo = models.CharField(max_length=20, unique=True, db_index=True)
+    numero_socio = models.PositiveIntegerField(null=True, blank=True, unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(max_length=150, unique=True)

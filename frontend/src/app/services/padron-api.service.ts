@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 
 export interface PadronSocio {
   socio_id: number;
+  numero_socio?: number | null;
   legajo: string | null;
   first_name: string;
   last_name: string;

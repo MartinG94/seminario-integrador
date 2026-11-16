@@ -84,6 +84,24 @@ class TestExpedientesPorSocioEndpoint:
         assert data[0]["urgencia"] == UrgenciaExpedienteEnum.NORMAL
         assert data[0]["urgencia_display"] == "Normal"
 
+    def test_institutional_member_number_finds_expedient(self, make_socio, authenticate) -> None:
+        socio_consultor = make_socio(legajo="70001", role=Role.SOCIO)
+        socio = make_socio(legajo="89123", role=Role.SOCIO)
+        socio.numero_socio = 1002
+        socio.save(update_fields=["numero_socio"])
+        exp = Expediente.objects.create(
+            numero="EXP-2026-001-INSTITUCIONAL",
+            socio=socio,
+            motivo="Consulta por número de socio institucional",
+        )
+
+        response = authenticate(socio_consultor).get("/api/v1/expedientes/por-socio/?legajo=1002")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert [item["id"] for item in data] == [exp.id]
+        assert data[0]["socio_numero_socio"] == 1002
+
     def test_gestion_endpoint_still_forbids_regular_socio_403(
         self, make_socio, authenticate
     ) -> None:
@@ -121,6 +139,7 @@ class TestExpedientesPorSocioEndpoint:
             "id",
             "numero",
             "titulo",
+            "socio_numero_socio",
             "motivo",
             "puntos",
             "estado",

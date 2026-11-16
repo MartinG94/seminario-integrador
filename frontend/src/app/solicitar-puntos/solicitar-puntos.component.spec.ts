@@ -74,7 +74,7 @@ describe('SolicitarPuntosComponent', () => {
       destinatarios_socios_ids: [7],
       estado_procesal: 'borrador',
       estado_procesal_display: 'Borrador',
-      involucrados: [{ socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba' }],
+      involucrados: [{ socio_id: 7, numero_socio: 1007, legajo: '777', first_name: 'Ana', last_name: 'Prueba' }],
       resolucion_final: null,
       created_at: '2026-03-01T10:00:00Z',
       issued_at: null,
@@ -100,8 +100,8 @@ describe('SolicitarPuntosComponent', () => {
       estado_procesal: 'en_descargo',
       estado_procesal_display: 'En Descargo',
       involucrados: [
-        { socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba' },
-        { socio_id: 8, legajo: '888', first_name: 'Bruno', last_name: 'García' },
+        { socio_id: 7, numero_socio: 1007, legajo: '777', first_name: 'Ana', last_name: 'Prueba' },
+        { socio_id: 8, numero_socio: 1008, legajo: '888', first_name: 'Bruno', last_name: 'García' },
       ],
       resolucion_final: null,
       created_at: '2026-03-02T12:00:00Z',
@@ -129,6 +129,7 @@ describe('SolicitarPuntosComponent', () => {
       of([
         {
           socio_id: 7,
+          numero_socio: 1007,
           legajo: '777',
           first_name: 'Ana',
           last_name: 'Prueba',
@@ -138,6 +139,7 @@ describe('SolicitarPuntosComponent', () => {
         },
         {
           socio_id: 8,
+          numero_socio: 1008,
           legajo: '888',
           first_name: 'Bruno',
           last_name: 'García',
@@ -370,6 +372,13 @@ describe('SolicitarPuntosComponent', () => {
     component.agregarSocio(component.socios[0]);
     component.filtrarSocios('777');
     expect(component.sociosFiltrados).toEqual([]);
+  });
+
+  it('filtra por número institucional sin confundirlo con el legajo', () => {
+    component.filtrarSocios('1007');
+    expect(component.sociosFiltrados.map(socio => socio.socio_id)).toEqual([7]);
+    expect(component.sociosFiltrados[0].numero_socio).toBe(1007);
+    expect(component.sociosFiltrados[0].legajo).toBe('777');
   });
 
   it('deshabilita el control cuando el expediente está emitido', () => {

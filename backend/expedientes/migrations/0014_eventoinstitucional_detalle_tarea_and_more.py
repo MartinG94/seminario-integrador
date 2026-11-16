@@ -13,14 +13,6 @@ def sync_evento_columns_idempotently(apps, schema_editor):
     """
     EventoInstitucional = apps.get_model("expedientes", "EventoInstitucional")
     table_name = EventoInstitucional._meta.db_table
-    with schema_editor.connection.cursor() as cursor:
-        existing_cols = {
-            col.name.lower()
-            for col in schema_editor.connection.introspection.get_table_description(
-                cursor, table_name
-            )
-        }
-
     for field_name in (
         "tolerancia_retiro_minutos",
         "detalle_tarea",
@@ -28,6 +20,13 @@ def sync_evento_columns_idempotently(apps, schema_editor):
         "motivo_cancelacion",
         "puntos_sancion",
     ):
+        with schema_editor.connection.cursor() as cursor:
+            existing_cols = {
+                col.name.lower()
+                for col in schema_editor.connection.introspection.get_table_description(
+                    cursor, table_name
+                )
+            }
         field = EventoInstitucional._meta.get_field(field_name)
         if field.column.lower() not in existing_cols:
             schema_editor.add_field(EventoInstitucional, field)

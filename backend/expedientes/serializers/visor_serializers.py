@@ -142,6 +142,7 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
             responsables.append(
                 {
                     "titulo": titulo,
+                    "numero_socio": soc.numero_socio,
                     "legajo": legajo,
                     "nombre": nombre,
                     "grupo": grupo,
@@ -154,6 +155,7 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
             responsables.append(
                 {
                     "titulo": titulo,
+                    "numero_socio": None,
                     "legajo": fb["legajo"],
                     "nombre": fb["nombre"],
                     "grupo": fb["grupo"],
@@ -371,6 +373,7 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
     regla_sugerida_display = serializers.CharField(
         source="get_regla_sugerida_display", read_only=True
     )
+    autor_numero_socio = serializers.SerializerMethodField()
     puntaje_final = serializers.SerializerMethodField()
 
     def get_puntaje_final(self, obj: DecisionCausalDescargo) -> Any:
@@ -393,9 +396,14 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
             "puntaje_final",
             "autor_id",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "created_at",
         ]
+
+    def get_autor_numero_socio(self, obj: DecisionCausalDescargo) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class EvidenciaVisorSerializer(serializers.ModelSerializer):
@@ -735,6 +743,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             involucrados_data.append(
                 {
                     "id": soc.id,
+                    "numero_socio": soc.numero_socio,
                     "legajo": legajo,
                     "nombre": f"{soc.first_name} {soc.last_name}".strip(),
                     "first_name": soc.first_name,

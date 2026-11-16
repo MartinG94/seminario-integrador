@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
+import { PaginatedResponse, PaginationParams } from '../models/paginated-response.model';
 import type { NivelUrgencia } from './tribunal-data.service';
 
 export type TipoAccionT01 = 'SANCTION' | 'MERIT';
@@ -27,6 +28,7 @@ export const CATALOGO_CONCEPTOS_EXPEDIENTE = [
 
 export interface SocioInvolucrado {
   socio_id?: number;
+  numero_socio?: number | null;
   legajo?: string;
   first_name?: string;
   last_name?: string;
@@ -195,6 +197,7 @@ export interface DecisionCausalDTO {
   puntaje_final?: number | string | null;
   autor: string;
   autor_legajo: string;
+  autor_numero_socio?: number | null;
   autor_rol: string;
   created_at: string;
 }
@@ -223,6 +226,7 @@ export interface ValoracionT03DTO {
   antecedentes: AntecedenteCitadoDTO[];
   autor: string;
   autor_legajo: string;
+  autor_numero_socio?: number | null;
   autor_rol: string;
   autor_condicion: string;
   autor_condicion_display: string;
@@ -319,6 +323,7 @@ export interface DescargoDetalleDTO {
 
 export interface SocioInvolucradoDetalleDTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   first_name?: string;
@@ -333,6 +338,7 @@ export interface SocioInvolucradoDetalleDTO {
 
 export interface ResponsableTdDTO {
   titulo: string;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   grupo: string;
@@ -373,6 +379,7 @@ export interface DescargoVisorDTO {
 
 export interface InvolucradoVisorDTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   first_name?: string;
@@ -463,6 +470,7 @@ export interface ExpedienteDetalleDTO {
 
 export interface SocioT01DTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
 }
@@ -780,16 +788,63 @@ export class ExpedienteApiService {
     return this.http.delete<void>(`${this.apiUrl}/reglamentos/articulos/${id}/`);
   }
 
-  listarPorLegajo(legajo: string): Observable<ExpedienteRankingDetalle[]> {
-    const params = new HttpParams().set('legajo', legajo);
-    return this.http.get<ExpedienteRankingDetalle[]>(
-      `${this.apiUrl}/gestion/`,
-      { params }
-    );
+  private appendPaginationParams(httpParams: HttpParams, params?: PaginationParams): HttpParams {
+    if (!params) {
+      return httpParams;
+    }
+    const keys: (keyof PaginationParams)[] = [
+      'page',
+      'page_size',
+      'ordering',
+      'search',
+      'estado',
+      'estado_ne',
+      'urgencia',
+      'concepto',
+      'socio',
+      'socio_legajo',
+      'fecha_desde',
+      'fecha_hasta',
+    ];
+    for (const key of keys) {
+      const value = params[key];
+      if (value !== undefined && value !== null && value !== '') {
+        httpParams = httpParams.set(key, String(value));
+      }
+    }
+    return httpParams;
   }
 
-  listarPorSocio(legajo: string): Observable<ExpedienteRankingDetalle[]> {
-    const params = new HttpParams().set('legajo', legajo);
+  listarPorLegajo(
+    legajo: string,
+    params?: PaginationParams
+  ): Observable<PaginatedResponse<ExpedienteRankingDetalle>> {
+    const httpParams = this.appendPaginationParams(new HttpParams().set('legajo', legajo), params);
+    return this.http
+      .get<PaginatedResponse<ExpedienteRankingDetalle> | ExpedienteRankingDetalle[]>(
+        `${this.apiUrl}/gestion/`,
+        { params: httpParams }
+      )
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response,
+            };
+          }
+          return response;
+        })
+      );
+  }
+
+  listarPorSocio(numeroSocio: string): Observable<ExpedienteRankingDetalle[]> {
+    const params = new HttpParams().set('numero_socio', numeroSocio);
     return this.http.get<ExpedienteRankingDetalle[]>(`${this.apiUrl}/por-socio/`, { params });
   }
 
@@ -865,8 +920,30 @@ export class ExpedienteApiService {
     return this.http.post(`${this.apiUrl}/${expedienteId}/descargo/`, payload);
   }
 
-  listarMisExpedientes(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/mis-expedientes/`);
+  listarMisExpedientes(
+    params?: PaginationParams
+  ): Observable<PaginatedResponse<any>> {
+    const httpParams = this.appendPaginationParams(new HttpParams(), params);
+    return this.http
+      .get<PaginatedResponse<any> | any[]>(`${this.apiUrl}/mis-expedientes/`, {
+        params: httpParams,
+      })
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response,
+            };
+          }
+          return response;
+        })
+      );
   }
 
   eliminarDescargo(expedienteId: number | string): Observable<any> {

@@ -38,6 +38,8 @@ El tiempo restante del plazo **no va como columna separada**. Va integrado dentr
 
 Es un ABM de artículos del Reglamento Interno. Hay que volcar los artículos ahí. **Todos los socios pueden ver**; solo TD, CD y Admin pueden agregar o editar. El control de acceso tiene que estar en servidor, no solo ocultando botones en el front.
 
+> **Actualizado (13/11/2026):** Implementado el ABM de Reglamentos con auditoría, carga inicial de artículos reglamentarios y control de acceso en servidor.
+
 ---
 
 ## Pantalla: Crear Expediente (T01)
@@ -77,11 +79,15 @@ Todas las columnas deben poder ordenarse.
 
 **"Pautas del Régimen Disciplinario" arriba de la tabla.** Eliminar ese bloque con los chips de HABILITADO / ADVERTENCIA / CESE ESTATUTARIO. El criterio de -10 y la política de -7 van a ser configurables, y por ahora no pertenecen a la pantalla de ranking.
 
+> **Actualizado (13/11/2026):** Implementado el ordenamiento por Saldo y compuesto (Grupo + Alfabético), el modal de detalle por socio y la lógica de alertas por umbrales reglamentarios (-10 crítico y -7 preventivo configurable/desactivable) con estricta privacidad.
+
 ---
 
 ## Pantalla: Reportes
 
 Están en pausa. Tengo que hablar con los usuarios del TD para definir qué necesitan ver. No arrancar nada acá todavía.
+
+> **Actualizado (13/11/2026):** Reportes salió de pausa e ingresó al sistema con vistas de T01, Reuniones, Subcomisiones, Histórico/Récords, Resumen y Exportación CSV (ver sección del 13/11/2026).
 
 ---
 
@@ -190,6 +196,8 @@ Dejo asentadas las definiciones y acuerdos alcanzados en las reuniones mantenida
     - **CONSIDERANDO:** Argumentación y valoración probatoria de la sanción o mérito.
     - **SE RESUELVE:** Artículos dispositivos individualizando expresamente el impacto en puntos de cada socio por nombre y legajo, notificación a CD y archivo.
 
+> **Actualizado (13/11/2026):** Se consolidó el modal de Resolución Oficial sin votación nominal, con permisos exclusivos del TD, persistencia de reglamentación y considerando limpio, incorporando el estado intermedio **"Pendiente de firma"** previo a la emisión definitiva (ver sección del 13/11/2026 y acuerdos de Sprint 5 sobre el reemplazo de "legajo" por "Número de Socio").
+
 ---
 
 ## 5. Pantalla: Ranking de Socios
@@ -220,4 +228,51 @@ Dejo asentadas las definiciones y acuerdos alcanzados en las reuniones mantenida
   - Corroborar el funcionamiento y conectividad del servicio MySQL en Docker.
 * **Ampliación de Datos de Prueba (Seed Data):**
   - Incorporar fixtures y seed data más exhaustivos y representativos (socios con distribución real en grupos G57 a G60, subcomisiones y causas disciplinarias testigo) para asegurar pruebas de integración y demostraciones fieles al uso institucional.
+
+---
+
+# Notas del PO — Consolidación de sprints 3–4 y acuerdos del sprint 5
+> **Fecha:** 13/11/2026 · **Autor:** Diego (Product Owner)
+
+Dejo asentado lo que ya quedó implementado y funcionando en el sistema durante los Sprints 3 y 4, más los acuerdos que cerramos para terminar el Sprint 5. Todo lo que se desarrolle o revise de acá en adelante tiene que respetar estas definiciones.
+
+---
+
+## 1. Decisiones transversales y experiencia de usuario (implementado)
+
+* **Notificaciones (toast):** En toda la app (incluidos login y modales), los avisos de éxito, error, advertencia e información salen abajo a la derecha por el servicio central. Duran 10 segundos, se desvanecen solos y se pueden cerrar con una X accesible. Cambiar de pantalla no los borra. No ponemos alertas transitorias dentro de formularios ni usamos `$.notify`. Todo en texto plano, sin trazas ni detalles técnicos.
+* **Formato de expedientes y visor:** Unificamos el código a `EXP-NNNN/YYYY` en todo el sistema y sumamos el visor de detalle según rol. La evidencia adjunta tiene acceso restringido para proteger datos sensibles de las causas.
+
+---
+
+## 2. Ciclo procesal, descargos, antecedentes y resoluciones (implementado)
+
+* **Descargos unificados (T02 y T03) y vencimiento:** Juntamos los descargos tipificados (T02) y extraordinarios (T03) en un mismo selector con persistencia. Cuando vence el plazo de justificación y no quedan instancias abiertas, el expediente pasa solo a revisión para que lo tome el Tribunal.
+* **Expedientes referenciados y antecedentes:** Al cargar una solicitud (T01), presentar un descargo o redactar una resolución, se pueden vincular expedientes anteriores desde una tabla y un modal selector. El Tribunal valora los descargos viendo esos antecedentes al lado del expediente.
+* **Resolución oficial y "Pendiente de firma":** El modal de resolución es exclusivo del rol TD, no tiene votación nominal y el *Considerando* arranca completamente en blanco. Guarda la reglamentación de respaldo y el texto dispositivo, y deja el expediente en estado "Pendiente de firma" hasta completar las firmas.
+* **Apartamiento y suplencia en el TD:** Si un integrante del Tribunal se aparta de una causa con motivo fundado, entra su suplente sin frenar el trámite.
+* **Apelación y adecuación de T01:** Ya funciona el circuito de apelación sobre resoluciones y el ajuste del formulario T01 para las causales y revisiones vinculadas.
+
+---
+
+## 3. Reglamentos, reportes, eventos y ranking (implementado)
+
+* **Reglamentos (ABM):** Quedó andando la carga inicial de artículos, el historial de cambios y el control de permisos en el servidor. Todos los socios pueden leer; solo TD, CD y Admin cargan o editan.
+* **Reportes e informes (sale de pausa):** Ya está operativa la pantalla con vistas para solicitudes T01, reuniones, subcomisiones, histórico/récords, resumen general y exportación a CSV. También sumamos la clasificación por concepto en los expedientes para alimentar estos informes.
+* **Eventos, reuniones y sanciones por inasistencia:** Se implementó la apertura y cierre de reuniones, la toma de asistencia y la generación automática de solicitudes cuando alguien falta sin justificación.
+* **Ranking de socios y umbrales:** Se puede ordenar por Saldo o de forma compuesta (Grupo y después alfabético), y abrir el modal con los expedientes de cada socio. Las alertas por puntos quedaron en -10 para el umbral crítico (cruce descendente único) y -7 para el preventivo (configurable y desactivable hasta la Circular 001/2026), sin incluir ningún dato médico ni sensible.
+
+---
+
+## 4. Acuerdos aprobados para el cierre (Sprint 5 consolidado)
+
+Esto es lo que validamos para cerrar el sistema en el Sprint 5:
+
+* **"Número de Socio" en vez de "legajo":** En AVEIT nos manejamos por número de socio. Cambiamos el término en toda la UI, las notificaciones y las resoluciones oficiales. En la base de datos dejamos la columna original para no romper el esquema legacy.
+* **Código canónico en Solicitar Puntos:** Apenas se crea una solicitud T01 se tiene que ver su número real (`EXP-NNNN/YYYY`), afuera los hashes temporales tipo `T01-<yyyy>-<hash>`.
+* **Exclusión fundada de involucrados (solo TD):** El TD puede excluir a un socio en cualquier estado previo a `Emitido` cargando un motivo obligatorio. Queda tachado en la causa, no suma puntos ni presenta descargo, y se avisa por mail tanto al excluido como a quien abrió el expediente. Si se excluye al último involucrado, la causa pasa a `Emitido` como "Sin efecto / Causa archivada".
+* **Enmienda de resoluciones emitidas:** Si hace falta corregir puntajes o fundamentos de una resolución ya emitida, se genera una nueva enlazada (`EXP-NNNN/YYYY-ENM-1`), se hace un contra-asiento en el libro mayor (cero `UPDATE` manuales) y vuelven a firmar los 3 representantes de los grupos activos (4.º, 5.º y 6.º año).
+* **Panel de Administración (solo Admin):** Pantalla para configurar parámetros del sistema (umbrales, plazos, mails institucionales y límites de adjuntos) con auditoría, y gestionar altas y bajas del rol TD usando Select2.
+* **Tablas, eventos, permisos y manual:** Revisamos todas las tablas para que cada columna muestre un solo dato sin concatenar textos. Vamos a rediseñar la pantalla de creación de eventos junto con el equipo, formalizar la matriz de permisos (RBAC) en backend y frontend, verificar todos los envíos de mail (`EmailOutbox`), optimizar paginación y consultas, y armar el manual de usuario separado por rol.
+
 

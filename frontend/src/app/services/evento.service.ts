@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import {
   AsistenciaEvento,
@@ -11,6 +12,7 @@ import {
   ReportarAsistenciaPayload,
   ReportarAsistenciaResponse
 } from '../models/evento.model';
+import { PaginatedResponse } from '../models/paginated-response.model';
 
 @Injectable({
   providedIn: 'root'
@@ -22,9 +24,9 @@ export class EventoService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Obtiene la lista de eventos institucionales con filtros opcionales.
+   * Obtiene la lista de eventos institucionales con filtros opcionales y envolvente paginada.
    */
-  getEventos(filtros?: EventoFiltros): Observable<EventoInstitucional[]> {
+  getEventos(filtros?: EventoFiltros): Observable<PaginatedResponse<EventoInstitucional>> {
     let params = new HttpParams();
     if (filtros) {
       if (filtros.categoria) {
@@ -48,15 +50,42 @@ export class EventoService {
       if (filtros.page != null) {
         params = params.set('page', filtros.page.toString());
       }
+      if (filtros.page_size != null) {
+        params = params.set('page_size', filtros.page_size.toString());
+      }
     }
-    return this.http.get<EventoInstitucional[]>(`${this.baseUrl}/`, { params });
+    return this.http
+      .get<PaginatedResponse<EventoInstitucional> | EventoInstitucional[]>(`${this.baseUrl}/`, { params })
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response,
+            };
+          }
+          return response;
+        })
+      );
   }
 
   /**
-   * Obtiene la lista de eventos creados por el usuario logueado.
+   * Obtiene la lista de eventos creados por el usuario logueado con paginación server-side.
    */
-  getMisEventos(): Observable<EventoInstitucional[]> {
-    return this.getEventos({ mis_eventos: true });
+  getMisEventos(filtros?: EventoFiltros): Observable<PaginatedResponse<EventoInstitucional>> {
+    return this.getEventos({ ...filtros, mis_eventos: true });
+  }
+
+  /**
+   * Obtiene eventos garantizando la interfaz canónica PaginatedResponse.
+   */
+  getEventosPaginados(filtros?: EventoFiltros): Observable<PaginatedResponse<EventoInstitucional>> {
+    return this.getEventos(filtros);
   }
 
   /**

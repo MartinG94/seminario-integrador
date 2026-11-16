@@ -9,7 +9,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
 import { of, Subject, throwError } from 'rxjs';
 import { NotificationService } from '../services/notification.service';
 
@@ -61,10 +63,12 @@ describe('GestionarExpedientesComponent', () => {
         MatAutocompleteModule,
         MatFormFieldModule,
         MatInputModule,
+        MatPaginatorModule,
         NoopAnimationsModule
       ],
       declarations: [GestionarExpedientesComponent, ValoracionT03PanelComponent],
       providers: [
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
         { provide: NotificationService, useValue: notifications },
         TribunalDataService,
         AuthService
@@ -110,12 +114,18 @@ describe('GestionarExpedientesComponent', () => {
     ]);
   });
 
-  it('debe permitir colapsar y expandir columnas en el tablero Kanban', () => {
+  it('debe inicializar colapsadas creado, pendiente_correos y emitido y permitir colapsar y expandir columnas', () => {
+    expect(component.isColumnaColapsada('creado')).toBeTrue();
+    expect(component.isColumnaColapsada('pendiente_correos')).toBeTrue();
+    expect(component.isColumnaColapsada('emitido')).toBeTrue();
+    expect(component.isColumnaColapsada('justificando')).toBeFalse();
+    expect(component.isColumnaColapsada('revision_resolucion')).toBeFalse();
+    expect(component.isColumnaColapsada('pendiente_firma')).toBeFalse();
+
+    component.toggleColapsar('emitido');
     expect(component.isColumnaColapsada('emitido')).toBeFalse();
     component.toggleColapsar('emitido');
     expect(component.isColumnaColapsada('emitido')).toBeTrue();
-    component.toggleColapsar('emitido');
-    expect(component.isColumnaColapsada('emitido')).toBeFalse();
   });
 
   it('columnasKanbanVisibles debe mostrar únicamente la columna filtrada si filtroEstado está activo', () => {
@@ -287,6 +297,7 @@ describe('GestionarExpedientesComponent', () => {
         firmas: { juecesFirmantes: ['Juez 1', 'Juez 2', 'Juez 3'] },
         ...overrides
       };
+      component.columnasColapsadas[expediente.estado] = false;
       component.expedientes = [expediente];
       fixture.detectChanges();
       return expediente;
@@ -1123,6 +1134,7 @@ describe('GestionarExpedientesComponent', () => {
       spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
       filaPrueba = {
         socioId: 10,
+        numero_socio: 7010,
         legajo: '74907',
         nombre: 'Diego Gabriel',
         apellido: 'Sánchez',
@@ -1142,7 +1154,7 @@ describe('GestionarExpedientesComponent', () => {
     it('genera el encabezado correcto con id de expediente, legajo y nombre completo', () => {
       component.involucradoSeleccionado = filaPrueba;
       const encabezado = component.getEncabezadoModalDescargo();
-      expect(encabezado).toBe('Descargo exp 888 y 74907, Diego Gabriel Sánchez');
+      expect(encabezado).toBe('Descargo exp 888 y 7010, Diego Gabriel Sánchez');
     });
 
     it('inicializa puntajeFinalInput con los puntos del expediente al abrir el descargo', () => {
@@ -1280,8 +1292,8 @@ describe('GestionarExpedientesComponent', () => {
       puntos: -1.5,
       cantidadSocios: 2,
       sociosInvolucrados: [
-        { id: '2', legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
-        { id: '3', legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
+        { id: '2', numero_socio: 7011, legajo: '85194', nombre: 'Lucas Martín Guillén', grupo: '59', estado: 'Activo' },
+        { id: '3', numero_socio: 7012, legajo: '87414', nombre: 'Diego Gabriel Sánchez', grupo: '59', estado: 'Pasivo' }
       ]
     };
 
@@ -1337,9 +1349,9 @@ describe('GestionarExpedientesComponent', () => {
       const modal = compiled.querySelector('.modal-backdrop-custom');
       expect(modal).toBeTruthy();
       expect(modal?.textContent).toContain('Socios Involucrados');
-      expect(modal?.textContent).toContain('85194');
+      expect(modal?.textContent).toContain('7011');
       expect(modal?.textContent).toContain('Lucas Martín Guillén');
-      expect(modal?.textContent).toContain('87414');
+      expect(modal?.textContent).toContain('7012');
       expect(modal?.textContent).toContain('Diego Gabriel Sánchez');
       expect(modal?.textContent).toContain('59');
       expect(modal?.textContent).toContain('Activo');
@@ -1751,7 +1763,8 @@ describe('GestionarExpedientesComponent', () => {
 
       const ths = Array.from(tabla.querySelectorAll('thead th')).map((el: any) => el.textContent.trim());
       expect(ths).toContain('N° de Socio');
-      expect(ths).toContain('Nombre Completo');
+      expect(ths).toContain('Apellido');
+      expect(ths).toContain('Nombre');
       expect(ths).toContain('Grupo');
       expect(ths).toContain('Estado de Descargo');
       expect(ths).toContain('Puntaje Final');
@@ -1764,6 +1777,31 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.formatGrupoInvolucrado(fila1.grupo)).toBe('59');
       expect(component.getEstadoDescargo(fila1)).toBe('Sin descargo');
       expect(component.getPuntajeFinalInvolucrado(fila1)).toBe(-1.5);
+    });
+
+    it('muestra el número institucional sin usar el legajo como número de socio', () => {
+      spyOn(api, 'obtenerDetalleExpediente').and.returnValue(of({
+        id: 202,
+        numero: '7/2026',
+        estado: 'revision_resolucion',
+        socios: [{
+          id: 77,
+          numero_socio: 1002,
+          legajo: '89123',
+          nombre: 'Lucía Gómez',
+          first_name: 'Lucía',
+          last_name: 'Gómez',
+          grupo: '59'
+        }],
+        descargos: []
+      }));
+
+      component.abrirDetalle(expBase);
+      fixture.detectChanges();
+
+      const tabla = fixture.nativeElement.querySelector('.tabla-involucrados') as HTMLElement;
+      expect(tabla.textContent).toContain('1002');
+      expect(tabla.textContent).not.toContain('89123');
     });
 
     it('debe calcular correctamente Estado de Descargo (Leído, No Leído, Sin descargo) y Puntaje Final', () => {
@@ -2243,7 +2281,7 @@ describe('GestionarExpedientesComponent', () => {
       expect(component.getCategoriaPuntajeLabel()).toBe('Sanción');
 
       component.opcionPuntajeFinal = 'LLAMADO_ATENCION';
-      expect(component.getCategoriaPuntajeLabel()).toBe('Apercibimiento');
+      expect(component.getCategoriaPuntajeLabel()).toBe('Llamado de Atención');
 
       component.opcionPuntajeFinal = '0.0';
       expect(component.getCategoriaPuntajeLabel()).toBe('Eximición');
@@ -2519,7 +2557,8 @@ describe('GestionarExpedientesComponent', () => {
       // Debe contener la tabla de puntajes finales consolidados en Artículo 1°
       const tablaPuntajes = modalEl.querySelector('.tabla-puntajes-consolidados');
       expect(tablaPuntajes).toBeTruthy();
-      expect(tablaPuntajes.textContent).toContain('Lucas Gómez');
+      expect(tablaPuntajes.textContent).toContain('Lucas');
+      expect(tablaPuntajes.textContent).toContain('Gómez');
       expect(tablaPuntajes.textContent).toContain('-1');
 
       // Botón selector de catálogo para VISTO presente, sin textarea libre de Visto
@@ -3133,6 +3172,181 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
       expect(exp.estado).toBe('pendiente_correos');
       expect(exp.considerandos).toBe('Considerandos rectificados.');
       expect(exp.firmas?.juecesFirmantes?.length).toBe(0);
+    });
+  });
+
+  describe('Sugerencias y correcciones PO PR #76 (Kanban preview, Mostrar más +, Llamado/Felicitación y refrescarVistaActual)', () => {
+    const makeExp = (id: number, overrides: Partial<Expediente> = {}): Expediente => ({
+      id: String(id),
+      numero: `EXP-${String(id).padStart(4, '0')}/2026`,
+      socio: 'Socio Prueba',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: `Motivo ${id}`,
+      fechaCreacion: '2026-03-01',
+      estado: 'justificando',
+      urgencia: 'normal',
+      horasRestantes: 24,
+      tipo: 'falta',
+      puntos: -1,
+      ...overrides,
+    });
+
+    it('renderiza vista previa de 5 tarjetas, total_count real del backend en .col-count y carga más al pulsar + sin duplicar', () => {
+      const iniciales = [1, 2, 3, 4, 5].map(id => makeExp(id));
+      const mockBoardConConteo: BoardResponseDTO = {
+        columns: [
+          { key: 'creado', label: 'Expediente Creado', cases: [], total_count: 8, has_more: true },
+          {
+            key: 'justificando',
+            label: 'Justificando',
+            total_count: 7,
+            has_more: true,
+            cases: iniciales.map(e => ({
+              id: Number(e.id),
+              numero: e.numero,
+              socio: 1,
+              socio_nombre: e.socio,
+              socio_legajo: e.legajo,
+              subcomision: e.subcomision,
+              estado: 'justificando',
+              estado_display: 'Justificando',
+              puntos: -1,
+              motivo: e.motivo,
+              created_at: e.fechaCreacion,
+              plazo_limite_at: null,
+              transiciones_permitidas: [],
+            })),
+          },
+          { key: 'revision_resolucion', label: 'En Revisión', cases: [], total_count: 0, has_more: false },
+          { key: 'espera_resolucion', label: 'Espera Resolución', cases: [], total_count: 0, has_more: false },
+          { key: 'pendiente_correos', label: 'Pendiente de Envío', cases: [], total_count: 0, has_more: false },
+          { key: 'emitido', label: 'Emitidos', cases: [], total_count: 0, has_more: false },
+        ],
+      };
+
+      (dataService.obtenerTablero as jasmine.Spy).and.returnValue(of(mockBoardConConteo));
+      component.expedientes = iniciales;
+      component.cargarDatosTablero();
+      fixture.detectChanges();
+
+      const colJustificando = fixture.nativeElement.querySelector('.kanban-col-mat[aria-label="Justificando"]') as HTMLElement;
+      expect(colJustificando).toBeTruthy();
+      expect(colJustificando.querySelector('.col-count')?.textContent?.trim()).toBe('7');
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(5);
+
+      const btnMas = colJustificando.querySelector('button.btn-mostrar-mas') as HTMLButtonElement;
+      expect(btnMas).toBeTruthy();
+      expect(btnMas.textContent?.trim()).toBe('+');
+      expect(btnMas.getAttribute('title')).toBe('Mostrar más');
+      expect(btnMas.getAttribute('aria-label')).toBe('Mostrar más');
+
+      const listarSpy = spyOn(dataService, 'listarExpedientes').and.returnValue(of({
+        count: 7,
+        total_pages: 2,
+        current_page: 2,
+        page_size: 5,
+        next: null,
+        previous: null,
+        results: [makeExp(5), makeExp(6), makeExp(7)], // incluye ID 5 duplicado para validar deduplicación
+      }));
+
+      btnMas.click();
+      fixture.detectChanges();
+
+      expect(listarSpy).toHaveBeenCalledWith(jasmine.objectContaining({
+        estado: 'justificando',
+        page: 2,
+        page_size: 5,
+        ordering: '-created_at',
+      }));
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(7);
+      expect(colJustificando.querySelector('button.btn-mostrar-mas')).toBeNull();
+    });
+
+    it('expande slice local de memoria al pulsar + cuando hay más de 5 tarjetas locales sin llamar a listarExpedientes', () => {
+      const listarSpy = spyOn(dataService, 'listarExpedientes');
+      component.expedientes = [1, 2, 3, 4, 5, 6, 7].map(id => makeExp(id));
+      fixture.detectChanges();
+
+      const colJustificando = fixture.nativeElement.querySelector('.kanban-col-mat[aria-label="Justificando"]') as HTMLElement;
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(5);
+      const btnMas = colJustificando.querySelector('button.btn-mostrar-mas') as HTMLButtonElement;
+      expect(btnMas).toBeTruthy();
+
+      btnMas.click();
+      fixture.detectChanges();
+
+      expect(listarSpy).not.toHaveBeenCalled();
+      expect(colJustificando.querySelectorAll('.kanban-card-mat').length).toBe(7);
+      expect(colJustificando.querySelector('button.btn-mostrar-mas')).toBeNull();
+    });
+
+    it('muestra "Llamado de atención" y "Felicitación" para ±0.25 en tarjetas Kanban y vista tabla', () => {
+      component.expedientes = [
+        makeExp(101, { puntos: -0.25, esLlamado: true, puntaje_solicitado: 'LLAMADO_ATENCION' }),
+        makeExp(102, { puntos: 0.25, esFelicitacion: true, puntaje_solicitado: 'FELICITACION' }),
+      ];
+      component.vistaActual = 'kanban';
+      fixture.detectChanges();
+
+      const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.kanban-card-mat'));
+      expect(cards.length).toBe(2);
+      const textosCards = cards.map(c => c.querySelector('.card-points')?.textContent?.trim());
+      expect(textosCards).toContain('Llamado de atención');
+      expect(textosCards).toContain('Felicitación');
+      expect(textosCards.join(' ')).not.toContain('0.25');
+
+      component.vistaActual = 'tabla';
+      fixture.detectChanges();
+      const tablaText = fixture.nativeElement.querySelector('table')?.textContent || '';
+      expect(tablaText).toContain('Llamado de atención');
+      expect(tablaText).toContain('Felicitación');
+      expect(tablaText).not.toContain('0.25');
+    });
+
+    it('refrescarVistaActual llama a cargarTablaPaginada en acciones mutadoras cuando vistaActual === "tabla"', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const cargarTablaSpy = spyOn(component, 'cargarTablaPaginada');
+      const cargarTableroSpy = spyOn(component, 'cargarDatosTablero');
+
+      component.vistaActual = 'tabla';
+
+      // 1. cambiarUrgenciaExpediente
+      spyOn(dataService, 'actualizarUrgencia').and.returnValue(of({}));
+      const exp = makeExp(10, { estado: 'pendiente_firma' });
+      component.expedienteSeleccionado = exp;
+      component.cambiarUrgenciaExpediente('urgente');
+      expect(cargarTablaSpy).toHaveBeenCalledTimes(1);
+      expect(cargarTableroSpy).not.toHaveBeenCalled();
+
+      // 2. confirmarFirma
+      spyOn(expedienteApi, 'firmarResolucionOficial').and.returnValue(of({
+        id: 1,
+        expediente: 10,
+        version: 1,
+        plantilla_version: 'v1',
+        estado: 'DRAFT',
+        numero_expediente_snapshot: 'EXP-0010/2026',
+        vistos: '',
+        considerandos: '',
+        articulos_resolutivos: '',
+        firmantes_td: ['74907 - Juez 1 - G1'],
+        created_by: 1,
+        created_at: '',
+        updated_at: '',
+        contenido_hash: 'hash-ok',
+      }));
+      component.expedienteSeleccionado = exp;
+      component.confirmarFirma();
+      expect(cargarTablaSpy).toHaveBeenCalledTimes(2);
+      expect(cargarTableroSpy).not.toHaveBeenCalled();
+
+      // 3. transicionarEstado
+      spyOn(dataService, 'transicionarExpediente').and.returnValue(of({ detail: 'Ok' }));
+      component.transicionarEstado(exp, 'justificando');
+      expect(cargarTablaSpy).toHaveBeenCalledTimes(3);
+      expect(cargarTableroSpy).not.toHaveBeenCalled();
     });
   });
 });
