@@ -27,10 +27,13 @@ class Role(models.TextChoices):
     """Roles RBAC del sistema. Ver docs/especificaciones/RBAC-SGD-AVEIT.md."""
 
     SOCIO = "SOCIO", "Socio Ordinario"
-    FISCALIZADORA = "FISCALIZADORA", "Autoridad de Subcomisión / Líder de Equipo"
+    AUTORIDAD_SC = "AUTORIDAD_SC", "Autoridad de Subcomisión / Líder de Equipo"
+    REVISORES = "REVISORES", "Revisores de Cuentas"
     CD = "CD", "Comisión Directiva"
     TD = "TD", "Tribunal de Disciplina"
     ADMIN = "ADMIN", "Administrador de Cómputos"
+    # Alias legado retenido para compatibilidad histórica
+    FISCALIZADORA = "FISCALIZADORA", "Fiscalizadora (Legado)"
 
 
 class Socio(models.Model):
@@ -60,7 +63,10 @@ class Socio(models.Model):
     category = models.CharField(max_length=10, choices=SocialCategory.choices)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.SOCIO, db_index=True)
     # Vigencia operativa de la cuenta: independiente de `category` (Constitución, ppio. 8).
-    is_enabled = models.BooleanField(default=True)
+    # is_enabled=False implica baja definitiva / cesantía (401 en login y API).
+    is_enabled = models.BooleanField(default=True, db_index=True)
+    # Suspensión procesal temporal: permite acceso en modo solo lectura a /mis-expedientes y apelar.
+    is_suspended = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         verbose_name = "Socio"

@@ -30,26 +30,26 @@ LEGACY_PERMISSION_TO_ROLES: Final[dict[str, tuple[str, ...]]] = {
     # sus propias solicitudes T01 y presentar descargos T02/T03.
     "tribunal_bajo": (
         Role.SOCIO,
-        Role.FISCALIZADORA,
+        Role.AUTORIDAD_SC,
+        Role.REVISORES,
         Role.CD,
         Role.TD,
         Role.ADMIN,
+        Role.FISCALIZADORA,
     ),
     # Gestión operativa: eventos, asistencias, hora de fin y filtrado de
-    # expedientes. En el esquema nuevo corresponde a los órganos de gobierno y
-    # al Tribunal; ADMIN queda excluido porque ACT-05 no tiene atribuciones
-    # funcionales sobre expedientes.
-    "tribunal_medio": (Role.CD, Role.TD),
+    # expedientes. Corresponde a órganos directivos, tribunal y autoridades de subcomisión.
+    "tribunal_medio": (Role.CD, Role.TD, Role.AUTORIDAD_SC),
     # Potestad jurisdiccional: dictaminar T01, calificar T02/T03, resolver y
     # firmar disposiciones. Exclusivo del Tribunal de Disciplina.
     "tribunal_alto": (Role.TD,),
 }
 
 # Cargos estatutarios legados (`socio_tipoSocio`, IDs 1-15) y el rol RBAC con
-# el que se da de alta la cuenta migrada.
+# el que se da de alta la cuenta migrada (Refinamiento PO S5 / SCRUM-121).
 LEGACY_POSITION_TO_ROLE: Final[dict[int, str]] = {
-    1: Role.FISCALIZADORA,  # Presidente de Subcomisión
-    2: Role.FISCALIZADORA,  # Vicepresidente de Subcomisión
+    1: Role.AUTORIDAD_SC,  # Presidente de Subcomisión
+    2: Role.AUTORIDAD_SC,  # Vicepresidente de Subcomisión
     3: Role.CD,  # Presidente de AVEIT
     4: Role.CD,  # Vicepresidente de AVEIT
     5: Role.CD,  # Tesorero
@@ -60,24 +60,13 @@ LEGACY_POSITION_TO_ROLE: Final[dict[int, str]] = {
     10: Role.TD,  # Titular del Tribunal de Disciplina
     11: Role.TD,  # Suplente del Tribunal de Disciplina
     12: Role.SOCIO,  # Socio Ordinario
+    13: Role.CD,  # Secretario (sujeto a revisión en padrón)
+    14: Role.REVISORES,  # Revisor de Cuentas Titular
+    15: Role.REVISORES,  # Revisor de Cuentas Suplente
 }
 
-# Cargos legados sin equivalencia unívoca en los cinco roles definidos por la
-# spec. No se asignan por defecto: migrarlos requiere una decisión del Product
-# Owner, y hasta entonces la cuenta se da de alta como SOCIO (mínimo
-# privilegio) y se revisa a mano.
-#
-# - 13 "Secretario": los 7 cargos de Comisión Directiva que enumera ACT-03 no
-#   incluyen un "Secretario" a secas (sí Secretario General y Secretario de
-#   Actas), por lo que no puede deducirse si es de CD o de subcomisión.
-# - 14/15 "Revisor de Cuentas" (y suplente): el ERS los ubica en STK-06
-#   "Órganos de Fiscalización", un actor que no tiene rol propio en el enum de
-#   la spec una vez que FISCALIZADORA quedó asignado a ACT-04.
-UNMAPPED_LEGACY_POSITIONS: Final[dict[int, str]] = {
-    13: "Secretario",
-    14: "Revisor de Cuentas",
-    15: "Revisor de Cuentas Suplente",
-}
+# Todos los cargos 1-15 cuentan con asignación formal conforme a SCRUM-121.
+UNMAPPED_LEGACY_POSITIONS: Final[dict[int, str]] = {}
 
 DEFAULT_ROLE_FOR_UNMAPPED: Final[str] = Role.SOCIO
 

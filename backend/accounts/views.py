@@ -35,6 +35,6 @@ class MeView(APIView):
         if socio is None or not socio.is_enabled:
             return Response(
                 {"detail": "No posee un legajo de socio vigente."},
-                status=status.HTTP_403_FORBIDDEN,
+                status=status.HTTP_401_UNAUTHORIZED,
             )
         return Response(SocioProfileSerializer(socio).data)

@@ -67,9 +67,7 @@ class EventoInstitucionalViewSet(viewsets.ModelViewSet):
     )
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
-            return [permissions.IsAuthenticated()]
-        return [CanManageEventos()]
+        return [permissions.IsAuthenticated(), CanManageEventos()]
 
     def get_serializer_class(self):
         if self.action == "create":

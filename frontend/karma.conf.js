@@ -1,4 +1,6 @@
-process.env.CHROME_BIN = process.env.CHROME_BIN || '/usr/bin/chromium';
+const isWin = process.platform === 'win32';
+const defaultChrome = isWin ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : '/usr/bin/chromium';
+process.env.CHROME_BIN = process.env.CHROME_BIN || defaultChrome;
 
 module.exports = function (config) {
   config.set({
@@ -41,11 +43,11 @@ module.exports = function (config) {
     customLaunchers: {
       ChromeHeadless: {
         base: 'Chrome',
-        flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions', '--remote-debugging-port=9222']
+        flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions']
       },
       ChromeHeadlessNoSandbox: {
         base: 'Chrome',
-        flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions', '--remote-debugging-port=9222']
+        flags: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-translate', '--disable-extensions']
       }
     },
     captureTimeout: 120000,

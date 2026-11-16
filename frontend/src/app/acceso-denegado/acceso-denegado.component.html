@@ -1,0 +1,28 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="card card-warning text-center">
+          <div class="card-header card-header-warning">
+            <h4 class="card-title">Acceso Denegado (403)</h4>
+            <p class="card-category">Operación o recurso no disponible para tu cuenta</p>
+          </div>
+          <div class="card-body">
+            <div class="my-4">
+              <i class="material-icons text-warning" style="font-size: 64px;">lock</i>
+            </div>
+            <p class="text-muted">
+              No contás con las facultades estatutarias o permisos requeridos para acceder a esta sección.
+              Si considerás que se trata de un error, por favor contactá a la Comisión Directiva.
+            </p>
+            <div class="mt-4">
+              <a [routerLink]="['/mis-expedientes']" class="btn btn-primary">
+                Volver a Mis Expedientes
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -422,7 +422,19 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 15. Instrucciones para la Actualización de este Archivo
+## 15. Sprint 5 — Desglose Atómico: MACRO-07 (SCRUM-92) / S5-07
+
+> **Historia / Macro:** SCRUM-92: Matriz Formal de Permisos RBAC y Verificación Universal de Notificaciones por Email.  
+> **Especificación:** [`docs/especificaciones/RBAC-SGD-AVEIT.md`](docs/especificaciones/RBAC-SGD-AVEIT.md)  
+> **Criterios de Aceptación:** Mapeo de cargos 1-15, diferenciación de `AUTORIDAD_SC` y `REVISORES` (reemplazo de `FISCALIZADORA`), blindaje 401 para `is_enabled=False`, suspensión operativa con 403, restricción de reglamentos a TD/CD, restricción de eventos a CD/TD/AUTORIDAD_SC, titularidad de descargos, exclusión activa de integrantes de TD recusados o apartados en votación/resolución, y ruta frontend `/403` con navegación de retorno.
+
+- [x] **S5-07.1 (SCRUM-121) Matriz formal de permisos RBAC en docs/:** Documento normativo consolidado en `docs/especificaciones/RBAC-SGD-AVEIT.md` con matriz bidireccional por rol, pantalla y endpoint REST, análisis de brecha (Gap Analysis) y carga de especificaciones en Jira.
+- [x] **S5-07.2 (SCRUM-122) Blindaje y tests automatizados de permisos DRF/Angular:** Implementación de roles en backend y frontend, diferenciación de cuentas deshabilitadas (401) y suspendidas (403), permisos a nivel de objeto para recusaciones TD y titularidad de descargos, componente UI `/403`, protección en `TribunalGuard` y tests automatizados (`pytest` y `npm test`) con 100% de éxito.
+- [ ] **S5-07.3 (SCRUM-123) Verificación universal de notificaciones por email:** Verificación integral de disparadores de email en el outbox transaccional, plantillas y cobertura de eventos institucionales.
+
+---
+
+## 16. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

@@ -151,7 +151,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "accounts.authentication.SocioJWTAuthentication",
     ),
     # Deny by default (CA3): every endpoint must opt in to anonymous access
     # explicitly instead of opting out of authentication.

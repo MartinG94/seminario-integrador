@@ -18,11 +18,11 @@ DEMO_PASSWORD = "Aveit-Demo-2026!"
 
 DEMO_SOCIOS = [
     ("74907", "Gastiaburu", "Lucas", Role.SOCIO, 2),
-    ("85194", "Guillén", "Lucas Martín", Role.FISCALIZADORA, 4),
+    ("85194", "Guillén", "Lucas Martín", Role.REVISORES, 4),
     ("87414", "Sánchez", "Diego Gabriel", Role.CD, 5),
     ("408917", "Rosales", "Nicolás", Role.TD, 6),
     ("403655", "Villegas", "Axel René", Role.ADMIN, 5),
-    ("409953", "Urviola", "Luis", Role.SOCIO, 4),
+    ("409953", "Urviola", "Luis", Role.AUTORIDAD_SC, 4),
     ("415327", "Quiroz", "Tomas Augusto", Role.SOCIO, 3),
 ]
 

@@ -35,6 +35,12 @@ class HasAnyRole(BasePermission):
         identifier = getattr(user, "username", "-")
         resource = request.path
 
+        # Un socio con suspensión procesal vigente no puede realizar acciones
+        # amparadas bajo roles especiales (salvo lectura de mis-expedientes y apelación).
+        if socio and socio.is_suspended:
+            audit.log_access_denied(identifier=identifier, role=role, resource=resource)
+            return False
+
         granted = bool(socio and socio.is_enabled and role in self.allowed_roles)
         if granted:
             audit.log_access_granted(identifier=identifier, role=role, resource=resource)

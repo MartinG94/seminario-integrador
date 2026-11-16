@@ -103,3 +103,4 @@ class SocioProfileSerializer(serializers.Serializer):
     category = serializers.CharField()
     category_display = serializers.CharField(source="get_category_display")
     subcomision = serializers.CharField(source="subcomision.name", default=None)
+    is_suspended = serializers.BooleanField(read_only=True)

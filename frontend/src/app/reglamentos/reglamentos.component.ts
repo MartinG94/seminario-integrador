@@ -42,7 +42,7 @@ export class ReglamentosComponent implements OnInit {
   }
 
   puedeGestionar(): boolean {
-    return this.authService.tieneRol('TD', 'CD', 'ADMIN');
+    return this.authService.tieneRol('TD', 'CD');
   }
 
   seleccionarPestana(tab: TipoDocumentoReglamento): void {

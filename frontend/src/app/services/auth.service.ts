@@ -5,7 +5,14 @@ import { tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 
-export type RolRbac = 'SOCIO' | 'FISCALIZADORA' | 'CD' | 'TD' | 'ADMIN';
+export type RolRbac =
+  | 'SOCIO'
+  | 'AUTORIDAD_SC'
+  | 'REVISORES'
+  | 'CD'
+  | 'TD'
+  | 'ADMIN'
+  | 'FISCALIZADORA';
 
 export interface PerfilSocio {
   legajo: string;
@@ -16,6 +23,7 @@ export interface PerfilSocio {
   category: 'PASSIVE' | 'ACTIVE';
   category_display: string;
   subcomision: string | null;
+  is_suspended?: boolean;
 }
 
 export interface LoginResponse {
@@ -66,6 +74,11 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     return this.getToken() !== null;
+  }
+
+  isSuspended(): boolean {
+    const perfil = this.getPerfil();
+    return !!perfil?.is_suspended;
   }
 
   /**

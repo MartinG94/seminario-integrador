@@ -21,12 +21,12 @@ declare interface ModuloInfo {
 export const ROUTES: RouteInfo[] = [
     { path: '/mis-expedientes',        title: 'Mis Expedientes',       icon: 'folder_shared',    class: '' },
     { path: '/reglamentos',            title: 'Reglamentos',           icon: 'menu_book',        class: '' },
-    { path: '/solicitar-puntos',       title: 'Crear Expediente',      icon: 'assignment_add',   class: '', roles: ['FISCALIZADORA', 'CD', 'TD'] },
+    { path: '/solicitar-puntos',       title: 'Crear Expediente',      icon: 'assignment_add',   class: '', roles: ['AUTORIDAD_SC', 'REVISORES', 'CD', 'TD', 'FISCALIZADORA'] },
     { path: '/ranking-socios',         title: 'Ranking de Socios',     icon: 'military_tech',    class: '' },
-    { path: '/gestionar-expedientes',  title: 'Gestionar Expedientes', icon: 'gavel',           class: '', roles: ['TD', 'ADMIN', 'CD'] },
+    { path: '/gestionar-expedientes',  title: 'Gestionar Expedientes', icon: 'gavel',           class: '', roles: ['TD', 'CD'] },
     { path: '/calendario-institucional', title: 'Calendario Institucional', icon: 'calendar_month', class: '' },
-    { path: '/reportes',               title: 'Reportes & Balance',    icon: 'analytics',       class: '', roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] },
-    { path: '/eventos-asistencia',     title: 'Eventos & Asistencia',  icon: 'event_available', class: '', roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] },
+    { path: '/reportes',               title: 'Reportes & Balance',    icon: 'analytics',       class: '', roles: ['TD', 'CD', 'REVISORES', 'FISCALIZADORA'] },
+    { path: '/eventos-asistencia',     title: 'Eventos & Asistencia',  icon: 'event_available', class: '', roles: ['CD', 'TD', 'AUTORIDAD_SC'] },
 ];
 
 /**

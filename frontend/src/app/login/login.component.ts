@@ -17,7 +17,8 @@ export class LoginComponent implements OnInit {
 
   cuentasDemo = [
     { legajo: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
-    { legajo: '85194', rol: 'FISCALIZADORA', nombre: 'Lucas Guillén' },
+    { legajo: '409953', rol: 'AUTORIDAD_SC', nombre: 'Luis Urviola' },
+    { legajo: '85194', rol: 'REVISORES', nombre: 'Lucas Guillén' },
     { legajo: '87414', rol: 'CD', nombre: 'Diego Sánchez' },
     { legajo: '408917', rol: 'TD', nombre: 'Nicolás Rosales' },
     { legajo: '403655', rol: 'ADMIN', nombre: 'Axel Villegas' },

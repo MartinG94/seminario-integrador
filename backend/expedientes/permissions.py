@@ -36,9 +36,9 @@ __all__ = [
 
 
 class CanManageReglamentos(HasAnyRole):
-    """Autoridades habilitadas para gestionar artículos de reglamentos (TD, CD, Admin)."""
+    """Autoridades habilitadas para gestionar artículos de reglamentos (exclusivo TD y CD)."""
 
-    allowed_roles = (Role.TD, Role.CD, Role.ADMIN)
+    allowed_roles = (Role.TD, Role.CD)
 
 
 class CanViewReportes(HasAnyRole):
@@ -46,7 +46,7 @@ class CanViewReportes(HasAnyRole):
     (TD, CD, Revisores, Admin).
     """
 
-    allowed_roles = (Role.TD, Role.CD, Role.FISCALIZADORA, Role.ADMIN)
+    allowed_roles = (Role.TD, Role.CD, Role.REVISORES, Role.ADMIN, Role.FISCALIZADORA)
 
 
 class IsComisionDirectivaOrAdmin(HasAnyRole):
@@ -56,9 +56,9 @@ class IsComisionDirectivaOrAdmin(HasAnyRole):
 
 
 class CanManageEventos(HasAnyRole):
-    """Autoridades facultadas para gestionar eventos (CD, Tribunal, Fiscalizadora, Admin)."""
+    """Autoridades facultadas para gestionar eventos (exclusivo CD, TD, Autoridad SC)."""
 
-    allowed_roles = (Role.CD, Role.ADMIN, Role.TD, Role.FISCALIZADORA)
+    allowed_roles = (Role.CD, Role.TD, Role.AUTORIDAD_SC)
 
 
 class CanManageCalendar(HasAnyRole):
@@ -68,9 +68,9 @@ class CanManageCalendar(HasAnyRole):
 
 
 class CanOpenExpedientes(HasAnyRole):
-    """Autoridades habilitadas para abrir expedientes: TD, CD y autoridades (Notas del PO)."""
+    """Autoridades habilitadas para abrir expedientes: TD, CD, Revisores y Autoridades SC (Notas del PO)."""
 
-    allowed_roles = (Role.TD, Role.CD, Role.FISCALIZADORA)
+    allowed_roles = (Role.TD, Role.CD, Role.AUTORIDAD_SC, Role.REVISORES, Role.FISCALIZADORA)
 
 
 class CanTransitionExpedientes(HasAnyRole):
@@ -88,15 +88,36 @@ class CanResolveCausal(HasAnyRole):
 class IsNotInvolvedInExpediente(BasePermission):
     """Inhibe a las partes interesadas del expediente `pk` (Art. 95 Estatuto, Art. 24 RPD).
 
-    Imputados y solicitantes no evalúan justificativos, no transicionan la causa ni
-    emiten o firman la resolución: responde 403 aunque tengan rol de Tribunal.
+    - Métodos de lectura (SAFE_METHODS): Se permite acceso de solo lectura al visor para
+      garantizar la publicidad procesal.
+    - Operaciones mutativas (POST, PUT, PATCH, DELETE): Imputados, solicitantes y
+      miembros apartados no evalúan justificativos, no transicionan la causa ni
+      redactan, firman o emiten la resolución: responde 403 Forbidden.
     """
 
     message = INVOLVED_MESSAGE
 
+    def _get_expediente(self, view):
+        expediente_id = view.kwargs.get("pk") or view.kwargs.get("expediente_id")
+        if expediente_id:
+            return Expediente.objects.filter(pk=expediente_id).first()
+        return None
+
     def has_permission(self, request, view) -> bool:
-        expediente = Expediente.objects.filter(pk=view.kwargs.get("pk")).first()
-        return expediente is None or not is_involved(expediente, request.user)
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return True
+        expediente = self._get_expediente(view)
+        if expediente is not None and is_involved(expediente, request.user):
+            return False
+        return True
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return True
+        expediente = obj if isinstance(obj, Expediente) else getattr(obj, "expediente", None)
+        if expediente is not None and is_involved(expediente, request.user):
+            return False
+        return True
 
 
 class CanAdjustT01(HasAnyRole):
@@ -114,7 +135,7 @@ class CanManageAppealDeadline(HasAnyRole):
 class CanCreateT01(HasAnyRole):
     """Autoridades procesales habilitadas para crear y tramitar T01."""
 
-    allowed_roles = (Role.FISCALIZADORA, Role.CD, Role.TD)
+    allowed_roles = (Role.AUTORIDAD_SC, Role.REVISORES, Role.CD, Role.TD, Role.FISCALIZADORA)
 
 
 class IsImputadoOrTribunal(BasePermission):
