@@ -561,5 +561,32 @@ describe('ExpedienteApiService', () => {
       req.flush([mockAntecedente]);
     });
   });
+  describe('libro mayor y publicación protegida (Spec 011)', () => {
+    const base = `${environment.apiUrl}/expedientes`;
+
+    it('consulta el saldo del socio autenticado', () => {
+      service.obtenerMiSaldo().subscribe(saldo => {
+        expect(saldo.saldo).toBe('-2.00');
+        expect(saldo.llamados_pendientes).toBe(1);
+      });
+      const req = http.expectOne(`${base}/mis-expedientes/saldo/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ saldo: '-2.00', llamados_pendientes: 1, felicitaciones_pendientes: 0, movimientos: [] });
+    });
+
+    it('obtiene la resolución publicada de un expediente', () => {
+      service.obtenerResolucionPublicada(7).subscribe(pub => expect(pub.identificador).toBe('RESOLUCIÓN 7/2026'));
+      const req = http.expectOne(`${base}/7/resolucion/publicada/`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ identificador: 'RESOLUCIÓN 7/2026' });
+    });
+
+    it('descarga el PDF publicado como Blob', () => {
+      service.descargarResolucionPublicadaPdf(7).subscribe(blob => expect(blob.size).toBeGreaterThan(0));
+      const req = http.expectOne(`${base}/7/resolucion/publicada/pdf/`);
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+    });
+  });
 });
 

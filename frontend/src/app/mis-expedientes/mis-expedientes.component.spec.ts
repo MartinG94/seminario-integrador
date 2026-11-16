@@ -880,107 +880,98 @@ describe('MisExpedientesComponent', () => {
     });
   });
 
-  describe('Cálculo Estricto de Saldo Neto desde Expedientes Emitidos', () => {
-    it('computa saldo 0 cuando el socio no tiene expedientes registrados', () => {
-      component.misExpedientes = [];
-      component.actualizarSaldoNeto();
+  describe('Saldo del libro mayor y aislamiento por socio (Spec 011)', () => {
+    const saldoUrl = `${apiUrl}/mis-expedientes/saldo/`;
+    const listaUrl = `${apiUrl}/mis-expedientes/`;
+
+    it('muestra el saldo y los pendientes 3:1 que informa el libro mayor', () => {
+      http.match(saldoUrl).forEach(req => req.flush({
+        saldo: '-2.50', llamados_pendientes: 2, felicitaciones_pendientes: 1, movimientos: []
+      }));
+      expect(component.saldoNeto).toBe(-2.5);
+      expect(component.llamadosAtencion).toBe(2);
+      expect(component.felicitaciones).toBe(1);
+    });
+
+    it('avisa por el servicio central si el saldo no se puede cargar', () => {
+      http.match(saldoUrl).forEach(req => req.flush({ detail: 'x' }, { status: 500, statusText: 'Error' }));
+      expect(notifications.error).toHaveBeenCalled();
       expect(component.saldoNeto).toBe(0);
     });
 
-    it('computa saldo 0 cuando el socio tiene expedientes pero ninguno está emitido/cerrado', () => {
-      component.misExpedientes = [
-        {
-          id: 'EXP-1',
-          numero: 'EXP-001/2026',
-          tipo: 'falta',
-          socio: 'Diego Gabriel Sánchez',
-          legajo: '87414',
-          motivo: 'Inasistencia',
-          subcomision: 'Cómputos',
-          puntos: -1,
-          estado: 'justificando',
-          fechaCreacion: '2026-10-08',
-          horasRestantes: 48
-        },
-        {
-          id: 'EXP-2',
-          numero: 'EXP-002/2026',
-          tipo: 'falta',
-          socio: 'Diego Gabriel Sánchez',
-          legajo: '87414',
-          motivo: 'Falta informe',
-          subcomision: 'Cómputos',
-          puntos: -2,
-          estado: 'revision_resolucion',
-          fechaCreacion: '2026-10-09',
-          horasRestantes: 0
-        }
-      ];
-
-      component.actualizarSaldoNeto();
-      expect(component.saldoNeto).toBe(0);
-    });
-
-    it('computa estrictamente la sumatoria de puntos de expedientes en estado emitido', () => {
-      component.misExpedientes = [
-        {
-          id: 'EXP-1',
-          numero: 'EXP-001/2026',
-          tipo: 'merito',
-          socio: 'Diego Gabriel Sánchez',
-          legajo: '87414',
-          motivo: 'Colaboración destacada',
-          subcomision: 'CD',
-          puntos: 3,
-          estado: 'emitido',
-          fechaCreacion: '2026-10-01',
-          horasRestantes: 0
-        },
-        {
-          id: 'EXP-2',
-          numero: 'EXP-002/2026',
-          tipo: 'falta',
-          socio: 'Diego Gabriel Sánchez',
-          legajo: '87414',
-          motivo: 'Inasistencia',
-          subcomision: 'CD',
-          puntos: -1,
-          estado: 'justificando',
-          fechaCreacion: '2026-10-05',
-          horasRestantes: 24
-        },
-        {
-          id: 'EXP-3',
-          numero: 'EXP-003/2026',
-          tipo: 'merito',
-          socio: 'Diego Gabriel Sánchez',
-          legajo: '87414',
-          motivo: 'Organización aniversario',
-          subcomision: 'CD',
-          puntos: 2,
-          estado: 'emitido',
-          fechaCreacion: '2026-10-06',
-          horasRestantes: 0
-        }
-      ];
-
-      component.actualizarSaldoNeto();
-      // Solo suman los emitidos: 3 + 2 = 5 (el de -1 en justificando no se computa)
-      expect(component.saldoNeto).toBe(5);
-    });
-
-    it('no sobreescribe el saldo con mocks estáticos al emitir socios$', () => {
-      component.misExpedientes = [];
-      component.actualizarSaldoNeto();
-      expect(component.saldoNeto).toBe(0);
-
-      // Simular emisión de socios
-      (component.dataService as any).sociosSubject?.next?.([
-        { id: '1', nombre: 'Diego Gabriel Sánchez', legajo: '87414', saldo: 10.0 }
+    it('no reemplaza una lista vacía del backend por expedientes locales', () => {
+      const data = TestBed.inject(TribunalDataService);
+      (data as any).expedientesSubject.next([
+        { id: '9', numero: 'EXP-0009/2026', socio: 'Otro Socio', legajo: '99999', estado: 'creado', puntos: -1 }
       ]);
+      http.match(listaUrl).forEach(req => req.flush([]));
+      expect(component.misExpedientes).toEqual([]);
+    });
 
-      // Debe mantenerse en 0 porque no tiene expedientes emitidos
-      expect(component.saldoNeto).toBe(0);
+    it('muestra los puntos aplicados por la resolución en las causas emitidas', () => {
+      http.match(listaUrl).forEach(req => req.flush([
+        { id: 1, numero: 'EXP-0001/2026', estado: 'emitido', puntos: -3, puntos_aplicados: '0.00', medida_aplicada: null },
+        { id: 2, numero: 'EXP-0002/2026', estado: 'emitido', puntos: -0.25, puntos_aplicados: '0.00', medida_aplicada: 'LLAMADO_ATENCION' },
+        { id: 3, numero: 'EXP-0003/2026', estado: 'justificando', puntos: -2, puntos_aplicados: null }
+      ]));
+      const [absuelto, llamado, enTramite] = component.misExpedientes;
+      expect(component.puntosVisibles(absuelto)).toBe(0);
+      expect(component.tieneImpactoAplicado(llamado)).toBeTrue();
+      expect(component.getMedidaLabel(llamado.medidaAplicada)).toBe('Llamado de atención');
+      expect(component.tieneImpactoAplicado(enTramite)).toBeFalse();
+      expect(component.puntosVisibles(enTramite)).toBe(-2);
+    });
+  });
+
+  describe('Resolución oficial publicada (Spec 011)', () => {
+    const publicacion = {
+      identificador: 'RESOLUCIÓN 0950/2026', expediente_id: 7, expediente_numero: 'EXP-0950/2026',
+      titulo: 'Inasistencia', version: 1, fecha_emision: '2026-11-15T10:00:00Z',
+      vistos: 'Visto.', considerandos: 'Faltó. [Dato de salud reservado]', articulos_resolutivos: 'Art. 1.',
+      reglamentos_respaldantes: ['Art. 83 R.I.'], medidas: [],
+      firmantes: [{ numero_socio: '78010', nombre: 'Ana', grupo: 'G59', social_year: 5, condicion: '', etiqueta: '78010 - Ana - G59', firmado_at: null }],
+      impactos: [{ socio_id: 1, numero_socio: '78001', nombre: 'Lu', apellido: 'Gas', puntos: '-2.00', medida: null }],
+      contiene_datos_reservados: true, contenido_hash: 'abc', integridad_verificada: true
+    };
+
+    it('abre la publicación censurada desde el detalle', () => {
+      component.abrirResolucionPublicada({ id: '7', estado: 'emitido' } as Expediente);
+      expect(component.cargandoResolucion).toBeTrue();
+      http.expectOne(`${apiUrl}/7/resolucion/publicada/`).flush(publicacion);
+      fixture.detectChanges();
+
+      expect(component.resolucionPublicada?.identificador).toBe('RESOLUCIÓN 0950/2026');
+      const modal: HTMLElement = fixture.nativeElement.querySelector('.modal-resolucion');
+      expect(modal.textContent).toContain('[Dato de salud reservado]');
+      expect(modal.textContent).toContain('Los datos de salud están reservados.');
+      expect(modal.textContent).toContain('-2 pts');
+      expect(modal.textContent).toContain('78010 - Ana - G59');
+    });
+
+    it('cierra el modal y avisa si la resolución todavía no fue publicada', () => {
+      component.abrirResolucionPublicada({ id: '7', estado: 'emitido' } as Expediente);
+      http.expectOne(`${apiUrl}/7/resolucion/publicada/`).flush(
+        { detail: 'La resolución de este expediente todavía no fue publicada.' },
+        { status: 404, statusText: 'Not Found' }
+      );
+      expect(component.modalResolucionAbierto).toBeFalse();
+      expect(notifications.error).toHaveBeenCalled();
+    });
+
+    it('descarga el PDF publicado', () => {
+      component.resolucionPublicada = publicacion as any;
+      spyOn(URL, 'createObjectURL').and.returnValue('blob:resolucion');
+      spyOn(URL, 'revokeObjectURL');
+      const click = spyOn(HTMLAnchorElement.prototype, 'click');
+
+      component.descargarResolucionPdf();
+      const req = http.expectOne(`${apiUrl}/7/resolucion/publicada/pdf/`);
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+
+      expect(click).toHaveBeenCalled();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:resolucion');
+      expect(component.descargandoResolucionPdf).toBeFalse();
     });
   });
 
@@ -1173,47 +1164,6 @@ describe('MisExpedientesComponent', () => {
 
       expect(rows[1].querySelector('.td-documento')?.textContent).toContain('Reglamento Interno');
       expect(rows[1].querySelector('.td-articulo')?.textContent?.trim()).toBe('12');
-    });
-
-    it('incluye expedientes donde el socio es co-imputado secundario en filtrarMisExpedientes', () => {
-      component.socioActual = 'Diego Gabriel Sánchez';
-      spyOn((component as any).auth, 'getPerfil').and.returnValue({
-        id: 3,
-        legajo: '87414',
-        first_name: 'Diego Gabriel',
-        last_name: 'Sánchez',
-        role: 'SOCIO'
-      });
-
-      component.expedientes = [
-        {
-          id: '3',
-          numero: 'EXP-0003/2026',
-          socio: 'Lucas Gastiaburu',
-          legajo: '74907',
-          sociosInvolucrados: [
-            { id: 1, legajo: '74907', nombre: 'Lucas Gastiaburu' },
-            { id: 3, legajo: '87414', nombre: 'Diego Gabriel Sánchez' }
-          ],
-          estado: 'justificando',
-          puntos: -1.5
-        } as any,
-        {
-          id: '4',
-          numero: 'EXP-0004/2026',
-          socio: 'Otro Socio',
-          legajo: '99999',
-          sociosInvolucrados: [
-            { id: 9, legajo: '99999', nombre: 'Otro Socio' }
-          ],
-          estado: 'creado',
-          puntos: -1
-        } as any
-      ];
-
-      (component as any).filtrarMisExpedientes();
-      expect(component.misExpedientes.length).toBe(1);
-      expect(component.misExpedientes[0].id).toBe('3');
     });
 
     it('ordena numericamente los expedientes evitando que 3/2026 quede tras 289/2024', () => {
