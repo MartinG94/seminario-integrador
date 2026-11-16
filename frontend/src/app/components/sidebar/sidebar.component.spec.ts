@@ -68,6 +68,18 @@ describe('SidebarComponent', () => {
     expect(titulos).toContain('Crear Expediente');
   });
 
+  it('muestra Administración sólo al rol ADMIN', () => {
+    const authService = TestBed.inject(AuthService);
+    const spy = spyOn(authService, 'tieneRol').and.callFake((...roles) => roles.includes('TD'));
+    component.actualizarMenu();
+    expect(component.menuItems.map(m => m.title)).not.toContain('Administración');
+
+    spy.and.callFake((...roles) => roles.includes('ADMIN'));
+    component.actualizarMenu();
+    expect(component.menuItems.map(m => m.title)).toContain('Administración');
+    expect(ROUTES.find(item => item.path === '/admin/parametros')?.roles).toEqual(['ADMIN']);
+  });
+
   it('declara los roles procesales para Crear Expediente', () => {
     const route = ROUTES.find(item => item.path === '/solicitar-puntos');
     expect(route?.roles).toEqual(['FISCALIZADORA', 'CD', 'TD']);

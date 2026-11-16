@@ -34,6 +34,16 @@ describe('MisExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('aplica los límites de adjuntos configurados por el Administrador', () => {
+    http.match(`${environment.apiUrl}/parametros/adjuntos/`)
+      .forEach(req => req.flush({ tamano_maximo_mb: 8, cantidad_maxima: 4 }));
+    expect(component.MAX_BYTES).toBe(8 * 1024 * 1024);
+    component.tipoDescargo = 'T03_EXTRAORDINARIO';
+    expect(component.limiteActual).toBe(4);
+    component.tipoDescargo = 'T02_CERTIFICADO';
+    expect(component.limiteActual).toBe(3);
+  });
+
   it('notifica validaciones de justificativo sin enviar un descargo inválido', () => {
     const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
     component.expedienteSeleccionado = { id: 'test' } as Expediente;
