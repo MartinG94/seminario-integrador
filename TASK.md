@@ -433,7 +433,49 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 15. Instrucciones para la Actualización de este Archivo
+## 15. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
+
+> **Spec de Referencia:** [`specs/010-optimizacion-rendimiento/spec.md`](specs/010-optimizacion-rendimiento/spec.md)  
+> **Plan Técnico:** [`specs/010-optimizacion-rendimiento/plan.md`](specs/010-optimizacion-rendimiento/plan.md)  
+> **Tareas:** [`specs/010-optimizacion-rendimiento/tasks.md`](specs/010-optimizacion-rendimiento/tasks.md)
+
+### Slice 1: Fundaciones y Contratos Base (Backend & Frontend)
+- [x] **T-87.01 Contrato de Paginación Canónico Backend [TDD]:** `StandardResultsSetPagination(PageNumberPagination)` en `backend/core/pagination.py` (`page_size=20`, `max_page_size=100`, envolvente de 7 campos y manejo de errores RFC 9457 para 404). Tests en `backend/tests/core/test_pagination.py` (17/17 en verde).
+- [x] **T-87.02 Modelo de Paginación Frontend e Interfaz Genérica [TDD]:** Interfaz genérica `PaginatedResponse<T>` en `frontend/src/app/models/paginated-response.model.ts` y tests unitarios en `paginated-response.model.spec.ts` (2/2 en verde).
+- [x] **T-87.03 Utilitario Universal `TrackByUtils` Frontend [TDD]:** Funciones puras `byId`, `bySocio`, `byExpediente`, `byValue` en `frontend/src/app/utils/track-by.util.ts` y tests unitarios en `track-by.util.spec.ts` (31/31 en verde).
+
+### Slice 2: Optimización de Persistencia y Eliminación de N+1 (SCRUM-120)
+- [x] **T-87.04 Suite Base de Rendimiento ORM y Límites de Queries [TDD]:** `backend/tests/expedientes/test_orm_performance.py` con fixtures y tests usando `django_assert_num_queries` y `CaptureQueriesContext` para eventos, antecedentes, defer de BLOB y métricas de reportes (5/5 en verde).
+- [x] **T-87.05 Optimización de Eventos Institucionales (Eliminación de N+1) [TDD]:** `EventoInstitucionalViewSet.get_queryset()` con anotaciones condicionales `total_convocados_calc`, `total_presentes_calc`, `total_ausentes_calc` y adaptación de `EventoInstitucionalSerializer`. Verificado en $\le 3$ queries SQL ($O(1)$).
+- [x] **T-87.06 Diferimiento de Binarios BLOB en Evidencias de Expedientes [TDD]:** `EXPEDIENTE_LIST_PREFETCH` en `backend/expedientes/views/__init__.py` utilizando `Prefetch("evidencias", queryset=EvidenciaDescargo.objects.defer("contenido_blob").select_related("socio"))`.
+- [x] **T-87.07 Optimización de Catálogo de Antecedentes con Subquery [TDD]:** `T03ValuationService.list_emitted_antecedents` y `build_expedientes_referenciados_detalle` con `Subquery` correlacionada indexada sobre `CambioEstadoExpediente` (`fecha_emision_calc`), reduciendo a exactamente 1 consulta SQL para 100 antecedentes.
+- [x] **T-87.08 Batching en Reportes y Precarga de Subcomisiones [TDD]:** Batching en `ReportesService.obtener_metricas_subcomision` sobre `tribunal_puntajegeneral` y `select_related("subcomision")` en el prefetch de socios involucrados en causas.
+
+### Slice 3: Paginación Server-Side y Rendimiento de Ranking de Socios (SCRUM-118 + SCRUM-119)
+- [x] **T-87.09 Paginación Server-Side en `RankingListView` [TDD]:** Integración de `StandardResultsSetPagination` en `RankingListView` (`backend/ranking/views.py`), soportando `page`, `page_size`, `ordering` y `search` sobre el queryset reconciliado. Tests en `backend/tests/ranking/test_ranking_pagination.py` (9/9 en verde) y suite general de ranking en verde.
+- [x] **T-87.10 Adaptación del Servicio Frontend `ranking.service.ts` [TDD]:** Parámetros `RankingPaginationParams`, tipado `PaginatedResponse<RankingSocio>` y compatibilidad con respuestas flat array. Tests en `ranking.service.spec.ts` (4/4 en verde).
+- [x] **T-87.11 Refactorización OnPush, trackBy y MatPaginator en `RankingSociosComponent` [TDD]:** `ChangeDetectionStrategy.OnPush`, eliminación de getters impuros con caché inteligente, `trackBySocioId`, `takeUntil(this.destroy$)` en `ngOnDestroy` y `<mat-paginator>` server-side en `ranking-socios.component.html` (suite `ranking-socios.component.spec.ts` en verde dentro de Karma 664/664).
+
+### Slice 4: Paginación Server-Side y Rendimiento en Tablero y Gestión de Expedientes (SCRUM-118 + SCRUM-119)
+- [x] **T-87.12 Paginación Server-Side en `ExpedienteCollectionView` y `MisExpedientesView` [TDD]:** `StandardResultsSetPagination` y `PaginatedAPIViewMixin` en `GET /api/v1/expedientes/gestion/` y `GET /api/v1/expedientes/mis-expedientes/` con envolvente de 7 campos, filtros/ordenamiento `_apply_expediente_collection_filters_and_ordering` con tie-breaker `-id` y `InvalidPageError` RFC 9457. Tests en `backend/tests/expedientes/test_expediente_pagination.py` (9/9 en verde).
+- [x] **T-87.13 Adaptación de Servicios Frontend `tribunal-data.service.ts` y `expediente-api.service.ts` [TDD]:** Soporte de `PaginatedResponse<Expediente>` y parámetros `PaginationParams` (`page`, `page_size`, `ordering`, `search`, filtros) en `listarExpedientes`, `listarMisExpedientes` y `listarPorLegajo`. Suites `tribunal-data.service.spec.ts` y `expediente-api.service.spec.ts` en verde dentro de Karma 664/664.
+- [x] **T-87.14 Refactorización OnPush, trackBy y MatPaginator en `GestionarExpedientesComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), setters reactivos con `cdr?.markForCheck()`, caché para filtros y estados, 13 funciones `trackBy` puras en `*ngFor`, `<mat-paginator>` server-side en vista tabla (`listarExpedientes`) y desuscripciones completas con `takeUntil(this.destroy$)` y limpieza de timers/URLs en `ngOnDestroy`. Suite `gestionar-expedientes.component.spec.ts` en verde dentro de Karma 664/664.
+- [x] **T-87.15 Refactorización OnPush, trackBy y MatPaginator en `MisExpedientesComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), 6 funciones `trackBy` puras en `*ngFor`, `interval(1000)` aislado con `ngZone.runOutsideAngular`, caché en `expedientesOrdenados`, `<mat-paginator>` server-side sobre `listarMisExpedientes`, deduplicación de `perfil$` en `ngOnInit`, `scrollLock.reset()` y `takeUntil(this.destroy$)` completo en 14/14 suscripciones. Suite `mis-expedientes.component.spec.ts` en verde dentro de Karma 664/664.
+
+### Slice 5: Refactorización Transversal OnPush, trackBy y Ciclo de Vida en Componentes Restantes (SCRUM-119)
+- [x] **T-87.16 Optimización de `SolicitarPuntosComponent` y `AsistenciaEventoComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), setters reactivos y `cdr?.markForCheck()`, protección completa con `takeUntil(this.destroy$)` en todas las suscripciones, `<mat-paginator>` server-side en Mis Eventos + `page_size: 100` en planilla de `AsistenciaEventoComponent`, cachés en `solicitar-puntos` y `asistencia-evento`, y funciones `trackBy` puras. Suites en verde dentro de Karma 664/664.
+- [x] **T-87.17 Optimización de `ReportesComponent`, `CalendarioInstitucionalComponent` y `VisorExpedienteComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), `cdr?.markForCheck()`, pre-cálculo `recomputeEscalados()` (`O(1)`) en `ReportesComponent`, protección `takeUntil(this.destroy$)` completa, limpieza de `ObjectURL`/timers y funciones `trackBy` puras. Suites en verde dentro de Karma 664/664.
+- [x] **T-87.18 Paginación en `EventoInstitucionalViewSet` y Adaptación de `evento.service.ts` [TDD]:** `pagination_class = StandardResultsSetPagination` en `EventoInstitucionalViewSet` y soporte `PaginatedResponse<EventoInstitucional>` en `evento.service.ts`. Tests `backend/tests/expedientes/test_evento_pagination.py` (5/5 en verde) y `evento.service.spec.ts` en verde dentro de Karma 664/664.
+
+### Slice 6: Verificación Integral de Calidad, Auditoría de Memoria y Consistencia PO
+- [x] **T-87.19 Auditoría de Memoria y Detección de Fugas en Frontend (Heap Profiling):** Ejecución de 20 ciclos de navegación bajo Chrome Headless CDP (100 navegaciones entre `/ranking-socios`, `/gestionar-expedientes`, `/mis-expedientes`, `/eventos-asistencia` y `/reportes`) verificando Heap delta en estado estable Ciclos 10→20 de `+0.2515 MB` (`+0.2527 MB` en re-auditoría QA) ($\le 0.5\text{ MB}$ RNF-03) y `0` nodos DOM desconectados (`specs/010-optimizacion-rendimiento/memory_audit_report.md` y `frontend/src/app/utils/lifecycle-memory.spec.ts`), más limpieza `ngOnDestroy` en `NavbarComponent`, `SidebarComponent` y `AdminLayoutComponent`.
+- [x] **T-87.20 Verificación de Inmutabilidad del Esquema Legacy (Regla 6):** Inspección con `python manage.py makemigrations --check --dry-run` certificando "No changes detected", CERO alteraciones DDL sobre tablas preexistentes (`socio_*`, `tribunal_*`) y `managed = False` inalterado.
+- [x] **T-87.21 Validación de Consistencia con Notas del PO y Sistema de Diseño:** Verificación de ordenamientos de saldo/grupo, modal de detalle de socios, selector reactivo de socios (Select2), tokens `DESIGN.md` e inmutabilidad estricta de notificaciones centrales a 10 segundos abajo a la derecha (solicitud del PM, PR #49).
+- [x] **T-87.22 Ejecución de Suites Completas y Linter:** Frontend Karma `672/672 SUCCESS` (0 fallos), `npx tsc --skipLibCheck --noEmit` exit `0`, `npx ng build --configuration production` exit `0`; Backend `pytest` `1387 passed, 8 skipped` (skips MySQL-only en SQLite local), `ruff check .` exit `0`, `ruff format --check backend/` exit `0` (`235` archivos; `ruff format --check .` reporta únicamente 4 archivos `.md` en `docs/`), `manage.py check` exit `0`, `makemigrations --check --dry-run` exit `0`.
+
+---
+
+## 16. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

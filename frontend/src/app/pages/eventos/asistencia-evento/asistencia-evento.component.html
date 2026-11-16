@@ -25,8 +25,8 @@
                      href="javascript:void(0)"
                      role="tab">
                     <i class="material-icons">checklist</i> MIS EVENTOS
-                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="misEventos.length > 0">
-                      {{ misEventos.length }}
+                    <span class="badge badge-pill badge-light text-dark font-weight-bold ml-2" *ngIf="(misEventosTotal || misEventos.length) > 0">
+                      {{ misEventosTotal || misEventos.length }}
                     </span>
                   </a>
                 </li>
@@ -122,7 +122,7 @@
                     <div class="col-md-4 mb-3">
                       <label class="form-label-custom">Tipo de {{ crearForm.get('categoria')?.value === 'REUNION' ? 'Reunión' : 'Actividad' }}: <span class="text-danger">*</span></label>
                       <select class="form-control" formControlName="tipo">
-                        <option *ngFor="let opt of subtiposDisponibles" [value]="opt.value">
+                        <option *ngFor="let opt of subtiposDisponibles; trackBy: trackByValue" [value]="opt.value">
                           {{ opt.label }} (Sanción: {{ opt.sancion }})
                         </option>
                       </select>
@@ -287,7 +287,7 @@
                     <div class="col-md-8 mb-3" *ngIf="crearForm.get('modo_convocatoria')?.value === 'GRUPO'">
                       <label class="form-label-custom">Grupo Social Convocado: <span class="text-danger">*</span></label>
                       <select class="form-control" formControlName="grupo_convocado">
-                        <option *ngFor="let g of gruposDisponibles" [value]="g">{{ g }}</option>
+                        <option *ngFor="let g of gruposDisponibles; trackBy: trackByValue" [value]="g">{{ g }}</option>
                       </select>
                     </div>
 
@@ -295,7 +295,7 @@
                     <div class="col-md-8 mb-3" *ngIf="crearForm.get('modo_convocatoria')?.value === 'SUBCOMISION'">
                       <label class="form-label-custom">Subcomisión Convocada: <span class="text-danger">*</span></label>
                       <select class="form-control" formControlName="subcomision_id">
-                        <option *ngFor="let sub of subcomisiones" [value]="sub.id">{{ sub.nombre }}</option>
+                        <option *ngFor="let sub of subcomisiones; trackBy: trackById" [value]="sub.id">{{ sub.nombre }}</option>
                       </select>
                     </div>
 
@@ -303,7 +303,7 @@
                     <div class="col-md-8 mb-3" *ngIf="crearForm.get('modo_convocatoria')?.value === 'ESTADO_SOCIAL'">
                       <label class="form-label-custom">Estado Social Convocado: <span class="text-danger">*</span></label>
                       <select class="form-control" formControlName="estado_social_convocado">
-                        <option *ngFor="let est of estadosSociales" [value]="est.id">{{ est.label }}</option>
+                        <option *ngFor="let est of estadosSociales; trackBy: trackById" [value]="est.id">{{ est.label }}</option>
                       </select>
                     </div>
 
@@ -327,7 +327,7 @@
                              style="max-height: 200px; overflow-y: auto; z-index: 1050;">
                           <a href="javascript:void(0)" 
                              class="list-group-item list-group-item-action py-2"
-                             *ngFor="let s of sociosEncontrados"
+                             *ngFor="let s of sociosEncontrados; trackBy: trackById"
                              (click)="seleccionarSocio(s)">
                             <strong>{{ s.last_name }}, {{ s.first_name }}</strong> (Legajo: {{ s.legajo }})
                             <span class="badge badge-light ml-2">{{ s.subcomision || 'Sin subcomisión' }}</span>
@@ -337,7 +337,7 @@
 
                       <!-- Chips de socios seleccionados -->
                       <div class="mt-2" *ngIf="sociosSeleccionados.length > 0">
-                        <span class="badge badge-primary mr-2 mb-1 p-2" *ngFor="let sel of sociosSeleccionados">
+                        <span class="badge badge-primary mr-2 mb-1 p-2" *ngFor="let sel of sociosSeleccionados; trackBy: trackById">
                           {{ sel.last_name }}, {{ sel.first_name }} ({{ sel.legajo }})
                           <i class="material-icons align-middle cursor-pointer ml-1" style="font-size: 14px;" (click)="removerSocio(sel.id)">close</i>
                         </span>
@@ -554,7 +554,7 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr *ngFor="let socio of convocadosFiltrados" [class.table-light]="socio.estado_asistencia === 'PRESENTE'">
+                          <tr *ngFor="let socio of convocadosFiltrados; trackBy: trackByConvocado" [class.table-light]="socio.estado_asistencia === 'PRESENTE'">
                             <td>
                               <strong>{{ socio.socio_nombre }}</strong>
                               <div class="small text-muted">
@@ -692,7 +692,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let ev of misEventos">
+                      <tr *ngFor="let ev of misEventos; trackBy: trackById">
                         <!-- Título y Tipo -->
                         <td>
                           <div class="font-weight-bold text-dark">{{ ev.titulo }}</div>
@@ -700,6 +700,18 @@
                             <span class="badge badge-info mr-1">{{ ev.categoria }}</span>
                             <span class="badge badge-secondary mr-1">{{ ev.tipo }}</span>
                             <span class="badge badge-light border" *ngIf="ev.modalidad">{{ ev.modalidad }}</span>
+                          </div>
+                          <!-- Métricas agregadas (SCRUM-120: total_convocados, total_presentes, total_ausentes) -->
+                          <div class="small mt-1 d-flex flex-wrap gap-1" *ngIf="ev.total_convocados !== undefined && ev.total_convocados !== null">
+                            <span class="badge badge-light border text-muted mr-1" title="Total convocados">
+                              <i class="material-icons align-middle mr-1" style="font-size: 13px;">groups</i>Convocados: {{ ev.total_convocados }}
+                            </span>
+                            <span class="badge badge-success mr-1" *ngIf="ev.total_presentes !== undefined" title="Presentes">
+                              Presentes: {{ ev.total_presentes }}
+                            </span>
+                            <span class="badge badge-danger mr-1" *ngIf="ev.total_ausentes !== undefined" title="Ausentes">
+                              Ausentes: {{ ev.total_ausentes }}
+                            </span>
                           </div>
                         </td>
 
@@ -783,6 +795,17 @@
                     </tbody>
                   </table>
                 </div>
+
+                <mat-paginator
+                  *ngIf="(misEventosTotal || misEventos.length) > 0"
+                  [length]="misEventosTotal || misEventos.length"
+                  [pageSize]="misEventosPageSize"
+                  [pageIndex]="misEventosPage - 1"
+                  [pageSizeOptions]="misEventosPageSizeOptions"
+                  (page)="onMisEventosPageChange($event)"
+                  showFirstLastButtons
+                  aria-label="Paginación de mis eventos">
+                </mat-paginator>
 
                 <div class="alert alert-secondary py-3 text-center mt-3" *ngIf="misEventos.length === 0 && !cargandoMisEventos">
                   <i class="material-icons align-middle mr-1">event_busy</i>

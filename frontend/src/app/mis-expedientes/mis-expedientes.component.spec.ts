@@ -2,6 +2,9 @@ import { ComponentsModule } from '../components/components.module';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
 import { environment } from '../../environments/environment';
 import { MisExpedientesComponent } from './mis-expedientes.component';
 import { NotificationService } from '../services/notification.service';
@@ -17,9 +20,13 @@ describe('MisExpedientesComponent', () => {
   beforeEach(async(() => {
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule, ComponentsModule],
+      imports: [HttpClientTestingModule, FormsModule, ComponentsModule, MatPaginatorModule, NoopAnimationsModule],
       declarations: [MisExpedientesComponent],
-      providers: [TribunalDataService, { provide: NotificationService, useValue: notifications }]
+      providers: [
+        TribunalDataService,
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
+        { provide: NotificationService, useValue: notifications }
+      ]
     }).compileComponents();
   }));
 
@@ -719,12 +726,12 @@ describe('MisExpedientesComponent', () => {
       /** Recarga la lista y responde solo la última petición, ignorando las del arranque del componente. */
       const recargarLista = (respuesta: any[]) => {
         component.cargarMisExpedientes();
-        const pendientes = http.match(listaUrl);
+        const pendientes = http.match(req => req.url === listaUrl);
         pendientes[pendientes.length - 1].flush(respuesta);
       };
 
       beforeEach(() => {
-        http.match(listaUrl).forEach(req => req.flush([]));
+        http.match(req => req.url === listaUrl).forEach(req => req.flush([]));
       });
 
       it('muestra el descargo recién presentado sin cerrar el detalle ni depender del almacén local', () => {
@@ -1229,6 +1236,145 @@ describe('MisExpedientesComponent', () => {
       expect(ordenados[0].numero).toBe('EXP-0001/2026');
       expect(ordenados[1].numero).toBe('EXP-0003/2026');
       expect(ordenados[2].numero).toBe('EXP-0289/2024');
+    });
+
+    describe('Correcciones PO PR #76 (filtro en_tramite server-side y Llamado de atención / Felicitación)', () => {
+      const listaUrl = `${apiUrl}/mis-expedientes/`;
+
+      beforeEach(() => {
+        http.match(req => req.url === listaUrl).forEach(req => req.flush({
+          count: 0,
+          total_pages: 1,
+          current_page: 1,
+          page_size: 20,
+          next: null,
+          previous: null,
+          results: []
+        }));
+      });
+
+      it('setFiltroTab en modo serverPaginated envía estado_ne=emitido para en_tramite, conserva serverPaginated con resultados vacíos y limpia filas previas', () => {
+        component.cargarMisExpedientes();
+        const reqTodos = http.expectOne(req =>
+          req.url === listaUrl &&
+          !req.params.has('estado') &&
+          !req.params.has('estado_ne')
+        );
+        reqTodos.flush({
+          count: 1,
+          total_pages: 1,
+          current_page: 1,
+          page_size: 20,
+          next: null,
+          previous: null,
+          results: [{ id: 10, numero: 'EXP-0010/2026', estado: 'emitido', puntos: -1, motivo: 'Resuelto' }]
+        });
+        expect(component.serverPaginated).toBeTrue();
+        expect(component.misExpedientes.length).toBe(1);
+
+        component.setFiltroTab('en_tramite');
+        const reqTramite = http.expectOne(req =>
+          req.url === listaUrl &&
+          req.params.get('estado_ne') === 'emitido' &&
+          !req.params.has('estado')
+        );
+        reqTramite.flush({
+          count: 0,
+          total_pages: 1,
+          current_page: 1,
+          page_size: 20,
+          next: null,
+          previous: null,
+          results: []
+        });
+        expect(component.serverPaginated).toBeTrue();
+        expect(component.misExpedientes).toEqual([]);
+        expect(component.totalRegistros).toBe(0);
+
+        component.setFiltroTab('resueltos');
+        const reqResueltos = http.expectOne(req =>
+          req.url === listaUrl &&
+          req.params.get('estado') === 'emitido' &&
+          !req.params.has('estado_ne')
+        );
+        reqResueltos.flush({
+          count: 1,
+          total_pages: 1,
+          current_page: 1,
+          page_size: 20,
+          next: null,
+          previous: null,
+          results: [{ id: 10, numero: 'EXP-0010/2026', estado: 'emitido', puntos: -1, motivo: 'Resuelto' }]
+        });
+        expect(component.serverPaginated).toBeTrue();
+        expect(component.misExpedientes.length).toBe(1);
+
+        component.setFiltroTab('todos');
+        const reqBackTodos = http.expectOne(req =>
+          req.url === listaUrl &&
+          !req.params.has('estado') &&
+          !req.params.has('estado_ne')
+        );
+        reqBackTodos.flush({
+          count: 1,
+          total_pages: 1,
+          current_page: 1,
+          page_size: 20,
+          next: null,
+          previous: null,
+          results: [{ id: 10, numero: 'EXP-0010/2026', estado: 'emitido', puntos: -1, motivo: 'Resuelto' }]
+        });
+        expect(component.misExpedientes.length).toBe(1);
+      });
+
+      it('muestra "Llamado de atención" y "Felicitación" para ±0.25 sin mostrar valores numéricos y aplica consolidación 3:1', () => {
+        component.cargarMisExpedientes();
+        const req = http.expectOne(r => r.url === listaUrl);
+        req.flush({
+          count: 5,
+          total_pages: 1,
+          current_page: 1,
+          page_size: 20,
+          next: null,
+          previous: null,
+          results: [
+            { id: 1, numero: 'EXP-0001/2026', estado: 'emitido', puntos: -0.25, puntaje_solicitado: 'LLAMADO_ATENCION', motivo: 'Llamado 1' },
+            { id: 2, numero: 'EXP-0002/2026', estado: 'emitido', puntos: -0.25, motivo: 'Llamado 2' },
+            { id: 3, numero: 'EXP-0003/2026', estado: 'emitido', puntos: -0.25, motivo: 'Llamado 3' },
+            { id: 4, numero: 'EXP-0004/2026', estado: 'emitido', puntos: 0.25, puntaje_solicitado: 'FELICITACION', motivo: 'Felicitación 1' },
+            { id: 5, numero: 'EXP-0005/2026', estado: 'emitido', puntos: -0.25, motivo: 'Llamado 4' }
+          ]
+        });
+        fixture.detectChanges();
+
+        expect(component.saldoNeto).toBe(-1);
+        expect(component.llamadosAtencion).toBe(1);
+        expect(component.felicitaciones).toBe(1);
+
+        const compiled = fixture.nativeElement as HTMLElement;
+        const tableText = compiled.querySelector('table')?.textContent || '';
+        expect(tableText).toContain('Llamado de atención');
+        expect(tableText).toContain('Felicitación');
+        expect(tableText).not.toContain('0.25');
+        expect(tableText).not.toContain('0.33');
+
+        component.abrirModalDetalle(component.misExpedientes[0]);
+        http.expectOne(`${apiUrl}/1/descargo/versiones/`).flush([]);
+        fixture.detectChanges();
+        let modalText = compiled.querySelector('.modal-backdrop-custom')?.textContent || '';
+        expect(modalText).toContain('Llamado de atención');
+        expect(modalText).not.toContain('0.25');
+        expect(modalText).not.toContain('0.33');
+        component.cerrarModalDetalle();
+
+        component.abrirModalDetalle(component.misExpedientes[3]);
+        http.expectOne(`${apiUrl}/4/descargo/versiones/`).flush([]);
+        fixture.detectChanges();
+        modalText = compiled.querySelector('.modal-backdrop-custom')?.textContent || '';
+        expect(modalText).toContain('Felicitación');
+        expect(modalText).not.toContain('0.25');
+        expect(modalText).not.toContain('0.33');
+      });
     });
   });
 });

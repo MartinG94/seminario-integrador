@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { PaginatedResponse, PaginationParams } from '../models/paginated-response.model';
 import { AuthService } from './auth.service';
 import type { AntecedenteT03DTO } from './expediente-api.service';
 
@@ -37,6 +38,8 @@ export interface BoardCaseDTO {
   urgencia?: NivelUrgencia;
   urgencia_display?: string;
   puntos: number;
+  es_felicitacion?: boolean;
+  es_llamado?: boolean;
   puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   motivo: string;
@@ -66,6 +69,8 @@ export interface BoardColumnDTO {
   key: EstadoExpediente;
   label: string;
   cases: BoardCaseDTO[];
+  total_count?: number;
+  has_more?: boolean;
 }
 
 export interface BoardResponseDTO {
@@ -307,6 +312,7 @@ export class TribunalDataService {
     urgencia?: string;
     fecha_desde?: string;
     fecha_hasta?: string;
+    preview_limit?: number;
   }): Observable<BoardResponseDTO> {
     let params = new HttpParams();
     if (filtros) {
@@ -326,6 +332,10 @@ export class TribunalDataService {
         params = params.set('fecha_hasta', filtros.fecha_hasta);
       }
     }
+    const previewLimit = filtros?.preview_limit === undefined ? 5 : filtros.preview_limit;
+    if (typeof previewLimit === 'number' && previewLimit > 0) {
+      params = params.set('preview_limit', String(previewLimit));
+    }
 
     return this.http.get<BoardResponseDTO>(`${environment.apiUrl}/expedientes/board/`, { params }).pipe(
       tap(res => {
@@ -339,6 +349,61 @@ export class TribunalDataService {
         this.expedientesSubject.next(todosLosExpedientes);
       })
     );
+  }
+
+  /**
+   * Paginación server-side de expedientes (SCRUM-118 / T-87.13).
+   * Consulta GET /api/v1/expedientes/gestion/ con page, page_size y filtros.
+   */
+  listarExpedientes(params?: PaginationParams): Observable<PaginatedResponse<Expediente>> {
+    let httpParams = new HttpParams();
+    if (params) {
+      const keys: (keyof PaginationParams)[] = [
+        'page',
+        'page_size',
+        'ordering',
+        'search',
+        'estado',
+        'estado_ne',
+        'urgencia',
+        'concepto',
+        'socio',
+        'socio_legajo',
+        'fecha_desde',
+        'fecha_hasta',
+      ];
+      for (const key of keys) {
+        const val = params[key];
+        if (val !== undefined && val !== null && val !== '') {
+          httpParams = httpParams.set(key, String(val));
+        }
+      }
+    }
+    return this.http
+      .get<PaginatedResponse<any> | any[]>(`${environment.apiUrl}/expedientes/gestion/`, {
+        params: httpParams,
+      })
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              count: response.length,
+              total_pages: 1,
+              current_page: 1,
+              page_size: response.length,
+              next: null,
+              previous: null,
+              results: response.map((c: any) => this.mapearBoardCaseAExpediente(c)),
+            };
+          }
+          return {
+            ...response,
+            results: (response.results || []).map((c: any) =>
+              this.mapearBoardCaseAExpediente(c)
+            ),
+          };
+        })
+      );
   }
 
   transicionarExpediente(
@@ -410,6 +475,24 @@ export class TribunalDataService {
       estadoDisplay = 'Pendiente de Firma';
     }
 
+    const pts = Number(c.puntos);
+    const esFelicitacion = Boolean(
+      c.es_felicitacion ||
+      c.puntaje_solicitado === 'FELICITACION' ||
+      c.puntajeSolicitado === 'FELICITACION' ||
+      (!Number.isNaN(pts) && (Math.abs(pts - 0.25) < 0.01 || Math.abs(pts - 0.33) < 0.01))
+    );
+    const esLlamado = Boolean(
+      c.es_llamado ||
+      c.puntaje_solicitado === 'LLAMADO_ATENCION' ||
+      c.puntajeSolicitado === 'LLAMADO_ATENCION' ||
+      (!Number.isNaN(pts) && (Math.abs(pts - (-0.25)) < 0.01 || Math.abs(pts - (-0.33)) < 0.01))
+    );
+    const puntajeSolicitadoFinal =
+      c.puntaje_solicitado ||
+      c.puntajeSolicitado ||
+      (esLlamado ? 'LLAMADO_ATENCION' : esFelicitacion ? 'FELICITACION' : null);
+
     return {
       id: String(c.id),
       numero: c.numero,
@@ -437,9 +520,11 @@ export class TribunalDataService {
       transicionesPermitidas: c.transiciones_permitidas || [],
       horasRestantes,
       tipo: c.puntos >= 0 ? 'merito' : 'falta',
-      puntos: Number(c.puntos),
-      puntaje_solicitado: c.puntaje_solicitado || null,
-      puntajeSolicitado: c.puntaje_solicitado || null,
+      puntos: pts,
+      esFelicitacion,
+      esLlamado,
+      puntaje_solicitado: puntajeSolicitadoFinal,
+      puntajeSolicitado: puntajeSolicitadoFinal,
       cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
       sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
       plazoLimiteAt: c.plazo_limite_at || undefined,

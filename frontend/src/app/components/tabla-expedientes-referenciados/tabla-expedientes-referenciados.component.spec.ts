@@ -64,11 +64,13 @@ describe('TablaExpedientesReferenciadosComponent', () => {
     expect(textoFila1).toContain('7/2026');
     expect(textoFila1).toContain('Sanción');
     expect(textoFila1).toContain('Sanción disciplinaria 7');
+    expect(textoFila1).toContain('01/03/2026');
 
     const textoFila2 = filas[1].nativeElement.textContent;
     expect(textoFila2).toContain('12/2026');
     expect(textoFila2).toContain('Mérito');
     expect(textoFila2).toContain('Mérito institucional 12');
+    expect(textoFila2).toContain('05/03/2026');
   });
 
   it('debe emitir remover al hacer clic en el botón de quitar cuando editable es true', () => {

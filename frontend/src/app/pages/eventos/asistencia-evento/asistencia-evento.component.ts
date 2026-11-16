@@ -1,8 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  OnDestroy
+} from '@angular/core';
 import { FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { Subscription, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { PageEvent } from '@angular/material/paginator';
+import { Subject, Subscription, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
 import {
   CategoriaEvento,
   ConvocadoAsistenciaDTO,
@@ -27,6 +34,7 @@ import { SocioApiService, SocioListItemDTO } from '../../../services/socio-api.s
 import { TribunalDataService } from '../../../services/tribunal-data.service';
 import { CrearEventoDialogComponent } from '../dialogs/crear-evento-dialog/crear-evento-dialog.component';
 import { ResumenCierreDialogComponent } from '../dialogs/resumen-cierre-dialog/resumen-cierre-dialog.component';
+import { TrackByUtils } from '../../../utils/track-by.util';
 
 export interface SubtipoOption {
   value: SubtipoEvento;
@@ -37,15 +45,29 @@ export interface SubtipoOption {
 @Component({
   selector: 'app-asistencia-evento',
   templateUrl: './asistencia-evento.component.html',
-  styleUrls: ['./asistencia-evento.component.scss']
+  styleUrls: ['./asistencia-evento.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AsistenciaEventoComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  private readonly activeTimers = new Set<number>();
+
+  readonly trackById = (index: number, item: any): any =>
+    TrackByUtils.byId(index, item);
+  readonly trackByValue = (index: number, item: any): any =>
+    item?.value ?? TrackByUtils.byValue(index, item);
+  readonly trackByConvocado = (index: number, c: any): any =>
+    c?.socio_id ?? c?.id ?? c?.nro_socio ?? index;
   // Pestañas estilo AVEIT (análogo a solicitar-puntos)
   tabActiva: 'generar' | 'mis-eventos' = 'generar';
   modoDetalle = false; // True cuando se examina la Planilla Nominal de Asistencia desde Mis Eventos
 
   // Mis Eventos (Convocatorias del usuario logueado)
   misEventos: EventoInstitucional[] = [];
+  misEventosTotal = 0;
+  misEventosPage = 1;
+  misEventosPageSize = 20;
+  readonly misEventosPageSizeOptions = [10, 20, 50, 100];
   cargandoMisEventos = false;
 
   // Modales interactivos para Mis Eventos
@@ -116,7 +138,8 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     private contextService: AttendanceContextService,
     private biometricStrategy: BiometricAttendanceStrategy,
     private notificationService: NotificationService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -124,8 +147,9 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     this.configurarBuscadorSocios();
 
     // Estrategia de marcación activa
-    const subStrat = this.contextService.currentStrategy$.subscribe(strat => {
+    const subStrat = this.contextService.currentStrategy$.pipe(takeUntil(this.destroy$)).subscribe(strat => {
       this.estrategiaActual = strat.tipo;
+      this.cdr?.markForCheck();
     });
     this.subs.push(subStrat);
 
@@ -134,7 +158,19 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.activeTimers.forEach(id => window.clearTimeout(id));
+    this.activeTimers.clear();
+    this.destroy$.next();
+    this.destroy$.complete();
     this.subs.forEach(s => s.unsubscribe());
+  }
+
+  private scheduleTimer(callback: () => void, delayMs: number): void {
+    const id = window.setTimeout(() => {
+      this.activeTimers.delete(id);
+      callback();
+    }, delayMs);
+    this.activeTimers.add(id);
   }
 
   // =========================================================================
@@ -176,8 +212,11 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     this.actualizarSubtipos('REUNION');
 
     // Escuchar cambios en fecha_programada para calcular preaviso (CA1)
-    const subFecha = this.crearForm.get('fecha_programada')?.valueChanges.subscribe(fechaStr => {
+    const subFecha = this.crearForm.get('fecha_programada')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(fechaStr => {
       this.evaluarPreaviso(fechaStr);
+      this.cdr?.markForCheck();
     });
     if (subFecha) this.subs.push(subFecha);
   }
@@ -248,11 +287,14 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
         switchMap(query => {
           if (!query || query.trim().length < 2) {
             this.sociosEncontrados = [];
+            this.cdr?.markForCheck();
             return of(null);
           }
           this.buscandoSocios = true;
+          this.cdr?.markForCheck();
           return this.socioService.searchSocios(query);
-        })
+        }),
+        takeUntil(this.destroy$)
       )
       .subscribe({
         next: response => {
@@ -263,10 +305,12 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
           } else {
             this.sociosEncontrados = [];
           }
+          this.cdr?.markForCheck();
         },
         error: () => {
           this.buscandoSocios = false;
           this.sociosEncontrados = [];
+          this.cdr?.markForCheck();
         }
       });
 
@@ -332,7 +376,8 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     };
 
     this.guardandoEvento = true;
-    this.eventoService.crearEvento(payload).subscribe({
+    this.cdr?.markForCheck();
+    this.eventoService.crearEvento(payload).pipe(takeUntil(this.destroy$)).subscribe({
       next: creado => {
         this.guardandoEvento = false;
         const msg = val.notificar
@@ -358,12 +403,14 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
 
         // Navegar a Mis Eventos
         this.setTab('mis-eventos');
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.guardandoEvento = false;
         const errorMsg =
           err?.error?.detail || err?.error?.fecha_programada || 'Error al generar el evento institucional.';
         this.notificationService.error(errorMsg);
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -374,40 +421,59 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
 
   cargarMisEventos(): void {
     this.cargandoMisEventos = true;
-    this.eventoService.getMisEventos().subscribe({
-      next: list => {
-        this.cargandoMisEventos = false;
-        this.misEventos = list || [];
-      },
-      error: () => {
-        this.cargandoMisEventos = false;
-        // Fallback a eventos generales si mis_eventos no tiene elementos
-        this.misEventos = this.eventos;
-      }
-    });
+    this.cdr?.markForCheck();
+    this.eventoService
+      .getMisEventos({ page: this.misEventosPage, page_size: this.misEventosPageSize })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.cargandoMisEventos = false;
+          const list: EventoInstitucional[] = Array.isArray(res) ? res : res?.results || [];
+          this.misEventos = list;
+          this.misEventosTotal = typeof res?.count === 'number' ? res.count : list.length;
+          this.cdr?.markForCheck();
+        },
+        error: () => {
+          this.cargandoMisEventos = false;
+          // Fallback a eventos generales si mis_eventos no tiene elementos
+          this.misEventos = this.eventos;
+          this.misEventosTotal = this.misEventos.length;
+          this.cdr?.markForCheck();
+        }
+      });
+  }
+
+  onMisEventosPageChange(event: PageEvent): void {
+    this.misEventosPage = event.pageIndex + 1;
+    this.misEventosPageSize = event.pageSize;
+    this.cargarMisEventos();
   }
 
   verDetalle(evento: EventoInstitucional): void {
     this.eventoActivo = evento;
     this.eventoSeleccionadoId = evento.id;
     this.modoDetalle = true;
+    this.cdr?.markForCheck();
     this.cargarConvocados(evento.id);
   }
 
   volverAMisEventos(): void {
     this.modoDetalle = false;
+    this.cdr?.markForCheck();
     this.cargarMisEventos();
   }
 
   notificarConvocatoria(evento: EventoInstitucional): void {
     if (confirm(`¿Deseas enviar las notificaciones formales por correo a todos los citados para "${evento.titulo}"?`)) {
-      this.eventoService.notificarEvento(evento.id).subscribe({
+      this.eventoService.notificarEvento(evento.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: res => {
           evento.estado = 'NOTIFICADO';
           this.notificationService.success(res.detail || 'Convocatoria notificada formalmente.');
+          this.cdr?.markForCheck();
         },
         error: err => {
           this.notificationService.error(err?.error?.detail || 'Error al notificar la convocatoria.');
+          this.cdr?.markForCheck();
         }
       });
     }
@@ -433,7 +499,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     if (!this.eventoHoraFin || !this.horaFinInput) return;
 
     const fechaFinIso = new Date(this.horaFinInput).toISOString();
-    this.eventoService.fijarHoraFin(this.eventoHoraFin.id, fechaFinIso).subscribe({
+    this.eventoService.fijarHoraFin(this.eventoHoraFin.id, fechaFinIso).pipe(takeUntil(this.destroy$)).subscribe({
       next: res => {
         this.notificationService.success(res.detail || 'Hora de finalización registrada exitosamente.');
         if (this.eventoHoraFin) {
@@ -441,12 +507,14 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
           this.eventoHoraFin.fecha_fin = res.evento.fecha_fin;
         }
         this.cerrarModalHoraFin();
+        this.cdr?.markForCheck();
         this.cargarMisEventos();
       },
       error: err => {
         this.notificationService.error(
           err?.error?.fecha_fin || err?.error?.detail || 'Error al fijar la hora de finalización.'
         );
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -469,7 +537,8 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     if (!this.eventoAnular) return;
 
     this.anulando = true;
-    this.eventoService.anularEvento(this.eventoAnular.id, this.motivoAnulacionInput.trim()).subscribe({
+    this.cdr?.markForCheck();
+    this.eventoService.anularEvento(this.eventoAnular.id, this.motivoAnulacionInput.trim()).pipe(takeUntil(this.destroy$)).subscribe({
       next: res => {
         this.anulando = false;
         this.notificationService.success(res.detail || 'Evento anulado correctamente.');
@@ -478,11 +547,13 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
           this.eventoAnular.motivo_cancelacion = this.motivoAnulacionInput.trim();
         }
         this.cerrarModalAnular();
+        this.cdr?.markForCheck();
         this.cargarMisEventos();
       },
       error: err => {
         this.anulando = false;
         this.notificationService.error(err?.error?.detail || 'Error al anular el evento.');
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -492,8 +563,9 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
   // =========================================================================
 
   cargarEventos(): void {
-    this.eventoService.getEventos().subscribe({
-      next: list => {
+    this.eventoService.getEventos({ page: 1, page_size: 100 }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res: any) => {
+        const list: EventoInstitucional[] = Array.isArray(res) ? res : res?.results || [];
         if (list && list.length > 0) {
           this.eventos = list;
           if (!this.eventoActivo) {
@@ -502,9 +574,11 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
         } else {
           this.cargarFallbackEventos();
         }
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.cargarFallbackEventos();
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -546,7 +620,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
   }
 
   cargarConvocados(eventoId: number | string): void {
-    this.eventoService.getAsistencias(eventoId).subscribe({
+    this.eventoService.getAsistencias(eventoId).pipe(takeUntil(this.destroy$)).subscribe({
       next: asistencias => {
         if (asistencias && asistencias.length > 0) {
           this.convocados = asistencias.map(a => ({
@@ -570,9 +644,11 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
         } else {
           this.generarConvocadosMock();
         }
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.generarConvocadosMock();
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -628,11 +704,68 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     ];
   }
 
+  // Cachés ligeros para evitar recomputar múltiples .filter() por ciclo de OnPush
+  private _kpiCacheKey = '';
+  private _kpiPresentes = 0;
+  private _kpiAusentes = 0;
+  private _kpiTardanzas = 0;
+  private _convCacheKey = '';
+  private _convCacheRef: ConvocadoAsistenciaDTO[] | null = null;
+  private _convCacheResult: ConvocadoAsistenciaDTO[] = [];
+
+  private buildEstadosDigest(): number {
+    let hash = this.convocados.length * 31;
+    for (let i = 0; i < this.convocados.length; i++) {
+      const est = this.convocados[i]?.estado_asistencia || '';
+      const token = (est.charCodeAt(0) || 0) + (est.length << 5);
+      hash = (hash + token * (i + 1)) | 0;
+    }
+    return hash;
+  }
+
+  private ensureKpiCache(): void {
+    const modTs = this.ultimaModificacion ? this.ultimaModificacion.getTime() : 0;
+    const digest = this.buildEstadosDigest();
+    const key = `${this.convocados.length}|${modTs}|${digest}`;
+    if (key === this._kpiCacheKey && this._convCacheRef === this.convocados) {
+      return;
+    }
+    let pres = 0;
+    let aus = 0;
+    let tard = 0;
+    for (const c of this.convocados) {
+      const e = c.estado_asistencia;
+      if (e === 'PRESENTE' || e === 'JUSTIFICADO') {
+        pres++;
+      } else if (e === 'AUSENTE_INJUSTIFICADO' || e === 'AUSENTE') {
+        aus++;
+      } else if (
+        e === 'TARDANZA_LEVE' ||
+        e === 'TARDE_LEVE' ||
+        e === 'TARDANZA_GRAVE' ||
+        e === 'TARDE_GRAVE'
+      ) {
+        tard++;
+      }
+    }
+    this._kpiPresentes = pres;
+    this._kpiAusentes = aus;
+    this._kpiTardanzas = tard;
+    this._kpiCacheKey = key;
+  }
+
   get convocadosFiltrados(): ConvocadoAsistenciaDTO[] {
+    const q = this.filtroTexto ? this.filtroTexto.toLowerCase().trim() : '';
+    const modTs = this.ultimaModificacion ? this.ultimaModificacion.getTime() : 0;
+    const digest = this.buildEstadosDigest();
+    const key = `${this.convocados.length}|${modTs}|${digest}|${q}|${this.filtroEstado}`;
+    if (this._convCacheRef === this.convocados && this._convCacheKey === key) {
+      return this._convCacheResult;
+    }
+
     let result = this.convocados;
 
-    if (this.filtroTexto && this.filtroTexto.trim()) {
-      const q = this.filtroTexto.toLowerCase().trim();
+    if (q) {
       result = result.filter(
         c =>
           c.socio_nombre.toLowerCase().includes(q) ||
@@ -664,29 +797,25 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       }
     }
 
+    this._convCacheRef = this.convocados;
+    this._convCacheKey = key;
+    this._convCacheResult = result;
     return result;
   }
 
   get totalPresentes(): number {
-    return this.convocados.filter(
-      c => c.estado_asistencia === 'PRESENTE' || c.estado_asistencia === 'JUSTIFICADO'
-    ).length;
+    this.ensureKpiCache();
+    return this._kpiPresentes;
   }
 
   get totalAusentes(): number {
-    return this.convocados.filter(
-      c => c.estado_asistencia === 'AUSENTE_INJUSTIFICADO' || c.estado_asistencia === 'AUSENTE'
-    ).length;
+    this.ensureKpiCache();
+    return this._kpiAusentes;
   }
 
   get totalTardanzas(): number {
-    return this.convocados.filter(
-      c =>
-        c.estado_asistencia === 'TARDANZA_LEVE' ||
-        c.estado_asistencia === 'TARDE_LEVE' ||
-        c.estado_asistencia === 'TARDANZA_GRAVE' ||
-        c.estado_asistencia === 'TARDE_GRAVE'
-    ).length;
+    this.ensureKpiCache();
+    return this._kpiTardanzas;
   }
 
   cambiarEstrategia(tipo: MetodoCapturaAsistencia): void {
@@ -725,7 +854,8 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
 
   simularHuellaSocio(socio: ConvocadoAsistenciaDTO): void {
     this.escaneandoHuella = true;
-    setTimeout(() => {
+    this.cdr?.markForCheck();
+    this.scheduleTimer(() => {
       this.escaneandoHuella = false;
       const horaProg = this.eventoActivo?.fecha_programada
         ? new Date(this.eventoActivo.fecha_programada)
@@ -745,6 +875,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       this.ultimaModificacion = new Date();
 
       this.notificationService.success(res.feedbackMensaje);
+      this.cdr?.markForCheck();
     }, 450);
   }
 
@@ -767,14 +898,17 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     };
 
     this.guardando = true;
-    this.eventoService.registrarAsistenciasBulk(this.eventoActivo.id, payload).subscribe({
+    this.cdr?.markForCheck();
+    this.eventoService.registrarAsistenciasBulk(this.eventoActivo.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.guardando = false;
         this.notificationService.success('Planilla de asistencia guardada correctamente.');
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.guardando = false;
         this.notificationService.success('Planilla de asistencia guardada localmente.');
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -790,7 +924,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       }
     });
 
-    dialogRef.afterClosed().subscribe(confirmado => {
+    dialogRef.afterClosed().pipe(takeUntil(this.destroy$)).subscribe(confirmado => {
       if (confirmado) {
         this.ejecutarProcesamientoYCierre();
       }
@@ -816,7 +950,8 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
     };
 
     this.procesando = true;
-    this.eventoService.procesarAsistencias(this.eventoActivo.id, payload).subscribe({
+    this.cdr?.markForCheck();
+    this.eventoService.procesarAsistencias(this.eventoActivo.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
       next: res => {
         this.procesando = false;
         if (this.eventoActivo) {
@@ -830,6 +965,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
           (Array.isArray(res.apercibimientos_creados) ? res.apercibimientos_creados.length : 0);
         const msg = `Convocatoria cerrada formalmente. Se abrieron ${expGenerados} expedientes y se registraron ${apercGenerados} apercibimientos.`;
         this.notificationService.success(msg);
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.procesando = false;
@@ -840,6 +976,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
         this.notificationService.success(
           `Convocatoria cerrada formalmente. Se abrieron ${expCount} expedientes en estado Expediente Creado.`
         );
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -849,11 +986,12 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       width: '720px'
     });
 
-    dialogRef.afterClosed().subscribe(nuevoEvento => {
+    dialogRef.afterClosed().pipe(takeUntil(this.destroy$)).subscribe(nuevoEvento => {
       if (nuevoEvento) {
         this.eventos.unshift(nuevoEvento);
         this.seleccionarEvento(nuevoEvento);
         this.cargarMisEventos();
+        this.cdr?.markForCheck();
       }
     });
   }

@@ -1307,3 +1307,50 @@ body.dark-edition,
   background-color: #F8FAFC;
   border-top: 1px solid var(--color-border-main, #E2E8F0);
 }
+
+.kanban-col-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 460px;
+  padding-right: 4px;
+}
+
+.kanban-col-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+}
+
+.btn-mostrar-mas {
+  min-width: 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 9999px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border-main);
+  background-color: var(--color-surface-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-border-focus);
+    background-color: var(--color-tint);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}

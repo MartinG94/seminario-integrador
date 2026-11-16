@@ -1,4 +1,12 @@
-import { Component, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  TemplateRef,
+  ViewChild
+} from '@angular/core';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { NavigationStart, Router } from '@angular/router';
 import { merge, Subject } from 'rxjs';
@@ -8,13 +16,22 @@ import { CalendarioApiService, CalcularPlazoResponse, HolidayDto } from '../serv
 import { AuthService } from '../services/auth.service';
 import { ExpedienteApiService, PlazoApelacionDTO } from '../services/expediente-api.service';
 import { NotificationService, httpErrorMessage } from '../services/notification.service';
+import { TrackByUtils } from '../utils/track-by.util';
 
 @Component({
   selector: 'app-calendario-institucional',
   templateUrl: './calendario-institucional.component.html',
-  styleUrls: ['./calendario-institucional.component.scss']
+  styleUrls: ['./calendario-institucional.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
+  readonly trackByValue = (index: number, item: any): any =>
+    TrackByUtils.byValue(index, item);
+  readonly trackByHoliday = (index: number, h: HolidayDto): any =>
+    h?.id ?? h?.fecha ?? index;
+  readonly trackByExcluded = (index: number, item: any): any =>
+    item?.fecha ?? item ?? index;
+
   holidays: HolidayDto[] = [];
   filteredHolidays: HolidayDto[] = [];
   selectedYear: number | null = null;
@@ -46,9 +63,15 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   appealDeadlineDraft: number | null = null;
   savingAppealDeadline = false;
 
-  constructor(private calendarApi: CalendarioApiService, public auth: AuthService,
-    private notifications: NotificationService, private dialog: MatDialog, private router: Router,
-    private expedienteApi: ExpedienteApiService) {}
+  constructor(
+    private calendarApi: CalendarioApiService,
+    public auth: AuthService,
+    private notifications: NotificationService,
+    private dialog: MatDialog,
+    private router: Router,
+    private expedienteApi: ExpedienteApiService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   get canManage(): boolean { return this.auth.tieneRol('ADMIN', 'CD', 'TD'); }
 
@@ -80,12 +103,16 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   }
 
   loadAppealDeadline(): void {
-    this.expedienteApi.obtenerPlazoApelacion().subscribe({
+    this.expedienteApi.obtenerPlazoApelacion().pipe(takeUntil(this.destroy$)).subscribe({
       next: plazo => {
         this.appealDeadline = plazo;
         this.appealDeadlineDraft = plazo.dias_habiles;
+        this.cdr?.markForCheck();
       },
-      error: err => this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el plazo de apelación.'))
+      error: err => {
+        this.notifications.error(httpErrorMessage(err, 'No se pudo cargar el plazo de apelación.'));
+        this.cdr?.markForCheck();
+      }
     });
   }
 
@@ -96,16 +123,19 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       return;
     }
     this.savingAppealDeadline = true;
-    this.expedienteApi.actualizarPlazoApelacion(dias).subscribe({
+    this.cdr?.markForCheck();
+    this.expedienteApi.actualizarPlazoApelacion(dias).pipe(takeUntil(this.destroy$)).subscribe({
       next: plazo => {
         this.savingAppealDeadline = false;
         this.appealDeadline = plazo;
         this.appealDeadlineDraft = plazo.dias_habiles;
         this.notifications.success('Plazo de apelación actualizado. Rige para los próximos períodos.');
+        this.cdr?.markForCheck();
       },
       error: err => {
         this.savingAppealDeadline = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo actualizar el plazo de apelación.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -131,15 +161,22 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       restoreFocus: true
     });
     // Cancelar al comenzar el cierre evita respuestas durante la animación de salida.
-    this.simulationDialog.beforeClosed().pipe(takeUntil(this.destroy$)).subscribe(() => this.resetSimulation());
+    this.simulationDialog.beforeClosed().pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.resetSimulation();
+      this.cdr?.markForCheck();
+    });
     merge(
       this.simulationDialog.backdropClick(),
       this.simulationDialog.keydownEvents().pipe(filter(event =>
         event.key === 'Escape' && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey))
     ).pipe(takeUntil(this.simulationDialog.afterClosed()), takeUntil(this.destroy$))
-      .subscribe(() => this.resetSimulation());
+      .subscribe(() => {
+        this.resetSimulation();
+        this.cdr?.markForCheck();
+      });
     this.simulationDialog.afterClosed().pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.simulationDialog = null;
+      this.cdr?.markForCheck();
     });
   }
 
@@ -169,16 +206,19 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   loadHolidays(): void {
     this.loading = true;
     this.loadError = '';
+    this.cdr?.markForCheck();
     this.calendarApi.getFeriados().pipe(takeUntil(this.destroy$)).subscribe({
       next: holidays => {
         this.holidays = holidays;
         this.applyFilters();
         this.loading = false;
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.loading = false;
         this.loadError = 'No se pudo cargar el calendario. Intentá nuevamente.';
         this.notifications.error(this.loadError);
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -188,6 +228,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       (this.selectedYear == null || Number(holiday.fecha.slice(0, 4)) === this.selectedYear) &&
       (this.selectedMonth == null || Number(holiday.fecha.slice(5, 7)) === this.selectedMonth)
     ).sort((a, b) => this.dateAscending ? a.fecha.localeCompare(b.fecha) : b.fecha.localeCompare(a.fecha));
+    this.cdr?.markForCheck();
   }
 
   toggleDateOrder(): void {
@@ -205,6 +246,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
     this.showHolidayForm = !this.showHolidayForm;
     this.holidayDate = '';
     this.holidayDescription = '';
+    this.cdr?.markForCheck();
   }
 
   saveHoliday(): void {
@@ -218,6 +260,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       return;
     }
     this.savingHoliday = true;
+    this.cdr?.markForCheck();
     this.calendarApi.addFeriado({
       fecha: this.holidayDate,
       descripcion: this.holidayDescription.trim()
@@ -237,10 +280,12 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
           this.simulationLoading = false;
           this.calculateDeadline();
         }
+        this.cdr?.markForCheck();
       },
       error: (error: unknown) => {
         this.savingHoliday = false;
         this.notifications.error(httpErrorMessage(error, 'No se pudo crear el feriado. Intentá nuevamente.'));
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -257,6 +302,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       return;
     }
     this.simulationLoading = true;
+    this.cdr?.markForCheck();
     this.calendarApi.calcularPlazo({
       start_at: `${this.simulationStart}-03:00`,
       business_days: this.simulationDays
@@ -264,10 +310,12 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
       next: result => {
         this.simulationLoading = false;
         this.simulationResult = result;
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.simulationLoading = false;
         this.notifications.error('No se pudo calcular el vencimiento. Intentá nuevamente.');
+        this.cdr?.markForCheck();
       }
     });
   }
