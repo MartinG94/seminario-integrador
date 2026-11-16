@@ -132,7 +132,7 @@ describe('CrearEventoDialogComponent (T14 / CA1 / CA8 / CA9)', () => {
       next: null,
       previous: null,
       results: [
-        { id: 201, legajo: '88123', first_name: 'Ana', last_name: 'Pérez', email: 'ana@aveit.com', role: 'socio', category: 'ACTIVE', category_display: 'Activo', subcomision: 'Deportes' }
+        { id: 201, numero_socio: 3201, legajo: '88123', first_name: 'Ana', last_name: 'Pérez', email: 'ana@aveit.com', role: 'socio', category: 'ACTIVE', category_display: 'Activo', subcomision: 'Deportes' }
       ]
     }));
 

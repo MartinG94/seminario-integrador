@@ -97,7 +97,9 @@ def test_emitir_sin_anexo_congela_version(padron_repo, expediente_client):
     assert response.status_code == 200, response.data
     solicitud = SolicitudT01.objects.get(pk=data["id"])
     assert solicitud.estado == "ISSUED"
-    assert solicitud.numero_expediente.startswith("T01-")
+    assert solicitud.numero_expediente == solicitud.expediente.numero
+    assert solicitud.numero_expediente.startswith("EXP-")
+    assert "/" in solicitud.numero_expediente
     assert solicitud.issued_at is not None
     assert solicitud.snapshot_destinatario["socio_id"] == 9001
     assert solicitud.snapshot_emitido["puntos"] == "-2.00"

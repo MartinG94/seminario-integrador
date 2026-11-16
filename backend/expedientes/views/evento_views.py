@@ -518,8 +518,12 @@ class RegistroApercibimientoViewSet(viewsets.ReadOnlyModelViewSet):
         search = params.get("search")
         if search:
             search_clean = search.strip()
+            numero_socio_query = Q()
+            if search_clean.isdigit():
+                numero_socio_query = Q(socio__numero_socio=int(search_clean))
             qs = qs.filter(
-                Q(socio__legajo__icontains=search_clean)
+                numero_socio_query
+                | Q(socio__legajo__icontains=search_clean)
                 | Q(socio__first_name__icontains=search_clean)
                 | Q(socio__last_name__icontains=search_clean)
             )

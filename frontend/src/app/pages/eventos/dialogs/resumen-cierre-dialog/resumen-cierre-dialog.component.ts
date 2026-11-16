@@ -9,6 +9,7 @@ import {
 export interface ActuacionPrevista {
   socioId: number;
   socioNombre: string;
+  socioNumeroSocio: number | null | undefined;
   socioLegajo: string;
   estadoAsistencia: EstadoAsistenciaEvento;
   tipoActuacion: 'EXPEDIENTE' | 'APERCIBIMIENTO' | 'NINGUNA';
@@ -120,6 +121,7 @@ export class ResumenCierreDialogComponent implements OnInit {
       return {
         socioId: socio.socio_id,
         socioNombre: socio.socio_nombre,
+        socioNumeroSocio: socio.socio_numero_socio,
         socioLegajo: socio.socio_legajo,
         estadoAsistencia: socio.estado_asistencia,
         tipoActuacion,

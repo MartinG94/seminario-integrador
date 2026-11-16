@@ -86,9 +86,10 @@ class OpeningNotificationService:
 
             # Validar correo institucional del socio imputado
             socio_email = (expediente.socio.email or "").strip()
+            socio_identificador = expediente.socio.numero_socio or expediente.socio.legajo
             if not socio_email:
                 raise MissingSocioEmailError(
-                    f"El socio imputado '{expediente.socio.legajo}' no posee dirección de "
+                    f"El socio imputado '{socio_identificador}' no posee dirección de "
                     f"correo electrónico válida registrada en su legajo."
                 )
 
@@ -104,7 +105,7 @@ class OpeningNotificationService:
             base_url = frontend_url or getattr(settings, "FRONTEND_URL", "http://localhost:4200")
             socio_nombre = (
                 f"{expediente.socio.first_name} {expediente.socio.last_name}".strip()
-                or expediente.socio.legajo
+                or str(socio_identificador)
             )
             payload = OpeningNotificationTemplate.render(
                 expediente_numero=expediente.numero,

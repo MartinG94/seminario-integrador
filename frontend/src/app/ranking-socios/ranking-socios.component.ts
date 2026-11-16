@@ -20,7 +20,7 @@ import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expe
 export type RankingColumnaOrden =
   | 'posicion'
   | 'socio'
-  | 'legajo'
+  | 'numero_socio'
   | 'categoria'
   | 'grupo'
   | 'subcomision'
@@ -199,7 +199,9 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
       width: '100%',
       maxWidth: '700px',
       data: {
-        legajo: socio.legajo,
+        numeroSocio: socio.numero_socio === null || socio.numero_socio === undefined
+          ? ''
+          : String(socio.numero_socio),
         nombreSocio: `${socio.nombre} ${socio.apellido}`.trim(),
         saldo: socio.saldo
       }
@@ -259,8 +261,8 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
         return this.sortDir === 'desc' ? 'saldo' : '-saldo';
       case 'socio':
         return `${prefix}apellido,${prefix}nombre`;
-      case 'legajo':
-        return `${prefix}legajo`;
+      case 'numero_socio':
+        return `${prefix}id`;
       case 'categoria':
         return `${prefix}categoria`;
       case 'grupo':
@@ -539,6 +541,8 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
         (s) =>
           s.nombre.toLowerCase().includes(q) ||
           s.apellido.toLowerCase().includes(q) ||
+          (s.numero_socio !== null && s.numero_socio !== undefined &&
+            String(s.numero_socio).toLowerCase().includes(q)) ||
           s.legajo.toLowerCase().includes(q) ||
           (s.subcomision && s.subcomision.toLowerCase().includes(q)) ||
           (s.grupo && s.grupo.toLowerCase().includes(q))
@@ -558,10 +562,15 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
               a.apellido.localeCompare(b.apellido, 'es') ||
               a.nombre.localeCompare(b.nombre, 'es');
             break;
-          case 'legajo': {
-            const numA = parseInt(a.legajo.replace(/\D/g, '') || '0', 10);
-            const numB = parseInt(b.legajo.replace(/\D/g, '') || '0', 10);
+          case 'numero_socio': {
+            const numA = a.numero_socio ?? Number.MAX_SAFE_INTEGER;
+            const numB = b.numero_socio ?? Number.MAX_SAFE_INTEGER;
             diff = numA - numB;
+            if (diff === 0 && (a.numero_socio == null || b.numero_socio == null)) {
+              diff =
+                a.apellido.localeCompare(b.apellido, 'es') ||
+                a.nombre.localeCompare(b.nombre, 'es');
+            }
             break;
           }
           case 'categoria':

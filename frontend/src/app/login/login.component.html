@@ -30,10 +30,10 @@
             type="button"
             *ngFor="let demo of cuentasDemo"
             class="btn-demo-chip"
-            (click)="seleccionarDemo(demo.legajo)"
-            [title]="demo.nombre + ' (' + demo.legajo + ')'">
+            (click)="seleccionarDemo(demo.numero_socio)"
+            [title]="demo.nombre + ' (' + demo.numero_socio + ')'">
             <span class="badge-rol">{{ demo.rol }}</span>
-            <span class="legajo-num">{{ demo.legajo }}</span>
+            <span class="legajo-num">{{ demo.numero_socio }}</span>
           </button>
         </div>
       </div>

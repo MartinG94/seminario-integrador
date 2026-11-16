@@ -80,6 +80,7 @@ interface BorradorDecisionCausal {
 /** Fila de la Tabla de Involucrados del detalle (notasPO §4). */
 export interface InvolucradoJustificacion {
   socioId: number;
+  numero_socio?: number | null;
   legajo: string;
   grupo: string;
   nombre: string;
@@ -718,15 +719,15 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (filas.length > 0) {
       detalleInvolucrados = filas.map(f => {
         const nombre = this.getNombreCompletoInvolucrado(f);
-        const legajo = f.legajo || 'S/L';
+        const numeroSocio = f.numero_socio ?? 'S/D';
         const grupo = f.grupo ? ` (G${this.formatGrupoInvolucrado(f.grupo)})` : '';
         const puntaje = this.getPuntajeFinalInvolucradoDisplay(f);
-        return `   - Socio N° ${legajo} — ${nombre}${grupo}: ${puntaje}`;
+        return `   - Socio N° ${numeroSocio} — ${nombre}${grupo}: ${puntaje}`;
       }).join('\n');
     } else {
       const socio = exp.socio || 'Socio';
-      const legajo = exp.legajo || 'S/L';
-      detalleInvolucrados = `   - Socio N° ${legajo} — ${socio}: ${this.getPuntajeSolicitadoDisplay(exp)}`;
+      const numeroSocio = exp.numero_socio ?? 'S/D';
+      detalleInvolucrados = `   - Socio N° ${numeroSocio} — ${socio}: ${this.getPuntajeSolicitadoDisplay(exp)}`;
     }
 
     return `SE RESUELVE:\nARTÍCULO 1°.- APLICAR la resolución disciplinaria correspondiente a los socios involucrados en los presentes actuados:\n${detalleInvolucrados}\n\nARTÍCULO 2°.- NOTIFICAR fehacientemente a los interesados y comunicar lo resuelto a la Comisión Directiva para su efectivo registro en el cómputo institucional de puntos.\n\nARTÍCULO 3°.- REGÍSTRESE, cúmplase con las firmas digitales colegiadas de los representantes de los años sociales y archívese en Secretaría del Tribunal de Disciplina.`;
@@ -1357,6 +1358,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (exp.sociosInvolucrados && exp.sociosInvolucrados.length > 0) {
       this.involucradosJustificacion = exp.sociosInvolucrados.map(s => ({
         socioId: Number(s.id),
+        numero_socio: s.numero_socio ?? null,
         legajo: s.legajo,
         grupo: s.grupo || '',
         nombre: s.nombre,
@@ -1366,6 +1368,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     } else if (exp.socio) {
       this.involucradosJustificacion = [{
         socioId: 0,
+        numero_socio: exp.numero_socio ?? null,
         legajo: exp.legajo || '',
         grupo: '',
         nombre: exp.socio,
@@ -1602,6 +1605,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const porSocio = new Map(descargos.map(d => [d.socio_id, d]));
     const filas: InvolucradoJustificacion[] = (detalle.socios || []).map(s => ({
       socioId: s.id,
+      numero_socio: s.numero_socio ?? null,
       legajo: s.legajo,
       grupo: s.grupo || '',
       nombre: s.first_name ?? s.nombre,
@@ -1613,6 +1617,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       .filter(d => !filas.some(f => f.socioId === d.socio_id))
       .forEach(d => filas.push({
         socioId: d.socio_id,
+        numero_socio: null,
         legajo: d.socio_legajo,
         grupo: '',
         nombre: d.socio_first_name ?? d.socio_nombre,
@@ -2103,10 +2108,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       const nom = this.getNombreCompletoInvolucrado(inv);
       const grupo = inv.grupo ? ` (Grupo ${inv.grupo})` : '';
       const pts = this.getPuntajeFinalInvolucradoDisplay(inv);
-      return `• Socio N° ${inv.legajo} - ${nom}${grupo}: Puntaje Final ${pts}.`;
+      return `• Socio N° ${inv.numero_socio ?? 'S/D'} - ${nom}${grupo}: Puntaje Final ${pts}.`;
     }).join('\n');
 
-    const detalleSocios = lineasSocios || `• Socio ${exp.socio || exp.legajo || 'involucrado'}: Puntaje Final ${exp.puntos > 0 ? '+' : ''}${exp.puntos} pts.`;
+    const detalleSocios = lineasSocios || `• Socio ${exp.socio || 'involucrado'}: Puntaje Final ${exp.puntos > 0 ? '+' : ''}${exp.puntos} pts.`;
     const seResuelve = `ARTÍCULO 1°.- Aplicar la resolución disciplinaria correspondiente a los socios involucrados conforme al siguiente detalle de puntos finales consolidados:\n${detalleSocios}\n\nARTÍCULO 2°.- Notifíquese a la Comisión Directiva y a los socios involucrados, regístrese, publíquese y archívese.`;
 
     const reglamentos = [...this.reglamentosSeleccionadosResolucion];
@@ -2459,7 +2464,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   getCategoriaPuntajeLabel(): string {
     const actual = this.getOpcionPuntajeActual();
-    if (actual.valor === 'LLAMADO_ATENCION') return 'Apercibimiento';
+    if (actual.valor === 'LLAMADO_ATENCION') return 'Llamado de Atención';
     if (actual.valor === 'FELICITACION') return 'Reconocimiento';
     if (actual.rank === 0) return 'Eximición';
     return actual.rank < 0 ? 'Sanción' : 'Mérito';
@@ -2650,7 +2655,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       return 'Descargo';
     }
     const expId = this.expedienteSeleccionado.id ?? this.expedienteSeleccionado.numero;
-    const nroSocio = this.involucradoSeleccionado.legajo;
+    const nroSocio = this.involucradoSeleccionado.numero_socio ?? 'S/D';
     const nombre = this.getNombreCompletoInvolucrado(this.involucradoSeleccionado);
     return `Descargo exp ${expId} y ${nroSocio}, ${nombre}`;
   }

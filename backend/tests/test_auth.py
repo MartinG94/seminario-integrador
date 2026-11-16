@@ -3,11 +3,14 @@
 import io
 import logging
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
 
 import pytest
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 from rest_framework_simplejwt.tokens import AccessToken
 
-from socios.models import Role, SocialCategory
+from socios.models import Role, SocialCategory, Socio
 from tests.conftest import VALID_PASSWORD
 
 LOGIN_URL = "/api/v1/auth/login/"
@@ -46,10 +49,11 @@ def test_login_success_returns_tokens_and_profile(api_client, make_socio):
         format="json",
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.data
     assert response.data["access"]
     assert response.data["refresh"]
     assert response.data["user"]["legajo"] == socio.legajo
+    assert response.data["user"]["numero_socio"] == socio.numero_socio
     assert response.data["user"]["role"] == Role.TD
     assert response.data["user"]["category"] == SocialCategory.ACTIVE
     assert response.data["user"]["category_display"] == "Activo"
@@ -67,9 +71,10 @@ def test_login_with_legajo_without_password_succeeds(api_client, make_socio):
         {"identifier": "74907"},
         format="json",
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.data
     assert response.data["access"]
     assert response.data["user"]["legajo"] == socio.legajo
+    assert response.data["user"]["numero_socio"] == socio.numero_socio
     assert response.data["user"]["role"] == Role.TD
 
     # 2. Con password enviada como cadena vacía
@@ -92,7 +97,71 @@ def test_login_accepts_email_as_identifier(api_client, make_socio):
         format="json",
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.data
+
+
+@pytest.mark.django_db
+def test_login_by_numero_socio_with_existing_user(api_client, make_socio):
+    socio = make_socio(legajo="74907", role=Role.TD, social_year=5)
+    socio.numero_socio = 412
+    socio.save(update_fields=["numero_socio"])
+
+    response = api_client.post(
+        LOGIN_URL,
+        {"identifier": "412", "password": VALID_PASSWORD},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    assert response.data["access"]
+    assert response.data["user"]["legajo"] == "74907"
+    assert response.data["user"]["numero_socio"] == 412
+
+
+@pytest.mark.django_db
+def test_login_by_numero_socio_fallback_autocreates_user(api_client, make_socio):
+    socio = make_socio(legajo="88123", email="ana@aveit.test")
+    socio.numero_socio = 515
+    socio.save(update_fields=["numero_socio"])
+    socio.user = None  # Simula Socio sin User asignado en memoria
+
+    user_model = get_user_model()
+    orig_socio_filter = Socio.objects.filter
+    mock_qs = MagicMock()
+    mock_qs.first.return_value = socio
+
+    def socio_filter_side_effect(*args, **kwargs):
+        if args and isinstance(args[0], Q):
+            return mock_qs
+        return orig_socio_filter(*args, **kwargs)
+
+    with (
+        patch(
+            "accounts.serializers.UserModel.objects.filter",
+            return_value=user_model.objects.none(),
+        ),
+        patch(
+            "socios.models.Socio.objects.filter",
+            side_effect=socio_filter_side_effect,
+        ) as mock_socio_filter,
+    ):
+        response = api_client.post(
+            LOGIN_URL,
+            {"identifier": "515"},
+            format="json",
+        )
+
+    assert response.status_code == 200, response.data
+    assert response.data["access"]
+    assert response.data["user"]["legajo"] == "88123"
+    assert response.data["user"]["numero_socio"] == 515
+    assert any(
+        call.args and isinstance(call.args[0], Q) for call in mock_socio_filter.call_args_list
+    )
+
+    socio.refresh_from_db()
+    assert socio.user is not None
+    assert socio.user.username == "515"
 
 
 @pytest.mark.django_db

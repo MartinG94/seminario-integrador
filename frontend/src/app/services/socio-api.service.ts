@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 export interface SocioLegajoDTO {
   id: number;
   legajo: string;
+  numero_socio?: number | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -29,6 +30,7 @@ export interface PaginatedResponse<T> {
 export interface SocioListItemDTO {
   id: number;
   legajo: string;
+  numero_socio?: number | null;
   first_name: string;
   last_name: string;
   email: string;

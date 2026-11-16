@@ -31,6 +31,7 @@ def _make_sample_socio_dto(socio_id: int = 1001, legajo: str = "85421") -> Socio
     """Genera un DTO canónico de prueba."""
     return SocioInstitucionalDTO(
         socio_id=socio_id,
+        numero_socio=socio_id,
         legajo=legajo,
         dni="41234567",
         first_name="Esteban",
@@ -75,6 +76,7 @@ class TestPadronSocioDetailView:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["socio_id"] == 1001
+        assert data["numero_socio"] == 1001
         assert data["legajo"] == "85421"
         assert data["first_name"] == "Esteban"
         assert data["category"] == "ACTIVE"
@@ -146,6 +148,7 @@ class TestPadronSocioLegajoDetailView:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["socio_id"] == 1001
+        assert data["numero_socio"] == 1001
         assert data["legajo"] == "85421"
         assert data["first_name"] == "Esteban"
         mock_repo.get_by_legajo.assert_called_once_with("85421")

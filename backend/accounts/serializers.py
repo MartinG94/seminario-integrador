@@ -35,23 +35,29 @@ class LoginSerializer(serializers.Serializer):
         identifier = attrs["identifier"]
         password = attrs.get("password", "")
 
-        user = UserModel.objects.filter(
+        user_query = (
             Q(username=identifier)
             | Q(email__iexact=identifier)
             | Q(socio__legajo=identifier)
             | Q(socio__email__iexact=identifier)
-        ).first()
+        )
+        if identifier.isdigit():
+            user_query |= Q(socio__numero_socio=int(identifier))
+
+        user = UserModel.objects.filter(user_query).first()
 
         if user is None:
             from socios.models import Socio
 
-            socio_obj = Socio.objects.filter(
-                Q(legajo=identifier) | Q(email__iexact=identifier)
-            ).first()
+            socio_query = Q(legajo=identifier) | Q(email__iexact=identifier)
+            if identifier.isdigit():
+                socio_query |= Q(numero_socio=int(identifier))
+
+            socio_obj = Socio.objects.filter(socio_query).first()
             if socio_obj is not None:
-                if socio_obj.user is None:
+                if getattr(socio_obj, "user", None) is None:
                     user, _ = UserModel.objects.get_or_create(
-                        username=socio_obj.legajo,
+                        username=str(socio_obj.numero_socio or socio_obj.legajo),
                         defaults={"email": socio_obj.email},
                     )
                     socio_obj.user = user
@@ -96,6 +102,7 @@ class SocioProfileSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(read_only=True)
     legajo = serializers.CharField()
+    numero_socio = serializers.IntegerField(allow_null=True, read_only=True)
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     email = serializers.EmailField()

@@ -218,6 +218,7 @@ def _serializar_socio_involucrado(
 
     return {
         "id": socio.id,
+        "numero_socio": socio.numero_socio,
         "legajo": legajo,
         "nombre": f"{socio.first_name} {socio.last_name}".strip(),
         "first_name": socio.first_name,
@@ -295,6 +296,9 @@ class ExpedienteResumenSerializer(serializers.ModelSerializer):
     """Serializador acotado para consulta pública/autenticada de expedientes por socio."""
 
     titulo = serializers.SerializerMethodField()
+    socio_numero_socio = serializers.IntegerField(
+        source="socio.numero_socio", allow_null=True, read_only=True
+    )
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
 
     class Meta:
@@ -303,6 +307,7 @@ class ExpedienteResumenSerializer(serializers.ModelSerializer):
             "id",
             "numero",
             "titulo",
+            "socio_numero_socio",
             "motivo",
             "puntos",
             "estado",
@@ -394,6 +399,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     """Serializador para listado y detalle de expedientes."""
 
     socio_nombre = serializers.SerializerMethodField()
+    socio_numero_socio = serializers.IntegerField(
+        source="socio.numero_socio", allow_null=True, read_only=True
+    )
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     subcomision = serializers.CharField(source="socio.subcomision.name", default="", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
@@ -454,6 +462,7 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "concepto",
             "concepto_display",
             "socio_nombre",
+            "socio_numero_socio",
             "socio_legajo",
             "creador",
             "solicitante",
@@ -894,6 +903,7 @@ class DecisionCausalSerializer(serializers.ModelSerializer):
         source="get_regla_sugerida_display", read_only=True
     )
     autor = serializers.CharField(source="autor.get_username", read_only=True)
+    autor_numero_socio = serializers.SerializerMethodField()
 
     class Meta:
         model = DecisionCausalDescargo
@@ -911,10 +921,15 @@ class DecisionCausalSerializer(serializers.ModelSerializer):
             "descargo_snapshot",
             "autor",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "created_at",
         ]
         read_only_fields = fields
+
+    def get_autor_numero_socio(self, obj: DecisionCausalDescargo) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class RegistrarDecisionCausalSerializer(serializers.Serializer):
@@ -951,6 +966,7 @@ class ValoracionT03Serializer(serializers.ModelSerializer):
 
     resultado_display = serializers.CharField(source="get_resultado_display", read_only=True)
     autor = serializers.CharField(source="autor.get_username", read_only=True)
+    autor_numero_socio = serializers.SerializerMethodField()
     autor_condicion_display = serializers.CharField(
         source="get_autor_condicion_display", read_only=True
     )
@@ -969,12 +985,17 @@ class ValoracionT03Serializer(serializers.ModelSerializer):
             "antecedentes",
             "autor",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "autor_condicion",
             "autor_condicion_display",
             "created_at",
         ]
         read_only_fields = fields
+
+    def get_autor_numero_socio(self, obj: ValoracionT03) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class AntecedenteT03Serializer(serializers.Serializer):
@@ -1363,9 +1384,6 @@ class EmitirT01Serializer(serializers.Serializer):
         }
         solicitud.estado = SolicitudT01.Estado.ISSUED
         solicitud.issued_at = timezone.now()
-        solicitud.numero_expediente = (
-            f"T01-{solicitud.issued_at:%Y}-{solicitud.id.hex[:12].upper()}"
-        )
 
         # Apertura atómica y vinculación formal con Expediente
         # Resolver socios (ya sea por PK local de Socio o por padrón institucional)
@@ -1425,6 +1443,7 @@ class EmitirT01Serializer(serializers.Serializer):
                 points=solicitud.puntos,
             )
             solicitud.expediente = expediente
+            solicitud.numero_expediente = expediente.numero
 
         solicitud.save()
         if solicitud.expediente_id:
@@ -1706,6 +1725,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             return [
                 {
                     "socio_id": s.get("socio_id"),
+                    "numero_socio": s.get("numero_socio"),
                     "legajo": s.get("legajo", "S/D"),
                     "first_name": s.get("first_name", ""),
                     "last_name": s.get("last_name", ""),
@@ -1723,6 +1743,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             return [
                 {
                     "socio_id": s.get("socio_id"),
+                    "numero_socio": s.get("numero_socio"),
                     "legajo": s.get("legajo", "S/D"),
                     "first_name": s.get("first_name", ""),
                     "last_name": s.get("last_name", ""),
@@ -1743,6 +1764,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
         return [
             {
                 "socio_id": s.id,
+                "numero_socio": s.numero_socio,
                 "legajo": s.legajo,
                 "first_name": s.first_name,
                 "last_name": s.last_name,

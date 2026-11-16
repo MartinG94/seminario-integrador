@@ -126,6 +126,7 @@ from expedientes.views.reportes_views import (
     ReportesResumenView,
 )
 from expedientes.views.visor_views import ExpedienteVisorView
+from padron.models import Socio as PadronSocio
 from padron.models import SocioEstudio
 from socios.models import Role, Socio
 
@@ -156,13 +157,27 @@ EXPEDIENTE_LIST_PREFETCH = (
 
 
 def filter_expedientes_by_legajo(queryset, legajo: str):
-    """Filtra expedientes asociados a un legajo como titular o socio implicado."""
-    padron_user_ids = SocioEstudio.objects.filter(
+    """Filtra por número institucional, con compatibilidad académica transitoria."""
+    try:
+        institutional_number = int(legajo)
+    except (TypeError, ValueError):
+        institutional_number = None
+
+    academic_user_ids = SocioEstudio.objects.filter(
         nroLegajo=legajo,
         socio__user_id__isnull=False,
     ).values("socio__user_id")
+    institutional_user_ids = PadronSocio.objects.none()
+    institutional_number_filter = Q()
+    if institutional_number is not None:
+        institutional_user_ids = PadronSocio.objects.filter(nroSocio=institutional_number).values(
+            "user_id"
+        )
+        institutional_number_filter = Q(numero_socio=institutional_number) | Q(
+            user_id__in=institutional_user_ids
+        )
     local_socio_ids = Socio.objects.filter(
-        user_id__in=padron_user_ids,
+        institutional_number_filter | Q(legajo=legajo) | Q(user_id__in=academic_user_ids),
     ).values("pk")
     return queryset.filter(
         Q(socio__legajo=legajo)
@@ -230,9 +245,11 @@ class ExpedienteCollectionView(PaginatedAPIViewMixin, APIView):
 
         # SCRUM-82: el legajo puede corresponder al socio principal o a cualquiera
         # de los socios involucrados/adicionales.
-        legajo = request.query_params.get("legajo")
-        if legajo is not None and legajo.strip():
-            queryset = filter_expedientes_by_legajo(queryset, legajo.strip())
+        identificador = request.query_params.get("numero_socio") or request.query_params.get(
+            "legajo"
+        )
+        if identificador is not None and identificador.strip():
+            queryset = filter_expedientes_by_legajo(queryset, identificador.strip())
 
         queryset = _apply_expediente_collection_filters_and_ordering(queryset, request.query_params)
 
@@ -247,7 +264,6 @@ class ExpedienteCollectionView(PaginatedAPIViewMixin, APIView):
             if page is not None:
                 serializer = ExpedienteListSerializer(page, many=True, context={"request": request})
                 return self.get_paginated_response(serializer.data)
-
         return Response(
             ExpedienteListSerializer(queryset, many=True, context={"request": request}).data
         )
@@ -367,7 +383,7 @@ class MisExpedientesView(PaginatedAPIViewMixin, APIView):
 
 class ExpedientesPorSocioView(APIView):
     """
-    Endpoint GET /api/v1/expedientes/por-socio/?legajo=<legajo>
+    Endpoint GET /api/v1/expedientes/por-socio/?numero_socio=<numero_socio>
     Consulta de solo lectura de expedientes de un socio para cualquier usuario autenticado.
     """
 
@@ -375,16 +391,18 @@ class ExpedientesPorSocioView(APIView):
 
     def get(self, request: Request) -> Response:
         DeadlineEnforcementService().close_expired_deadlines()
-        legajo = request.query_params.get("legajo")
-        if not legajo or not legajo.strip():
+        identificador = request.query_params.get("numero_socio") or request.query_params.get(
+            "legajo"
+        )
+        if not identificador or not identificador.strip():
             return Response(
                 {"error": "El parámetro 'legajo' es obligatorio."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        legajo = legajo.strip()
+        identificador = identificador.strip()
         queryset = Expediente.objects.select_related("solicitud_t01").order_by("-created_at", "-id")
-        queryset = filter_expedientes_by_legajo(queryset, legajo)
+        queryset = filter_expedientes_by_legajo(queryset, identificador)
         serializer = ExpedienteResumenSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

@@ -194,7 +194,7 @@
             type="text"
             class="form-control"
             [formControl]="filtroSocioControl"
-            placeholder="Escriba apellido, nombre o legajo del socio..."
+            placeholder="Escriba apellido, nombre o número de socio..."
           />
           <div class="input-group-append" *ngIf="buscandoSocios">
             <span class="input-group-text"><i class="material-icons spin">refresh</i></span>
@@ -211,7 +211,7 @@
           >
             <div>
               <strong>{{ s.last_name }}, {{ s.first_name }}</strong>
-              <small class="text-muted ml-2">Legajo: {{ s.legajo }} - {{ s.subcomision || 'Sin subcomisión' }}</small>
+              <small class="text-muted ml-2">N.º de Socio: {{ s.numero_socio ?? '—' }} - {{ s.subcomision || 'Sin subcomisión' }}</small>
             </div>
             <span class="badge badge-primary">+ Convocado</span>
           </button>
@@ -224,7 +224,7 @@
             *ngFor="let sel of sociosSeleccionados"
             class="badge badge-info p-2 mr-1 mb-1 d-inline-flex align-items-center"
           >
-            {{ sel.first_name }} {{ sel.last_name }} ({{ sel.legajo }})
+            {{ sel.first_name }} {{ sel.last_name }} (N.º de Socio {{ sel.numero_socio ?? '—' }})
             <button
               type="button"
               class="close ml-2 text-white font-weight-bold"

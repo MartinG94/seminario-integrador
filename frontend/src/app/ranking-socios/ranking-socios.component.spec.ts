@@ -37,7 +37,8 @@ describe('RankingSociosComponent', () => {
   const sociosMock: RankingSocio[] = [
     {
       id: '1',
-      legajo: '1001',
+      numero_socio: 1001,
+      legajo: '85421',
       nombre: 'Ana',
       apellido: 'Gómez',
       categoria: 'ACTIVO',
@@ -51,7 +52,8 @@ describe('RankingSociosComponent', () => {
     },
     {
       id: '2',
-      legajo: '1002',
+      numero_socio: 1002,
+      legajo: '89123',
       nombre: 'Bruno',
       apellido: 'Pérez',
       categoria: 'PASIVO',
@@ -336,21 +338,21 @@ describe('RankingSociosComponent', () => {
   it('debería soportar ordenamiento universal en todas las columnas', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(
       of(mockPaginated([
-        { ...sociosMock[0], id: '1', legajo: '105', nombre: 'Zoe', apellido: 'Alonso', categoria: 'PASIVO', subcomision: 'Deportes', grupo: 'G2', saldo: 1 },
-        { ...sociosMock[0], id: '2', legajo: '98', nombre: 'Ana', apellido: 'Bustos', categoria: 'ACTIVO', subcomision: 'Buffet', grupo: 'G10', saldo: 10 },
-        { ...sociosMock[0], id: '3', legajo: '1002', nombre: 'Carlos', apellido: 'Castro', categoria: 'ACTIVO', subcomision: 'Cómputos', grupo: 'G1', saldo: -5 }
+        { ...sociosMock[0], id: '1', numero_socio: 105, legajo: '90001', nombre: 'Zoe', apellido: 'Alonso', categoria: 'PASIVO', subcomision: 'Deportes', grupo: 'G2', saldo: 1 },
+        { ...sociosMock[0], id: '2', numero_socio: 98, legajo: '90002', nombre: 'Ana', apellido: 'Bustos', categoria: 'ACTIVO', subcomision: 'Buffet', grupo: 'G10', saldo: 10 },
+        { ...sociosMock[0], id: '3', numero_socio: 1002, legajo: '90003', nombre: 'Carlos', apellido: 'Castro', categoria: 'ACTIVO', subcomision: 'Cómputos', grupo: 'G1', saldo: -5 }
       ]))
     );
     fixture.detectChanges();
 
-    // 1. Ordenar por legajo numérico (asc: 98, 105, 1002)
-    component.alternarOrden('legajo');
-    expect(component.sortKey).toBe('legajo');
+    // 1. Ordenar por número institucional (asc: 98, 105, 1002)
+    component.alternarOrden('numero_socio');
+    expect(component.sortKey).toBe('numero_socio');
     expect(component.sortDir).toBe('asc');
     expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['2', '1', '3']);
 
     // Legajo desc
-    component.alternarOrden('legajo');
+    component.alternarOrden('numero_socio');
     expect(component.sortDir).toBe('desc');
     expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['3', '1', '2']);
 
@@ -399,7 +401,8 @@ describe('RankingSociosComponent', () => {
     const sociosPagina: RankingSocio[] = Array.from({ length: 13 }, (_, i) => ({
       ...sociosMock[0],
       id: String(i + 1),
-      legajo: String(2001 + i),
+      numero_socio: 2001 + i,
+      legajo: String(9001 + i),
       saldo: 13 - i
     }));
     rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(sociosPagina)));
@@ -431,11 +434,38 @@ describe('RankingSociosComponent', () => {
       width: '100%',
       maxWidth: '700px',
       data: {
-        legajo: '1001',
+        numeroSocio: '1001',
         nombreSocio: 'Ana Gómez',
         saldo: 5
       }
     });
+  });
+
+  it('usa el número de socio institucional al abrir expedientes', () => {
+    fixture.detectChanges();
+    const socio = {
+      ...component.socios[0],
+      id: '89123',
+      numero_socio: 1002,
+      legajo: '89123'
+    };
+
+    component.abrirExpedientesSocio(socio);
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ExpedientesSocioDialogComponent,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({ numeroSocio: '1002' })
+      })
+    );
+  });
+
+  it('no usa legajo ni PK local como fallback del número institucional', () => {
+    const socioSinNumero = { ...sociosMock[0], id: '777', numero_socio: null, legajo: '89123' };
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated([socioSinNumero])));
+    fixture.detectChanges();
+
+    expect(component.socios[0].numero_socio).toBeNull();
   });
 
   it('onRowKeyDown debe abrir expedientes al presionar Enter o Space', () => {

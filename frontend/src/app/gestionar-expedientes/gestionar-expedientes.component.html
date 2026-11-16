@@ -58,7 +58,7 @@
           <!-- 2. Estado -->
           <div class="filtro-item filtro-control-select">
             <label class="filtro-label" for="filtro-estado">Estado:</label>
-            <select id="filtro-estado" class="form-control" [(ngModel)]="filtroEstado">
+            <select id="filtro-estado" class="form-control selector-filtro-aveit" [(ngModel)]="filtroEstado">
               <option *ngFor="let est of estadosDisponibles; trackBy: trackByOpcion" [value]="est.key">{{est.label}}</option>
             </select>
           </div>
@@ -66,7 +66,7 @@
           <!-- 3. Urgencia -->
           <div class="filtro-item filtro-control-select">
             <label class="filtro-label" for="filtro-urgencia">Urgencia:</label>
-            <select id="filtro-urgencia" class="form-control" [(ngModel)]="filtroUrgencia">
+            <select id="filtro-urgencia" class="form-control selector-filtro-aveit" [(ngModel)]="filtroUrgencia">
               <option *ngFor="let urg of urgenciasDisponibles; trackBy: trackByOpcion" [value]="urg.key">{{urg.label}}</option>
             </select>
           </div>
@@ -391,7 +391,7 @@
                 <i class="material-icons" style="font-size: 11px;">{{getUrgenciaIcon(expedienteSeleccionado.urgencia)}}</i>
                 {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
               </span>
-              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2" role="group" aria-label="Cambiar Urgencia">
+              <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2 selector-urgencia-aveit" role="group" aria-label="Cambiar Urgencia">
                 <button type="button" 
                         class="btn btn-sm py-0 px-2"
                         [ngClass]="expedienteSeleccionado.urgencia === 'baja' ? 'btn-success' : 'btn-outline-secondary'"
@@ -475,7 +475,8 @@
               <thead>
                 <tr>
                   <th scope="col">N° de Socio</th>
-                  <th scope="col">Nombre Completo</th>
+                  <th scope="col">Apellido</th>
+                  <th scope="col">Nombre</th>
                   <th scope="col">Grupo</th>
                   <th scope="col">Estado de Descargo</th>
                   <th scope="col">Puntaje Final</th>
@@ -484,8 +485,9 @@
               </thead>
               <tbody>
                 <tr *ngFor="let fila of involucradosJustificacion; trackBy: trackBySocioInvolucrado">
-                  <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
-                  <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
+                  <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
+                  <td class="apellido-cell">{{fila.apellido || '—'}}</td>
+                  <td class="nombre-cell">{{fila.nombre || '—'}}</td>
                   <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                   <td class="estado-descargo-cell">
                     <span class="estado-descargo-badge" [ngClass]="{
@@ -517,7 +519,7 @@
                   </td>
                 </tr>
                 <tr *ngIf="involucradosJustificacion.length === 0">
-                  <td colspan="6" class="text-center text-muted py-2">No hay involucrados registrados en el expediente.</td>
+                  <td colspan="7" class="text-center text-muted py-2">No hay involucrados registrados en el expediente.</td>
                 </tr>
               </tbody>
             </table>
@@ -744,7 +746,8 @@
                 <thead class="bg-light">
                   <tr>
                     <th scope="col" class="font-weight-bold">N° de Socio</th>
-                    <th scope="col" class="font-weight-bold">Nombre y Apellido</th>
+                    <th scope="col" class="font-weight-bold">Apellido</th>
+                    <th scope="col" class="font-weight-bold">Nombre</th>
                     <th scope="col" class="font-weight-bold">Grupo</th>
                     <th scope="col" class="font-weight-bold">Estado de Descargo</th>
                     <th scope="col" class="font-weight-bold">Puntaje Final Consolidado</th>
@@ -752,8 +755,9 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let fila of involucradosJustificacion; trackBy: trackBySocioInvolucrado">
-                    <td class="font-weight-bold legajo-cell">{{fila.legajo || '—'}}</td>
-                    <td class="nombre-cell">{{getNombreCompletoInvolucrado(fila)}}</td>
+                    <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
+                    <td class="apellido-cell">{{fila.apellido || '—'}}</td>
+                    <td class="nombre-cell">{{fila.nombre || '—'}}</td>
                     <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                     <td class="estado-descargo-cell">
                       <span class="estado-descargo-badge" [ngClass]="{
@@ -767,8 +771,9 @@
                     </td>
                   </tr>
                   <tr *ngIf="involucradosJustificacion.length === 0">
-                    <td class="font-weight-bold legajo-cell">{{expedienteSeleccionado.legajo || '—'}}</td>
-                    <td class="nombre-cell">{{expedienteSeleccionado.socio}}</td>
+                    <td class="font-weight-bold legajo-cell">{{expedienteSeleccionado.numero_socio ?? '—'}}</td>
+                    <td class="apellido-cell">{{expedienteSeleccionado.socio || '—'}}</td>
+                    <td class="nombre-cell">—</td>
                     <td class="grupo-cell">—</td>
                     <td class="estado-descargo-cell text-muted">Evaluado</td>
                     <td class="font-weight-bold puntaje-final-cell">{{getPuntajeSolicitadoDisplay(expedienteSeleccionado)}}</td>
@@ -994,7 +999,7 @@
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div>
               <span class="text-muted small text-uppercase font-weight-bold d-block">Miembro TD en Sesión Activa</span>
-              <strong class="text-dark">{{ usuarioActualPerfil.legajo }} - {{ usuarioActualPerfil.first_name }} {{ usuarioActualPerfil.last_name }}</strong>
+              <strong class="text-dark">{{ usuarioActualPerfil.numero_socio ?? '—' }} - {{ usuarioActualPerfil.first_name }} {{ usuarioActualPerfil.last_name }}</strong>
               <span class="badge badge-primary ml-2">{{ usuarioActualPerfil.category || 'TD' }}</span>
             </div>
             <div *ngIf="usuarioYaFirmoResolucion" class="text-success small font-weight-bold d-flex align-items-center">
@@ -1089,14 +1094,14 @@
         <div class="table-responsive">
           <table class="table table-hover table-mat">
             <thead>
-              <th>N° de Socio / Legajo</th>
+              <th>N° de Socio</th>
               <th>Nombre y Apellido</th>
               <th>Grupo</th>
               <th>Estado</th>
             </thead>
             <tbody>
               <tr *ngFor="let s of (expedienteSeleccionado.sociosInvolucrados || []); trackBy: trackById">
-                <td class="font-weight-bold text-dark">{{s.legajo}}</td>
+                <td class="font-weight-bold text-dark">{{s.numero_socio ?? '—'}}</td>
                 <td>{{s.nombre}}</td>
                 <td>{{s.grupo || '-'}}</td>
                 <td>{{s.estado || 'Activo'}}</td>
@@ -1309,7 +1314,7 @@
               <div class="puntaje-controls-group">
                 <div class="input-group-stepper-vertical">
                   <select id="opcionPuntajeFinal" 
-                          class="form-control font-weight-bold select-puntaje-escala" 
+                          class="form-control font-weight-bold select-puntaje-escala selector-puntaje-aveit"
                           [(ngModel)]="opcionPuntajeFinal"
                           (ngModelChange)="onOpcionPuntajeFinalChange($event)"
                           [disabled]="!puedeModificarPuntaje">

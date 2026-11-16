@@ -120,15 +120,17 @@
           <thead>
             <tr>
               <th scope="col">N° de Socio</th>
-              <th scope="col">Nombre Completo</th>
+              <th scope="col">Apellido</th>
+              <th scope="col">Nombre</th>
               <th scope="col">Grupo</th>
               <th scope="col">Subcomisión</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let s of solicitud.involucrados">
-              <td class="font-weight-bold legajo-cell">{{ s.legajo || '—' }}</td>
-              <td class="nombre-cell">{{ s.last_name ? (s.last_name + ', ' + s.first_name) : (s.nombre || '—') }}</td>
+              <td class="font-weight-bold legajo-cell">{{ s.numero_socio ?? '—' }}</td>
+              <td class="apellido-cell">{{ s.last_name || '—' }}</td>
+              <td class="nombre-cell">{{ s.first_name || s.nombre || '—' }}</td>
               <td class="grupo-cell">{{ s.grupo || '—' }}</td>
               <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
             </tr>
