@@ -156,8 +156,7 @@ def test_login_by_numero_socio_fallback_autocreates_user(api_client, make_socio)
     assert response.data["user"]["legajo"] == "88123"
     assert response.data["user"]["numero_socio"] == 515
     assert any(
-        call.args and isinstance(call.args[0], Q)
-        for call in mock_socio_filter.call_args_list
+        call.args and isinstance(call.args[0], Q) for call in mock_socio_filter.call_args_list
     )
 
     socio.refresh_from_db()
