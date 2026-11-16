@@ -289,14 +289,26 @@ class ReportesService:
             .order_by("-pts_ciclo")
         )
 
+        top_socios = list(socios_qs[:15])
+        socio_usernames = []
+        for s in top_socios:
+            try:
+                socio_usernames.append(int(s.user.username))
+            except (ValueError, TypeError, AttributeError):
+                pass
+
+        pg_map = {}
+        if socio_usernames:
+            for pg in PuntajeGeneral.objects.filter(socio_id__in=socio_usernames):
+                pg_map[pg.socio_id] = float(pg.puntos)
+
         tabla_socios: list[dict[str, Any]] = []
         pos = 1
-        for s in socios_qs[:15]:
+        for s in top_socios:
             pts_ciclo_val = float(s.pts_ciclo or Decimal("0.00"))
-            # Puntos totales acumulados (desde PuntajeGeneral si existe, o estimado)
             try:
-                pg = PuntajeGeneral.objects.filter(socio_id=int(s.user.username)).first()
-                pts_totales_val = float(pg.puntos) if pg else pts_ciclo_val
+                uid = int(s.user.username)
+                pts_totales_val = pg_map.get(uid, pts_ciclo_val)
             except Exception:
                 pts_totales_val = pts_ciclo_val
 
@@ -308,6 +320,7 @@ class ReportesService:
             tabla_socios.append(
                 {
                     "posicion": pos,
+                    "numero_socio": s.numero_socio,
                     "legajo": s.legajo,
                     "apellido": s.last_name,
                     "nombre": s.first_name,
@@ -323,6 +336,7 @@ class ReportesService:
             tabla_socios = [
                 {
                     "posicion": 1,
+                    "numero_socio": 11779,
                     "legajo": "87414",
                     "apellido": "Sanchez Turu Michel",
                     "nombre": "Diego Gabriel",
@@ -432,6 +446,8 @@ class ReportesService:
                 "posicion": 1,
                 "socio_numero": 11779,
                 "nombre_completo": "Diego Gabriel Sánchez Turu Michel",
+                "apellido": "Sánchez Turu Michel",
+                "nombre": "Diego Gabriel",
                 "subcomision": "Gestión Social y Ambiental",
                 "puntaje_historico": 25.0,
                 "record_destacado": True,
@@ -440,6 +456,8 @@ class ReportesService:
                 "posicion": 2,
                 "socio_numero": 11549,
                 "nombre_completo": "Cerda Gallego",
+                "apellido": "Cerda Gallego",
+                "nombre": "—",
                 "subcomision": "Relaciones Institucionales",
                 "puntaje_historico": 22.5,
                 "record_destacado": False,
@@ -448,6 +466,8 @@ class ReportesService:
                 "posicion": 3,
                 "socio_numero": 11521,
                 "nombre_completo": "Mollecker",
+                "apellido": "Mollecker",
+                "nombre": "—",
                 "subcomision": "Comisión Directiva",
                 "puntaje_historico": 20.0,
                 "record_destacado": False,
@@ -456,6 +476,8 @@ class ReportesService:
                 "posicion": 4,
                 "socio_numero": 11544,
                 "nombre_completo": "Lucero",
+                "apellido": "Lucero",
+                "nombre": "—",
                 "subcomision": "Cómputos",
                 "puntaje_historico": 16.0,
                 "record_destacado": False,
@@ -464,6 +486,8 @@ class ReportesService:
                 "posicion": 5,
                 "socio_numero": 11553,
                 "nombre_completo": "Robertson",
+                "apellido": "Robertson",
+                "nombre": "—",
                 "subcomision": "Gestión Social y Ambiental",
                 "puntaje_historico": 13.5,
                 "record_destacado": False,
@@ -472,6 +496,8 @@ class ReportesService:
                 "posicion": 6,
                 "socio_numero": 11214,
                 "nombre_completo": "Battistino Sofia",
+                "apellido": "Battistino",
+                "nombre": "Sofia",
                 "subcomision": "Gestión Social y Ambiental",
                 "puntaje_historico": 13.0,
                 "record_destacado": False,
@@ -480,6 +506,8 @@ class ReportesService:
                 "posicion": 7,
                 "socio_numero": 11468,
                 "nombre_completo": "Navarro Juan",
+                "apellido": "Navarro",
+                "nombre": "Juan",
                 "subcomision": "Prensa y Difusión",
                 "puntaje_historico": 11.5,
                 "record_destacado": False,
@@ -488,6 +516,8 @@ class ReportesService:
                 "posicion": 8,
                 "socio_numero": 11503,
                 "nombre_completo": "Gómez Tomás",
+                "apellido": "Gómez",
+                "nombre": "Tomás",
                 "subcomision": "Recursos Humanos",
                 "puntaje_historico": 10.0,
                 "record_destacado": False,
@@ -496,6 +526,8 @@ class ReportesService:
                 "posicion": 9,
                 "socio_numero": 11262,
                 "nombre_completo": "Alvarez Facundo",
+                "apellido": "Alvarez",
+                "nombre": "Facundo",
                 "subcomision": "Eventos",
                 "puntaje_historico": 9.5,
                 "record_destacado": False,
@@ -504,6 +536,8 @@ class ReportesService:
                 "posicion": 10,
                 "socio_numero": 10999,
                 "nombre_completo": "Fernández Lucas",
+                "apellido": "Fernández",
+                "nombre": "Lucas",
                 "subcomision": "Mantenimiento",
                 "puntaje_historico": 8.0,
                 "record_destacado": False,

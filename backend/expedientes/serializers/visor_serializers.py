@@ -142,6 +142,7 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
             responsables.append(
                 {
                     "titulo": titulo,
+                    "numero_socio": soc.numero_socio,
                     "legajo": legajo,
                     "nombre": nombre,
                     "grupo": grupo,
@@ -154,6 +155,7 @@ def obtener_responsables_td() -> list[dict[str, Any]]:
             responsables.append(
                 {
                     "titulo": titulo,
+                    "numero_socio": None,
                     "legajo": fb["legajo"],
                     "nombre": fb["nombre"],
                     "grupo": fb["grupo"],
@@ -345,6 +347,7 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
     regla_sugerida_display = serializers.CharField(
         source="get_regla_sugerida_display", read_only=True
     )
+    autor_numero_socio = serializers.SerializerMethodField()
 
     class Meta:
         model = DecisionCausalDescargo
@@ -361,9 +364,14 @@ class DecisionCausalVisorSerializer(serializers.ModelSerializer):
             "evidencias_valoradas",
             "autor_id",
             "autor_legajo",
+            "autor_numero_socio",
             "autor_rol",
             "created_at",
         ]
+
+    def get_autor_numero_socio(self, obj: DecisionCausalDescargo) -> int | None:
+        socio = getattr(obj.autor, "socio", None) if obj.autor_id else None
+        return getattr(socio, "numero_socio", None)
 
 
 class EvidenciaVisorSerializer(serializers.ModelSerializer):
@@ -404,6 +412,8 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
     causal = serializers.SerializerMethodField()
     reglamento_asociado = serializers.SerializerMethodField()
     reglamentos_respaldantes = serializers.SerializerMethodField()
+    expedientes_referenciados = serializers.SerializerMethodField()
+    expedientes_referenciados_detalle = serializers.SerializerMethodField()
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     urgencia_display = serializers.CharField(source="get_urgencia_display", read_only=True)
     concepto_display = serializers.CharField(source="get_concepto_display", read_only=True)
@@ -430,6 +440,8 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             "causal",
             "reglamento_asociado",
             "reglamentos_respaldantes",
+            "expedientes_referenciados",
+            "expedientes_referenciados_detalle",
             "puntos",
             "estado",
             "estado_display",
@@ -501,6 +513,22 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
         if solicitud and solicitud.reglamentos_respaldantes:
             return list(solicitud.reglamentos_respaldantes)
         return [self.get_reglamento_asociado(obj)]
+
+    def get_expedientes_referenciados(self, obj: Expediente) -> list[int]:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and hasattr(solicitud, "expedientes_referenciados"):
+            return solicitud.expedientes_referenciados or []
+        return []
+
+    def get_expedientes_referenciados_detalle(self, obj: Expediente) -> list[dict]:
+        solicitud = getattr(obj, "solicitud_t01", None)
+        if solicitud and hasattr(solicitud, "expedientes_referenciados"):
+            from expedientes.services.t03_valuation_service import (
+                build_expedientes_referenciados_detalle,
+            )
+
+            return build_expedientes_referenciados_detalle(solicitud.expedientes_referenciados)
+        return []
 
     def get_solicitante(self, obj: Expediente) -> dict[str, str]:
         solicitud = getattr(obj, "solicitud_t01", None)
@@ -665,6 +693,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             involucrados_data.append(
                 {
                     "id": soc.id,
+                    "numero_socio": soc.numero_socio,
                     "legajo": legajo,
                     "nombre": f"{soc.first_name} {soc.last_name}".strip(),
                     "first_name": soc.first_name,

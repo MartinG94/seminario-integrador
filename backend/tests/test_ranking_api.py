@@ -288,6 +288,36 @@ class TestRankingFilteringAndOrdering:
         assert len(r_leg.json()) == 1
         assert r_leg.json()[0]["legajo"] == "65432"
 
+    def test_search_and_contract_use_institutional_member_number(
+        self, api_client: APIClient, seed_ranking_data
+    ) -> None:
+        socio = create_legacy_record(
+            Socio,
+            nroSocio=1002,
+            nombre="Lucía",
+            apellido="Gómez",
+            anoSocial=5,
+            subcomision=seed_ranking_data["subcomisiones"][0],
+            idTipoSocio=1,
+        )
+        create_legacy_record(
+            SocioEstudio,
+            compositeKey=100201,
+            socio=socio,
+            nroLegajo=89123,
+            codEspecialidad=1,
+        )
+        create_legacy_record(PuntajeGeneral, idPuntajeGeneral=1002, socio=socio, puntos=0.0)
+
+        response = api_client.get("/api/v1/ranking/?search=1002")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["numero_socio"] == 1002
+        assert data[0]["id"] == "1002"
+        assert data[0]["legajo"] == "89123"
+
     def test_ordering_saldo_descending_default(
         self, api_client: APIClient, seed_ranking_data
     ) -> None:

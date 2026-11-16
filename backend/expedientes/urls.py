@@ -9,6 +9,7 @@ from expedientes.resolution_views import (
 )
 from expedientes.views import (
     AdecuacionT01View,
+    AntecedenteT03View,
     ApelacionT01View,
     ArticuloReglamentoDetailView,
     ArticuloReglamentoListCreateView,
@@ -42,6 +43,7 @@ from expedientes.views import (
     SolicitudT01EmitView,
     TransicionarExpedienteView,
     TransicionExpedienteView,
+    ValoracionT03View,
 )
 from expedientes.views.reportes_views import (
     ExpedienteClasificacionPatchView,
@@ -128,6 +130,7 @@ urlpatterns = [
     path("por-socio/", ExpedientesPorSocioView.as_view(), name="expedientes-por-socio"),
     path("mis-expedientes/", MisExpedientesView.as_view(), name="mis-expedientes"),
     path("mis-solicitudes/", MisSolicitudesT01View.as_view(), name="mis-solicitudes"),
+    path("antecedentes/", AntecedenteT03View.as_view(), name="antecedente-t03"),
     path("<int:pk>/estado/", TransicionExpedienteView.as_view(), name="transicionar-expediente"),
     path("<int:pk>/descargo/", PresentarDescargoView.as_view(), name="presentar-descargo"),
     path(
@@ -139,6 +142,11 @@ urlpatterns = [
         "<int:pk>/composicion/",
         ComposicionTribunalView.as_view(),
         name="composicion-tribunal",
+    ),
+    path(
+        "<int:pk>/descargos/<int:descargo_id>/valoraciones-t03/",
+        ValoracionT03View.as_view(),
+        name="descargo-valoraciones-t03",
     ),
     path(
         "<int:pk>/descargo/versiones/",

@@ -27,14 +27,14 @@
               <label for="calendar-year">Año</label>
               <select id="calendar-year" class="form-control" [(ngModel)]="selectedYear" (ngModelChange)="applyFilters()">
                 <option [ngValue]="null">Todos los años</option>
-                <option *ngFor="let year of years" [ngValue]="year">{{ year }}</option>
+                <option *ngFor="let year of years; trackBy: trackByValue" [ngValue]="year">{{ year }}</option>
               </select>
             </div>
             <div class="calendar-field">
               <label for="calendar-month">Mes</label>
               <select id="calendar-month" class="form-control" [(ngModel)]="selectedMonth" (ngModelChange)="applyFilters()">
                 <option [ngValue]="null">Todos los meses</option>
-                <option *ngFor="let month of months; let index = index" [ngValue]="index + 1">{{ month }}</option>
+                <option *ngFor="let month of months; let index = index; trackBy: trackByValue" [ngValue]="index + 1">{{ month }}</option>
               </select>
             </div>
           </div>
@@ -134,7 +134,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let holiday of filteredHolidays">
+              <tr *ngFor="let holiday of filteredHolidays; trackBy: trackByHoliday">
                 <td class="holiday-date">{{ formatCalendarDate(holiday.fecha) }}</td>
                 <td>{{ holiday.descripcion }}</td>
                 <td>{{ holiday.creado_por_nombre }}</td>
@@ -186,7 +186,7 @@
             <div>
               <h5>Días hábiles ({{ simulationResult.dias_habiles_computados.length }})</h5>
               <ol>
-                <li *ngFor="let day of simulationResult.dias_habiles_computados">
+                <li *ngFor="let day of simulationResult.dias_habiles_computados; trackBy: trackByValue">
                   {{ day.weekday }} {{ formatCalendarDate(day.date) }}
                 </li>
               </ol>
@@ -194,7 +194,7 @@
             <div *ngIf="simulationResult.dias_excluidos.length">
               <h5>Días excluidos ({{ simulationResult.dias_excluidos.length }})</h5>
               <ul>
-                <li *ngFor="let day of simulationResult.dias_excluidos">
+                <li *ngFor="let day of simulationResult.dias_excluidos; trackBy: trackByExcluded">
                   {{ formatCalendarDate(day.date) }} · {{ day.reason }}
                 </li>
               </ul>

@@ -78,5 +78,5 @@ def normalize_numbers(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("expedientes", "0025_resolucion_reglamentos_respaldantes")]
+    dependencies = [("expedientes", "0026_valoracion_t03_y_expedientes_referenciados")]
     operations = [migrations.RunPython(normalize_numbers, migrations.RunPython.noop)]

@@ -11,7 +11,7 @@ from expedientes.models import Expediente, ExpedienteNumberSequence, SolicitudT0
 
 
 def migration_module():
-    return import_module("expedientes.migrations.0026_normalize_canonical_numbers")
+    return import_module("expedientes.migrations.0027_normalize_canonical_numbers")
 
 
 def run_migration():

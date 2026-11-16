@@ -6,6 +6,7 @@ from expedientes.models import Resolucion
 class ResolucionSerializer(serializers.ModelSerializer):
     identificador_resolucion = serializers.SerializerMethodField()
     firmantes_td = serializers.SerializerMethodField()
+    expedientes_referenciados_detalle = serializers.SerializerMethodField()
     plantilla_version = serializers.CharField(max_length=50, default="v1", required=False)
 
     class Meta:
@@ -24,6 +25,8 @@ class ResolucionSerializer(serializers.ModelSerializer):
             "considerandos",
             "articulos_resolutivos",
             "reglamentos_respaldantes",
+            "expedientes_referenciados",
+            "expedientes_referenciados_detalle",
             "puntos_finales",
             "medidas",
             "created_by",
@@ -58,3 +61,46 @@ class ResolucionSerializer(serializers.ModelSerializer):
 
     def get_firmantes_td(self, obj: Resolucion) -> list:
         return obj.firmantes or []
+
+    def validate_expedientes_referenciados(self, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError(
+                "Debe ser una lista de identificadores de expedientes."
+            )
+        vistos = set()
+        for exp_id in value:
+            if not isinstance(exp_id, int) or exp_id <= 0:
+                raise serializers.ValidationError(
+                    "Cada expediente referenciado debe ser un entero positivo."
+                )
+            if exp_id in vistos:
+                raise serializers.ValidationError(
+                    f"El expediente {exp_id} está duplicado en la lista."
+                )
+            vistos.add(exp_id)
+        if vistos:
+            from expedientes.models import EstadoExpedienteEnum, Expediente
+
+            emitidos_ids = set(
+                Expediente.objects.filter(
+                    pk__in=vistos, estado=EstadoExpedienteEnum.EMITIDO
+                ).values_list("id", flat=True)
+            )
+            faltantes = vistos - emitidos_ids
+            if faltantes:
+                raise serializers.ValidationError(
+                    "Los siguientes expedientes no existen o no están en estado emitido: "
+                    f"{sorted(faltantes)}."
+                )
+        return value
+
+    def get_expedientes_referenciados_detalle(self, obj: Resolucion) -> list[dict]:
+        from expedientes.services.t03_valuation_service import (
+            build_expedientes_referenciados_detalle,
+        )
+
+        return build_expedientes_referenciados_detalle(
+            getattr(obj, "expedientes_referenciados", None)
+        )

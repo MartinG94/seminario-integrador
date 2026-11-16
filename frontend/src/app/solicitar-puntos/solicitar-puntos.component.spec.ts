@@ -13,8 +13,9 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
-import { ExpedienteApiService, SolicitudMonitoreo, SolicitudT01 } from '../services/expediente-api.service';
+import { AntecedenteT03DTO, ExpedienteApiService, SolicitudMonitoreo, SolicitudT01 } from '../services/expediente-api.service';
 import { PadronApiService } from '../services/padron-api.service';
+import { NotificationService } from '../services/notification.service';
 import { SolicitudDetalleDialogComponent } from './solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { SolicitarPuntosComponent } from './solicitar-puntos.component';
 
@@ -73,7 +74,7 @@ describe('SolicitarPuntosComponent', () => {
       destinatarios_socios_ids: [7],
       estado_procesal: 'borrador',
       estado_procesal_display: 'Borrador',
-      involucrados: [{ socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba' }],
+      involucrados: [{ socio_id: 7, numero_socio: 1007, legajo: '777', first_name: 'Ana', last_name: 'Prueba' }],
       resolucion_final: null,
       created_at: '2026-03-01T10:00:00Z',
       issued_at: null,
@@ -99,8 +100,8 @@ describe('SolicitarPuntosComponent', () => {
       estado_procesal: 'en_descargo',
       estado_procesal_display: 'En Descargo',
       involucrados: [
-        { socio_id: 7, legajo: '777', first_name: 'Ana', last_name: 'Prueba' },
-        { socio_id: 8, legajo: '888', first_name: 'Bruno', last_name: 'García' },
+        { socio_id: 7, numero_socio: 1007, legajo: '777', first_name: 'Ana', last_name: 'Prueba' },
+        { socio_id: 8, numero_socio: 1008, legajo: '888', first_name: 'Bruno', last_name: 'García' },
       ],
       resolucion_final: null,
       created_at: '2026-03-02T12:00:00Z',
@@ -117,14 +118,18 @@ describe('SolicitarPuntosComponent', () => {
       'listarReglamentos',
       'listarMisSolicitudes',
       'eliminarBorrador',
+      'listarCatalogoAntecedentes',
     ]);
     padron = jasmine.createSpyObj('PadronApiService', ['listarSocios']);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
+
+    expediente.listarCatalogoAntecedentes.and.returnValue(of([]));
 
     padron.listarSocios.and.returnValue(
       of([
         {
           socio_id: 7,
+          numero_socio: 1007,
           legajo: '777',
           first_name: 'Ana',
           last_name: 'Prueba',
@@ -134,6 +139,7 @@ describe('SolicitarPuntosComponent', () => {
         },
         {
           socio_id: 8,
+          numero_socio: 1008,
           legajo: '888',
           first_name: 'Bruno',
           last_name: 'García',
@@ -388,6 +394,13 @@ describe('SolicitarPuntosComponent', () => {
     component.agregarSocio(component.socios[0]);
     component.filtrarSocios('777');
     expect(component.sociosFiltrados).toEqual([]);
+  });
+
+  it('filtra por número institucional sin confundirlo con el legajo', () => {
+    component.filtrarSocios('1007');
+    expect(component.sociosFiltrados.map(socio => socio.socio_id)).toEqual([7]);
+    expect(component.sociosFiltrados[0].numero_socio).toBe(1007);
+    expect(component.sociosFiltrados[0].legajo).toBe('777');
   });
 
   it('deshabilita el control cuando el expediente está emitido', () => {
@@ -968,5 +981,44 @@ describe('SolicitarPuntosComponent', () => {
       expect(component.modalReglamentosAbierto).toBeFalse();
     }));
   });
+
+  describe('selector de expedientes referenciados / antecedentes', () => {
+    const mockCatalogo: AntecedenteT03DTO[] = [
+      { id: 101, numero: '101/2026', titulo: 'Sanción por falta', motivo: 'Inasistencia', puntos: -1, fecha_emision: '2026-02-01', tipo_accion: 'SANCTION', reglamento_invocado: 'Art. 14 inc. a' },
+      { id: 102, numero: '102/2026', titulo: 'Mérito voluntariado', motivo: 'Colaboración', puntos: 2, fecha_emision: '2026-02-15', tipo_accion: 'MERIT', reglamento_invocado: 'Art. 25' }
+    ];
+
+    it('abre el modal y carga el catálogo de antecedentes cuando no está cargado', () => {
+      expediente.listarCatalogoAntecedentes.and.returnValue(of(mockCatalogo));
+      component.abrirModalExpedientes();
+
+      expect(component.modalExpedientesAbierto).toBeTrue();
+      expect(expediente.listarCatalogoAntecedentes).toHaveBeenCalled();
+      expect(component.catalogoExpedientesModal.length).toBe(2);
+      expect(component.catalogoExpedientesCargado).toBeTrue();
+    });
+
+    it('actualiza y remueve expedientes referenciados seleccionados', () => {
+      component.onExpedientesSeleccionadosChange(mockCatalogo);
+      expect(component.expedientesReferenciadosSeleccionados.length).toBe(2);
+
+      component.removerExpedienteReferenciado(101);
+      expect(component.expedientesReferenciadosSeleccionados.length).toBe(1);
+      expect(component.expedientesReferenciadosSeleccionados[0].id).toBe(102);
+    });
+
+    it('incluye expedientes_referenciados en el payload del borrador', () => {
+      component.onExpedientesSeleccionadosChange(mockCatalogo);
+      const p = component['payload']();
+      expect(p.expedientes_referenciados).toEqual([101, 102]);
+    });
+
+    it('formatea correctamente el número de expediente en solicitudes creadas', () => {
+      expect(component.formatSolicitudExpediente(null)).toBe('Borrador sin número');
+      expect(component.formatSolicitudExpediente({ estado: 'DRAFT', numero: 'EXP-0001/2026' } as any)).toBe('Borrador sin número');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0001/2026', numero_expediente: null } as any)).toBe('1/2026');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0013/2026', numero_expediente: 'T01-2026-4B07617805E6' } as any)).toBe('13/2026');
+      expect(component.formatSolicitudExpediente({ estado: 'ISSUED', numero: 'EXP-0005/2026', numero_expediente: 'EXP-0005/2026' } as any)).toBe('5/2026');
+    });
+  });
 });
-import { NotificationService } from '../services/notification.service';

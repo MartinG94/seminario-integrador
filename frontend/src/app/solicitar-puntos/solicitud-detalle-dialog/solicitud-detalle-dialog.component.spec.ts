@@ -35,8 +35,8 @@ describe('SolicitudDetalleDialogComponent', () => {
     estado_procesal: 'en_descargo',
     estado_procesal_display: 'En Descargo',
     involucrados: [
-      { socio_id: 101, legajo: 'LEG-101', first_name: 'Carlos', last_name: 'Pérez', grupo: 'G57', subcomision: 'Deportes' },
-      { socio_id: 102, legajo: 'LEG-102', first_name: 'Ana', last_name: 'Gómez', grupo: 'G58', subcomision: 'Cómputos' },
+      { socio_id: 101, numero_socio: 3101, legajo: 'LEG-101', first_name: 'Carlos', last_name: 'Pérez', grupo: 'G57', subcomision: 'Deportes' },
+      { socio_id: 102, numero_socio: 3102, legajo: 'LEG-102', first_name: 'Ana', last_name: 'Gómez', grupo: 'G58', subcomision: 'Cómputos' },
     ],
     resolucion_final: null,
     created_at: '2026-03-15T09:30:00Z',
@@ -85,13 +85,15 @@ describe('SolicitudDetalleDialogComponent', () => {
     expect(compiled.textContent).toContain('Falta grave estatutaria');
   });
 
-  it('muestra la lista de socios involucrados con legajo y subcomisión', () => {
+  it('muestra la lista de socios involucrados con número institucional y subcomisión', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('LEG-101');
-    expect(compiled.textContent).toContain('Pérez, Carlos');
+    expect(compiled.textContent).toContain('3101');
+    expect(compiled.textContent).toContain('Pérez');
+    expect(compiled.textContent).toContain('Carlos');
     expect(compiled.textContent).toContain('Deportes');
-    expect(compiled.textContent).toContain('LEG-102');
-    expect(compiled.textContent).toContain('Gómez, Ana');
+    expect(compiled.textContent).toContain('3102');
+    expect(compiled.textContent).toContain('Gómez');
+    expect(compiled.textContent).toContain('Ana');
     expect(compiled.textContent).toContain('Cómputos');
     expect(compiled.textContent).toContain('G57');
     expect(compiled.textContent).toContain('G58');

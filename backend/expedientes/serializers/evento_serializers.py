@@ -52,6 +52,9 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
     evento_titulo = serializers.CharField(source="evento.titulo", read_only=True)
     socio_id = serializers.IntegerField(source="socio.id", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
+    socio_numero_socio = serializers.IntegerField(
+        source="socio.numero_socio", allow_null=True, read_only=True
+    )
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     socio_email = serializers.EmailField(source="socio.email", read_only=True)
     socio_subcomision = serializers.CharField(
@@ -76,6 +79,7 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
             "evento_titulo",
             "socio_id",
             "socio_nombre",
+            "socio_numero_socio",
             "socio_legajo",
             "socio_email",
             "socio_subcomision",
@@ -102,6 +106,7 @@ class AsistenciaEventoSerializer(serializers.ModelSerializer):
             "evento_titulo",
             "socio_id",
             "socio_nombre",
+            "socio_numero_socio",
             "socio_legajo",
             "socio_email",
             "socio_subcomision",
@@ -241,6 +246,9 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
         source="get_modo_convocatoria_display", read_only=True
     )
     convocante_nombre = serializers.SerializerMethodField()
+    convocante_numero_socio = serializers.IntegerField(
+        source="convocante.numero_socio", allow_null=True, read_only=True
+    )
     convocante_legajo = serializers.CharField(source="convocante.legajo", read_only=True)
     subcomision_nombre = serializers.CharField(
         source="subcomision.name", default=None, read_only=True
@@ -280,6 +288,7 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
             "subcomision_nombre",
             "convocante",
             "convocante_nombre",
+            "convocante_numero_socio",
             "convocante_legajo",
             "reportado_por",
             "reportado_por_nombre",
@@ -303,6 +312,7 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
             "estado_display",
             "modo_convocatoria_display",
             "convocante_nombre",
+            "convocante_numero_socio",
             "convocante_legajo",
             "subcomision_nombre",
             "reportado_por_nombre",
@@ -328,19 +338,37 @@ class EventoInstitucionalSerializer(serializers.ModelSerializer):
         return f"{obj.reportado_por.first_name} {obj.reportado_por.last_name}".strip()
 
     def get_total_convocados(self, obj: EventoInstitucional) -> int:
+        if hasattr(obj, "total_convocados_calc"):
+            return obj.total_convocados_calc
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "asistencias" in cache:
+            return len(obj.asistencias.all())
         return obj.asistencias.count()
 
     def get_total_presentes(self, obj: EventoInstitucional) -> int:
-        return obj.asistencias.filter(
-            estado_asistencia__in=[
-                EstadoAsistenciaEventoEnum.PRESENTE,
-                EstadoAsistenciaEventoEnum.JUSTIFICADO,
-                EstadoAsistenciaEventoEnum.TARDE_LEVE,
-                EstadoAsistenciaEventoEnum.TARDE_GRAVE,
-            ]
-        ).count()
+        if hasattr(obj, "total_presentes_calc"):
+            return obj.total_presentes_calc
+        presentes_estados = {
+            EstadoAsistenciaEventoEnum.PRESENTE,
+            EstadoAsistenciaEventoEnum.JUSTIFICADO,
+            EstadoAsistenciaEventoEnum.TARDE_LEVE,
+            EstadoAsistenciaEventoEnum.TARDE_GRAVE,
+        }
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "asistencias" in cache:
+            return sum(1 for a in obj.asistencias.all() if a.estado_asistencia in presentes_estados)
+        return obj.asistencias.filter(estado_asistencia__in=presentes_estados).count()
 
     def get_total_ausentes(self, obj: EventoInstitucional) -> int:
+        if hasattr(obj, "total_ausentes_calc"):
+            return obj.total_ausentes_calc
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "asistencias" in cache:
+            return sum(
+                1
+                for a in obj.asistencias.all()
+                if a.estado_asistencia == EstadoAsistenciaEventoEnum.AUSENTE
+            )
         return obj.asistencias.filter(estado_asistencia=EstadoAsistenciaEventoEnum.AUSENTE).count()
 
 
@@ -623,6 +651,9 @@ class AtencionFelicitacionSerializer(serializers.ModelSerializer):
 
     socio_id = serializers.IntegerField(source="socio.id", read_only=True)
     socio_nombre = serializers.SerializerMethodField()
+    socio_numero_socio = serializers.IntegerField(
+        source="socio.numero_socio", allow_null=True, read_only=True
+    )
     socio_legajo = serializers.CharField(source="socio.legajo", read_only=True)
     pendientes = serializers.IntegerField(source="llamadosAtencion", read_only=True)
     estado = serializers.CharField(read_only=True)
@@ -632,6 +663,7 @@ class AtencionFelicitacionSerializer(serializers.ModelSerializer):
         fields = [
             "socio_id",
             "socio_nombre",
+            "socio_numero_socio",
             "socio_legajo",
             "llamadosAtencion",
             "felicitaciones",

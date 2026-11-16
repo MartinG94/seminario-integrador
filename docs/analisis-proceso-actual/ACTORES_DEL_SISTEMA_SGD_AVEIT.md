@@ -51,8 +51,7 @@ classDiagram
         +consultarSaldoIndividual()
         +verMisExpedientes()
         +recibirAcuseSancion()
-        +presentarFormularioT02()
-        +presentarFormularioT03()
+        +presentarDescargo()
         +verResolucionesPublicas()
     }
 
@@ -61,7 +60,7 @@ classDiagram
         +gestionarTablero6Estados()
         +consultarRankingGeneral()
         +buscarLegajoSocio()
-        +revisarJustificacionesT02_T03()
+        +revisarDescargo()
         +emitirVotoNominal()
         +redactarResolucion()
         +firmarColegiadamente()
@@ -126,12 +125,11 @@ classDiagram
   2. Consultar el módulo **"Mis Expedientes"** para visualizar causas en las que se encuentre imputado o postulado.
   3. Consultar su **saldo neto de puntos (+/-)** y el historial detallado de movimientos.
   4. Recibir automáticamente por correo el **Acuse de Sanción** al abrirse un expediente.
-  5. Completar y presentar el **Formulario T02 (Justificación Tipificada)** adjuntando certificados médicos o pasajes dentro del plazo improrrogable de **cinco (5) días hábiles**.
-  6. Completar y presentar el **Formulario T03 (Descargo Extraordinario)** con prueba digital respaldante ante causales especiales no tipificadas.
-  7. Visualizar y descargar las Resoluciones publicadas por el Tribunal de Disciplina.
+  5. Completar y presentar el **Descargo** (Tipificado con certificados médicos o laborales, o Tipo "Otros" con exposición libre y prueba respaldante) dentro del plazo improrrogable de **cinco (5) días hábiles**.
+  6. Visualizar y descargar las Resoluciones publicadas por el Tribunal de Disciplina.
 * **Restricciones y Reglas de Negocio:**
   - Solo tiene acceso a su propio legajo personal y a las resoluciones públicas institucionales (aislamiento y privacidad de datos).
-  - Vencido el plazo preclusivo de 5 días hábiles, el sistema inhabilita de manera automática la carga de formularios T02 o T03 (**RN-02**).
+  - Vencido el plazo preclusivo de 5 días hábiles, el sistema inhabilita de manera automática la carga de descargos (**RN-02**).
   - No posee facultades para solicitar apertura de expedientes (T01) ni votar resoluciones.
 
 ---
@@ -144,7 +142,7 @@ classDiagram
   1. Gestionar el **Tablero de Control de Estados** (*Expediente Creado, En período de subida de justificaciones, Las justificaciones están siendo revisadas, En espera de resolución, Pendiente de firma y envío, Expedientes ya emitidos*).
   2. Utilizar el **Buscador Integral de Legajos por Socio** para rastrear expedientes históricos, antecedentes y descargos previos de cualquier socio.
   3. Consultar, filtrar y ordenar el **Ranking Consolidado de Puntos** de la masa societaria (por categoría Pasivo/Activo y por subcomisión).
-  4. Revisar justificaciones T02 y descargos T03 en el módulo *"Justificaciones"*, aprobando o desaprobando formalmente las solicitudes y analizando los archivos probatorios adjuntos.
+  4. Revisar y evaluar los descargos presentados en el módulo *"Justificaciones"*, aprobando o desaprobando formalmente las solicitudes y analizando los archivos probatorios adjuntos.
   5. Iniciar expedientes disciplinarios de oficio o en concepto de "rectificación" (Art. 24 del Reglamento Procesal 2026).
   6. Emitir su **voto nominal fundado** durante las sesiones del Tribunal.
   7. Redactar el texto de la **Resolución Oficial** con su estructura reglamentaria de VISTOS, CONSIDERANDOS y RESOLUCIÓN.
@@ -222,7 +220,7 @@ classDiagram
 * **Propósito con el Sistema:** Despachar de manera confiable, asíncrona y fehaciente las notificaciones electrónicas generadas por el sistema hacia los socios y autoridades.
 * **Responsabilidades y Casos de Uso Clave:**
   1. Recibir peticiones de despacho encoladas desde el backend en Python.
-  2. Enviar el correo de **Acuse de Sanción** con enlace seguro directo al formulario T02/T03.
+  2. Enviar el correo de **Acuse de Sanción** con enlace seguro directo al formulario de descargo.
   3. Enviar el acuse de recibo al socio cuando presenta una justificación o descargo con comprobantes.
   4. Despachar la notificación oficial con la **Resolución Definitiva** firmada colegiadamente (a los imputados, solicitante y CD).
   5. Remitir los avisos urgentes de alertas preventivas (7 puntos) y críticas (10 puntos).
@@ -233,8 +231,8 @@ classDiagram
 
 | # | Actor Consolidado | Naturaleza | Módulos del Sistema | Formularios / Documentos | Competencia T01 | Voto y Firma |
 | :---: | :--- | :---: | :--- | :---: | :---: | :---: |
-| **1** | **Socio Ordinario** | Humano (Base) | Mis Expedientes, Mi Saldo, Resoluciones Públicas | Presenta **T02** y **T03** | No habilitado | No |
-| **2** | **Miembro de TD** | Humano (Operador) | Tablero 6 Estados, Justificaciones, Ranking, Buscador Legajos, Balances | Revisa T01/T02/T03, emite **Resolución** y **Balance (Art. 137)** | De oficio o Rectificación (Art. 24) | **Sí (Voto nominal y Firma Colegiada)** |
+| **1** | **Socio Ordinario** | Humano (Base) | Mis Expedientes, Mi Saldo, Resoluciones Públicas | Presenta **Descargo (Tipificado / Otros)** | No habilitado | No |
+| **2** | **Miembro de TD** | Humano (Operador) | Tablero 6 Estados, Justificaciones, Ranking, Buscador Legajos, Balances | Revisa T01 y Descargos, emite **Resolución** y **Balance (Art. 137)** | De oficio o Rectificación (Art. 24) | **Sí (Voto nominal y Firma Colegiada)** |
 | **3** | **Comisión Directiva** | Humano (Gobierno) | Reporte Ejecutivo, Ranking Consolidado, Alertas 7/10 pts, Cierres de Asambleas | Inicia **T01 (+ Anexo)**, recibe Balances Cuatrimestrales | General sobre cualquier socio/área (Art. 21) | No en TD (Aprueba en CD) |
 | **4** | **Autoridad de SC / Líder de Equipo** | Humano (Operativo) | Carga T01, Reporte de Tareas, Evaluación de Desempeño | Inicia **T01 (+ Anexo)** | Socios de su subcomisión / equipo (Arts. 25 y 26) | No |
 | **5** | **Admin (cómputos)** | Humano (Soporte) | Panel RBAC, Logs de Seguridad, Backups MySQL, Configuración | Perfiles técnicos y configuración | No habilitado | No |
