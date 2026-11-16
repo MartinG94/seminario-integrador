@@ -11,6 +11,7 @@ from typing import Any
 from django.db import transaction
 
 from accounts import audit
+from core.services.system_parameters import SystemParameterService
 from expedientes.domain.evidence_validator import EvidenceValidationError, EvidenceValidator
 from expedientes.models import (
     AuditoriaDescargaEvidencia,
@@ -46,7 +47,10 @@ class EvidenceService:
             raise ValueError("file_obj debe ser un archivo o secuencia de bytes.")
 
         filename = getattr(file_obj, "name", "adjunto")
-        validated = EvidenceValidator.validate_file(content=content, filename=filename)
+        limits = SystemParameterService.attachment_limits()
+        validated = EvidenceValidator.validate_file(
+            content=content, filename=filename, max_bytes=limits.tamano_maximo_bytes
+        )
 
         # Regla de no duplicación: verificar si ya existe evidencia vigente con el mismo hash
         duplicado = EvidenciaDescargo.objects.filter(

@@ -15,6 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.services.system_parameters import SystemParameterService
 from expedientes.domain.calendar import compute_business_deadline
 from expedientes.domain.causal_resolution import CausalDecision
 from expedientes.domain.evidence_validator import EvidenceValidationError, EvidenceValidator
@@ -638,7 +639,11 @@ class EvidenciaUploadView(APIView):
             ).count()
             total_count = vigentes_count + len(files)
             try:
-                EvidenceValidator.validate_quota(tipo_descargo, total_count)
+                EvidenceValidator.validate_quota(
+                    tipo_descargo,
+                    total_count,
+                    max_count=SystemParameterService.attachment_limits().cantidad_maxima,
+                )
             except EvidenceValidationError as exc:
                 return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 

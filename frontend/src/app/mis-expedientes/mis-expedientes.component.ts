@@ -18,6 +18,7 @@ import {
   ReglamentoCiteView
 } from '../utils/reglamento-format.util';
 import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
+import { AdminApiService } from '../services/admin-api.service';
 
 @Component({
   selector: 'app-mis-expedientes',
@@ -58,8 +59,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   archivosSeleccionados: File[] = [];
   evidenciasExistentes: any[] = [];
   subiendoArchivos = false;
-  readonly LIMITE_DOCUMENTOS = 5;
-  readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  // Límites vigentes del panel de administración (Spec 010); 5 y 5 MB hasta que respondan.
+  LIMITE_DOCUMENTOS = 5;
+  MAX_MB = 5;
+  get MAX_BYTES(): number { return this.MAX_MB * 1024 * 1024; }
   readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
   esEdicion = false;
@@ -84,10 +87,22 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     private renderer: Renderer2,
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService,
-    private scrollLock: ModalScrollLockService
+    private scrollLock: ModalScrollLockService,
+    private adminApi: AdminApiService
   ) {}
 
+  cargarLimitesAdjuntos(): void {
+    this.subs.push(this.adminApi.obtenerLimitesAdjuntos().subscribe({
+      next: limites => {
+        this.LIMITE_DOCUMENTOS = limites.cantidad_maxima;
+        this.MAX_MB = limites.tamano_maximo_mb;
+      },
+      error: () => { /* Rigen los valores iniciales; el servidor valida igual. */ }
+    }));
+  }
+
   ngOnInit(): void {
+    this.cargarLimitesAdjuntos();
     const subPerfil = this.auth.perfil$.subscribe(perfil => {
       this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
       this.cargarMisExpedientes();
@@ -730,7 +745,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get limiteActual(): number {
-    return this.tipoDescargo === 'T03_EXTRAORDINARIO' ? 5 : 3;
+    // El tope de 3 para descargos tipificados no cambia (Spec 010, decisión 3).
+    return this.tipoDescargo === 'T03_EXTRAORDINARIO'
+      ? this.LIMITE_DOCUMENTOS
+      : Math.min(3, this.LIMITE_DOCUMENTOS);
   }
 
   get puedeSubirMas(): boolean {
@@ -785,7 +803,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     for (const f of nuevos) {
       if (f.size > this.MAX_BYTES) {
-        this.notifications.error(`El archivo "${f.name}" supera el límite de 5 MB.`);
+        this.notifications.error(`El archivo "${f.name}" supera el límite de ${this.MAX_MB} MB.`);
         return;
       }
       const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();

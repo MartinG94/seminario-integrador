@@ -193,6 +193,16 @@ def resolver_destinatarios_alerta_critica(socio_email: str | None = None) -> lis
     except Exception:
         cd_email = "cd@example.org"
         tribunal_email = "tribunal@example.org"
+    # Correos configurados en el panel de administración (Spec 010), si los hay.
+    try:
+        from core.services.system_parameters import SystemParameterService
+
+        cd_email = SystemParameterService.email("email_comision_directiva", fallback=cd_email)
+        tribunal_email = SystemParameterService.email(
+            "email_tribunal_disciplina", fallback=tribunal_email
+        )
+    except Exception:
+        pass
 
     destinatarios: list[str] = []
     if socio_email and socio_email.strip():

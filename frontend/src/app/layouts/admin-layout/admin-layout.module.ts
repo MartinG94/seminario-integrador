@@ -42,6 +42,7 @@ import { ResumenCierreDialogComponent } from '../../pages/eventos/dialogs/resume
 import { ProgramarReunionDialogComponent } from '../../eventos-asistencia/dialogs/programar-reunion-dialog/programar-reunion-dialog.component';
 import { ResumenCierreDialogComponentAlias } from '../../eventos-asistencia/dialogs/resumen-cierre-dialog/resumen-cierre-dialog.component';
 import { ComponentsModule } from '../../components/components.module';
+import { AdminParametrosComponent } from '../../pages/admin/parametros/admin-parametros.component';
 
 @NgModule({
   imports: [
@@ -88,6 +89,7 @@ import { ComponentsModule } from '../../components/components.module';
     UpgradeComponent,
     EnDesarrolloComponent,
     VisorExpedienteComponent,
+    AdminParametrosComponent,
   ]
 })
 
