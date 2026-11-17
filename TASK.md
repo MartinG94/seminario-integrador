@@ -433,6 +433,16 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
+## 14.2 Sprint 5 — Desglose Atómico: MACRO-02 / SCRUM-59 (Libro Mayor Inmutable, Portal 'Mis Expedientes' y Publicación Oficial Protegida)
+
+> **Tareas:** [`specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md`](specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md)
+
+- [x] **TS5-02.1 Libro mayor transaccional inmutable con regla 3:1 [TDD]:** Asientos por socio al emitir la resolución en `tribunal_puntajeaplicado`, auditoría `AsientoLibroMayor` de solo inserción con hash encadenado, consolidación 3:1 de llamados y felicitaciones e idempotencia.
+- [x] **TS5-02.2 Portal 'Mis Expedientes' con aislamiento por socio [TDD]:** Saldo y pendientes 3:1 desde `GET /api/v1/expedientes/mis-expedientes/saldo/`, puntos aplicados por causa, sin lista local de respaldo y sin exponer descargos, comprobantes ni borradores de resolución ajenos.
+- [x] **TS5-02.3 Publicación protegida de resoluciones oficiales [TDD]:** `GET /api/v1/expedientes/<id>/resolucion/publicada/` y su PDF con censura de datos de salud, sin adjuntos privados, verificación de integridad, auditoría de consulta y modal de lectura en Mis Expedientes.
+
+---
+
 ## 15. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
 
 > **Spec de Referencia:** [`specs/010-optimizacion-rendimiento/spec.md`](specs/010-optimizacion-rendimiento/spec.md)  

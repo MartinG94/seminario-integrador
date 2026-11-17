@@ -121,6 +121,9 @@ export interface Expediente {
   puntos: number;
   esFelicitacion?: boolean;
   esLlamado?: boolean;
+  /** Puntos que el libro mayor aplicó al socio en sesión por la resolución emitida (Spec 011). */
+  puntosAplicados?: number | null;
+  medidaAplicada?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   justificacionAprobada?: boolean;
   puntaje_solicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
   puntajeSolicitado?: 'LLAMADO_ATENCION' | 'FELICITACION' | null;

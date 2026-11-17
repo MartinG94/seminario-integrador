@@ -82,6 +82,7 @@ from expedientes.services.causal_resolution_service import (
 from expedientes.services.deadline_service import DeadlineEnforcementService
 from expedientes.services.descargo_version_service import DescargoVersionService
 from expedientes.services.evidence_service import EvidenceService
+from expedientes.services.ledger_service import LedgerService
 from expedientes.services.opening_notification_service import (
     CaseNotificationQueryService,
     InvalidCaseStatusError,
@@ -364,20 +365,20 @@ class MisExpedientesView(PaginatedAPIViewMixin, APIView):
             "page" in request.query_params or "page_size" in request.query_params
         )
         is_all_requested = request.query_params.get("all", "").lower() in ("true", "1", "yes")
+        # Aislamiento y puntos aplicados del socio en ambas variantes (Spec 011, RF-10 y RF-13).
+        context = {
+            "request": request,
+            "es_mis_expedientes": True,
+            "impactos_socio": LedgerService.impactos_por_expediente(socio),
+        }
 
         if is_paginated_requested and not is_all_requested:
             page = self.paginate_queryset(queryset)
             if page is not None:
-                serializer = ExpedienteListSerializer(
-                    page,
-                    many=True,
-                    context={"request": request, "es_mis_expedientes": True},
-                )
+                serializer = ExpedienteListSerializer(page, many=True, context=context)
                 return self.get_paginated_response(serializer.data)
 
-        serializer = ExpedienteListSerializer(
-            queryset, many=True, context={"request": request, "es_mis_expedientes": True}
-        )
+        serializer = ExpedienteListSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -1205,9 +1206,11 @@ class ExpedienteDetailView(APIView):
 
         self.check_object_permissions(request, expediente)
         es_mis = request.query_params.get("origen") == "mis_expedientes"
-        serializer = ExpedienteListSerializer(
-            expediente, context={"request": request, "es_mis_expedientes": es_mis}
-        )
+        context = {"request": request, "es_mis_expedientes": es_mis}
+        socio = getattr(request.user, "socio", None)
+        if es_mis and socio is not None:
+            context["impactos_socio"] = LedgerService.impactos_por_expediente(socio)
+        serializer = ExpedienteListSerializer(expediente, context=context)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request, pk: int) -> Response:

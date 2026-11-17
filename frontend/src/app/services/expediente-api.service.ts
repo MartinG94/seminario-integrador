@@ -729,6 +729,72 @@ export interface ReporteResumenResponseDTO {
   catalogo_conceptos: Array<{ codigo: string; nombre: string }>;
   catalogo_subcomisiones: Array<{ id: number; nombre: string }>;}
 
+/** Libro mayor del socio autenticado (Spec 011, S5-02.2). */
+export type TipoAsientoLibroMayor =
+  | 'PUNTOS_DIRECTOS'
+  | 'SIN_IMPACTO'
+  | 'LLAMADO_ATENCION'
+  | 'FELICITACION'
+  | 'CONSOLIDACION_LLAMADOS'
+  | 'CONSOLIDACION_FELICITACIONES';
+
+export interface MovimientoLibroMayorDTO {
+  id: number;
+  fecha: string;
+  expediente_id: number;
+  expediente_numero: string;
+  tipo: TipoAsientoLibroMayor;
+  tipo_display: string;
+  puntos: string;
+  contador_resultante: number | null;
+}
+
+export interface MiSaldoDTO {
+  saldo: string;
+  llamados_pendientes: number;
+  felicitaciones_pendientes: number;
+  movimientos: MovimientoLibroMayorDTO[];
+}
+
+/** Publicación oficial protegida de una resolución emitida (Spec 011, S5-02.3). */
+export interface FirmantePublicoDTO {
+  numero_socio: string;
+  nombre: string;
+  grupo: string;
+  social_year: number | null;
+  condicion: string;
+  etiqueta: string;
+  firmado_at: string | null;
+}
+
+export interface ImpactoPublicadoDTO {
+  socio_id: number;
+  numero_socio: string;
+  nombre: string;
+  apellido: string;
+  puntos: string | null;
+  medida: 'LLAMADO_ATENCION' | 'FELICITACION' | null;
+}
+
+export interface ResolucionPublicadaDTO {
+  identificador: string;
+  expediente_id: number;
+  expediente_numero: string;
+  titulo: string;
+  version: number;
+  fecha_emision: string | null;
+  vistos: string;
+  considerandos: string;
+  articulos_resolutivos: string;
+  reglamentos_respaldantes: string[];
+  medidas: string[];
+  firmantes: FirmantePublicoDTO[];
+  impactos: ImpactoPublicadoDTO[];
+  contiene_datos_reservados: boolean;
+  contenido_hash: string;
+  integridad_verificada: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpedienteApiService {
   private readonly apiUrl = `${environment.apiUrl}/expedientes`;
@@ -934,6 +1000,20 @@ export class ExpedienteApiService {
           return response;
         })
       );
+  }
+
+  obtenerMiSaldo(): Observable<MiSaldoDTO> {
+    return this.http.get<MiSaldoDTO>(`${this.apiUrl}/mis-expedientes/saldo/`);
+  }
+
+  obtenerResolucionPublicada(expedienteId: number | string): Observable<ResolucionPublicadaDTO> {
+    return this.http.get<ResolucionPublicadaDTO>(`${this.apiUrl}/${expedienteId}/resolucion/publicada/`);
+  }
+
+  descargarResolucionPublicadaPdf(expedienteId: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${expedienteId}/resolucion/publicada/pdf/`, {
+      responseType: 'blob'
+    });
   }
 
   eliminarDescargo(expedienteId: number | string): Observable<any> {

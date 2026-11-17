@@ -1831,6 +1831,86 @@ class Resolucion(models.Model):
         return super().delete(*args, **kwargs)
 
 
+class TipoAsientoLibroMayorEnum(models.TextChoices):
+    PUNTOS_DIRECTOS = "PUNTOS_DIRECTOS", "Puntos directos"
+    SIN_IMPACTO = "SIN_IMPACTO", "Sin impacto en puntos"
+    LLAMADO_ATENCION = "LLAMADO_ATENCION", "Llamado de atención"
+    FELICITACION = "FELICITACION", "Felicitación"
+    CONSOLIDACION_LLAMADOS = "CONSOLIDACION_LLAMADOS", "Tres llamados de atención (-1 punto)"
+    CONSOLIDACION_FELICITACIONES = (
+        "CONSOLIDACION_FELICITACIONES",
+        "Tres felicitaciones (+1 punto)",
+    )
+
+
+class InsertOnlyQuerySet(models.QuerySet):
+    """Bloquea las operaciones masivas que esquivan `save()` y `delete()` de instancia."""
+
+    immutable_message = "El libro mayor es de solo inserción."
+
+    def update(self, **kwargs):
+        raise ValidationError(self.immutable_message)
+
+    def delete(self):
+        raise ValidationError(self.immutable_message)
+
+    def bulk_update(self, objs, fields, **kwargs):
+        raise ValidationError(self.immutable_message)
+
+
+class AsientoLibroMayor(InsertOnlyModel):
+    """Auditoría inmutable de cada asiento originado por una resolución emitida (Spec 011).
+
+    El monto que suma el saldo vive en la tabla legada `tribunal_puntajeaplicado`
+    (`puntaje_aplicado_id`); este registro agrega la resolución de origen, el tipo,
+    el contador 3:1 resultante, el autor y el hash encadenado por socio.
+    """
+
+    immutable_message = "El libro mayor es de solo inserción."
+
+    resolucion = models.ForeignKey(
+        Resolucion, on_delete=models.PROTECT, related_name="asientos_libro_mayor"
+    )
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="asientos_libro_mayor"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="asientos_libro_mayor"
+    )
+    nro_socio = models.PositiveIntegerField(null=True, blank=True, db_index=True)
+    tipo = models.CharField(max_length=30, choices=TipoAsientoLibroMayorEnum.choices)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2)
+    contador_resultante = models.PositiveSmallIntegerField(null=True, blank=True)
+    puntaje_aplicado_id = models.IntegerField(null=True, blank=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="asientos_libro_mayor",
+    )
+    hash_anterior = models.CharField(max_length=64)
+    hash_transaccion = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    objects = InsertOnlyQuerySet.as_manager()
+
+    class Meta:
+        db_table = "expedientes_asiento_libro_mayor"
+        verbose_name = "Asiento del libro mayor"
+        verbose_name_plural = "Asientos del libro mayor"
+        ordering = ["socio_id", "created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["resolucion", "socio", "tipo"],
+                name="unique_asiento_por_resolucion_socio_tipo",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.expediente_id} · socio {self.socio_id}: {self.tipo} {self.puntos}"
+
+
 # Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy
 Reunion = EventoInstitucional
 AsistenciaReunion = AsistenciaEvento

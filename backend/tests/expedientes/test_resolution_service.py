@@ -219,7 +219,7 @@ def test_consolidated_provider_con_llamado_de_atencion(
 
     assert decision is not None
     assert "Llamado de atención" in decision.medidas
-    assert decision.puntos_finales == Decimal("-0.25")
+    assert decision.puntos_finales == Decimal("0.00")
     assert decision.resultado == "SANCTION"
 
 
