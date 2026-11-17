@@ -483,7 +483,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 - [x] **S5-07.1 (SCRUM-121) Matriz formal de permisos RBAC en docs/:** Documento normativo consolidado en `docs/especificaciones/RBAC-SGD-AVEIT.md` con matriz bidireccional por rol, pantalla y endpoint REST, análisis de brecha (Gap Analysis) y carga de especificaciones en Jira.
 - [x] **S5-07.2 (SCRUM-122) Blindaje y tests automatizados de permisos DRF/Angular:** Implementación de roles en backend y frontend, diferenciación de cuentas deshabilitadas (401) y suspendidas (403), permisos a nivel de objeto para recusaciones TD y titularidad de descargos, componente UI `/403`, protección en `TribunalGuard` y tests automatizados (`pytest` y `npm test`) con 100% de éxito.
-- [ ] **S5-07.3 (SCRUM-123) Verificación universal de notificaciones por email:** Verificación integral de disparadores de email en el outbox transaccional, plantillas y cobertura de eventos institucionales.
+- [x] **S5-07.3 (SCRUM-123) Verificación universal de notificaciones por email:** Consolidación de los 13 eventos en `EmailOutbox`, matriz documental en [`docs/especificaciones/MATRIZ_EMAILS_OUTBOX.md`](docs/especificaciones/MATRIZ_EMAILS_OUTBOX.md), remitente `DEFAULT_FROM_EMAIL`, BCC automático `EMAIL_BCC_INSTITUCIONAL`, adjuntos PDF probatorios Base64 (`EmailAttachment`), backoff exponencial (`max_retries=5` → `FAILED`), idempotencia transaccional y suite `pytest` en `backend/tests/notifications/test_s5_07_3_matriz_universal_emails.py` (13/13 en verde; 29/29 en `notifications/`).
 
 ---
 

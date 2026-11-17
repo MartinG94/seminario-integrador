@@ -3,6 +3,7 @@ Servicios de dominio para el encolado, renderizado y despacho de notificaciones 
 """
 
 import base64
+import html
 import logging
 from datetime import timedelta
 from typing import Any
@@ -19,6 +20,26 @@ logger = logging.getLogger(__name__)
 
 class EmailDispatcherService:
     """Orquestador de persistencia Outbox y despacho de correos electrónicos."""
+
+    @staticmethod
+    def resolve_disciplinary_bcc(
+        bcc_list: list[str] | None = None,
+        *,
+        is_disciplinary: bool = False,
+    ) -> list[str]:
+        """Construye la lista BCC e incorpora EMAIL_BCC_INSTITUCIONAL en correos disciplinarios."""
+        resolved: list[str] = []
+        for addr in bcc_list or []:
+            clean = str(addr).strip()
+            if clean and clean not in resolved:
+                resolved.append(clean)
+
+        if is_disciplinary:
+            institucional_bcc = (getattr(settings, "EMAIL_BCC_INSTITUCIONAL", "") or "").strip()
+            if institucional_bcc and institucional_bcc not in resolved:
+                resolved.append(institucional_bcc)
+
+        return resolved
 
     @classmethod
     def create_or_get_outbox(cls, validated_data: dict[str, Any]) -> tuple[EmailOutbox, bool]:
@@ -41,17 +62,22 @@ class EmailDispatcherService:
                 return existing, False
 
         attachments_data = data.pop("attachments", [])
+        metadata = dict(data.get("metadata", {}) or {})
+        is_disciplinary = bool(metadata.get("es_disciplinario"))
+        bcc_list = cls.resolve_disciplinary_bcc(
+            data.get("bcc", []), is_disciplinary=is_disciplinary
+        )
 
         with transaction.atomic():
             outbox = EmailOutbox.objects.create(
                 to=data["to"],
                 cc=data.get("cc", []),
-                bcc=data.get("bcc", []),
+                bcc=bcc_list,
                 subject=data["subject"],
                 body_text=data["body_text"],
                 body_html=data.get("body_html"),
                 idempotency_key=idempotency_key,
-                metadata=data.get("metadata", {}),
+                metadata=metadata,
                 status=EmailOutboxStatus.PENDING,
             )
 
@@ -75,10 +101,21 @@ class EmailDispatcherService:
         if outbox.status == EmailOutboxStatus.SENT:
             return True
 
-        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "sistema@example.org")
+        if outbox.status == EmailOutboxStatus.FAILED or outbox.retry_count >= outbox.max_retries:
+            if outbox.status != EmailOutboxStatus.FAILED:
+                outbox.status = EmailOutboxStatus.FAILED
+                outbox.save(update_fields=["status"])
+            return False
+
+        from_email = (
+            getattr(settings, "DEFAULT_FROM_EMAIL", "notificaciones@aveit.utn.edu.ar")
+            or "notificaciones@aveit.utn.edu.ar"
+        )
         to_list = outbox.to if isinstance(outbox.to, list) else [outbox.to]
         cc_list = outbox.cc if isinstance(outbox.cc, list) else []
-        bcc_list = outbox.bcc if isinstance(outbox.bcc, list) else []
+        is_disciplinary = bool((outbox.metadata or {}).get("es_disciplinario"))
+        raw_bcc = outbox.bcc if isinstance(outbox.bcc, list) else []
+        bcc_list = cls.resolve_disciplinary_bcc(raw_bcc, is_disciplinary=is_disciplinary)
 
         msg = EmailMultiAlternatives(
             subject=outbox.subject,
@@ -174,3 +211,85 @@ class EmailDispatcherService:
             "failed": failed_count,
             "pending": pending_remaining,
         }
+
+
+def process_email_outbox(batch_size: int = 50, force: bool = False) -> dict[str, int]:
+    """Procesa la cola transaccional EmailOutbox aplicando reintentos con backoff exponencial."""
+    return EmailDispatcherService.process_pending_queue(batch_size=batch_size, force=force)
+
+
+def render_institutional_email_html(
+    *,
+    header_title: str = "A.V.E.I.T. — Tribunal de Disciplina",
+    subtitle: str,
+    greeting: str,
+    intro_paragraphs: list[str],
+    detail_rows: list[tuple[str, str, str | None]] | None = None,
+    closing_paragraphs: list[str] | None = None,
+    cta_label: str | None = None,
+    cta_url: str | None = None,
+    note: str | None = None,
+    accent_color: str = "#0b3c5d",
+) -> str:
+    """Renderiza plantilla HTML institucional unificada para notificaciones SGD-AVEIT."""
+    intro_html = "".join(
+        f"<p>{html.escape(p)}</p>" for p in intro_paragraphs if p and p.strip()
+    )
+
+    rows_html = ""
+    if detail_rows:
+        items = []
+        for label, value, color in detail_rows:
+            val_style = f" color: {html.escape(color)};" if color else ""
+            items.append(
+                f'<p style="margin: 4px 0;{val_style}">'
+                f"<strong>{html.escape(label)}:</strong> {html.escape(value)}</p>"
+            )
+        accent = html.escape(accent_color)
+        rows_html = (
+            f'<div style="background-color: #f8f9fa; border-left: 4px solid {accent}; '
+            f'padding: 12px; margin: 16px 0;">{"".join(items)}</div>'
+        )
+
+    closing_html = "".join(
+        f"<p>{html.escape(p)}</p>" for p in (closing_paragraphs or []) if p and p.strip()
+    )
+
+    cta_html = ""
+    if cta_label and cta_url:
+        cta_html = (
+            '<div style="text-align: center; margin: 24px 0;">'
+            f'<a href="{html.escape(cta_url, quote=True)}" '
+            f'style="background-color: {html.escape(accent_color)}; color: #ffffff; '
+            "padding: 12px 24px; text-decoration: none; border-radius: 4px; "
+            f'font-weight: bold; display: inline-block;">{html.escape(cta_label)}</a>'
+            "</div>"
+        )
+
+    note_html = (
+        f'<p style="font-size: 12px; color: #7f8c8d;">{html.escape(note)}</p>' if note else ""
+    )
+
+    return (
+        '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"></head><body>'
+        '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; '
+        'color: #2c3e50;">'
+        f'<div style="background-color: {html.escape(accent_color)}; padding: 20px; '
+        'text-align: center; color: #ffffff;">'
+        f'<h2 style="margin: 0;">{html.escape(header_title)}</h2>'
+        f'<p style="margin: 5px 0 0 0; font-size: 14px;">{html.escape(subtitle)}</p>'
+        "</div>"
+        '<div style="padding: 24px; border: 1px solid #e0e0e0; background-color: #ffffff;">'
+        f"<p>{html.escape(greeting)}</p>"
+        f"{intro_html}"
+        f"{rows_html}"
+        f"{closing_html}"
+        f"{cta_html}"
+        f"{note_html}"
+        "</div>"
+        '<div style="background-color: #f1f1f1; padding: 12px; text-align: center; '
+        'font-size: 12px; color: #7f8c8d;">'
+        "Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos — UTN FRC"
+        "</div>"
+        "</div></body></html>"
+    )

@@ -205,6 +205,24 @@ def resolver_destinatarios_alerta_critica(socio_email: str | None = None) -> lis
     return destinatarios
 
 
+def resolver_destinatarios_alerta_preventiva(socio_email: str | None = None) -> list[str]:
+    """Resuelve destinatarios de la alerta preventiva (-7 puntos): Socio y Comisión Directiva."""
+    try:
+        from django.conf import settings
+
+        cd_email = getattr(settings, "CD_EMAIL", "cd@example.org")
+    except Exception:
+        cd_email = "cd@example.org"
+
+    destinatarios: list[str] = []
+    if socio_email and socio_email.strip():
+        destinatarios.append(socio_email.strip())
+    if cd_email and cd_email.strip() and cd_email.strip() not in destinatarios:
+        destinatarios.append(cd_email.strip())
+
+    return destinatarios
+
+
 class ActoAprobadoResolver:
     """Resuelve destinatarios y acciones para la alerta crítica.
 
@@ -330,7 +348,7 @@ class EvaluacionCruceResult:
 
 
 class ThresholdAlertNotificationService:
-    """Servicio de despacho de notificaciones para alertas de umbral crítico."""
+    """Servicio de despacho de notificaciones para alertas de umbrales (-7 y -10)."""
 
     @classmethod
     def construir_payload_outbox(
@@ -339,23 +357,43 @@ class ThresholdAlertNotificationService:
         socio_nombre: str = "",
     ) -> dict[str, Any]:
         """Construye el payload para la cola transaccional Outbox asegurando cero datos médicos."""
-        subject = (
-            f"[SGD-AVEIT] ALERTA CRÍTICA: Saldo de puntos reglamentario (Socio #{alerta.socio_id})"
-        )
         nombre_str = f" {socio_nombre}" if socio_nombre else ""
-        body_text = (
-            f"Estimado/a socio/a{nombre_str} (Legajo/ID: {alerta.socio_id}),\n\n"
-            f"Le informamos formalmente que su saldo de puntos ha alcanzado un valor crítico "
-            f"de {alerta.saldo_nuevo} puntos, habiendo cruzado el umbral reglamentario de "
-            f"{alerta.umbral_evaluado} puntos (Art. 93 del Reglamento Interno).\n\n"
-            f"El procedimiento formal disciplinario ha quedado en estado de espera del acto "
-            f"resolutivo de la Comisión Directiva. De acuerdo con el reglamento, se notifica "
-            f"en simultáneo a la Comisión Directiva y al Tribunal de Disciplina.\n\n"
-            f"Acción administrativa: {alerta.accion_asociada}\n"
-            f"Fecha de emisión: {alerta.fecha_emision.isoformat()}\n\n"
-            f"Atentamente,\n"
-            f"Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)\n"
-        )
+        if alerta.tipo == TipoAlerta.PREVENTIVA:
+            subject = (
+                f"[SGD-AVEIT] ALERTA PREVENTIVA: Saldo de puntos próximo a límite "
+                f"(Socio #{alerta.socio_id})"
+            )
+            body_text = (
+                f"Estimado/a socio/a{nombre_str} (Legajo/ID: {alerta.socio_id}),\n\n"
+                f"Le informamos preventivamente que su saldo de puntos ha alcanzado "
+                f"{alerta.saldo_nuevo} puntos, superando el umbral preventivo configurable de "
+                f"{alerta.umbral_evaluado} puntos.\n\n"
+                f"Se notifica en simultáneo a la Comisión Directiva para su seguimiento.\n\n"
+                f"Acción administrativa: {alerta.accion_asociada}\n"
+                f"Fecha de emisión: {alerta.fecha_emision.isoformat()}\n\n"
+                f"Atentamente,\n"
+                f"Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)\n"
+            )
+            idempotency_key = f"threshold-alert-preventiva-{alerta.socio_id}-{alerta.id}"
+        else:
+            subject = (
+                f"[SGD-AVEIT] ALERTA CRÍTICA: Saldo de puntos reglamentario "
+                f"(Socio #{alerta.socio_id})"
+            )
+            body_text = (
+                f"Estimado/a socio/a{nombre_str} (Legajo/ID: {alerta.socio_id}),\n\n"
+                f"Le informamos formalmente que su saldo de puntos ha alcanzado un valor crítico "
+                f"de {alerta.saldo_nuevo} puntos, habiendo cruzado el umbral reglamentario de "
+                f"{alerta.umbral_evaluado} puntos (Art. 93 del Reglamento Interno).\n\n"
+                f"El procedimiento formal disciplinario ha quedado en estado de espera del acto "
+                f"resolutivo de la Comisión Directiva. De acuerdo con el reglamento, se notifica "
+                f"en simultáneo a la Comisión Directiva y al Tribunal de Disciplina.\n\n"
+                f"Acción administrativa: {alerta.accion_asociada}\n"
+                f"Fecha de emisión: {alerta.fecha_emision.isoformat()}\n\n"
+                f"Atentamente,\n"
+                f"Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)\n"
+            )
+            idempotency_key = f"threshold-alert-critica-{alerta.socio_id}-{alerta.id}"
 
         metadata = {
             "alerta_id": alerta.id,
@@ -368,12 +406,57 @@ class ThresholdAlertNotificationService:
             "remitente": get_default_from_email(),
             "baja_automatica_aplicada": alerta.baja_automatica_aplicada,
             "accion_asociada": alerta.accion_asociada,
+            "es_disciplinario": True,
         }
         # Validación de CA5
         AlertaSanitizer.sanitize_dict(metadata)
         AlertaSanitizer.assert_no_sensitive_data(body_text)
 
-        idempotency_key = f"threshold-alert-critica-{alerta.socio_id}-{alerta.id}"
+        body_html: str | None = None
+        try:
+            from notifications.services import render_institutional_email_html
+
+            es_critica = alerta.tipo != TipoAlerta.PREVENTIVA
+            body_html = render_institutional_email_html(
+                subtitle=(
+                    "Alerta Crítica de Saldo Reglamentario"
+                    if es_critica
+                    else "Alerta Preventiva de Saldo de Puntos"
+                ),
+                greeting=f"Estimado/a socio/a{nombre_str} (N.º de socio: {alerta.socio_id}):",
+                intro_paragraphs=[
+                    (
+                        f"Le informamos formalmente que su saldo de puntos ha alcanzado un valor "
+                        f"crítico de {alerta.saldo_nuevo} puntos, superando el umbral de "
+                        f"{alerta.umbral_evaluado} puntos (Art. 93 del Reglamento Interno)."
+                        if es_critica
+                        else f"Le informamos preventivamente que su saldo de puntos ha alcanzado "
+                        f"{alerta.saldo_nuevo} puntos, próximo al límite reglamentario "
+                        f"(umbral preventivo: {alerta.umbral_evaluado} puntos)."
+                    )
+                ],
+                detail_rows=[
+                    ("Socio", f"#{alerta.socio_id}", None),
+                    (
+                        "Saldo actual",
+                        f"{alerta.saldo_nuevo} pts",
+                        "#b71c1c" if es_critica else "#d97706",
+                    ),
+                    ("Umbral evaluado", f"{alerta.umbral_evaluado} pts", None),
+                    ("Acción asociada", str(alerta.accion_asociada), None),
+                    ("Fecha de emisión", alerta.fecha_emision.strftime("%d/%m/%Y %H:%M"), None),
+                ],
+                closing_paragraphs=[
+                    (
+                        "Se notifica en simultáneo a Comisión Directiva y Tribunal de Disciplina."
+                        if es_critica
+                        else "Se notifica en simultáneo a Comisión Directiva para su seguimiento."
+                    )
+                ],
+                accent_color="#b71c1c" if es_critica else "#0b3c5d",
+            )
+        except Exception:
+            body_html = None
 
         return {
             "to": list(alerta.destinatarios),
@@ -381,7 +464,7 @@ class ThresholdAlertNotificationService:
             "bcc": [],
             "subject": subject,
             "body_text": body_text,
-            "body_html": None,
+            "body_html": body_html,
             "idempotency_key": idempotency_key,
             "metadata": metadata,
         }
@@ -409,6 +492,8 @@ class ThresholdAlertNotificationService:
             return outbox
         except Exception:
             return payload
+
+    despachar_alerta = despachar_alerta_critica
 
 
 class ThresholdAlertEngine:
@@ -529,6 +614,13 @@ class ThresholdAlertEngine:
 
         # 4. Caso: Cruce descendente hacia zona preventiva configurable (CA3)
         if config.preventivo_activo and not zona_prev_ant and zona_prev_post:
+            dests_prev = resolver_destinatarios_alerta_preventiva(socio_email=socio_email)
+            meta.setdefault("canal", "EMAIL_OUTBOX")
+            meta.setdefault("notificacion_in_app", False)
+            meta.setdefault("remitente", get_default_from_email())
+            meta.setdefault("baja_automatica_aplicada", False)
+            meta.setdefault("accion_asociada", "ADVERTENCIA_PREVENTIVA")
+
             alerta = RegistroAlerta(
                 id=str(uuid.uuid4()),
                 socio_id=socio_id,
@@ -538,15 +630,21 @@ class ThresholdAlertEngine:
                 umbral_evaluado=config.umbral_preventivo,
                 fecha_emision=momento,
                 estado_despacho=EstadoDespachoAlerta.DESPACHADA,
-                destinatarios=[],
+                destinatarios=dests_prev,
                 accion_asociada="ADVERTENCIA_PREVENTIVA",
                 metadata=meta,
                 es_reversion=es_reversion,
                 es_rectificacion=es_rectificacion,
                 es_registro_interno=True,
-                envio_externo_realizado=False,
+                envio_externo_realizado=despachar_outbox,
                 baja_automatica_aplicada=False,
             )
+
+            if despachar_outbox:
+                ThresholdAlertNotificationService.despachar_alerta(
+                    alerta, socio_nombre=socio_nombre
+                )
+
             return EvaluacionCruceResult(
                 cruce=TipoCruce.PREVENTIVO_DESCENDENTE,
                 alerta_generada=alerta,

@@ -277,4 +277,8 @@ def emitir_resolucion(
             motivo="Resolución emitida con la totalidad de firmas requeridas.",
         )
 
+    from expedientes.services.disciplinary_notifications import enqueue_resolution_notifications
+
+    enqueue_resolution_notifications(resolucion)
+
     return resolucion

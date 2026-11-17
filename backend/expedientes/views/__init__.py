@@ -529,7 +529,7 @@ class PresentarDescargoView(APIView):
                         descargo.archivo = ""
                         descargo.save(update_fields=["archivo"])
             es_version_posterior = es_correccion and descargo.versiones.exists()
-            DescargoVersionService.registrar_version(
+            version_obj = DescargoVersionService.registrar_version(
                 descargo,
                 (
                     OperacionDescargoEnum.CORREGIDO
@@ -567,6 +567,18 @@ class PresentarDescargoView(APIView):
                     if es_correccion
                     else f"Presentación formal de descargo {validated_data['tipo']}."
                 ),
+            )
+
+            from expedientes.services.disciplinary_notifications import (
+                enqueue_descargo_received_notice,
+            )
+
+            enqueue_descargo_received_notice(
+                expediente=expediente,
+                descargo=descargo,
+                socio=socio,
+                version_num=version_obj.numero,
+                es_correccion=es_correccion,
             )
 
             return Response(

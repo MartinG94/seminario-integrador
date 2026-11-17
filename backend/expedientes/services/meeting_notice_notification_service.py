@@ -130,26 +130,28 @@ class MeetingNoticeNotificationService:
             f"Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)"
         )
 
-        color_caracter = "#15803D" if evento.es_sancionable else "#64748B"
-        body_html = (
-            "<div style='font-family: Roboto, Arial, sans-serif; color: #151846;'>"
-            "<h2 style='color: #151846; border-bottom: 2px solid #6E9DDC;'>Convocatoria</h2>"
-            f"<p>Estimado/a <strong>{socio.first_name} {socio.last_name}</strong> "
-            f"(N.º de socio: {socio_identificador}),</p>"
-            "<p>Se le notifica formalmente la citación para el siguiente evento:</p>"
-            "<div style='background: #F8FAFC; border-left: 4px solid #6E9DDC; padding: 12px;'>"
-            f"<p><strong>Denominación:</strong> {evento.titulo}</p>"
-            f"<p><strong>Categoría:</strong> {categoria_label} ({subtipo_label})</p>"
-            f"<p><strong>Fecha y Hora:</strong> {fecha_str}</p>"
-            f"<p><strong>Modalidad:</strong> {modalidad_str}</p>"
-            f"<p><strong>Carácter:</strong> "
-            f"<span style='color: {color_caracter}; font-weight: bold;'>{caracter_str}</span></p>"
-            "</div>"
-            f"<p><a href='{evento_url}' style='background: #151846; color: #fff; "
-            "padding: 8px 16px; border-radius: 4px;'>Ver Convocatoria</a></p>"
-            "<hr style='border: 0; border-top: 1px solid #E2E8F0; margin: 20px 0;'/>"
-            "<p style='font-size: 12px; color: #64748B;'>A.V.E.I.T. — UTN FRC</p>"
-            "</div>"
+        from notifications.services import render_institutional_email_html
+
+        body_html = render_institutional_email_html(
+            header_title="A.V.E.I.T. — Convocatoria Institucional",
+            subtitle=f"{categoria_label}: {evento.titulo}",
+            greeting=(
+                f"Estimado/a {socio.first_name} {socio.last_name} "
+                f"(N.º de socio: {socio_identificador}):"
+            ),
+            intro_paragraphs=[
+                "Se le notifica formalmente la citación para el siguiente evento institucional:"
+            ],
+            detail_rows=[
+                ("Denominación", str(evento.titulo), None),
+                ("Categoría", f"{categoria_label} ({subtipo_label})", None),
+                ("Fecha y Hora", fecha_str, None),
+                ("Modalidad", modalidad_str, None),
+                ("Tolerancia", f"{evento.tolerancia_tardanza_minutos} minutos", None),
+                ("Carácter", caracter_str, "#b71c1c" if evento.es_sancionable else None),
+            ],
+            cta_label="Ver Convocatoria",
+            cta_url=evento_url,
         )
 
         idempotency_key = f"meeting_notice_{evento.id}_socio_{socio.id}"
@@ -166,6 +168,7 @@ class MeetingNoticeNotificationService:
                 "socio_id": socio.id,
                 "categoria": evento.categoria,
                 "tipo": evento.tipo,
+                "es_disciplinario": bool(evento.es_sancionable),
             },
         }
 
@@ -247,27 +250,30 @@ class MeetingNoticeNotificationService:
                 "Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (A.V.E.I.T.)"
             )
 
-            body_html = (
-                "<div style='font-family: Roboto, Arial, sans-serif; color: #151846;'>"
-                "<h2 style='color: #DC2626; border-bottom: 2px solid #DC2626;'>"
-                "Aviso de Cancelación</h2>"
-                f"<p>Estimado/a <strong>{socio.first_name} {socio.last_name}</strong> "
-                f"(N.º de socio: {socio_identificador}),</p>"
-                "<p>Le informamos que la siguiente convocatoria institucional ha sido "
-                "<strong>CANCELADA</strong> y queda sin efecto:</p>"
-                "<div style='background: #FEF2F2; border-left: 4px solid #DC2626; "
-                "padding: 12px; margin: 12px 0;'>"
-                f"<p><strong>Denominación:</strong> {evento.titulo}</p>"
-                f"<p><strong>Categoría:</strong> {evento.get_categoria_display()} "
-                f"({evento.tipo})</p>"
-                f"<p><strong>Fecha que estaba prevista:</strong> {fecha_str}</p>"
-                f"<p><strong>Motivo informado:</strong> {motivo_texto}</p>"
-                "</div>"
-                "<p style='color: #475569;'>Pedimos sinceras disculpas por los inconvenientes que "
-                "esta cancelación pudiera ocasionarle.</p>"
-                "<hr style='border: 0; border-top: 1px solid #E2E8F0; margin: 20px 0;'/>"
-                "<p style='font-size: 12px; color: #64748B;'>A.V.E.I.T. — UTN FRC</p>"
-                "</div>"
+            from notifications.services import render_institutional_email_html
+
+            body_html = render_institutional_email_html(
+                header_title="A.V.E.I.T. — Aviso Formal de Cancelación",
+                subtitle=f"Cancelación de Convocatoria: {evento.titulo}",
+                greeting=(
+                    f"Estimado/a {socio.first_name} {socio.last_name} "
+                    f"(N.º de socio: {socio_identificador}):"
+                ),
+                intro_paragraphs=[
+                    "Le informamos que la siguiente convocatoria institucional ha sido "
+                    "CANCELADA y queda sin efecto:"
+                ],
+                detail_rows=[
+                    ("Denominación", str(evento.titulo), None),
+                    ("Categoría", f"{evento.get_categoria_display()} ({evento.tipo})", None),
+                    ("Fecha prevista", fecha_str, None),
+                    ("Motivo informado", motivo_texto, "#b71c1c"),
+                ],
+                closing_paragraphs=[
+                    "Pedimos sinceras disculpas por los inconvenientes que esta cancelación "
+                    "pudiera ocasionarle."
+                ],
+                accent_color="#b71c1c",
             )
 
             idempotency_key = f"meeting_cancellation_{evento.id}_socio_{socio.id}"
@@ -282,6 +288,7 @@ class MeetingNoticeNotificationService:
                     "evento_id": evento.id,
                     "socio_id": socio.id,
                     "motivo": motivo_texto,
+                    "es_disciplinario": bool(evento.es_sancionable),
                 },
             }
             outbox, _ = EmailDispatcherService.create_or_get_outbox(payload)

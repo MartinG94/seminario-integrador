@@ -8,12 +8,13 @@ Implementa:
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.utils import timezone
 
 from expedientes.models import EstadoExpedienteEnum, Expediente
+from expedientes.services.disciplinary_notifications import enqueue_deadline_reminder
 from expedientes.services.t01_appeal_service import T01AppealService
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 
@@ -93,3 +94,55 @@ class DeadlineEnforcementService:
                     raise
 
         return closed_count
+
+    def send_imminent_deadline_reminders(
+        self,
+        ahora: datetime | None = None,
+        window_hours: int = 24,
+    ) -> int:
+        """Encola recordatorios preventivos 24h antes del vencimiento del plazo (Evento 7).
+
+        Idempotencia: ``deadline-reminder-{expediente_id}-socio-{socio_id}``.
+        """
+        momento = ahora or timezone.now()
+        limite_ventana = momento + timedelta(hours=window_hours)
+
+        candidate_ids = list(
+            Expediente.objects.filter(
+                estado=EstadoExpedienteEnum.JUSTIFICANDO,
+                plazo_limite_at__isnull=False,
+                plazo_limite_at__gt=momento,
+            ).values_list("id", flat=True)
+        )
+
+        reminded_count = 0
+        for exp_id in candidate_ids:
+            with transaction.atomic():
+                expediente = (
+                    Expediente.objects.select_for_update()
+                    .select_related("socio")
+                    .prefetch_related("socios")
+                    .filter(id=exp_id)
+                    .first()
+                )
+                if not expediente or expediente.estado != EstadoExpedienteEnum.JUSTIFICANDO:
+                    continue
+
+                plazo_efectivo = T01AppealService.effective_deadline(expediente)
+                if not plazo_efectivo or not (momento < plazo_efectivo <= limite_ventana):
+                    continue
+
+                socios_map = {expediente.socio.id: expediente.socio} if expediente.socio else {}
+                for s in expediente.socios.all():
+                    socios_map.setdefault(s.id, s)
+
+                for socio in socios_map.values():
+                    outbox = enqueue_deadline_reminder(
+                        expediente=expediente,
+                        socio=socio,
+                        plazo_limite_at=plazo_efectivo,
+                    )
+                    if outbox is not None:
+                        reminded_count += 1
+
+        return reminded_count

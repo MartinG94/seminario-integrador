@@ -230,6 +230,7 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() in ("true", "1", "t")
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "sistema@example.org")
+EMAIL_BCC_INSTITUCIONAL = os.getenv("EMAIL_BCC_INSTITUCIONAL", "")
 CD_EMAIL = os.getenv("CD_EMAIL", "cd@example.org")
 # Destinatario de los avisos de Tribunal Ad-Hoc / convocatoria a Asamblea (Art. 95, S4-04).
 COMISION_DIRECTIVA_EMAIL = os.getenv("COMISION_DIRECTIVA_EMAIL", "cd@aveit.org")

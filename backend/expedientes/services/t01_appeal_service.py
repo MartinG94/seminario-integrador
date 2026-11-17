@@ -78,16 +78,27 @@ def _involved_ids(expediente: Expediente) -> set[int]:
     return {expediente.socio_id, *expediente.socios.values_list("pk", flat=True)}
 
 
-def _enqueue_mail(*, key: str, to: str, subject: str, body: str, metadata: dict) -> None:
+def _enqueue_mail(
+    *,
+    key: str,
+    to: str,
+    subject: str,
+    body: str,
+    metadata: dict,
+    body_html: str | None = None,
+) -> None:
     if not to:
         return
+    meta = dict(metadata)
+    meta["es_disciplinario"] = True
     EmailDispatcherService.create_or_get_outbox(
         {
             "to": [to],
             "subject": subject,
             "body_text": body,
+            "body_html": body_html,
             "idempotency_key": key,
-            "metadata": metadata,
+            "metadata": meta,
         }
     )
 
@@ -201,6 +212,26 @@ class T01AppealService:
             f"Plazo: hasta el {timezone.localtime(periodo.limite_at):%d/%m/%Y %H:%M} hs.\n\n"
             f"{texto}"
         )
+        from notifications.services import render_institutional_email_html
+
+        cuerpo_html = render_institutional_email_html(
+            subtitle="Registro de Apelación T01",
+            greeting=f"Expediente {expediente.numero}:",
+            intro_paragraphs=[
+                f"Se registró la apelación (versión {apelacion.numero}) de {_socio_label(socio)}."
+            ],
+            detail_rows=[
+                ("Expediente", str(expediente.numero), None),
+                ("Versión", str(apelacion.numero), None),
+                ("Fecha", f"{timezone.localtime(apelacion.created_at):%d/%m/%Y %H:%M} hs", None),
+                (
+                    "Plazo",
+                    f"hasta el {timezone.localtime(periodo.limite_at):%d/%m/%Y %H:%M} hs",
+                    None,
+                ),
+            ],
+            closing_paragraphs=[texto],
+        )
         asunto = f"Expediente {expediente.numero}: apelación registrada"
         metadata = {"expediente_id": expediente.pk, "apelacion_id": apelacion.pk}
         _enqueue_mail(
@@ -208,6 +239,7 @@ class T01AppealService:
             to=socio.email,
             subject=asunto,
             body=cuerpo,
+            body_html=cuerpo_html,
             metadata=metadata,
         )
         _enqueue_mail(
@@ -215,6 +247,7 @@ class T01AppealService:
             to=settings.TRIBUNAL_EMAIL,
             subject=asunto,
             body=cuerpo,
+            body_html=cuerpo_html,
             metadata=metadata,
         )
         return apelacion
