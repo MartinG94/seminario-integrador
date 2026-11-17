@@ -475,7 +475,25 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 16. Instrucciones para la Actualización de este Archivo
+## 16. Sprint 5 — Desglose Atómico: US Macro 01 / SCRUM-89 (Circuito Resolutivo Oficial, Exclusión Fundada, Corrección de Puntaje Final y Enmiendas Trazables)
+
+> **Spec de Referencia:** [`specs/010-circuito-resolutivo-enmiendas/spec.md`](specs/010-circuito-resolutivo-enmiendas/spec.md)  
+> **Plan Técnico:** [`specs/010-circuito-resolutivo-enmiendas/plan.md`](specs/010-circuito-resolutivo-enmiendas/plan.md)  
+> **Tareas:** [`specs/010-circuito-resolutivo-enmiendas/tasks.md`](specs/010-circuito-resolutivo-enmiendas/tasks.md)  
+> **Estado:** **Plan Aprobado con PO (12/11/2026) — Listo para Inicio**
+
+- [x] **T10.1 (SCRUM-101) Persistencia de `puntaje_ratificado` en Backend [TDD]:** Columna `puntaje_ratificado` en `DescargoExpediente`, migración `0026`, actualización de `CausalResolutionService.decide` y exposición en serializers.
+- [x] **T10.2 (SCRUM-101) Sincronización de Puntaje Ratificado en Frontend [TDD]:** Actualización de `getPuntajeFinalInvolucrado` y visualización de puntaje en `gestionar-expedientes.component.ts`.
+- [x] **T10.3 (SCRUM-102) Dominio y Servicio de Exclusión Fundada [TDD]:** Campos de exclusión, `ExclusionInvolucradoService`, validación de rol TD, motivo >= 10 chars, aviso por Outbox y cierre administrativo a `EMITIDO` sin triple firma si es el último involucrado.
+- [x] **T10.4 (SCRUM-102) Endpoint REST y UI de Exclusión en Angular [TDD]:** Endpoint `POST /involucrados/<socio_id>/excluir/`, botón "Excluir Socio", modal de motivo y estado tachado con badge `Excluido`.
+- [x] **T10.5 (SCRUM-99) Firma Colegiada por Año Social con Inferencia y Selector de Suplencia [TDD]:** Inferencia automática de Titular/Suplente, selector visible para tribunal ad-hoc (Art. 95), etiqueta canónica `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]` y verificación de los 3 años sociales.
+- [x] **T10.6 (SCRUM-100) Emisión Oficial y Despacho Idempotente sin Duplicados [TDD]:** Sellado SHA-256, estado `EMITIDO`, despacho a socios, CD y TD con claves de idempotencia únicas en `EmailOutbox`.
+- [x] **T10.7 (SCRUM-103) Modelo y Servicio de Enmienda con Contra-asientos Opción B [TDD]:** Modelo `EnmiendaResolucion`, endpoint de enmienda, numeración `RESOLUCIÓN N/YYYY` (Art. 19), retorno a firmas y contra-asiento (reversión íntegra + nuevo asiento) en libro mayor sin UPDATE/DELETE.
+- [x] **T10.8 (SCRUM-103) Flujo de Enmienda en Frontend y Verificación Integral [TDD]:** Acción "Enmendar Resolución", modal de rectificación, pasaje a estado de firmas y suites completas en verde (`pytest`, `Karma`, `ruff`).
+
+---
+
+## 17. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

@@ -2347,6 +2347,16 @@ describe('GestionarExpedientesComponent', () => {
         descargo: { puntaje_ratificado: 1.5 }
       } as any;
       expect(component.getPuntajeFinalInvolucradoDisplay(filaNumPos)).toBe('+1.5');
+
+      // Recuperación desde decisiones_causal si puntaje_ratificado no viniese en caché
+      const filaFallbackDecision = {
+        descargo: {
+          puntaje_ratificado: null,
+          decisiones_causal: [{ puntaje_final: -2.5, decision: 'REJECTED' }]
+        }
+      } as any;
+      expect(component.getPuntajeFinalInvolucrado(filaFallbackDecision)).toBe(-2.5);
+      expect(component.getPuntajeFinalInvolucradoDisplay(filaFallbackDecision)).toBe('-2.5');
     });
   });
 
@@ -2585,6 +2595,66 @@ describe('GestionarExpedientesComponent', () => {
       component.confirmarFirma();
 
       expect(notifications.success).toHaveBeenCalled();
+      expect(component.modalFirmaAbierto).toBeFalse();
+    });
+
+    it('Modal 3 soporta selección y envío de condición de suplencia para firma colegiada (SCRUM-99)', () => {
+      const exp = crearExpConReglamentos();
+      exp.id = '99';
+      exp.estado = 'pendiente_firma';
+      exp.firmas = { juecesFirmantes: [], hashCriptografico: '', timestamp: '' };
+      component.abrirFirma(exp);
+      fixture.detectChanges();
+
+      expect(component.esSuplenteFirma).toBeFalse();
+
+      component.esSuplenteFirma = true;
+      fixture.detectChanges();
+
+      spyOn(expedienteApi, 'firmarResolucionOficial').and.returnValue(of({
+        id: 1,
+        expediente: 99,
+        version: 1,
+        estado: 'DRAFT',
+        firmantes_td: [{
+          legajo: '408917',
+          full_name: 'Usuario TD',
+          social_year: 4,
+          es_suplente: true,
+          condicion: 'SUPLENTE',
+          etiqueta: '408917 - Usuario TD - G59 (Sup.)'
+        }]
+      } as any));
+
+      component.confirmarFirma();
+      expect(expedienteApi.firmarResolucionOficial).toHaveBeenCalledWith('99', { es_suplente: true });
+      expect(component.modalFirmaAbierto).toBeFalse();
+    });
+
+    it('confirmarFirma actualiza el estado del expediente a emitido al alcanzar 3 firmas o estadoRes ISSUED', () => {
+      const exp = crearExpConReglamentos();
+      exp.id = '100';
+      exp.estado = 'pendiente_firma';
+      exp.firmas = { juecesFirmantes: ['1 - Juez 1 - G57', '2 - Juez 2 - G58'], hashCriptografico: '', timestamp: '' };
+      component.abrirFirma(exp);
+
+      spyOn(expedienteApi, 'firmarResolucionOficial').and.returnValue(of({
+        id: 2,
+        expediente: 100,
+        version: 1,
+        estado: 'ISSUED',
+        contenido_hash: 'sha256-abc',
+        issued_at: '2026-11-16T15:00:00Z',
+        firmantes_td: [
+          { legajo: '1', full_name: 'Juez 1', social_year: 4, es_suplente: false, condicion: 'TITULAR', etiqueta: '1 - Juez 1 - G57' },
+          { legajo: '2', full_name: 'Juez 2', social_year: 5, es_suplente: false, condicion: 'TITULAR', etiqueta: '2 - Juez 2 - G58' },
+          { legajo: '3', full_name: 'Juez 3', social_year: 6, es_suplente: false, condicion: 'TITULAR', etiqueta: '3 - Juez 3 - G59' }
+        ]
+      } as any));
+
+      component.confirmarFirma();
+      expect(exp.estado).toBe('emitido');
+      expect(exp.estadoDisplay).toBe('Emitidos');
       expect(component.modalFirmaAbierto).toBeFalse();
     });
 
@@ -2978,6 +3048,224 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
     });
   });
 
+  describe('SCRUM-102: Exclusión fundada de involucrados', () => {
+    it('debe permitir a miembro TD abrir el modal de exclusión y enviar solicitud con motivo válido', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const exp = { id: '301', numero: 'EXP-301/2026', estado: 'justificando', puntos: -1.0 } as any;
+      component.expedienteSeleccionado = exp;
+      const fila: InvolucradoJustificacion = {
+        socioId: 44,
+        legajo: '75044',
+        grupo: '59',
+        nombre: 'Martín',
+        apellido: 'Pérez',
+        descargo: null,
+        esta_excluido: false
+      };
+      component.involucradosJustificacion = [fila];
+
+      expect(component.puedeExcluirInvolucrado(fila)).toBeTrue();
+
+      component.abrirModalExclusion(fila);
+      expect(component.mostrarModalExclusion).toBeTrue();
+      expect(component.involucradoAExcluir).toBe(fila);
+
+      // Con motivo corto falla la validación
+      component.motivoExclusion = 'corto';
+      component.confirmarExclusion();
+      expect(component.errorExclusion).toContain('al menos 10 caracteres');
+
+      // Con motivo válido llama a la API
+      spyOn(expedienteApi, 'excluirInvolucrado').and.returnValue(of({
+        success: true,
+        mensaje: 'Excluido',
+        expediente_id: 301,
+        expediente_estado: 'justificando',
+        expediente_archivado: false,
+        activos_restantes_count: 1,
+        socio_id: 44,
+        socio_legajo: '75044',
+        esta_excluido: true,
+        motivo_exclusion: 'Exclusión formal por no encontrarse citado.',
+        excluido_at: '2026-11-12T16:00:00Z'
+      }));
+
+      component.motivoExclusion = 'Exclusión formal por no encontrarse citado.';
+      component.confirmarExclusion();
+
+      expect(expedienteApi.excluirInvolucrado).toHaveBeenCalledWith(
+        301,
+        44,
+        'Exclusión formal por no encontrarse citado.'
+      );
+      expect(fila.esta_excluido).toBeTrue();
+      expect(fila.motivo_exclusion).toBe('Exclusión formal por no encontrarse citado.');
+      expect(component.mostrarModalExclusion).toBeFalse();
+    });
+
+    it('archiva administrativamente el expediente a emitido si era el único o último involucrado activo', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const exp = { id: '302', numero: 'EXP-302/2026', estado: 'justificando', puntos: -1.0 } as any;
+      component.expedientes = [exp];
+      component.expedienteSeleccionado = exp;
+      const fila: InvolucradoJustificacion = {
+        socioId: 45,
+        legajo: '75045',
+        grupo: '59',
+        nombre: 'Sofía',
+        apellido: 'Gómez',
+        descargo: null,
+        esta_excluido: false
+      };
+      component.involucradosJustificacion = [fila];
+
+      spyOn(expedienteApi, 'excluirInvolucrado').and.returnValue(of({
+        success: true,
+        mensaje: 'Excluido y archivado',
+        expediente_id: 302,
+        expediente_estado: 'emitido',
+        expediente_archivado: true,
+        activos_restantes_count: 0,
+        socio_id: 45,
+        socio_legajo: '75045',
+        esta_excluido: true,
+        motivo_exclusion: 'Exclusión del único socio imputado por error formal.',
+        excluido_at: '2026-11-12T16:00:00Z'
+      }));
+
+      component.abrirModalExclusion(fila);
+      component.motivoExclusion = 'Exclusión del único socio imputado por error formal.';
+      component.confirmarExclusion();
+
+      expect(exp.estado).toBe('emitido');
+      expect(exp.estadoDisplay).toBe('Emitidos');
+      expect(exp.puntos).toBe(0);
+      expect(component.modalDetalleAbierto).toBeFalse();
+      expect(fila.esta_excluido).toBeTrue();
+    });
+  });
+
+  describe('SCRUM-103: Enmienda trazable de resoluciones por rol TD', () => {
+    it('puedeEnmendarResolucion es true sólo para expedientes emitidos y miembros TD', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      component.expedienteSeleccionado = { id: '401', numero: 'EXP-401/2026', estado: 'emitido' } as any;
+      expect(component.puedeEnmendarResolucion).toBeTrue();
+
+      component.expedienteSeleccionado = { id: '401', numero: 'EXP-401/2026', estado: 'pendiente_correos' } as any;
+      expect(component.puedeEnmendarResolucion).toBeFalse();
+    });
+
+    it('abre modal de enmienda, valida motivo >= 10 caracteres y transiciona a pendiente_firma al confirmar', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const exp = {
+        id: '402',
+        numero: 'EXP-402/2026',
+        estado: 'emitido',
+        considerandos: 'Considerandos previos.',
+        puntos: -2.0
+      } as any;
+      component.expedienteSeleccionado = exp;
+
+      component.abrirModalEnmienda(exp);
+      expect(component.mostrarModalEnmienda).toBeTrue();
+      expect(component.considerandosEnmienda).toBe('Considerandos previos.');
+
+      // Motivo corto
+      component.motivoEnmienda = 'corto';
+      component.confirmarEnmienda();
+      expect(component.errorEnmienda).toContain('al menos 10 caracteres');
+
+      // Llamada exitosa a la API
+      spyOn(expedienteApi, 'enmendarResolucion').and.returnValue(of({
+        id: 1,
+        motivo_enmienda: 'Error material en tipificación de atenuantes.',
+        resolucion_nueva_detalle: {
+          id: 55,
+          version: 2,
+          estado: 'DRAFT',
+          considerandos: 'Considerandos rectificados.'
+        }
+      }));
+
+      component.motivoEnmienda = 'Error material en tipificación de atenuantes.';
+      component.considerandosEnmienda = 'Considerandos rectificados.';
+      component.confirmarEnmienda();
+
+      expect(expedienteApi.enmendarResolucion).toHaveBeenCalledWith(
+        402,
+        {
+          motivo_enmienda: 'Error material en tipificación de atenuantes.',
+          considerandos: 'Considerandos rectificados.'
+        }
+      );
+      expect(component.mostrarModalEnmienda).toBeFalse();
+      expect(exp.estado).toBe('pendiente_firma');
+      expect(exp.considerandos).toBe('Considerandos rectificados.');
+      expect(exp.firmas?.juecesFirmantes?.length).toBe(0);
+    });
+
+    it('confirmarEnmienda incluye nuevos_puntajes y articulos_resolutivos para involucrados activos usando puntajesEnmiendaPorSocio', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const exp = {
+        id: '403',
+        numero: 'EXP-403/2026',
+        estado: 'emitido',
+        considerandos: 'Considerandos previos.',
+        puntos: -2.0
+      } as any;
+      component.expedienteSeleccionado = exp;
+      component.involucradosJustificacion = [
+        { socioId: 10, numero_socio: 1001, legajo: '75010', grupo: '59', nombre: 'Ana', apellido: 'López', descargo: null, esta_excluido: false },
+        { socioId: 11, numero_socio: 1002, legajo: '75011', grupo: '59', nombre: 'Luis', apellido: 'Díaz', descargo: null, esta_excluido: true }
+      ];
+
+      component.abrirModalEnmienda(exp);
+      spyOn(expedienteApi, 'enmendarResolucion').and.returnValue(of({
+        id: 2,
+        motivo_enmienda: 'Rectificación de puntaje por atenuante acreditado.',
+        resolucion_nueva_detalle: { id: 56, version: 2, estado: 'DRAFT', considerandos: 'Considerandos previos.' }
+      }));
+
+      component.motivoEnmienda = 'Rectificación de puntaje por atenuante acreditado.';
+      component.puntajesEnmiendaPorSocio[10] = '-1.0';
+      component.confirmarEnmienda();
+
+      expect(expedienteApi.enmendarResolucion).toHaveBeenCalledWith(403, jasmine.objectContaining({
+        motivo_enmienda: 'Rectificación de puntaje por atenuante acreditado.',
+        considerandos: 'Considerandos previos.',
+        nuevos_puntajes: [{ socio_id: 10, puntaje: -1.0 }],
+        articulos_resolutivos: jasmine.stringContaining('Socio N° 1001')
+      }));
+    });
+
+    it('confirmarEnmienda soporta LLAMADO_ATENCION y FELICITACION en puntajesEnmiendaPorSocio', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const exp = {
+        id: '404',
+        numero: 'EXP-404/2026',
+        estado: 'emitido',
+        considerandos: 'Considerandos previos.',
+        puntos: -1.0
+      } as any;
+      component.expedienteSeleccionado = exp;
+      component.involucradosJustificacion = [
+        { socioId: 20, numero_socio: 2001, legajo: '75020', grupo: '59', nombre: 'María', apellido: 'Paz', descargo: null, esta_excluido: false }
+      ];
+
+      component.abrirModalEnmienda(exp);
+      spyOn(expedienteApi, 'enmendarResolucion').and.returnValue(of({ id: 3 }));
+
+      component.motivoEnmienda = 'Rectificación a llamado de atención institucional.';
+      component.puntajesEnmiendaPorSocio[20] = 'LLAMADO_ATENCION';
+      component.confirmarEnmienda();
+
+      expect(expedienteApi.enmendarResolucion).toHaveBeenCalledWith(404, jasmine.objectContaining({
+        nuevos_puntajes: [{ socio_id: 20, puntaje: 'LLAMADO_ATENCION' }],
+        articulos_resolutivos: jasmine.stringContaining('Llamado de Atención')
+      }));
+    });
+  });
+
   describe('Sugerencias y correcciones PO PR #76 (Kanban preview, Mostrar más +, Llamado/Felicitación y refrescarVistaActual)', () => {
     const makeExp = (id: number, overrides: Partial<Expediente> = {}): Expediente => ({
       id: String(id),
@@ -3150,6 +3438,148 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
       component.transicionarEstado(exp, 'justificando');
       expect(cargarTablaSpy).toHaveBeenCalledTimes(3);
       expect(cargarTableroSpy).not.toHaveBeenCalled();
+    });
+
+    it('decrementarUrgencia e incrementarUrgencia transicionan entre baja, normal y urgente', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const actSpy = spyOn(dataService, 'actualizarUrgencia').and.returnValue(of({}));
+      const exp = makeExp(20, { urgencia: 'normal' });
+      component.expedienteSeleccionado = exp;
+
+      component.decrementarUrgencia();
+      expect(actSpy).toHaveBeenCalledWith('20', 'baja');
+
+      component.expedienteSeleccionado.urgencia = 'baja';
+      component.incrementarUrgencia();
+      expect(actSpy).toHaveBeenCalledWith('20', 'normal');
+
+      component.expedienteSeleccionado.urgencia = 'normal';
+      component.incrementarUrgencia();
+      expect(actSpy).toHaveBeenCalledWith('20', 'urgente');
+    });
+
+    it('todosLosDescargosVistos ignora socios excluidos y requiere al menos un socio activo leído', () => {
+      component.involucradosJustificacion = [
+        { socioId: 1, legajo: '101', grupo: 'G58', nombre: 'A', apellido: 'B', descargo: { leido: false } as any, esta_excluido: true },
+        { socioId: 2, legajo: '102', grupo: 'G58', nombre: 'C', apellido: 'D', descargo: { leido: true } as any, esta_excluido: false },
+      ];
+      expect(component.todosLosDescargosVistos).toBeTrue();
+
+      component.involucradosJustificacion = [
+        { socioId: 1, legajo: '101', grupo: 'G58', nombre: 'A', apellido: 'B', descargo: { leido: true } as any, esta_excluido: true },
+      ];
+      expect(component.todosLosDescargosVistos).toBeFalse();
+    });
+
+    it('firmantesPieResolucion y espaciosFirmaPorAnioSocial mapean estrictamente por anio_social de firmantesDetalle sin duplicar', () => {
+      component.expedienteSeleccionado = makeExp(30, {
+        firmas: {
+          juecesFirmantes: ['1001 - Vocal 4 - G59', '11737 - Vocal 5 - G58'],
+          firmantesDetalle: [
+            { anio_social: 4, etiqueta: '1001 - Vocal 4 - G59' },
+            { anio_social: 5, etiqueta: '11737 - Vocal 5 - G58' }
+          ]
+        }
+      });
+
+      const pie = component.firmantesPieResolucion;
+      expect(pie[0]).toEqual({ anioSocial: 4, etiquetaAnio: '4.º Año Social', firma: '1001 - Vocal 4 - G59' });
+      expect(pie[1]).toEqual({ anioSocial: 5, etiquetaAnio: '5.º Año Social', firma: '11737 - Vocal 5 - G58' });
+      expect(pie[2]).toEqual({ anioSocial: 6, etiquetaAnio: '6.º Año Social', firma: 'Pendiente de firma' });
+
+      const espacios = component.espaciosFirmaPorAnioSocial;
+      expect(espacios[2].firmado).toBeFalse();
+      expect(espacios[2].firma).toBeNull();
+    });
+
+    it('confirmarVotacion envía es_suplente y actualiza firmas desde res.firmantes_td', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      const exp = makeExp(40, { estado: 'revision_resolucion' });
+      component.expedienteSeleccionado = exp;
+      component.reglamentosSeleccionadosResolucion = ['Estatuto - Art. 25'];
+      component.considerandosTexto = 'CONSIDERANDO: mérito suficiente.';
+      component.esSuplenteFirma = true;
+      component.anioSocialFirma = 4;
+
+      const crearSpy = spyOn(expedienteApi, 'crearResolucion').and.returnValue(of({
+        id: 99,
+        expediente: 40,
+        version: 1,
+        plantilla_version: 'v1',
+        estado: 'DRAFT',
+        numero_expediente_snapshot: 'EXP-0040/2026',
+        vistos: '',
+        considerandos: '',
+        articulos_resolutivos: '',
+        firmantes_td: [{
+          legajo: '11928',
+          full_name: 'Suplente 4',
+          social_year: 4,
+          anio_social: 4,
+          grupo: 'G59',
+          etiqueta: '11928 - Suplente 4 - G59 (Sup.)'
+        }],
+        created_by: 1,
+        created_at: '',
+        updated_at: '',
+        contenido_hash: 'abc123'
+      }));
+
+      component.confirmarVotacion();
+
+      expect(crearSpy).toHaveBeenCalledWith('40', jasmine.objectContaining({
+        es_suplente: true,
+        anio_social: 4
+      }));
+      expect(exp.estado).toBe('pendiente_firma');
+      expect(exp.firmas?.juecesFirmantes).toEqual(['11928 - Suplente 4 - G59 (Sup.)']);
+      expect(exp.firmas?.firmantesDetalle?.length).toBe(1);
+    });
+
+    it('no renderiza el botón Estampar Firma Digital ni el selector de condición cuando usuarioYaFirmoResolucion es true', () => {
+      spyOn(authService, 'tieneRol').and.returnValue(true);
+      spyOn(authService, 'getCurrentUser').and.returnValue({
+        legajo: '85421',
+        numero_socio: 1001,
+        first_name: 'Esteban',
+        last_name: 'Pérez',
+        email: '1001@aveit.test',
+        role: 'TD',
+        category: 'ACTIVE',
+        category_display: 'Activo',
+        subcomision: null
+      });
+      const exp = makeExp(50, {
+        estado: 'pendiente_firma',
+        firmas: {
+          juecesFirmantes: ['1001 - Esteban Pérez - G60'],
+          firmantesDetalle: [{ anio_social: 4, numero_socio: 1001, legajo: '85421', etiqueta: '1001 - Esteban Pérez - G60' }]
+        }
+      });
+
+      component.abrirFirma(exp);
+      fixture.detectChanges();
+
+      expect(component.usuarioYaFirmoResolucion).toBeTrue();
+      const texto = fixture.nativeElement.textContent || '';
+      expect(texto).toContain('Ya registraste tu firma para tu año social');
+      expect(texto).not.toContain('Estampar Firma Digital');
+      expect(fixture.nativeElement.querySelector('.selector-condicion-firma')).toBeNull();
+    });
+
+    it('onColumnaWheel detiene la propagación cuando la columna tiene scroll disponible en la dirección del desplazamiento', () => {
+      const el = document.createElement('div');
+      Object.defineProperty(el, 'scrollHeight', { value: 600, configurable: true });
+      Object.defineProperty(el, 'clientHeight', { value: 300, configurable: true });
+      Object.defineProperty(el, 'scrollTop', { value: 50, configurable: true });
+
+      const stopPropDown = jasmine.createSpy('stopPropagation');
+      component.onColumnaWheel({ currentTarget: el, deltaY: 40, stopPropagation: stopPropDown } as unknown as WheelEvent);
+      expect(stopPropDown).toHaveBeenCalled();
+
+      const stopPropUp = jasmine.createSpy('stopPropagation');
+      component.onColumnaWheel({ currentTarget: el, deltaY: -40, stopPropagation: stopPropUp } as unknown as WheelEvent);
+      expect(stopPropUp).toHaveBeenCalled();
     });
   });
 });

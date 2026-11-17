@@ -92,20 +92,20 @@ class OpeningNotificationTemplate:
         fecha_limite_str = plazo_limite_at.strftime("%d/%m/%Y %H:%M")
         enlace_seguro = f"{frontend_url.rstrip('/')}/mis-expedientes/{expediente_id}"
 
-        subject = f"[SGD-AVEIT] Notificación de Apertura de Causa — Autos {expediente_numero}"
+        subject = f"[SGD-AVEIT] Notificación de Apertura de Expediente — Autos {expediente_numero}"
 
         body_text = (
             f"Estimado/a socio/a {socio_nombre}:\n\n"
             f"Por medio de la presente, el Tribunal de Disciplina de A.V.E.I.T. le notifica "
             f"formalmente la apertura del expediente disciplinario N° {expediente_numero}.\n\n"
-            f"• Causa: Actuación disciplinaria en trámite\n"
+            f"• Expediente: Actuación disciplinaria en trámite\n"
             f"• Fecha y hora de despacho: {fecha_inicio_str}\n"
             f"• Plazo de defensa: Dispone de un término fatal e improrrogable de cinco (5) días "
             f"hábiles administrativos para presentar sus descargos "
             f"(Art. 12 Inc. 2 del Reglamento Procesal 2026).\n"
             f"• Vencimiento del plazo: {fecha_limite_str}\n\n"
             f"Por razones de confidencialidad estatutaria y protección de datos personales, "
-            f"los antecedentes circunstanciados de la causa se encuentran reservados para su "
+            f"los antecedentes circunstanciados del expediente se encuentran reservados para su "
             f"consulta exclusiva ingresando a la plataforma institucional:\n"
             f"{enlace_seguro}\n\n"
             f"Atentamente,\n"
@@ -119,7 +119,7 @@ class OpeningNotificationTemplate:
             'color: #ffffff;">\n'
             '        <h2 style="margin: 0;">A.V.E.I.T. — Tribunal de Disciplina</h2>\n'
             '        <p style="margin: 5px 0 0 0; font-size: 14px;">'
-            "Cédula de Notificación de Apertura de Causa</p>\n"
+            "Cédula de Notificación de Apertura de Expediente</p>\n"
             "    </div>\n"
             '    <div style="padding: 24px; border: 1px solid #e0e0e0; '
             'background-color: #ffffff;">\n'
@@ -128,7 +128,7 @@ class OpeningNotificationTemplate:
             f"<strong>{expediente_numero}</strong>.</p>\n"
             '        <div style="background-color: #f8f9fa; border-left: 4px solid #0b3c5d; '
             'padding: 12px; margin: 16px 0;">\n'
-            '            <p style="margin: 4px 0;"><strong>Causa:</strong> '
+            '            <p style="margin: 4px 0;"><strong>Expediente:</strong> '
             "Actuación disciplinaria en trámite</p>\n"
             f'            <p style="margin: 4px 0;"><strong>Fecha de Despacho:</strong> '
             f"{fecha_inicio_str}</p>\n"
@@ -145,7 +145,7 @@ class OpeningNotificationTemplate:
             "color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; "
             'font-weight: bold; display: inline-block;">Acceder a Mis Expedientes y Descargos</a>\n'
             "        </div>\n"
-            '        <p style="font-size: 12px; color: #7f8c8d;">Nota: El acceso a la causa '
+            '        <p style="font-size: 12px; color: #7f8c8d;">Nota: El acceso al expediente '
             "requiere autenticación institucional obligatoria.</p>\n"
             "    </div>\n"
             '    <div style="background-color: #f1f1f1; padding: 12px; text-align: center; '

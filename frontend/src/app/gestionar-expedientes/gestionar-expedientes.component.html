@@ -37,7 +37,7 @@
           </ul>
         </div>
         <div class="text-white-50 d-none d-md-block small">
-          <span *ngIf="vistaActual === 'kanban'">Sala del Tribunal: Juzgamiento colegiado y seguimiento de causas</span>
+          <span *ngIf="vistaActual === 'kanban'">Sala del Tribunal: Juzgamiento colegiado y seguimiento de expedientes</span>
           <span *ngIf="vistaActual === 'tabla'">Explorador integral y detallado de expedientes disciplinarios</span>
         </div>
       </div>
@@ -148,7 +148,10 @@
             </div>
           </div>
 
-          <div class="kanban-col-body" (scroll)="onColumnaScroll(col.estado, $event)">
+          <div class="kanban-col-body"
+               (scroll)="onColumnaScroll(col.estado, $event)"
+               (wheel)="onColumnaWheel($event)"
+               (touchmove)="$event.stopPropagation()">
             <div *ngIf="getExpedientesVisiblesPorEstado(col.estado).length === 0" class="text-center py-4 text-muted small">
               Sin expedientes en esta etapa
             </div>
@@ -312,7 +315,7 @@
                           aria-label="Emitir Resolución">
                     <i class="material-icons">gavel</i>
                   </button>
-                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'pendiente_correos'" 
+                  <button *ngIf="puedeVotarOFirmar && (exp.estado === 'pendiente_firma' || exp.estado === 'pendiente_correos') && (exp.firmas?.juecesFirmantes?.length || 0) < 3" 
                           mat-button 
                           class="btn btn-success btn-link btn-just-icon" 
                           (click)="abrirFirma(exp)" 
@@ -392,18 +395,18 @@
                 {{getUrgenciaLabel(expedienteSeleccionado.urgencia)}}
               </span>
               <div *ngIf="puedeVotarOFirmar" class="btn-group btn-group-sm ml-2 selector-urgencia-aveit" role="group" aria-label="Cambiar Urgencia">
-                <button type="button" 
-                        class="btn btn-sm py-0 px-2"
-                        [ngClass]="expedienteSeleccionado.urgencia === 'baja' ? 'btn-success' : 'btn-outline-secondary'"
-                        (click)="cambiarUrgenciaExpediente('baja')">Baja</button>
-                <button type="button" 
-                        class="btn btn-sm py-0 px-2"
-                        [ngClass]="(!expedienteSeleccionado.urgencia || expedienteSeleccionado.urgencia === 'normal') ? 'btn-info' : 'btn-outline-secondary'"
-                        (click)="cambiarUrgenciaExpediente('normal')">Normal</button>
-                <button type="button" 
-                        class="btn btn-sm py-0 px-2"
-                        [ngClass]="expedienteSeleccionado.urgencia === 'urgente' ? 'btn-danger' : 'btn-outline-secondary'"
-                        (click)="cambiarUrgenciaExpediente('urgente')">Urgente</button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary py-0 px-2 btn-urgencia-decrementar"
+                        [disabled]="(expedienteSeleccionado.urgencia || 'normal') === 'baja'"
+                        (click)="decrementarUrgencia()"
+                        aria-label="Disminuir urgencia"
+                        title="Disminuir urgencia">−</button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary py-0 px-2 btn-urgencia-incrementar"
+                        [disabled]="expedienteSeleccionado.urgencia === 'urgente'"
+                        (click)="incrementarUrgencia()"
+                        aria-label="Aumentar urgencia"
+                        title="Aumentar urgencia">+</button>
               </div>
             </div>
 
@@ -484,37 +487,57 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let fila of involucradosJustificacion; trackBy: trackBySocioInvolucrado">
-                  <td class="font-weight-bold legajo-cell">{{fila.numero_socio ?? '—'}}</td>
-                  <td class="apellido-cell">{{fila.apellido || '—'}}</td>
-                  <td class="nombre-cell">{{fila.nombre || '—'}}</td>
+                <tr *ngFor="let fila of involucradosJustificacion; trackBy: trackBySocioInvolucrado"
+                    [ngClass]="{'fila-excluida text-muted': fila.esta_excluido}">
+                  <td class="font-weight-bold legajo-cell" [style.text-decoration]="fila.esta_excluido ? 'line-through' : 'none'">
+                    {{fila.numero_socio ?? fila.legajo ?? '—'}}
+                  </td>
+                  <td class="apellido-cell" [style.text-decoration]="fila.esta_excluido ? 'line-through' : 'none'">
+                    {{fila.apellido || '—'}}
+                  </td>
+                  <td class="nombre-cell" [style.text-decoration]="fila.esta_excluido ? 'line-through' : 'none'">
+                    {{fila.nombre || '—'}}
+                    <span *ngIf="fila.esta_excluido" class="badge badge-secondary ml-1 badge-excluido">Excluido</span>
+                  </td>
                   <td class="grupo-cell">{{formatGrupoInvolucrado(fila.grupo)}}</td>
                   <td class="estado-descargo-cell">
-                    <span class="estado-descargo-badge" [ngClass]="{
-                            'text-success font-weight-bold': getEstadoDescargo(fila) === 'Leído',
-                            'text-warning font-weight-bold': getEstadoDescargo(fila) === 'No Leído',
-                            'text-muted': getEstadoDescargo(fila) === 'Sin descargo'
-                          }">{{getEstadoDescargo(fila)}}</span>
-                    <div *ngIf="fila.descargo?.tipo === 'T03_EXTRAORDINARIO'" class="small estado-justificacion">{{estadoJustificacion(fila)}}</div>
+                    <span *ngIf="fila.esta_excluido" class="badge badge-danger">Excluido del Expediente</span>
+                    <ng-container *ngIf="!fila.esta_excluido">
+                      <span class="estado-descargo-badge" [ngClass]="{
+                              'text-success font-weight-bold': getEstadoDescargo(fila) === 'Leído',
+                              'text-warning font-weight-bold': getEstadoDescargo(fila) === 'No Leído',
+                              'text-muted': getEstadoDescargo(fila) === 'Sin descargo'
+                            }">{{getEstadoDescargo(fila)}}</span>
+                      <div *ngIf="fila.descargo?.tipo === 'T03_EXTRAORDINARIO'" class="small estado-justificacion">{{estadoJustificacion(fila)}}</div>
+                    </ng-container>
                   </td>
                   <td class="font-weight-bold puntaje-final-cell">
-                    {{getPuntajeFinalInvolucradoDisplay(fila)}}
+                    {{fila.esta_excluido ? '0.00 pts (Excluido)' : getPuntajeFinalInvolucradoDisplay(fila)}}
                   </td>
                   <td class="text-right text-nowrap acciones-cell">
-                    <button *ngIf="fila.descargo" 
+                    <button *ngIf="fila.descargo && !fila.esta_excluido" 
                             type="button" 
                             class="btn btn-sm btn-info btn-ver-descargo"
                             [attr.aria-label]="accionDescargo(fila) + ' de ' + getNombreCompletoInvolucrado(fila)"
                             (click)="verDescargo(fila)">
                       <i class="material-icons" aria-hidden="true" style="font-size: 14px;">visibility</i> {{accionDescargo(fila)}}
                     </button>
-                    <button *ngIf="!fila.descargo && esSocioActual(fila) && expedienteSeleccionado?.estado === 'justificando'" 
+                    <button *ngIf="!fila.descargo && !fila.esta_excluido && esSocioActual(fila) && expedienteSeleccionado?.estado === 'justificando'" 
                             type="button" 
                             class="btn btn-sm btn-primary btn-justificar-involucrado"
                             [attr.aria-label]="'Presentar Descargo de ' + getNombreCompletoInvolucrado(fila)"
                             (click)="irAMisExpedientesParaDescargo()"
                             title="Ir a Mis Expedientes para presentar descargo">
                       <i class="material-icons" aria-hidden="true" style="font-size: 14px;">add_circle</i> Descargo
+                    </button>
+                    <!-- Acción Excluir Involucrado (solo rol TD, expediente no emitido, no excluido previamente) -->
+                    <button *ngIf="puedeExcluirInvolucrado(fila)"
+                            type="button"
+                            class="btn btn-sm btn-outline-danger btn-excluir-involucrado ml-1"
+                            [attr.aria-label]="'Excluir a ' + getNombreCompletoInvolucrado(fila) + ' del expediente'"
+                            (click)="abrirModalExclusion(fila)"
+                            title="Excluir socio del expediente con motivo fundado">
+                      <i class="material-icons" aria-hidden="true" style="font-size: 14px;">person_remove</i> Excluir
                     </button>
                   </td>
                 </tr>
@@ -574,6 +597,15 @@
                 class="btn btn-info btn-ver-resolucion" 
                 (click)="abrirResolucion(expedienteSeleccionado)">
           <i class="material-icons" style="font-size: 16px;">description</i> Ver Resolución
+        </button>
+
+        <button *ngIf="puedeEnmendarResolucion" 
+                mat-raised-button 
+                type="button"
+                class="btn btn-warning btn-enmendar-resolucion" 
+                (click)="abrirModalEnmienda(expedienteSeleccionado)"
+                title="Enmendar resolución emitida con trazabilidad y contra-asiento">
+          <i class="material-icons" style="font-size: 16px;">history_edu</i> Enmendar Resolución
         </button>
 
         <button mat-button 
@@ -788,13 +820,42 @@
           </div>
 
           <!-- Artículo 2°: Texto institucional inalterable -->
-          <div class="articulo-resolutivo p-3 bg-white rounded border">
+          <div class="articulo-resolutivo p-3 bg-white rounded border mb-3">
             <strong class="d-block text-dark mb-1">ARTÍCULO 2°.-</strong>
             <p class="mb-0 text-muted font-italic">
               Notifíquese a la Comisión Directiva y al socio mencionado anteriormente, publíquese y archívese.
             </p>
           </div>
         </section>
+
+        <!-- Selector de Condición Titular / Suplente para la firma inicial del creador (Art. 95) -->
+        <div class="p-3 bg-white rounded border mt-3 selector-condicion-firma">
+          <label class="text-dark font-weight-bold small d-block mb-2">
+            Condición de suscripción en el Tribunal (Art. 95 Estatuto):
+          </label>
+          <div class="condicion-firma-opciones d-flex align-items-center flex-wrap">
+            <label class="condicion-opcion-card" [class.activa]="!esSuplenteFirma" (click)="esSuplenteFirma = false">
+              <input type="radio" name="condicionFirmaVotacion" [value]="false" [(ngModel)]="esSuplenteFirma" class="sr-only">
+              <span class="condicion-radio-icon">
+                <i class="material-icons" *ngIf="!esSuplenteFirma">radio_button_checked</i>
+                <i class="material-icons" *ngIf="esSuplenteFirma">radio_button_unchecked</i>
+              </span>
+              <span class="condicion-texto font-weight-bold">Miembro Titular</span>
+            </label>
+
+            <label class="condicion-opcion-card opcion-suplente" [class.activa]="esSuplenteFirma" (click)="esSuplenteFirma = true">
+              <input type="radio" name="condicionFirmaVotacion" [value]="true" [(ngModel)]="esSuplenteFirma" class="sr-only">
+              <span class="condicion-radio-icon">
+                <i class="material-icons" *ngIf="esSuplenteFirma">radio_button_checked</i>
+                <i class="material-icons" *ngIf="!esSuplenteFirma">radio_button_unchecked</i>
+              </span>
+              <span class="condicion-texto font-weight-bold">Miembro Suplente (Sup.)</span>
+            </label>
+          </div>
+          <small class="text-muted d-block mt-2">
+            Su firma inicial quedará registrada automáticamente al generar la resolución.
+          </small>
+        </div>
 
       </div>
 
@@ -1008,6 +1069,35 @@
           </div>
         </div>
 
+        <!-- Selector de Condición Titular / Suplente (Art. 95) -->
+        <div *ngIf="!usuarioYaFirmoResolucion" class="p-3 bg-white rounded border mb-3 selector-condicion-firma">
+          <label class="text-dark font-weight-bold small d-block mb-2">
+            Condición de suscripción en el Tribunal (Art. 95 Estatuto):
+          </label>
+          <div class="condicion-firma-opciones d-flex align-items-center flex-wrap">
+            <label class="condicion-opcion-card" [class.activa]="!esSuplenteFirma" (click)="esSuplenteFirma = false">
+              <input type="radio" name="condicionFirma" [value]="false" [(ngModel)]="esSuplenteFirma" class="sr-only">
+              <span class="condicion-radio-icon">
+                <i class="material-icons" *ngIf="!esSuplenteFirma">radio_button_checked</i>
+                <i class="material-icons" *ngIf="esSuplenteFirma">radio_button_unchecked</i>
+              </span>
+              <span class="condicion-texto font-weight-bold">Miembro Titular</span>
+            </label>
+
+            <label class="condicion-opcion-card opcion-suplente" [class.activa]="esSuplenteFirma" (click)="esSuplenteFirma = true">
+              <input type="radio" name="condicionFirma" [value]="true" [(ngModel)]="esSuplenteFirma" class="sr-only">
+              <span class="condicion-radio-icon">
+                <i class="material-icons" *ngIf="esSuplenteFirma">radio_button_checked</i>
+                <i class="material-icons" *ngIf="!esSuplenteFirma">radio_button_unchecked</i>
+              </span>
+              <span class="condicion-texto font-weight-bold">Miembro Suplente (Sup.)</span>
+            </label>
+          </div>
+          <small class="text-muted d-block mt-2">
+            Preseleccionado según padrón y composición. Puede ajustarse para integraciones ad-hoc bajo el Art. 95 del Estatuto.
+          </small>
+        </div>
+
         <!-- Resumen del Documento Resolutivo -->
         <div class="resolucion-oficial-preview p-3 bg-white rounded border mb-3">
           <div class="h6 font-weight-bold text-dark border-bottom pb-2 mb-2">
@@ -1055,9 +1145,10 @@
 
       <div class="card-footer d-flex justify-content-end gap-2">
         <button mat-button class="btn btn-default" (click)="cerrarModales()" [disabled]="firmando">Cancelar</button>
-        <button mat-raised-button 
+        <button *ngIf="!usuarioYaFirmoResolucion && puedeFirmarResolucion"
+                mat-raised-button 
                 class="btn btn-success d-inline-flex align-items-center" 
-                [disabled]="firmando || !puedeFirmarResolucion"
+                [disabled]="firmando"
                 (click)="confirmarFirma()">
           <i class="material-icons" style="font-size: 16px;">fingerprint</i>
           <span class="ml-1">{{ firmando ? 'Estampando firma...' : 'Estampar Firma Digital' }}</span>
@@ -1216,13 +1307,24 @@
       </div>
 
       <div class="card-footer d-flex justify-content-between align-items-center">
-        <button mat-raised-button 
-                type="button" 
-                class="btn btn-outline-primary btn-descargar-pdf d-inline-flex align-items-center"
-                (click)="descargarPdfResolucion()">
-          <i class="material-icons" style="font-size: 16px;">picture_as_pdf</i>
-          <span class="ml-1">Descargar PDF Oficial</span>
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <button mat-raised-button 
+                  type="button" 
+                  class="btn btn-outline-primary btn-descargar-pdf d-inline-flex align-items-center"
+                  (click)="descargarPdfResolucion()">
+            <i class="material-icons" style="font-size: 16px;">picture_as_pdf</i>
+            <span class="ml-1">Descargar PDF Oficial</span>
+          </button>
+          <button *ngIf="puedeEnmendarResolucion"
+                  mat-raised-button
+                  type="button"
+                  class="btn btn-warning btn-enmendar-resolucion-modal d-inline-flex align-items-center ml-2"
+                  (click)="abrirModalEnmienda(expedienteSeleccionado)"
+                  title="Enmendar resolución emitida">
+            <i class="material-icons" style="font-size: 16px;">history_edu</i>
+            <span class="ml-1">Enmendar Resolución</span>
+          </button>
+        </div>
         <button mat-button class="btn btn-default" (click)="cerrarModales()">Cerrar</button>
       </div>
     </div>
@@ -1452,3 +1554,173 @@
   (seleccionadosChange)="onAntecedentesDescargoChange($event)"
   (cerrar)="cerrarModalAntecedentesDescargo()">
 </app-modal-selector-expedientes>
+
+<!-- Modal de Exclusión Fundada (SCRUM-102) -->
+<div *ngIf="mostrarModalExclusion" class="modal-backdrop-custom d-flex align-items-center justify-content-center" role="dialog" aria-modal="true" aria-labelledby="modal-exclusion-title">
+  <div class="card modal-content-custom shadow-lg" style="max-width: 600px; width: 90%;">
+    <div class="card-header card-header-danger d-flex justify-content-between align-items-center">
+      <h4 class="card-title text-white mb-0" id="modal-exclusion-title">
+        <i class="material-icons mr-1" aria-hidden="true" style="vertical-align: middle;">person_remove</i> Exclusión Fundada de Socio
+      </h4>
+      <button type="button" class="close text-white" aria-label="Cerrar" (click)="cerrarModalExclusion()">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="card-body">
+      <p class="text-dark">
+        Está por dictar la exclusión formal del socio
+        <strong>{{getNombreCompletoInvolucrado(involucradoAExcluir)}} (N° de Socio {{involucradoAExcluir?.numero_socio ?? involucradoAExcluir?.legajo}})</strong>
+        del expediente <strong>{{expedienteSeleccionado?.numero}}</strong>.
+      </p>
+      <p class="text-muted small">
+        Esta acción desestimará todo cargo y eximirá al socio de sanciones. Se notificará fehacientemente al socio y al solicitante.
+      </p>
+      <div class="form-group">
+        <label for="motivo-exclusion-input" class="font-weight-bold text-dark">
+          Motivo fundado de la exclusión (mínimo 10 caracteres) *:
+        </label>
+        <textarea id="motivo-exclusion-input"
+                  class="form-control border rounded p-2"
+                  rows="4"
+                  [(ngModel)]="motivoExclusion"
+                  placeholder="Detalle el fundamento institucional o probatorio de la exclusión..."></textarea>
+        <small class="form-text text-muted">
+          {{motivoExclusion.length}} caracteres (mínimo 10)
+        </small>
+      </div>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary mr-2" (click)="cerrarModalExclusion()" [disabled]="excluyendoInvolucrado">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-danger btn-confirmar-exclusion" (click)="confirmarExclusion()" [disabled]="excluyendoInvolucrado || motivoExclusion.trim().length < 10">
+        <span *ngIf="excluyendoInvolucrado" class="spinner-border spinner-border-sm mr-1" role="status"></span>
+        Confirmar Exclusión
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Enmienda Trazable (SCRUM-103) -->
+<div *ngIf="mostrarModalEnmienda"
+     class="modal-backdrop-custom"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-enmienda-title"
+     tabindex="-1"
+     (click)="cerrarModalEnmienda()"
+     (keydown.escape)="cerrarModalEnmienda()"
+     (wheel)="$event.stopPropagation()"
+     (touchmove)="$event.stopPropagation()">
+  <div class="modal-dialog-custom modal-dialog-tribunal"
+       tabindex="-1"
+       (click)="$event.stopPropagation()"
+       (keydown)="onModalKeydown($event)">
+    <div class="card modal-detalle-card shadow-lg">
+      <div class="card-header card-header-warning d-flex justify-content-between align-items-center">
+        <h4 class="card-title text-white mb-0 font-weight-bold" id="modal-enmienda-title">
+          <i class="material-icons mr-1" aria-hidden="true" style="vertical-align: middle;">history_edu</i> Enmienda Trazable de Resolución
+        </h4>
+        <button type="button" class="close text-white" aria-label="Cerrar" (click)="cerrarModalEnmienda()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="card-body modal-detalle-body" tabindex="-1">
+      <div class="alert alert-warning py-2 small mb-3 text-dark">
+        <i class="material-icons mr-1" style="font-size: 16px; vertical-align: text-bottom;">info</i>
+        Iniciará una enmienda formal sobre la resolución del expediente <strong>{{formatCaseNumber(expedienteSeleccionado?.numero)}}</strong>.
+        Se creará una nueva versión borrador preservando la numeración oficial. El expediente volverá al estado <em>Pendiente de Firma</em> para recabar las 3 firmas colegiadas por año social. Al emitirse, se registrarán automáticamente los ajustes correspondientes en el libro mayor de puntos.
+      </div>
+
+      <div class="form-group mb-3">
+        <label for="motivo-enmienda-input" class="font-weight-bold text-dark">
+          Motivo fundado de la enmienda (mínimo 10 caracteres) *:
+        </label>
+        <textarea id="motivo-enmienda-input"
+                  class="form-control border rounded p-2"
+                  rows="3"
+                  [(ngModel)]="motivoEnmienda"
+                  placeholder="Detalle los motivos fundados de hecho o de derecho, subsanación o hechos sobrevinientes que justifican la rectificación..."></textarea>
+        <small class="form-text text-muted">
+          {{motivoEnmienda.length}} caracteres (mínimo 10)
+        </small>
+      </div>
+
+      <div class="form-group mb-3">
+        <label for="considerandos-enmienda-input" class="font-weight-bold text-dark">
+          CONSIDERANDO Rectificado (opcional):
+        </label>
+        <textarea id="considerandos-enmienda-input"
+                  class="form-control border rounded p-2"
+                  rows="4"
+                  [(ngModel)]="considerandosEnmienda"
+                  placeholder="Modifique los considerandos de la resolución si corresponde..."></textarea>
+        <small class="form-text text-muted">
+          Si se deja vacío, se conservarán los considerandos de la resolución previa.
+        </small>
+      </div>
+
+      <div *ngIf="involucradosActivosEnmienda.length > 0" class="form-group mb-2">
+        <label class="font-weight-bold text-dark d-block mb-2">
+          Puntajes Finales Rectificados por Socio:
+        </label>
+        <div class="table-responsive border rounded">
+          <table class="table table-sm mb-0 tabla-enmienda-socios">
+            <thead class="thead-light">
+              <tr>
+                <th>N° de Socio</th>
+                <th>Socio</th>
+                <th>Grupo</th>
+                <th>Puntaje Final</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let inv of involucradosActivosEnmienda; trackBy: trackBySocioInvolucrado">
+                <td class="font-weight-bold align-middle">{{inv.numero_socio ?? inv.legajo ?? '—'}}</td>
+                <td class="align-middle">{{getNombreCompletoInvolucrado(inv)}}</td>
+                <td class="align-middle">{{formatGrupoInvolucrado(inv.grupo)}}</td>
+                <td class="align-middle">
+                  <select class="form-control form-control-sm"
+                          [attr.aria-label]="'Puntaje rectificado para ' + getNombreCompletoInvolucrado(inv)"
+                          [(ngModel)]="puntajesEnmiendaPorSocio[inv.socioId]">
+                    <option *ngFor="let op of escalaPuntajes; trackBy: trackByOpcion" [value]="op.valor">
+                      {{op.label}}
+                    </option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div *ngIf="involucradosActivosEnmienda.length === 0" class="form-group mb-2">
+        <label for="puntaje-enmienda-input" class="font-weight-bold text-dark">
+          Puntaje Final Rectificado (opcional):
+        </label>
+        <input id="puntaje-enmienda-input"
+               type="number"
+               step="0.5"
+               class="form-control border rounded p-2"
+               [(ngModel)]="puntajeEnmiendaInput"
+               placeholder="Ej: -1.0 (dejar vacío para mantener el puntaje actual)">
+        <small class="form-text text-muted">
+          Si se especifica, actualizará el puntaje final de los socios activos involucrados al emitir la enmienda.
+        </small>
+      </div>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary mr-2" (click)="cerrarModalEnmienda()" [disabled]="enmendandoResolucion">
+        Cancelar
+      </button>
+      <button type="button"
+              class="btn btn-warning btn-confirmar-enmienda"
+              (click)="confirmarEnmienda()"
+              [disabled]="enmendandoResolucion || motivoEnmienda.trim().length < 10">
+        <span *ngIf="enmendandoResolucion" class="spinner-border spinner-border-sm mr-1" role="status"></span>
+        Confirmar Enmienda
+      </button>
+    </div>
+    </div>
+  </div>
+</div>

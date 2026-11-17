@@ -275,7 +275,7 @@ table.table-mat tbody tr:focus {
 // ==========================================================================
 
 .modal-dialog-tribunal {
-  max-width: 880px;
+  max-width: min(1140px, 96vw) !important;
 
   .card {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -313,7 +313,7 @@ table.table-mat tbody tr:focus {
 
 // Modal de Detalle Rediseñado (SCRUM-70 / Boceto PO)
 .modal-dialog-tribunal {
-  max-width: 860px !important;
+  max-width: min(1140px, 96vw) !important;
 
   .modal-detalle-card {
     border-radius: 12px;
@@ -420,19 +420,24 @@ table.table-mat tbody tr:focus {
       border-radius: 10px;
 
       .tabla-involucrados {
+        width: 100%;
+        table-layout: auto;
+
         th {
           color: var(--color-text-secondary, #64748B);
-          font-size: 12px;
+          font-size: 11.5px;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.4px;
+          letter-spacing: 0.3px;
+          padding: 10px 8px;
+          white-space: nowrap;
           border-bottom: 2px solid var(--color-border-main, #E2E8F0);
         }
 
         td {
           vertical-align: middle;
           font-size: 13px;
-          padding: 11px 14px;
+          padding: 10px 8px;
           border-top: 1px solid var(--color-border-main, #E2E8F0);
         }
 
@@ -510,6 +515,34 @@ body.dark-edition,
   color: var(--color-text-secondary);
   font-family: var(--font-subtitle);
   font-size: 12px;
+}
+
+.fila-excluida {
+  background-color: rgba(185, 28, 28, 0.06) !important;
+  opacity: 0.75;
+
+  .legajo-cell,
+  .nombre-cell {
+    text-decoration: line-through;
+  }
+}
+
+.badge-excluido {
+  font-size: 11px;
+  background-color: var(--color-text-secondary);
+  color: var(--color-text-inverse);
+  vertical-align: middle;
+}
+
+.btn-excluir-involucrado {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+
+  &:hover,
+  &:focus {
+    background-color: var(--color-danger);
+    color: var(--color-text-inverse);
+  }
 }
 
 .btn-evaluar-justificacion,
@@ -1351,9 +1384,87 @@ body.dark-edition,
   border-top: 1px solid var(--color-border-main, #E2E8F0);
 }
 
+// Selector accesible de condición Titular / Suplente
+.selector-condicion-firma {
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-border-main);
+  border-radius: 8px;
+
+  .condicion-firma-opciones {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+
+  .condicion-opcion-card {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    margin-right: 14px;
+    margin-bottom: 6px;
+    border: 2px solid var(--color-border-main);
+    border-radius: 6px;
+    background-color: var(--color-surface);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease-in-out;
+
+    .condicion-radio-icon {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 8px;
+      color: var(--color-text-secondary);
+
+      .material-icons {
+        font-size: 20px;
+        vertical-align: middle;
+      }
+    }
+
+    .condicion-texto {
+      font-size: 0.88rem;
+      color: var(--color-text-secondary);
+    }
+
+    &:hover {
+      border-color: var(--color-border-focus);
+      background-color: var(--color-surface-elevated);
+    }
+
+    &.activa {
+      border-color: var(--color-primary);
+      background-color: rgba(21, 24, 70, 0.06);
+
+      .condicion-radio-icon {
+        color: var(--color-primary);
+      }
+
+      .condicion-texto {
+        color: var(--color-primary);
+      }
+    }
+
+    &.opcion-suplente.activa {
+      border-color: var(--color-warning);
+      background-color: rgba(146, 64, 14, 0.08);
+
+      .condicion-radio-icon {
+        color: var(--color-warning);
+      }
+
+      .condicion-texto {
+        color: var(--color-warning);
+      }
+    }
+  }
+}
+
 .kanban-col-body {
   flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
   max-height: 460px;
   padding-right: 4px;
 }

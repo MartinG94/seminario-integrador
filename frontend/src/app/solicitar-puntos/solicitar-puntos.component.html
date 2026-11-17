@@ -34,7 +34,7 @@
             </div>
             <div class="text-white-50 d-none d-md-block small font-weight-bold">
               <span *ngIf="tabActiva === 'nueva'">Apertura de Solicitud T-01</span>
-              <span *ngIf="tabActiva === 'creadas'">Seguimiento de Causas y Trámites</span>
+              <span *ngIf="tabActiva === 'creadas'">Seguimiento de Expedientes y Trámites</span>
             </div>
           </div>
 
@@ -378,7 +378,7 @@
             <div *ngIf="tabActiva === 'creadas'">
               <div class="mb-3">
                 <h3 class="card-title text-dark font-weight-bold mb-1">Solicitudes Creadas</h3>
-                <p class="text-muted small mb-3">Seguimiento y consulta de causas y solicitudes iniciadas.</p>
+                <p class="text-muted small mb-3">Seguimiento y consulta de expedientes y solicitudes iniciadas.</p>
               </div>
 
               <div *ngIf="failedToLoadRequests && !cargandoSolicitudes" class="text-center py-4">
@@ -392,7 +392,7 @@
               <div class="row align-items-center mb-3">
                 <div class="col-md-7 mb-2 mb-md-0">
                   <mat-form-field appearance="outline" class="w-100">
-                    <mat-label>Buscar por causa, causal, expediente o socio...</mat-label>
+                    <mat-label>Buscar por expediente, causal o socio...</mat-label>
                     <input matInput [formControl]="busquedaControl" placeholder="Escribí para filtrar en tiempo real...">
                     <mat-icon matSuffix>search</mat-icon>
                   </mat-form-field>

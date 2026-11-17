@@ -169,6 +169,7 @@ export interface Expediente {
   articulosResolutivos?: string;
   firmas?: {
     juecesFirmantes: string[];
+    firmantesDetalle?: any[];
     hashCriptografico?: string;
     timestamp?: string;
     fechaSellado?: string;
@@ -534,6 +535,7 @@ export class TribunalDataService {
       plazoLimiteAt: c.plazo_limite_at || undefined,
       firmas: {
         juecesFirmantes: firmantesReales,
+        firmantesDetalle: Array.isArray(c.firmantes_td) ? c.firmantes_td : [],
         hashCriptografico: c.contenido_hash || '',
         timestamp: c.issued_at || '',
         fechaSellado: c.issued_at || ''

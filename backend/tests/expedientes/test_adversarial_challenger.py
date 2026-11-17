@@ -159,7 +159,7 @@ class TestAdversarialConfidentialityAndBoundaries:
         assert item_final["resolucion_final"] is not None
         assert item_final["resolucion_final"]["emitido"] is True
         assert "dictamen" in item_final["resolucion_final"]
-        assert f"causa {expediente.numero}" in item_final["resolucion_final"]["dictamen"]
+        assert f"expediente {expediente.numero}" in item_final["resolucion_final"]["dictamen"]
 
         # Incluso en emitido, verificar que ningún voto o nota interna se fuga
         for fk in forbidden_leak_keys:

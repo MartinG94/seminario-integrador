@@ -6,9 +6,13 @@ from django.core.exceptions import ValidationError
 
 from expedientes.domain.closed_decision import ClosedDecision
 from expedientes.models import (
+    ComposicionTribunal,
+    CondicionIntegranteEnum,
     DecisionCausalDescargo,
+    DescargoExpediente,
     EstadoExpedienteEnum,
     EstadoResolucionEnum,
+    IntegranteComposicion,
     Resolucion,
 )
 from expedientes.services.resolution_service import (
@@ -19,6 +23,8 @@ from expedientes.services.resolution_service import (
     obtener_firmantes_td_por_anio_social,
     registrar_firma_resolucion,
 )
+from notifications.models import EmailOutbox
+from ranking.domain.threshold_alerts import AlertaSanitizer
 from socios.models import Role
 
 
@@ -331,3 +337,252 @@ def test_completar_tres_firmas_emite_resolucion_y_transiciona_expediente(
 
     causal_expediente.refresh_from_db()
     assert causal_expediente.estado == EstadoExpedienteEnum.EMITIDO
+
+
+@pytest.mark.django_db
+def test_registrar_firma_con_es_suplente_explicito_agrega_sup_a_etiqueta(
+    causal_expediente, causal_vocal, make_socio
+):
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    s4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+    s4.first_name = "Facundo"
+    s4.last_name = "Gomez"
+    s4.save()
+
+    resolucion = registrar_firma_resolucion(resolucion, s4.user, es_suplente=True)
+    assert len(resolucion.firmantes) == 1
+    firma = resolucion.firmantes[0]
+    assert firma["es_suplente"] is True
+    assert firma["condicion"] == "SUPLENTE"
+    assert firma["etiqueta"].endswith(" (Sup.)")
+    assert "40001 - Facundo Gomez" in firma["etiqueta"]
+
+
+@pytest.mark.django_db
+def test_registrar_firma_infiere_suplente_desde_composicion_tribunal(
+    causal_expediente, causal_vocal, make_socio
+):
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    s5 = make_socio(legajo="50002", role=Role.TD, social_year=5)
+    s5.first_name = "Lucia"
+    s5.last_name = "Vera"
+    s5.save()
+
+    # Estampar ComposicionTribunal donde s5 es Suplente
+    composicion = ComposicionTribunal.objects.create(expediente=causal_expediente)
+    IntegranteComposicion.objects.create(
+        composicion=composicion,
+        anio_social=5,
+        socio=s5,
+        condicion=CondicionIntegranteEnum.SUPLENTE,
+        nro_socio=int(s5.legajo),
+        nombre_completo="Lucia Vera",
+        grupo="G58",
+    )
+
+    resolucion = registrar_firma_resolucion(resolucion, s5.user)
+    firma = resolucion.firmantes[0]
+    assert firma["es_suplente"] is True
+    assert firma["condicion"] == "SUPLENTE"
+    assert firma["etiqueta"].endswith(" (Sup.)")
+
+
+@pytest.mark.django_db
+def test_registrar_firma_permite_especificar_anio_social_ad_hoc(
+    causal_expediente, causal_vocal, make_socio
+):
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    s4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+
+    # El socio tiene año social 4 en su perfil, pero firma en representación ad-hoc de 6.° año
+    resolucion = registrar_firma_resolucion(resolucion, s4.user, anio_social=6)
+    firma = resolucion.firmantes[0]
+    assert firma["social_year"] == 6
+    assert firma["anio_social"] == 6
+
+
+@pytest.mark.django_db
+def test_registrar_firma_rechaza_anio_social_invalido(causal_expediente, causal_vocal, make_socio):
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerandos.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    s4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+
+    with pytest.raises(ValidationError) as exc:
+        registrar_firma_resolucion(resolucion, s4.user, anio_social=2)
+    assert "El año social debe ser 4, 5 o 6" in str(exc.value)
+
+
+@pytest.mark.django_db
+def test_emitir_resolucion_despacha_correos_idempotentes_sin_duplicados(
+    causal_expediente, causal_vocal, make_socio
+):
+    causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+    causal_expediente.puntos = Decimal("-2.50")
+    causal_expediente.save()
+
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerando sanción formal.",
+        articulos_resolutivos="Artículo 1: sancionar con -2.50 puntos.",
+        created_by=causal_vocal.user,
+    )
+    s4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+    s5 = make_socio(legajo="50001", role=Role.TD, social_year=5)
+    s6 = make_socio(legajo="60001", role=Role.TD, social_year=6)
+
+    # Involucrar a un socio activo
+    socio_activo = make_socio(legajo="76050", email="activo@aveit.test")
+    causal_expediente.socios.add(socio_activo)
+
+    # 1. Firmar las 3 firmas -> emite automáticamente
+    registrar_firma_resolucion(resolucion, s4.user)
+    registrar_firma_resolucion(resolucion, s5.user)
+    registrar_firma_resolucion(resolucion, s6.user)
+
+    resolucion.refresh_from_db()
+    assert resolucion.estado == EstadoResolucionEnum.ISSUED
+
+    # 2. Verificar que EmailOutbox contenga notificaciones para socio activo, CD y TD
+    outbox_emails = list(
+        EmailOutbox.objects.filter(
+            idempotency_key__startswith=f"resolucion-emision-{resolucion.id}-"
+        )
+    )
+    assert len(outbox_emails) >= 3
+
+    # Claves de idempotencia esperadas
+    idempotency_keys = {e.idempotency_key for e in outbox_emails}
+    assert any("cd" in k for k in idempotency_keys)
+    assert any("td" in k for k in idempotency_keys)
+    assert any(str(socio_activo.id) in k or "activo@aveit.test" in k for k in idempotency_keys)
+
+    # 3. Verificar que no contengan términos médicos (EARS-100.3)
+    for email_entry in outbox_emails:
+        AlertaSanitizer.assert_no_sensitive_data(email_entry.subject)
+        AlertaSanitizer.assert_no_sensitive_data(email_entry.body_text)
+
+    # 4. Re-ejecución idempotente: no debe crear duplicados
+    conteo_inicial = EmailOutbox.objects.filter(
+        idempotency_key__startswith=f"resolucion-emision-{resolucion.id}-"
+    ).count()
+
+    from expedientes.services.resolution_service import despachar_notificaciones_resolucion_emitida
+
+    despachar_notificaciones_resolucion_emitida(resolucion)
+
+    conteo_reintento = EmailOutbox.objects.filter(
+        idempotency_key__startswith=f"resolucion-emision-{resolucion.id}-"
+    ).count()
+    assert conteo_reintento == conteo_inicial
+
+
+@pytest.mark.django_db
+def test_emitir_resolucion_no_envia_correo_a_socio_excluido(
+    causal_expediente, causal_vocal, make_socio
+):
+    causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+    causal_expediente.puntos = Decimal("-1.00")
+    causal_expediente.save()
+
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerando.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+    s4 = make_socio(legajo="40001", role=Role.TD, social_year=4)
+    s5 = make_socio(legajo="50001", role=Role.TD, social_year=5)
+    s6 = make_socio(legajo="60001", role=Role.TD, social_year=6)
+
+    # Involucrar a un socio pero marcarlo como excluido
+    socio_excluido = make_socio(legajo="76051", email="excluido@aveit.test")
+    causal_expediente.socios.add(socio_excluido)
+    DescargoExpediente.objects.create(
+        expediente=causal_expediente,
+        socio=socio_excluido,
+        esta_excluido=True,
+        motivo_exclusion="Exclusión previa formal",
+    )
+
+    registrar_firma_resolucion(resolucion, s4.user)
+    registrar_firma_resolucion(resolucion, s5.user)
+    registrar_firma_resolucion(resolucion, s6.user)
+
+    resolucion.refresh_from_db()
+    outbox_emails = EmailOutbox.objects.filter(
+        idempotency_key__startswith=f"resolucion-emision-{resolucion.id}-"
+    )
+    # Ningún email debe tener como destinatario al socio excluido
+    for e in outbox_emails:
+        assert "excluido@aveit.test" not in e.to
+        assert "excluido@aveit.test" not in e.idempotency_key
+        assert (e.metadata or {}).get("socio_id") != socio_excluido.id
+
+
+@pytest.mark.django_db
+def test_emitir_resolucion_mantiene_pendiente_correos_si_falla_despacho(
+    causal_expediente, causal_vocal, monkeypatch
+):
+    causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+    causal_expediente.puntos = Decimal("-1.00")
+    causal_expediente.save()
+
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerando.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+
+    monkeypatch.setattr(
+        "expedientes.services.resolution_service.EmailDispatcherService.dispatch",
+        lambda outbox: False,
+    )
+
+    emitida = emitir_resolucion(
+        resolucion, causal_vocal.user, ExpedienteConsolidatedDecisionProvider()
+    )
+    assert emitida.estado == EstadoResolucionEnum.ISSUED
+
+    causal_expediente.refresh_from_db()
+    assert causal_expediente.estado == EstadoExpedienteEnum.PENDIENTE_CORREOS

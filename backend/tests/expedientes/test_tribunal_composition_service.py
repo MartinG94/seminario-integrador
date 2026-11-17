@@ -152,7 +152,7 @@ class TestCasosCriticos:
         payload = describe(causal_expediente)
         assert payload["requiere_ad_hoc"] is True
         assert payload["motivos_ad_hoc"] == [
-            "El titular y el suplente del 5.º año están involucrados en la causa "
+            "El titular y el suplente del 5.º año están involucrados en el expediente "
             "(Art. 95 del Estatuto)."
         ]
         resolver(causal_expediente)

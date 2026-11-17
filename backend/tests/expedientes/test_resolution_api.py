@@ -329,6 +329,67 @@ def test_firmar_resolucion_endpoint_agrega_firma_y_emite_al_completar(
 
 
 @pytest.mark.django_db
+def test_firmar_resolucion_api_con_es_suplente_explicito(
+    causal_expediente, make_socio, authenticate
+):
+    causal_expediente.estado = "pendiente_correos"
+    causal_expediente.save()
+
+    s4 = make_socio(legajo="40201", role=Role.TD, social_year=4)
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerandos de prueba.",
+        articulos_resolutivos="Artículo 1: sanción.",
+        created_by=s4.user,
+    )
+    client = authenticate(s4)
+
+    # Firmar indicando explícitamente suplencia ad-hoc
+    response = client.post(
+        sign_url(causal_expediente.pk),
+        {"es_suplente": True},
+        format="json",
+    )
+    assert response.status_code == 200
+    firmante = response.data["firmantes_td"][0]
+    assert firmante["es_suplente"] is True
+    assert firmante["condicion"] == "SUPLENTE"
+    assert firmante["etiqueta"].endswith(" (Sup.)")
+
+
+@pytest.mark.django_db
+def test_firmar_resolucion_api_con_anio_social_ad_hoc(causal_expediente, make_socio, authenticate):
+    causal_expediente.estado = "pendiente_correos"
+    causal_expediente.save()
+
+    s4 = make_socio(legajo="40201", role=Role.TD, social_year=4)
+    Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="v1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos de prueba.",
+        considerandos="Considerandos de prueba.",
+        articulos_resolutivos="Artículo 1: sanción.",
+        created_by=s4.user,
+    )
+    client = authenticate(s4)
+
+    # Firmar asignando año social 5
+    response = client.post(
+        sign_url(causal_expediente.pk),
+        {"anio_social": 5},
+        format="json",
+    )
+    assert response.status_code == 200
+    firmante = response.data["firmantes_td"][0]
+    assert firmante["social_year"] == 5
+    assert firmante["anio_social"] == 5
+
+
+@pytest.mark.django_db
 def test_expediente_list_serializer_expone_datos_resolucion(causal_expediente, causal_vocal):
     from expedientes.serializers import ExpedienteListSerializer
 
@@ -466,3 +527,31 @@ def test_resolucion_guarda_y_valida_expedientes_referenciados(
     assert res_ok.data["expedientes_referenciados"] == [emitido.id]
     assert len(res_ok.data["expedientes_referenciados_detalle"]) == 1
     assert res_ok.data["expedientes_referenciados_detalle"][0]["numero"] == "EXP-0555/2026"
+
+
+@pytest.mark.django_db
+def test_creacion_resolucion_auto_firma_creador_td_con_grupo_coherente(
+    causal_expediente, make_socio, authenticate
+):
+    from django.utils import timezone
+
+    causal_expediente.estado = "revision_resolucion"
+    causal_expediente.save()
+
+    s5 = make_socio(legajo="50991", role=Role.TD, social_year=5)
+    client = authenticate(s5)
+    payload = {
+        "vistos": "Vistos.",
+        "considerandos": "Considerandos.",
+        "articulos_resolutivos": "Artículo 1.",
+        "es_suplente": True,
+    }
+    response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
+    assert response.status_code == 201
+    assert len(response.data["firmantes_td"]) == 1
+    firma = response.data["firmantes_td"][0]
+    assert firma["user_id"] == s5.user.id
+    assert firma["social_year"] == 5
+    assert firma["es_suplente"] is True
+    expected_grupo = f"G{(timezone.localdate().year - 1962) - 5}"
+    assert firma["grupo"] == expected_grupo
