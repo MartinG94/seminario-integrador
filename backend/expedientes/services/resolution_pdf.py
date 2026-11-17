@@ -1,6 +1,7 @@
 """Generación de previsualizaciones y documentos PDF institucionales de resoluciones."""
 
 from io import BytesIO
+from pathlib import Path
 from xml.sax.saxutils import escape
 
 from django.utils import timezone
@@ -12,12 +13,15 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     HRFlowable,
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
 )
+
+TD_LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "td_logo.png"
 
 COLOR_NAVY = colors.HexColor("#151846")
 COLOR_CYAN = colors.HexColor("#0097A7")
@@ -301,8 +305,11 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
         elif getattr(expediente, "motivo", None):
             titulo_ref = str(expediente.motivo).strip()
 
-    # 1. Encabezado con escudo vectorial AVEIT y título institucional
-    shield = _build_aveit_shield(46.0)
+    # 1. Encabezado con escudo oficial del Tribunal de Disciplina y título institucional
+    if TD_LOGO_PATH.exists():
+        shield = Image(str(TD_LOGO_PATH), width=48.0, height=48.0)
+    else:
+        shield = _build_aveit_shield(46.0)
     shield_table = Table([[shield]], colWidths=[172 * mm])
     shield_table.setStyle(
         TableStyle(
