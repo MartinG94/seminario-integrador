@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from expedientes.models import CambioEstadoExpediente, EstadoExpedienteEnum, Expediente, Resolucion
-from expedientes.permissions import CanTransitionExpedientes
+from expedientes.permissions import CanTransitionExpedientes, IsNotInvolvedInExpediente
 from expedientes.resolution_serializers import ResolucionSerializer
 from expedientes.services.resolution_pdf import build_resolution_preview_pdf
 from expedientes.services.resolution_service import (
@@ -20,7 +20,11 @@ from expedientes.services.resolution_service import (
 
 
 class ResolucionView(APIView):
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def get(self, request, expediente_id):
         resolucion = (
@@ -145,7 +149,11 @@ class ResolucionView(APIView):
 
 
 class ResolucionFirmarView(APIView):
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request, expediente_id):
         resolucion = (
@@ -165,7 +173,11 @@ class ResolucionFirmarView(APIView):
 
 
 class ResolucionEmitirView(APIView):
-    permission_classes = [permissions.IsAuthenticated, CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     @transaction.atomic
     def post(self, request, expediente_id):

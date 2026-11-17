@@ -160,11 +160,11 @@ VALORACION_T03_SCENARIOS = [
 
 TEAM_MEMBERS = [
     ("74907", "Gastiaburu", "Lucas", Role.SOCIO, 2, "Cómputos"),
-    ("85194", "Guillén", "Lucas Martín", Role.FISCALIZADORA, 4, "Recursos Humanos"),
+    ("85194", "Guillén", "Lucas Martín", Role.REVISORES, 4, "Recursos Humanos"),
     ("87414", "Sánchez", "Diego Gabriel", Role.CD, 5, "Comisión Directiva"),
     ("408917", "Rosales", "Nicolás", Role.TD, 6, "Tribunal de Disciplina"),
     ("403655", "Villegas", "Axel René", Role.ADMIN, 5, "Cómputos"),
-    ("409953", "Urviola", "Luis", Role.SOCIO, 4, "Cómputos"),
+    ("409953", "Urviola", "Luis", Role.AUTORIDAD_SC, 4, "Cómputos"),
     ("415327", "Quiroz", "Tomas Augusto", Role.SOCIO, 3, "Cómputos"),
 ]
 

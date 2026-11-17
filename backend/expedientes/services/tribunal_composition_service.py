@@ -203,8 +203,15 @@ class TribunalCompositionService:
 
     @staticmethod
     def notify_if_ad_hoc(expediente: Expediente) -> EmailOutbox | None:
-        """Encola, una sola vez, el aviso a Comisión Directiva para convocar a Asamblea."""
+        """Encola avisos de apartamiento/suplencia al TD y a CD si requiere integración Ad-Hoc."""
+        from expedientes.services.disciplinary_notifications import (
+            enqueue_tribunal_substitution_notices,
+        )
+
         state = _live_state(expediente)
+        if state.composition.separated:
+            enqueue_tribunal_substitution_notices(expediente, state)
+
         if not state.composition.requires_ad_hoc:
             return None
         apartados = "\n".join(
@@ -238,6 +245,7 @@ class TribunalCompositionService:
                     "tipo": "AVISO_TRIBUNAL_AD_HOC",
                     "expediente_id": expediente.pk,
                     "expediente_numero": expediente.numero,
+                    "es_disciplinario": True,
                 },
             }
         )

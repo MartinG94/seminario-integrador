@@ -1454,12 +1454,16 @@ class EmitirT01Serializer(serializers.Serializer):
 
         solicitud.save()
         if solicitud.expediente_id:
+            from expedientes.services.disciplinary_notifications import (
+                enqueue_solicitud_t01_applicant_ack,
+            )
             from expedientes.services.tribunal_composition_service import (
                 TribunalCompositionService,
             )
 
             # El solicitante también es parte interesada (Art. 24 RPD).
             TribunalCompositionService.notify_if_ad_hoc(solicitud.expediente)
+            enqueue_solicitud_t01_applicant_ack(solicitud, solicitud.expediente)
         return solicitud
 
 

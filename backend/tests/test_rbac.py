@@ -74,7 +74,9 @@ def test_unauthorized_roles_get_403_on_padron(make_socio, authenticate, role):
 
 @pytest.mark.django_db
 def test_disabled_account_cannot_use_previously_issued_token(make_socio, authenticate):
-    """La autorización se revalida contra el padrón, no contra el token."""
+    """La autorización se revalida contra el padrón, no contra el token.
+    is_enabled=False responde 401 Unauthorized conforme a S5-07.2.
+    """
     socio = make_socio(legajo="74907", role=Role.TD)
     client = authenticate(socio)
     assert client.get(PADRON_URL).status_code == 200
@@ -82,7 +84,7 @@ def test_disabled_account_cannot_use_previously_issued_token(make_socio, authent
     socio.is_enabled = False
     socio.save()
 
-    assert client.get(PADRON_URL).status_code == 403
+    assert client.get(PADRON_URL).status_code == 401
 
 
 @pytest.mark.django_db
@@ -148,8 +150,19 @@ def test_granted_access_is_audited(make_socio, authenticate, security_log):
 @pytest.mark.parametrize(
     "legacy_permission,expected_roles",
     [
-        ("tribunal_bajo", {Role.SOCIO, Role.FISCALIZADORA, Role.CD, Role.TD, Role.ADMIN}),
-        ("tribunal_medio", {Role.CD, Role.TD}),
+        (
+            "tribunal_bajo",
+            {
+                Role.SOCIO,
+                Role.AUTORIDAD_SC,
+                Role.REVISORES,
+                Role.CD,
+                Role.TD,
+                Role.ADMIN,
+                Role.FISCALIZADORA,
+            },
+        ),
+        ("tribunal_medio", {Role.CD, Role.TD, Role.AUTORIDAD_SC}),
         ("tribunal_alto", {Role.TD}),
     ],
 )
@@ -172,22 +185,28 @@ def test_legacy_permission_hierarchy_is_cumulative():
 
 def test_tribunal_alto_is_exclusive_to_tribunal():
     """Sólo el TD dictamina, resuelve y firma disposiciones."""
-    for role in (Role.SOCIO, Role.FISCALIZADORA, Role.CD, Role.ADMIN):
+    for role in (Role.SOCIO, Role.FISCALIZADORA, Role.CD, Role.ADMIN, Role.AUTORIDAD_SC, Role.REVISORES):
         assert not satisfies_legacy_permission(role, "tribunal_alto")
 
 
 @pytest.mark.parametrize(
     "position_id,expected_role",
     [
-        (1, Role.FISCALIZADORA),  # Presidente de Subcomisión
-        (2, Role.FISCALIZADORA),  # Vicepresidente de Subcomisión
+        (1, Role.AUTORIDAD_SC),  # Presidente de Subcomisión
+        (2, Role.AUTORIDAD_SC),  # Vicepresidente de Subcomisión
         (3, Role.CD),  # Presidente de AVEIT
+        (4, Role.CD),  # Vicepresidente de AVEIT
         (5, Role.CD),  # Tesorero
+        (6, Role.CD),  # Protesorero
+        (7, Role.CD),  # Secretario de Actas
         (8, Role.CD),  # Secretario General
         (9, Role.CD),  # Prosecretario
         (10, Role.TD),  # Titular del Tribunal de Disciplina
         (11, Role.TD),  # Suplente del Tribunal de Disciplina
         (12, Role.SOCIO),  # Socio Ordinario
+        (13, Role.CD),  # Secretario
+        (14, Role.REVISORES),  # Revisor de Cuentas Titular
+        (15, Role.REVISORES),  # Revisor de Cuentas Suplente
     ],
 )
 def test_legacy_position_maps_to_expected_role(position_id, expected_role):

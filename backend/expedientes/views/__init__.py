@@ -44,6 +44,7 @@ from expedientes.permissions import (
     CanTransitionExpedientes,
     CanValueT03,
     IsImputadoOrTribunal,
+    IsNotInvolvedInExpediente,
     IsTribunalOrDirectiva,
 )
 from expedientes.serializers import (
@@ -297,7 +298,11 @@ class ExpedienteCollectionView(PaginatedAPIViewMixin, APIView):
 
 
 class TransicionExpedienteView(APIView):
-    permission_classes = [CanTransitionExpedientes]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = TransicionExpedienteSerializer(data=request.data)
@@ -425,6 +430,24 @@ class PresentarDescargoView(APIView):
         socio = getattr(request.user, "socio", None)
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
+        if socio.is_suspended:
+            raise PermissionDenied("Socio con suspensión vigente: no se admiten nuevos descargos.")
+
+        expediente = Expediente.objects.filter(id=pk).first()
+        if not expediente:
+            return Response(
+                {"detail": "Expediente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Verificar titularidad (salvo staff o TD)
+        if (
+            not expediente.socios.filter(pk=socio.pk).exists()
+            and expediente.socio_id != socio.id
+        ):
+            raise PermissionDenied(
+                "No tiene autorización para presentar descargo en este expediente."
+            )
 
         # En los T01 la apelación reemplaza al descargo T02/T03 (PB-02).
         es_involucrado = Expediente.objects.filter(Q(socio=socio) | Q(socios=socio), pk=pk).exists()
@@ -445,15 +468,6 @@ class PresentarDescargoView(APIView):
                 return Response(
                     {"detail": "Expediente no encontrado."},
                     status=status.HTTP_404_NOT_FOUND,
-                )
-
-            # Verificar titularidad (salvo staff o TD)
-            if (
-                not expediente.socios.filter(pk=socio.pk).exists()
-                and expediente.socio_id != socio.id
-            ):
-                raise PermissionDenied(
-                    "No tiene autorización para presentar descargo en este expediente."
                 )
 
             # Si no está en estado 'justificando'
@@ -515,7 +529,7 @@ class PresentarDescargoView(APIView):
                         descargo.archivo = ""
                         descargo.save(update_fields=["archivo"])
             es_version_posterior = es_correccion and descargo.versiones.exists()
-            DescargoVersionService.registrar_version(
+            version_obj = DescargoVersionService.registrar_version(
                 descargo,
                 (
                     OperacionDescargoEnum.CORREGIDO
@@ -553,6 +567,18 @@ class PresentarDescargoView(APIView):
                     if es_correccion
                     else f"Presentación formal de descargo {validated_data['tipo']}."
                 ),
+            )
+
+            from expedientes.services.disciplinary_notifications import (
+                enqueue_descargo_received_notice,
+            )
+
+            enqueue_descargo_received_notice(
+                expediente=expediente,
+                descargo=descargo,
+                socio=socio,
+                version_num=version_obj.numero,
+                es_correccion=es_correccion,
             )
 
             return Response(
@@ -706,6 +732,8 @@ class EvidenciaUploadView(APIView):
         socio = getattr(request.user, "socio", None)
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
+        if socio.is_suspended:
+            raise PermissionDenied("Socio con suspensión vigente: no se admiten nuevos descargos.")
 
         expediente = Expediente.objects.filter(id=pk).first()
         if not expediente:
@@ -889,6 +917,7 @@ class DecisionCausalView(APIView):
             return [
                 permissions.IsAuthenticated(),
                 CanResolveCausal(),
+                IsNotInvolvedInExpediente(),
             ]
         return [permissions.IsAuthenticated(), IsTribunalOrDirectiva()]
 
@@ -1110,7 +1139,11 @@ class ApelacionT01View(APIView):
 class AdecuacionT01View(APIView):
     """El TD adecúa puntos e involucrados con motivos (PB-02, OP 30)."""
 
-    permission_classes = [permissions.IsAuthenticated, CanAdjustT01]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        CanAdjustT01,
+        IsNotInvolvedInExpediente,
+    ]
 
     def post(self, request: Request, pk: int) -> Response:
         serializer = AdecuarT01Serializer(data=request.data)
@@ -1417,6 +1450,7 @@ class TransicionarExpedienteView(APIView):
     permission_classes = [
         permissions.IsAuthenticated,
         CanTransitionExpedientes,
+        IsNotInvolvedInExpediente,
     ]
 
     def post(self, request: Request, pk: int) -> Response:

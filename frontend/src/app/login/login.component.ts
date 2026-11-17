@@ -17,7 +17,8 @@ export class LoginComponent implements OnInit {
 
   cuentasDemo = [
     { numero_socio: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
-    { numero_socio: '85194', rol: 'FISCALIZADORA', nombre: 'Lucas Guillén' },
+    { numero_socio: '409953', rol: 'AUTORIDAD_SC', nombre: 'Luis Urviola' },
+    { numero_socio: '85194', rol: 'REVISORES', nombre: 'Lucas Guillén' },
     { numero_socio: '87414', rol: 'CD', nombre: 'Diego Sánchez' },
     { numero_socio: '408917', rol: 'TD', nombre: 'Nicolás Rosales' },
     { numero_socio: '403655', rol: 'ADMIN', nombre: 'Axel Villegas' },

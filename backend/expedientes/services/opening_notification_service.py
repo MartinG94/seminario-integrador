@@ -8,8 +8,9 @@ Implementa:
 - Principio 7: Registro de auditoría y excepciones sin fuga de datos privados.
 """
 
+import base64
 import logging
-from typing import Any
+import re
 
 from django.conf import settings
 from django.db import models, transaction
@@ -17,6 +18,7 @@ from django.utils import timezone
 
 from expedientes.domain.opening_policy import OpeningNotificationTemplate
 from expedientes.models import EstadoExpedienteEnum, Expediente
+from expedientes.services.resolution_pdf import build_opening_cedula_pdf
 from notifications.models import EmailOutbox
 from notifications.services import EmailDispatcherService
 
@@ -101,45 +103,75 @@ class OpeningNotificationService:
                 actor=actor,
             )
 
-            # Componer plantilla institucional (valida ausencia de datos médicos)
+            # Componer plantilla institucional (valida ausencia de datos médicos) y Cédula PDF
             base_url = frontend_url or getattr(settings, "FRONTEND_URL", "http://localhost:4200")
-            socio_nombre = (
-                f"{expediente.socio.first_name} {expediente.socio.last_name}".strip()
-                or str(socio_identificador)
-            )
-            payload = OpeningNotificationTemplate.render(
-                expediente_numero=expediente.numero,
-                socio_nombre=socio_nombre,
-                motivo_caratula=expediente.motivo,
-                plazo_inicio_at=expediente.plazo_inicio_at,
-                plazo_limite_at=expediente.plazo_limite_at,
-                frontend_url=base_url,
-                expediente_id=expediente.id,
-                socio_id=expediente.socio_id,
+            safe_numero = re.sub(r"[^A-Za-z0-9._-]+", "_", str(expediente.numero)) or str(
+                expediente.id
             )
 
-            # Encolar en Outbox
-            outbox_payload: dict[str, Any] = {
-                "to": [socio_email],
-                "subject": payload.subject,
-                "body_text": payload.body_text,
-                "body_html": payload.body_html,
-                "idempotency_key": payload.idempotency_key,
-                "metadata": payload.metadata,
-            }
-            outbox, _ = EmailDispatcherService.create_or_get_outbox(outbox_payload)
+            def _build_and_enqueue(target_socio, target_email: str) -> EmailOutbox:
+                target_ident = target_socio.numero_socio or target_socio.legajo
+                target_nombre = (
+                    f"{target_socio.first_name} {target_socio.last_name}".strip()
+                    or str(target_ident)
+                )
+                payload = OpeningNotificationTemplate.render(
+                    expediente_numero=expediente.numero,
+                    socio_nombre=target_nombre,
+                    motivo_caratula=expediente.motivo,
+                    plazo_inicio_at=expediente.plazo_inicio_at,
+                    plazo_limite_at=expediente.plazo_limite_at,
+                    frontend_url=base_url,
+                    expediente_id=expediente.id,
+                    socio_id=target_socio.id,
+                )
+                cedula_pdf = build_opening_cedula_pdf(
+                    expediente=expediente,
+                    socio=target_socio,
+                    plazo_inicio_at=expediente.plazo_inicio_at,
+                    plazo_limite_at=expediente.plazo_limite_at,
+                )
+                meta = dict(payload.metadata)
+                meta["es_disciplinario"] = True
+                outbox_item, _ = EmailDispatcherService.create_or_get_outbox(
+                    {
+                        "to": [target_email],
+                        "subject": payload.subject,
+                        "body_text": payload.body_text,
+                        "body_html": payload.body_html,
+                        "idempotency_key": payload.idempotency_key,
+                        "metadata": meta,
+                        "attachments": [
+                            {
+                                "filename": f"cedula_apertura_{safe_numero}.pdf",
+                                "content_base64": base64.b64encode(cedula_pdf).decode("utf-8"),
+                                "mimetype": "application/pdf",
+                            }
+                        ],
+                    }
+                )
+                return outbox_item
+
+            outbox = _build_and_enqueue(expediente.socio, socio_email)
+            extra_outboxes: list[EmailOutbox] = []
+            for co_socio in expediente.socios.exclude(pk=expediente.socio_id):
+                co_email = (co_socio.email or "").strip()
+                if co_email:
+                    extra_outboxes.append(_build_and_enqueue(co_socio, co_email))
 
         # --- FASE 2: Despacho SMTP fuera del lock de BD ---
-        try:
-            EmailDispatcherService.dispatch(outbox)
-        except Exception as exc:
-            # Principio 7: Auditoría sin fuga de asunto ni cuerpo del correo
-            logger.warning(
-                "Fallo al despachar notificación inmediata para expediente %s (outbox_id=%s): %s",
-                expediente.id,
-                outbox.id,
-                type(exc).__name__,
-            )
+        for item in [outbox, *extra_outboxes]:
+            try:
+                EmailDispatcherService.dispatch(item)
+            except Exception as exc:
+                # Principio 7: Auditoría sin fuga de asunto ni cuerpo del correo
+                logger.warning(
+                    "Fallo al despachar notificación inmediata para expediente %s "
+                    "(outbox_id=%s): %s",
+                    expediente.id,
+                    item.id,
+                    type(exc).__name__,
+                )
 
         return expediente, outbox
 

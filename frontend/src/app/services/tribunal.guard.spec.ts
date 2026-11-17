@@ -11,7 +11,8 @@ describe('TribunalGuard', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    auth = jasmine.createSpyObj('AuthService', ['tieneRol']);
+    auth = jasmine.createSpyObj('AuthService', ['tieneRol', 'isSuspended']);
+    auth.isSuspended.and.returnValue(false);
     router = jasmine.createSpyObj('Router', ['navigate']);
 
     TestBed.configureTestingModule({
@@ -32,10 +33,17 @@ describe('TribunalGuard', () => {
     expect(auth.tieneRol).toHaveBeenCalledWith('TD', 'ADMIN', 'CD');
   });
 
-  it('bloquea y redirige a /mis-expedientes si el socio no tiene los roles permitidos', () => {
+  it('bloquea y redirige a /403 si el socio no tiene los roles permitidos', () => {
     auth.tieneRol.and.returnValue(false);
     expect(guard.canActivate({} as any, {} as any)).toBeFalse();
-    expect(router.navigate).toHaveBeenCalledWith(['/mis-expedientes']);
+    expect(router.navigate).toHaveBeenCalledWith(['/403']);
+  });
+
+  it('bloquea y redirige a /403 si el socio está suspendido, aun teniendo rol privilegiado', () => {
+    auth.isSuspended.and.returnValue(true);
+    auth.tieneRol.and.returnValue(true);
+    expect(guard.canActivate({} as any, {} as any)).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/403']);
   });
 
   it('usa los roles declarados por la ruta cuando están presentes', () => {

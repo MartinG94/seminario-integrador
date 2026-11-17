@@ -50,7 +50,7 @@ export class ReglamentosComponent implements OnInit, OnDestroy {
   }
 
   puedeGestionar(): boolean {
-    return this.authService.tieneRol('TD', 'CD', 'ADMIN');
+    return this.authService.tieneRol('TD', 'CD');
   }
 
   seleccionarPestana(tab: TipoDocumentoReglamento): void {

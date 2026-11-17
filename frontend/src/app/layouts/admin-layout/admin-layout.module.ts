@@ -37,6 +37,7 @@ import { ExpedientesSocioDialogComponent } from '../../ranking-socios/expediente
 import { SolicitudDetalleDialogComponent } from '../../solicitar-puntos/solicitud-detalle-dialog/solicitud-detalle-dialog.component';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
+import { AccesoDenegadoComponent } from '../../acceso-denegado/acceso-denegado.component';
 
 import { AsistenciaEventoComponent } from '../../pages/eventos/asistencia-evento/asistencia-evento.component';
 import { CrearEventoDialogComponent } from '../../pages/eventos/dialogs/crear-evento-dialog/crear-evento-dialog.component';
@@ -94,6 +95,7 @@ import { ComponentsModule } from '../../components/components.module';
     UpgradeComponent,
     EnDesarrolloComponent,
     VisorExpedienteComponent,
+    AccesoDenegadoComponent,
   ]
 })
 

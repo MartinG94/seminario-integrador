@@ -17,18 +17,21 @@ UserModel = get_user_model()
 DEMO_PASSWORD = "Aveit-Demo-2026!"
 
 DEMO_SOCIOS = [
-    ("74907", "Gastiaburu", "Lucas", Role.SOCIO, 2),
-    ("85194", "Guillén", "Lucas Martín", Role.FISCALIZADORA, 4),
-    ("87414", "Sánchez", "Diego Gabriel", Role.CD, 5),
-    ("408917", "Rosales", "Nicolás", Role.TD, 6),
-    ("403655", "Villegas", "Axel René", Role.ADMIN, 5),
-    ("409953", "Urviola", "Luis", Role.SOCIO, 4),
-    ("415327", "Quiroz", "Tomas Augusto", Role.SOCIO, 3),
+    ("74907", "Gastiaburu", "Lucas", Role.SOCIO, 2, True, False),
+    ("85194", "Guillén", "Lucas Martín", Role.REVISORES, 4, True, False),
+    ("87414", "Sánchez", "Diego Gabriel", Role.CD, 5, True, False),
+    ("408917", "Rosales", "Nicolás", Role.TD, 6, True, False),
+    ("403655", "Villegas", "Axel René", Role.ADMIN, 5, True, False),
+    ("409953", "Urviola", "Luis", Role.AUTORIDAD_SC, 4, True, False),
+    ("415327", "Quiroz", "Tomas Augusto", Role.SOCIO, 3, True, False),
+    # Cuentas de ejemplo para verificación de estados operativos RBAC (S5-07.2)
+    ("99001", "Baja", "Socio", Role.SOCIO, 4, False, False),
+    ("99002", "Suspendido", "Socio", Role.SOCIO, 4, True, True),
 ]
 
 
 class Command(BaseCommand):
-    help = "Crea socios de demostración con un rol RBAC cada uno."
+    help = "Crea socios de demostración con un rol RBAC y estados operativos de ejemplo."
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -37,15 +40,19 @@ class Command(BaseCommand):
 
         subcomision, _ = Subcomision.objects.get_or_create(name="Cómputos")
 
-        for legajo, last_name, first_name, role, social_year in DEMO_SOCIOS:
+        for legajo, last_name, first_name, role, social_year, is_enabled, is_suspended in DEMO_SOCIOS:
             if Socio.objects.filter(legajo=legajo).exists():
                 self.stdout.write(f"= {legajo} ya existe, se omite")
                 continue
 
             email = f"{legajo}@aveit.test"
-            user = UserModel.objects.create_user(
-                username=legajo, email=email, password=DEMO_PASSWORD
+            user, _ = UserModel.objects.get_or_create(
+                username=legajo,
+                defaults={"email": email},
             )
+            user.set_password(DEMO_PASSWORD)
+            user.save()
+
             socio = Socio.objects.create(
                 user=user,
                 legajo=legajo,
@@ -55,11 +62,13 @@ class Command(BaseCommand):
                 subcomision=subcomision,
                 social_year=social_year,
                 role=role,
+                is_enabled=is_enabled,
+                is_suspended=is_suspended,
             )
             self.stdout.write(
                 self.style.SUCCESS(
                     f"+ {socio.legajo} {socio.last_name} "
-                    f"rol={socio.role} categoria={socio.get_category_display()}"
+                    f"rol={socio.role} enabled={socio.is_enabled} suspended={socio.is_suspended}"
                 )
             )
 

@@ -19,12 +19,28 @@ import { UpgradeComponent } from '../../upgrade/upgrade.component';
 import { TribunalGuard } from '../../services/tribunal.guard';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
+import { AccesoDenegadoComponent } from '../../acceso-denegado/acceso-denegado.component';
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
     { path: 'reglamentos',            component: ReglamentosComponent },
-    { path: 'gestionar-expedientes',  component: GestionarExpedientesComponent, canActivate: [TribunalGuard] },
-    { path: 'gestionar-expedientes/:id/visor', component: VisorExpedienteComponent, canActivate: [TribunalGuard] },
+    {
+      path: 'gestionar-expedientes',
+      component: GestionarExpedientesComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['TD', 'CD'] }
+    },
+    {
+      path: 'sala-tribunal',
+      redirectTo: 'gestionar-expedientes',
+      pathMatch: 'full'
+    },
+    {
+      path: 'gestionar-expedientes/:id/visor',
+      component: VisorExpedienteComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['TD', 'CD'] }
+    },
     {
       path: 'gestionar-expedientes/:id/descargo/:socioId',
       component: EnDesarrolloComponent,
@@ -32,7 +48,8 @@ export const AdminLayoutRoutes: Routes = [
       data: {
         titulo: 'Ver Descargo',
         descripcion: 'Visualización y resolución individual del descargo.',
-        icono: 'description'
+        icono: 'description',
+        roles: ['TD', 'CD']
       }
     },
     { path: 'calendario-institucional', component: CalendarioInstitucionalComponent },
@@ -40,27 +57,34 @@ export const AdminLayoutRoutes: Routes = [
       path: 'reportes',
       component: ReportesComponent,
       canActivate: [TribunalGuard],
-      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
+      data: { roles: ['TD', 'CD', 'REVISORES', 'FISCALIZADORA'] }
     },
     { path: 'ranking-socios',         component: RankingSociosComponent },
     {
       path: 'solicitar-puntos',
       component: SolicitarPuntosComponent,
       canActivate: [TribunalGuard],
-      data: { roles: ['FISCALIZADORA', 'CD', 'TD'] }
+      data: { roles: ['AUTORIDAD_SC', 'REVISORES', 'CD', 'TD', 'FISCALIZADORA'] }
+    },
+    {
+      path: 'expedientes/crear',
+      redirectTo: 'solicitar-puntos',
+      pathMatch: 'full'
     },
     { 
       path: 'eventos-asistencia',     
       component: EventosAsistenciaComponent,
       canActivate: [TribunalGuard],
-      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
+      data: { roles: ['CD', 'TD', 'AUTORIDAD_SC'] }
     },
     {
       path: 'eventos',
       component: EventosAsistenciaComponent,
       canActivate: [TribunalGuard],
-      data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
+      data: { roles: ['CD', 'TD', 'AUTORIDAD_SC'] }
     },
+    { path: '403',                    component: AccesoDenegadoComponent },
+    { path: 'acceso-denegado',        redirectTo: '403', pathMatch: 'full' },
     { path: 'dashboard',              component: DashboardComponent },
     { path: 'table-list',             component: TableListComponent },
     { path: 'typography',             component: TypographyComponent },
