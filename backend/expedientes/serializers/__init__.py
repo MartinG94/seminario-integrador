@@ -735,14 +735,24 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         result = []
         for d in descargos_list:
             evs = current_evidence_for(d, evidencias)
-            decisiones_qs = list(d.decisiones_causal.all())
+            decisiones_qs = sorted(d.decisiones_causal.all(), key=lambda x: x.version, reverse=True)
             valoraciones_qs = (
                 list(d.valoraciones_t03.all()) if hasattr(d, "valoraciones_t03") else []
             )
             leido = bool(decisiones_qs) or bool(valoraciones_qs)
             puntaje_ratificado = None
+            raw_ratificado = getattr(d, "puntaje_ratificado", None)
             if getattr(d, "esta_excluido", False):
                 puntaje_ratificado = 0.0
+            elif raw_ratificado is not None and str(raw_ratificado).strip() != "":
+                val_str = str(raw_ratificado).strip()
+                if val_str in ("LLAMADO_ATENCION", "FELICITACION"):
+                    puntaje_ratificado = val_str
+                else:
+                    try:
+                        puntaje_ratificado = float(val_str)
+                    except (ValueError, TypeError):
+                        puntaje_ratificado = val_str
             elif decisiones_qs:
                 primera = decisiones_qs[0]
                 snapshot = primera.descargo_snapshot or {}
@@ -1824,7 +1834,7 @@ class MisSolicitudesT01Serializer(serializers.ModelSerializer):
             return {
                 "emitido": True,
                 "fecha": obj.expediente.updated_at,
-                "dictamen": f"Resolución firme emitida para causa {obj.expediente.numero}.",
+                "dictamen": f"Resolución firme emitida para expediente {obj.expediente.numero}.",
             }
         return None
 

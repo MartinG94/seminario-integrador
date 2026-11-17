@@ -552,4 +552,37 @@ def test_emitir_resolucion_no_envia_correo_a_socio_excluido(
     # Ningún email debe tener como destinatario al socio excluido
     for e in outbox_emails:
         assert "excluido@aveit.test" not in e.to
-        assert str(socio_excluido.id) not in e.idempotency_key
+        assert "excluido@aveit.test" not in e.idempotency_key
+        assert (e.metadata or {}).get("socio_id") != socio_excluido.id
+
+
+@pytest.mark.django_db
+def test_emitir_resolucion_mantiene_pendiente_correos_si_falla_despacho(
+    causal_expediente, causal_vocal, monkeypatch
+):
+    causal_expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+    causal_expediente.puntos = Decimal("-1.00")
+    causal_expediente.save()
+
+    resolucion = Resolucion.objects.create(
+        expediente=causal_expediente,
+        plantilla_version="resolucion-2026.1",
+        numero_expediente_snapshot=causal_expediente.numero,
+        vistos="Vistos.",
+        considerandos="Considerando.",
+        articulos_resolutivos="Artículo 1.",
+        created_by=causal_vocal.user,
+    )
+
+    monkeypatch.setattr(
+        "expedientes.services.resolution_service.EmailDispatcherService.dispatch",
+        lambda outbox: False,
+    )
+
+    emitida = emitir_resolucion(
+        resolucion, causal_vocal.user, ExpedienteConsolidatedDecisionProvider()
+    )
+    assert emitida.estado == EstadoResolucionEnum.ISSUED
+
+    causal_expediente.refresh_from_db()
+    assert causal_expediente.estado == EstadoExpedienteEnum.PENDIENTE_CORREOS

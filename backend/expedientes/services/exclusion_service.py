@@ -102,9 +102,10 @@ class ExclusionInvolucradoService:
             },
         )
 
+        nro_socio = getattr(socio_imputado, "numero_socio", None) or socio_imputado.legajo
         if descargo.esta_excluido:
             raise ValidationError(
-                f"El socio {socio_imputado.legajo} ya fue excluido previamente de este expediente."
+                f"El socio {nro_socio} ya fue excluido previamente de este expediente."
             )
 
         # Registrar la exclusión inmutable
@@ -145,12 +146,12 @@ class ExclusionInvolucradoService:
             expediente.puntos = 0
             expediente.save(update_fields=["estado", "puntos", "updated_at"])
 
-            actor_legajo = (
-                getattr(socio_user, "legajo", "")
+            actor_nro = (
+                (getattr(socio_user, "numero_socio", None) or getattr(socio_user, "legajo", ""))
                 if socio_user
                 else getattr(user, "username", str(user))
             )
-            actor_str = f"Socio {actor_legajo}" if actor_legajo else "Tribunal de Disciplina"
+            actor_str = f"Socio {actor_nro}" if actor_nro else "Tribunal de Disciplina"
 
             CambioEstadoExpediente.objects.create(
                 expediente=expediente,
@@ -158,12 +159,14 @@ class ExclusionInvolucradoService:
                 estado_nuevo=EstadoExpedienteEnum.EMITIDO,
                 actor=actor_str,
                 motivo=(
-                    "Sin efecto / Causa archivada por exclusión fundada de la totalidad "
+                    "Sin efecto / Expediente archivado por exclusión fundada de la totalidad "
                     f"de involucrados. Fundamento: {motivo_limpio}"
                 ),
             )
 
-            # Si existía una resolución borrador, archivarla
+            # Si existía una resolución borrador, archivarla; si no, crear resolución administrativa
+            from expedientes.models import Resolucion
+
             resolucion_draft = expediente.resoluciones.filter(
                 estado=EstadoResolucionEnum.DRAFT
             ).first()
@@ -175,13 +178,36 @@ class ExclusionInvolucradoService:
                     f"Exclusión fundada de la totalidad de involucrados: {motivo_limpio}."
                 )
                 resolucion_draft.articulos_resolutivos = (
-                    "Artículo 1°: Archivar la presente causa sin sanción ni impacto en puntos."
+                    "Artículo 1°: Archivar el presente expediente sin sanción ni impacto en puntos."
                 )
                 resolucion_draft.puntos_finales = 0
                 resolucion_draft.estado = EstadoResolucionEnum.ISSUED
                 resolucion_draft.issued_by = user
                 resolucion_draft.issued_at = timezone.now()
                 resolucion_draft.save()
+            elif not expediente.resoluciones.filter(estado=EstadoResolucionEnum.ISSUED).exists():
+                Resolucion.objects.create(
+                    expediente=expediente,
+                    version=1,
+                    plantilla_version="v1",
+                    estado=EstadoResolucionEnum.ISSUED,
+                    numero_expediente_snapshot=expediente.numero,
+                    vistos=(
+                        f"Las actuaciones obrantes en el Expediente {expediente.numero} "
+                        "y la exclusión fundada de la totalidad de los socios involucrados."
+                    ),
+                    considerandos=(
+                        f"Sin efecto / Expediente archivado por exclusión fundada: {motivo_limpio}."
+                    ),
+                    articulos_resolutivos=(
+                        "Artículo 1°: Archivar el presente expediente sin sanción "
+                        "ni impacto en puntos."
+                    ),
+                    puntos_finales=0,
+                    created_by=user,
+                    issued_by=user,
+                    issued_at=timezone.now(),
+                )
 
             expediente_archivado = True
 
@@ -210,7 +236,9 @@ class ExclusionInvolucradoService:
         )
 
         idempotency_socio = f"exclusion-expediente-{expediente.id}-socio-{socio.id}-notif"
-        subject_socio = f"[AVEIT] Causa {expediente.numero}: Desestimación e imputación sin efecto"
+        subject_socio = (
+            f"[AVEIT] Expediente {expediente.numero}: Desestimación e imputación sin efecto"
+        )
         body_socio = (
             f"Estimado/a {socio.first_name} {socio.last_name}:\n\n"
             "Por disposición formal del Tribunal de Disciplina de A.V.E.I.T. en el marco del "
@@ -252,12 +280,13 @@ class ExclusionInvolucradoService:
 
         if solicitante_email:
             idempotency_sol = f"exclusion-expediente-{expediente.id}-solicitante-socio-{socio.id}"
-            subject_sol = f"[AVEIT] Causa {expediente.numero}: Exclusión de socio imputado"
+            subject_sol = f"[AVEIT] Expediente {expediente.numero}: Exclusión de socio imputado"
             nombre_soc = f"{socio.first_name} {socio.last_name}".strip()
+            nro_socio_msg = getattr(socio, "numero_socio", None) or socio.legajo
             body_sol = (
                 "Estimado/a solicitante:\n\n"
                 "Se le notifica que el TD ha dispuesto la exclusión fundada del socio "
-                f"{socio.legajo} ({nombre_soc}) en el expediente {expediente.numero}.\n\n"
+                f"{nro_socio_msg} ({nombre_soc}) en el expediente {expediente.numero}.\n\n"
                 f"Fundamento:\n{motivo}\n\n"
                 "Atentamente,\nTribunal de Disciplina — A.V.E.I.T."
             )
@@ -276,10 +305,6 @@ class ExclusionInvolucradoService:
                     }
                 )
                 EmailDispatcherService.dispatch(outbox_sol)
-            except Exception as exc:
-                logger.warning(
-                    "Fallo al despachar notificación de exclusión al solicitante: %s", exc
-                )
             except Exception as exc:
                 logger.warning(
                     "Fallo al despachar notificación de exclusión al solicitante: %s", exc

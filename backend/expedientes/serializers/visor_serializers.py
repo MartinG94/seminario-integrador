@@ -212,7 +212,7 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
             "tipo": "CREACION",
             "tipo_display": "Apertura formal de expediente",
             "titulo": f"Apertura formal: {expediente.numero}",
-            "descripcion": f"Causa formalizada con motivo: '{expediente.motivo}'.",
+            "descripcion": f"Expediente formalizado con motivo: '{expediente.motivo}'.",
             "actor": creador_display,
             "icono": "folder_open",
             "color": "#1e3a8a",
@@ -315,8 +315,8 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
                     "id": f"exclusion-{d.id}",
                     "fecha_hora": fecha_excl.isoformat(),
                     "tipo": "EXCLUSION_INVOLUCRADO",
-                    "tipo_display": "Exclusión fundada de causa",
-                    "titulo": f"Socio {soc_display} excluido de la causa",
+                    "tipo_display": "Exclusión fundada del expediente",
+                    "titulo": f"Socio {soc_display} excluido del expediente",
                     "descripcion": f"Motivo formal: {desc_motivo}",
                     "actor": actor_excl,
                     "icono": "person_remove",
@@ -671,7 +671,7 @@ class ExpedienteVisorSerializer(serializers.ModelSerializer):
             if esta_excluido:
                 tiene_descargo = False
                 estado_descargo = "EXCLUIDO"
-                estado_descargo_display = "Excluido de la causa"
+                estado_descargo_display = "Excluido del Expediente"
             elif descargo_vigente:
                 tiene_descargo = True
                 estado_descargo = "PRESENTADO"

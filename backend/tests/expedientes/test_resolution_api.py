@@ -527,3 +527,31 @@ def test_resolucion_guarda_y_valida_expedientes_referenciados(
     assert res_ok.data["expedientes_referenciados"] == [emitido.id]
     assert len(res_ok.data["expedientes_referenciados_detalle"]) == 1
     assert res_ok.data["expedientes_referenciados_detalle"][0]["numero"] == "EXP-0555/2026"
+
+
+@pytest.mark.django_db
+def test_creacion_resolucion_auto_firma_creador_td_con_grupo_coherente(
+    causal_expediente, make_socio, authenticate
+):
+    from django.utils import timezone
+
+    causal_expediente.estado = "revision_resolucion"
+    causal_expediente.save()
+
+    s5 = make_socio(legajo="50991", role=Role.TD, social_year=5)
+    client = authenticate(s5)
+    payload = {
+        "vistos": "Vistos.",
+        "considerandos": "Considerandos.",
+        "articulos_resolutivos": "Artículo 1.",
+        "es_suplente": True,
+    }
+    response = client.post(resolution_url(causal_expediente.pk), payload, format="json")
+    assert response.status_code == 201
+    assert len(response.data["firmantes_td"]) == 1
+    firma = response.data["firmantes_td"][0]
+    assert firma["user_id"] == s5.user.id
+    assert firma["social_year"] == 5
+    assert firma["es_suplente"] is True
+    expected_grupo = f"G{(timezone.localdate().year - 1962) - 5}"
+    assert firma["grupo"] == expected_grupo

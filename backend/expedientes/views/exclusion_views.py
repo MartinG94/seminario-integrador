@@ -35,15 +35,18 @@ class ExcluirInvolucradoView(APIView):
         socio = resultado["socio"]
         expediente = resultado["expediente"]
 
+        nro_socio = getattr(socio, "numero_socio", None) or socio.legajo
+
         return Response(
             {
                 "success": True,
-                "mensaje": f"Socio {socio.legajo} excluido fundadamente de la causa.",
+                "mensaje": f"Socio {nro_socio} excluido fundadamente del expediente.",
                 "expediente_id": expediente.id,
                 "expediente_estado": expediente.estado,
                 "expediente_archivado": resultado["expediente_archivado"],
                 "activos_restantes_count": resultado["activos_restantes_count"],
                 "socio_id": socio.id,
+                "socio_numero_socio": socio.numero_socio,
                 "socio_legajo": socio.legajo,
                 "esta_excluido": descargo.esta_excluido,
                 "motivo_exclusion": descargo.motivo_exclusion,

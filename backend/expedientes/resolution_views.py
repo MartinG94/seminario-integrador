@@ -21,6 +21,7 @@ from expedientes.services.resolution_service import (
     emitir_resolucion,
     registrar_firma_resolucion,
 )
+from socios.models import Role
 
 
 class ResolucionView(APIView):
@@ -87,6 +88,49 @@ class ResolucionView(APIView):
         if isinstance(expedientes, list):
             resolucion.expedientes_referenciados = expedientes
             resolucion.save(update_fields=["expedientes_referenciados", "updated_at"])
+
+        data = request.data if isinstance(request.data, dict) else {}
+        auto_firmar_raw = data.get("auto_firmar", True)
+        if isinstance(auto_firmar_raw, str):
+            auto_firmar = auto_firmar_raw.strip().lower() not in ("false", "0", "no")
+        else:
+            auto_firmar = bool(auto_firmar_raw)
+
+        socio_user = getattr(request.user, "socio", None)
+        es_td_activo = getattr(socio_user, "role", None) == Role.TD and getattr(
+            socio_user, "is_active", True
+        )
+        if auto_firmar and (
+            es_td_activo
+            or getattr(request.user, "is_staff", False)
+            or getattr(request.user, "is_superuser", False)
+        ):
+            es_suplente_raw = data.get("es_suplente")
+            if es_suplente_raw is not None:
+                if isinstance(es_suplente_raw, str):
+                    es_suplente = es_suplente_raw.strip().lower() in ("true", "1", "yes")
+                else:
+                    es_suplente = bool(es_suplente_raw)
+            else:
+                es_suplente = None
+
+            anio_social_raw = data.get("anio_social") or data.get("social_year")
+            anio_social = None
+            if anio_social_raw is not None:
+                try:
+                    anio_social = int(anio_social_raw)
+                except (ValueError, TypeError):
+                    anio_social = None
+
+            try:
+                resolucion = registrar_firma_resolucion(
+                    resolucion,
+                    request.user,
+                    es_suplente=es_suplente,
+                    anio_social=anio_social,
+                )
+            except ValidationError:
+                pass
 
         return Response(ResolucionSerializer(resolucion).data, status=status.HTTP_201_CREATED)
 
@@ -221,9 +265,39 @@ class ResolucionPreviewView(APIView):
             Resolucion.objects.filter(expediente_id=expediente_id).order_by("-version").first()
         )
         if not resolucion:
-            return Response(
-                {"detail": "Resolución no encontrada."},
-                status=status.HTTP_404_NOT_FOUND,
+            expediente = get_object_or_404(Expediente, pk=expediente_id)
+            if expediente.estado != EstadoExpedienteEnum.EMITIDO:
+                return Response(
+                    {"detail": "Resolución no encontrada."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            cambio_cierre = expediente.cambios_estado.filter(
+                estado_nuevo=EstadoExpedienteEnum.EMITIDO
+            ).first()
+            considerando_fallback = (
+                (cambio_cierre.motivo if cambio_cierre and cambio_cierre.motivo else "")
+                or expediente.motivo
+                or "Actuaciones administrativas finalizadas."
+            )
+            resolucion = Resolucion(
+                expediente=expediente,
+                version=1,
+                plantilla_version="v1",
+                estado="ISSUED",
+                numero_expediente_snapshot=expediente.numero,
+                vistos=(
+                    f"Las actuaciones obrantes en el Expediente {expediente.numero} "
+                    f"y las disposiciones reglamentarias vigentes de A.V.E.I.T."
+                ),
+                considerandos=considerando_fallback,
+                articulos_resolutivos=(
+                    "Artículo 1°: Téngase presente lo resuelto en las actuaciones "
+                    f"con impacto de {expediente.puntos} puntos.\n\n"
+                    "Artículo 2°: Notifíquese y archívese."
+                ),
+                puntos_finales=expediente.puntos,
+                created_at=expediente.created_at,
+                issued_at=cambio_cierre.fecha_hora if cambio_cierre else expediente.updated_at,
             )
 
         response = HttpResponse(
@@ -243,6 +317,7 @@ class EnmiendaResolucionView(APIView):
         data = request.data if isinstance(request.data, dict) else {}
         motivo_enmienda = data.get("motivo_enmienda", "")
         considerandos = data.get("considerandos")
+        articulos_resolutivos = data.get("articulos_resolutivos")
         nuevos_puntajes = data.get("nuevos_puntajes")
 
         try:
@@ -251,6 +326,7 @@ class EnmiendaResolucionView(APIView):
                 user=request.user,
                 motivo_enmienda=motivo_enmienda,
                 considerandos=considerandos,
+                articulos_resolutivos=articulos_resolutivos,
                 nuevos_puntajes=nuevos_puntajes,
             )
         except ValidationError as exc:

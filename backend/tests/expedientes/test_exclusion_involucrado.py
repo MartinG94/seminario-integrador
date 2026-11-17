@@ -82,7 +82,9 @@ class TestExclusionInvolucradoService:
         ).first()
         assert cambio is not None
         assert (
-            "Sin efecto / Causa archivada" in cambio.motivo or "archivada" in cambio.motivo.lower()
+            "Sin efecto / Expediente archivado" in cambio.motivo
+            or "archivada" in cambio.motivo.lower()
+            or "archivado" in cambio.motivo.lower()
         )
 
     def test_excluir_involucrado_rechaza_rol_no_autorizado(
@@ -191,12 +193,12 @@ class TestVisorConExclusion:
         assert inv["esta_excluido"] is True
         assert inv["motivo_exclusion"] == VALID_GROUNDS
         assert inv["estado_descargo"] == "EXCLUIDO"
-        assert inv["estado_descargo_display"] == "Excluido de la causa"
+        assert inv["estado_descargo_display"] == "Excluido del Expediente"
 
         # Timeline contiene el hito de exclusión
         timeline = data["timeline"]
         hitos_exclusion = [h for h in timeline if h["tipo"] == "EXCLUSION_INVOLUCRADO"]
         assert len(hitos_exclusion) >= 1
         hito = hitos_exclusion[0]
-        assert "excluido de la causa" in hito["titulo"].lower()
+        assert "excluido del expediente" in hito["titulo"].lower()
         assert VALID_GROUNDS in hito["descripcion"]

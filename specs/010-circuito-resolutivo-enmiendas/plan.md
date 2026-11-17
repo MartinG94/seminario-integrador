@@ -14,17 +14,19 @@ backend/
 ├── expedientes/
 │   ├── models.py                     # Modelo EnmiendaResolucion + campos puntaje_ratificado y exclusión en DescargoExpediente
 │   ├── migrations/
-│   │   └── 0026_circuito_resolutivo_enmiendas.py
+│   │   ├── 0027_descargo_puntaje_ratificado.py
+│   │   ├── 0028_descargo_exclusion_involucrado.py
+│   │   └── 0029_enmienda_resolucion.py
 │   ├── services/
 │   │   ├── causal_resolution_service.py # Persistencia de puntaje_ratificado en decide()
 │   │   ├── exclusion_service.py         # Servicio de exclusión fundada y cierre administrativo si es último
 │   │   ├── resolution_service.py        # Firma con selector de suplencia, emisión con EmailOutbox idempotente
 │   │   └── enmienda_service.py          # Circuito de enmienda, versión 2 y contra-asientos Opción B
 │   ├── serializers/
-│   │   ├── visor_serializers.py         # Serialización de puntaje_ratificado, flags de exclusión
-│   │   └── resolution_serializers.py    # Serialización de firmas y enmiendas
+│   │   └── visor_serializers.py         # Serialización de puntaje_ratificado, flags de exclusión
+│   ├── resolution_serializers.py        # Serialización de firmas y enmiendas
+│   ├── resolution_views.py              # Endpoints de resolución, firma, emisión y enmienda
 │   ├── views/
-│   │   ├── resolution_views.py          # Endpoints de resolución, firma, emisión y enmienda
 │   │   └── exclusion_views.py           # Endpoint de exclusión fundada
 │   └── urls.py                          # Rutas REST
 └── tests/

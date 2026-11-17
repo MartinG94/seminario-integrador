@@ -77,30 +77,42 @@ class ExpedienteConsolidatedDecisionProvider:
             elif solicitud_t01.puntaje_especial == SolicitudT01.PuntajeEspecial.FELICITACION:
                 medidas.append("Felicitación")
 
-        # Revisar descargos y sus decisiones más recientes
-        for descargo in expediente.descargos.all():
-            ultima_decision = descargo.decisiones_causal.order_by("-version").first()
-            if ultima_decision:
-                snapshot = ultima_decision.descargo_snapshot or {}
-                ptos_val = snapshot.get("puntaje_final")
-                if ptos_val == "LLAMADO_ATENCION":
-                    if "Llamado de atención" not in medidas:
-                        medidas.append("Llamado de atención")
-                    puntos = Decimal("-0.25")
-                elif ptos_val == "FELICITACION":
-                    if "Felicitación" not in medidas:
-                        medidas.append("Felicitación")
-                    puntos = Decimal("0.25")
-                elif ptos_val is not None:
-                    try:
-                        puntos = Decimal(str(ptos_val))
-                    except Exception:
-                        pass
-                else:
-                    if ultima_decision.decision == "ACCEPTED":
-                        puntos = Decimal("0.00")
-                    elif ultima_decision.decision == "REJECTED":
-                        puntos = Decimal(str(expediente.puntos))
+        # Revisar descargos activos (excluyendo socios excluidos) y sus decisiones más recientes
+        descargos_all = list(expediente.descargos.all())
+        if descargos_all:
+            descargos_activos = [d for d in descargos_all if not getattr(d, "esta_excluido", False)]
+            if not descargos_activos:
+                puntos = Decimal("0.00")
+            else:
+                for descargo in descargos_activos:
+                    raw_rat = getattr(descargo, "puntaje_ratificado", None)
+                    has_rat = raw_rat is not None and str(raw_rat).strip() != ""
+                    ultima_decision = descargo.decisiones_causal.order_by("-version").first()
+                    ptos_val = None
+                    if has_rat:
+                        ptos_val = str(raw_rat).strip()
+                    elif ultima_decision:
+                        snapshot = ultima_decision.descargo_snapshot or {}
+                        ptos_val = snapshot.get("puntaje_final")
+
+                    if ptos_val == "LLAMADO_ATENCION":
+                        if "Llamado de atención" not in medidas:
+                            medidas.append("Llamado de atención")
+                        puntos = Decimal("-0.25")
+                    elif ptos_val == "FELICITACION":
+                        if "Felicitación" not in medidas:
+                            medidas.append("Felicitación")
+                        puntos = Decimal("0.25")
+                    elif ptos_val is not None:
+                        try:
+                            puntos = Decimal(str(ptos_val))
+                        except Exception:
+                            pass
+                    elif ultima_decision:
+                        if ultima_decision.decision == "ACCEPTED":
+                            puntos = Decimal("0.00")
+                        elif ultima_decision.decision == "REJECTED":
+                            puntos = Decimal(str(expediente.puntos))
 
         puntos_finales = puntos.quantize(Decimal("0.01"))
         if puntos_finales < Decimal("0.00") or "Llamado de atención" in medidas:
@@ -206,9 +218,11 @@ def registrar_firma_resolucion(
     if social_year in anios_ocupados:
         raise ValidationError(f"El {social_year}.º año social ya se encuentra firmado.")
 
-    if not grupo and social_year:
+    if social_year in (4, 5, 6):
         current_year = timezone.localdate().year
-        grupo = f"G{(current_year - 1962) - int(social_year)}"
+        expected_grupo = f"G{(current_year - 1962) - int(social_year)}"
+        if not grupo or grupo != expected_grupo:
+            grupo = expected_grupo
 
     # Inferencia de suplencia si no fue provista explícitamente (EARS-99.2)
     if es_suplente is None:
@@ -255,7 +269,10 @@ def registrar_firma_resolucion(
 
     es_suplente = bool(es_suplente)
 
-    etiqueta = f"{legajo} - {full_name} - {grupo}" if grupo else f"{legajo} - {full_name}"
+    identificador = str(numero_socio) if numero_socio is not None else legajo
+    etiqueta = (
+        f"{identificador} - {full_name} - {grupo}" if grupo else f"{identificador} - {full_name}"
+    )
     if es_suplente:
         etiqueta += " (Sup.)"
 
@@ -285,7 +302,7 @@ def registrar_firma_resolucion(
         for f in resolucion.firmantes
         if (f.get("social_year") or f.get("anio_social")) is not None
     }
-    if {4, 5, 6}.issubset(anios_actualizados) or len(resolucion.firmantes) >= 3:
+    if {4, 5, 6}.issubset(anios_actualizados):
         if resolucion.estado == EstadoResolucionEnum.DRAFT:
             resolucion = emitir_resolucion(
                 resolucion=resolucion,
@@ -316,9 +333,18 @@ def emitir_resolucion(
     for field, label in required_fields:
         if not getattr(resolucion, field).strip():
             raise ValidationError({field: f"{label} son obligatorios."})
+    from expedientes.models import EnmiendaResolucion
+
+    es_enmienda = EnmiendaResolucion.objects.filter(resolucion_nueva=resolucion).exists()
     resolucion.numero_expediente_snapshot = resolucion.expediente.numero
-    resolucion.puntos_finales = Decimal(decision.puntos_finales).quantize(Decimal("0.01"))
-    resolucion.medidas = list(decision.medidas)
+    if es_enmienda and resolucion.puntos_finales is not None:
+        resolucion.puntos_finales = Decimal(str(resolucion.puntos_finales)).quantize(
+            Decimal("0.01")
+        )
+    else:
+        resolucion.puntos_finales = Decimal(decision.puntos_finales).quantize(Decimal("0.01"))
+    if not es_enmienda:
+        resolucion.medidas = list(decision.medidas)
     resolucion.estado = EstadoResolucionEnum.ISSUED
     resolucion.issued_by = emisor
     resolucion.issued_at = timezone.now()
@@ -335,25 +361,7 @@ def emitir_resolucion(
     resolucion.contenido_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     resolucion.save()
 
-    expediente = resolucion.expediente
-    if expediente and expediente.estado != EstadoExpedienteEnum.EMITIDO:
-        estado_ant = expediente.estado
-        if not expediente.concepto:
-            expediente.concepto = ConceptoExpedienteEnum.TD
-        expediente.estado = EstadoExpedienteEnum.EMITIDO
-        expediente.save(update_fields=["estado", "concepto", "updated_at"])
-        actor_name = getattr(emisor, "username", str(emisor))
-        CambioEstadoExpediente.objects.create(
-            expediente=expediente,
-            estado_anterior=estado_ant,
-            estado_nuevo=EstadoExpedienteEnum.EMITIDO,
-            actor=actor_name,
-            motivo="Resolución emitida con la totalidad de firmas requeridas.",
-        )
-
     # Contra-asientos de enmienda bajo Opción B (EARS-103.3)
-    from expedientes.models import EnmiendaResolucion
-
     enmienda = EnmiendaResolucion.objects.filter(resolucion_nueva=resolucion).first()
     if enmienda:
         from expedientes.services.enmienda_service import EnmiendaService
@@ -361,16 +369,58 @@ def emitir_resolucion(
         EnmiendaService.aplicar_contra_asientos_opcion_b(enmienda)
 
     # Despacho atómico e idempotente de notificaciones (EARS-100.2)
-    despachar_notificaciones_resolucion_emitida(resolucion)
+    _, hubo_fallo_correos = despachar_notificaciones_resolucion_emitida_con_estado(resolucion)
+
+    expediente = resolucion.expediente
+    if expediente:
+        if hubo_fallo_correos:
+            if expediente.estado != EstadoExpedienteEnum.PENDIENTE_CORREOS:
+                estado_ant = expediente.estado
+                if not expediente.concepto:
+                    expediente.concepto = ConceptoExpedienteEnum.TD
+                expediente.estado = EstadoExpedienteEnum.PENDIENTE_CORREOS
+                expediente.save(update_fields=["estado", "concepto", "updated_at"])
+                actor_name = getattr(emisor, "username", str(emisor))
+                CambioEstadoExpediente.objects.create(
+                    expediente=expediente,
+                    estado_anterior=estado_ant,
+                    estado_nuevo=EstadoExpedienteEnum.PENDIENTE_CORREOS,
+                    actor=actor_name,
+                    motivo=(
+                        "Resolución emitida con fallo en despacho de correos; pendiente de envío."
+                    ),
+                )
+        elif expediente.estado != EstadoExpedienteEnum.EMITIDO:
+            estado_ant = expediente.estado
+            if not expediente.concepto:
+                expediente.concepto = ConceptoExpedienteEnum.TD
+            expediente.estado = EstadoExpedienteEnum.EMITIDO
+            expediente.save(update_fields=["estado", "concepto", "updated_at"])
+            actor_name = getattr(emisor, "username", str(emisor))
+            CambioEstadoExpediente.objects.create(
+                expediente=expediente,
+                estado_anterior=estado_ant,
+                estado_nuevo=EstadoExpedienteEnum.EMITIDO,
+                actor=actor_name,
+                motivo="Resolución emitida con la totalidad de firmas requeridas.",
+            )
 
     return resolucion
 
 
 def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[EmailOutbox]:
     """Despacha notificaciones atómicas en EmailOutbox hacia involucrados, CD y TD (EARS-100)."""
+    despachados, _ = despachar_notificaciones_resolucion_emitida_con_estado(resolucion)
+    return despachados
+
+
+def despachar_notificaciones_resolucion_emitida_con_estado(
+    resolucion: Resolucion,
+) -> tuple[list[EmailOutbox], bool]:
+    """Despacha notificaciones de resolución emitida y reporta si hubo fallos de envío."""
     expediente = getattr(resolucion, "expediente", None)
     if not expediente:
-        return []
+        return [], False
 
     numero_exp = resolucion.numero_expediente_snapshot or expediente.numero
     identificador = f"RESOLUCIÓN {numero_exp.replace('EXP-', '').strip()}"
@@ -382,6 +432,7 @@ def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[
     medidas_str = ", ".join(resolucion.medidas) if resolucion.medidas else "Ninguna"
 
     despachados: list[EmailOutbox] = []
+    hubo_fallo = False
 
     # 1. Notificar a socios involucrados activos (no excluidos)
     excluidos_ids = set(
@@ -402,11 +453,11 @@ def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[
             or getattr(socio, "email", None)
             or f"socio.{socio.legajo}@aveit.test"
         )
-        asunto_socio = f"[AVEIT] Causa {numero_exp}: Emisión de {identificador}"
+        asunto_socio = f"[AVEIT] Expediente {numero_exp}: Emisión de {identificador}"
         cuerpo_socio = (
             f"Estimado/a {socio.first_name} {socio.last_name}:\n\n"
             f"Se notifica que el Tribunal de Disciplina ha emitido la {identificador} "
-            f"correspondiente a la causa {numero_exp}.\n\n"
+            f"correspondiente al expediente {numero_exp}.\n\n"
             "Resumen de lo resuelto:\n"
             f"- Puntaje final: {puntos_str}\n"
             f"- Medidas adoptadas: {medidas_str}\n\n"
@@ -432,14 +483,17 @@ def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[
                     },
                 }
             )
-            EmailDispatcherService.dispatch(outbox)
+            ok = EmailDispatcherService.dispatch(outbox)
             despachados.append(outbox)
+            if ok is False or getattr(outbox, "status", None) == "FAILED":
+                hubo_fallo = True
         except Exception as exc:
             logger.warning(
                 "Fallo al despachar notificación de resolución a socio %s: %s",
                 socio_email,
                 exc,
             )
+            hubo_fallo = True
 
     # 2. Notificar a Comisión Directiva
     cd_email = getattr(settings, "COMISION_DIRECTIVA_EMAIL", None) or getattr(
@@ -448,7 +502,7 @@ def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[
     asunto_cd = f"[AVEIT] Notificación CD: Emisión de {identificador} ({numero_exp})"
     cuerpo_cd = (
         "Estimados Miembros de la Comisión Directiva:\n\n"
-        f"Se notifica formalmente la emisión de la {identificador} de la causa {numero_exp}.\n\n"
+        f"Se notifica formalmente la emisión de la {identificador} del expediente {numero_exp}.\n\n"
         f"- Puntos dictaminados: {puntos_str}\n"
         f"- Medidas: {medidas_str}\n\n"
         "Atentamente,\nTribunal de Disciplina — A.V.E.I.T."
@@ -470,10 +524,13 @@ def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[
                 },
             }
         )
-        EmailDispatcherService.dispatch(outbox_cd)
+        ok_cd = EmailDispatcherService.dispatch(outbox_cd)
         despachados.append(outbox_cd)
+        if ok_cd is False or getattr(outbox_cd, "status", None) == "FAILED":
+            hubo_fallo = True
     except Exception as exc:
         logger.warning("Fallo al despachar notificación de resolución a CD: %s", exc)
+        hubo_fallo = True
 
     # 3. Notificar a Tribunal de Disciplina
     td_email = getattr(settings, "TRIBUNAL_EMAIL", "td@aveit.org")
@@ -502,9 +559,12 @@ def despachar_notificaciones_resolucion_emitida(resolucion: Resolucion) -> list[
                 },
             }
         )
-        EmailDispatcherService.dispatch(outbox_td)
+        ok_td = EmailDispatcherService.dispatch(outbox_td)
         despachados.append(outbox_td)
+        if ok_td is False or getattr(outbox_td, "status", None) == "FAILED":
+            hubo_fallo = True
     except Exception as exc:
         logger.warning("Fallo al despachar notificación de resolución a TD: %s", exc)
+        hubo_fallo = True
 
-    return despachados
+    return despachados, hubo_fallo

@@ -297,6 +297,8 @@ export interface GuardarResolucionPayload {
   articulos_resolutivos: string;
   reglamentos_respaldantes?: string[];
   expedientes_referenciados?: number[];
+  es_suplente?: boolean;
+  anio_social?: number | null;
 }
 
 export interface DescargoDetalleDTO {
@@ -1157,7 +1159,8 @@ export class ExpedienteApiService {
     payload: {
       motivo_enmienda: string;
       considerandos?: string;
-      nuevos_puntajes?: Array<{ socio_id: number; puntaje: number }>;
+      articulos_resolutivos?: string;
+      nuevos_puntajes?: Array<{ socio_id: number; puntaje: number | string }>;
     }
   ): Observable<any> {
     return this.http.post<any>(

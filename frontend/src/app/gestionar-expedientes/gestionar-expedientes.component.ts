@@ -359,16 +359,26 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.auth.getCurrentUser();
   }
 
-  get firmantesPieResolucion(): { anioSocial: number; etiquetaAnio: string; firma: string }[] {
-    const firmas = this.expedienteSeleccionado?.firmas?.juecesFirmantes || [];
-    return [4, 5, 6].map((anio, idx) => {
-      const match = firmas.find(f => {
-        if (anio === 4 && (f.includes('4.°') || f.includes('4.º') || f.includes('G59') || f.includes('Candela Moreno') || f.includes('11735'))) return true;
-        if (anio === 5 && (f.includes('5.°') || f.includes('5.º') || f.includes('G58') || f.includes('Catalina Cerda') || f.includes('11737'))) return true;
-        if (anio === 6 && (f.includes('6.°') || f.includes('6.º') || f.includes('G57') || f.includes('Giuliano Toselli') || f.includes('11239'))) return true;
-        return false;
-      }) || firmas[idx];
+  private obtenerFirmaPorAnioSocial(anio: number): string | null {
+    const detalle = this.expedienteSeleccionado?.firmas?.firmantesDetalle;
+    if (Array.isArray(detalle) && detalle.length > 0) {
+      const match = detalle.find(
+        (f: any) => f && Number(f.anio_social ?? f.social_year) === anio
+      );
+      if (match) {
+        return match.etiqueta || match.firma || `${match.legajo || ''} - ${match.full_name || ''} - ${match.grupo || ''}`.trim();
+      }
+      return null;
+    }
 
+    const firmas = this.expedienteSeleccionado?.firmas?.juecesFirmantes || [];
+    const matchTexto = firmas.find(f => f.includes(`${anio}.°`) || f.includes(`${anio}.º`));
+    return matchTexto || null;
+  }
+
+  get firmantesPieResolucion(): { anioSocial: number; etiquetaAnio: string; firma: string }[] {
+    return [4, 5, 6].map(anio => {
+      const match = this.obtenerFirmaPorAnioSocial(anio);
       return {
         anioSocial: anio,
         etiquetaAnio: `${anio}.º Año Social`,
@@ -378,19 +388,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get espaciosFirmaPorAnioSocial(): { anioSocial: number; etiquetaAnio: string; firma: string | null; firmado: boolean }[] {
-    const firmas = this.expedienteSeleccionado?.firmas?.juecesFirmantes || [];
-    return [4, 5, 6].map((anio, idx) => {
-      const match = firmas.find(f => {
-        if (anio === 4 && (f.includes('4.°') || f.includes('4.º') || f.includes('G59') || f.includes('Candela Moreno') || f.includes('11735'))) return true;
-        if (anio === 5 && (f.includes('5.°') || f.includes('5.º') || f.includes('G58') || f.includes('Catalina Cerda') || f.includes('11737'))) return true;
-        if (anio === 6 && (f.includes('6.°') || f.includes('6.º') || f.includes('G57') || f.includes('Giuliano Toselli') || f.includes('11239'))) return true;
-        return false;
-      }) || firmas[idx];
-
+    return [4, 5, 6].map(anio => {
+      const match = this.obtenerFirmaPorAnioSocial(anio);
       return {
         anioSocial: anio,
         etiquetaAnio: `${anio}.º Año Social`,
-        firma: match || null,
+        firma: match,
         firmado: !!match
       };
     });
@@ -398,10 +401,25 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get usuarioYaFirmoResolucion(): boolean {
     const perfil = this.usuarioActualPerfil;
-    if (!perfil || !this.expedienteSeleccionado?.firmas?.juecesFirmantes) return false;
+    if (!perfil || !this.expedienteSeleccionado?.firmas) return false;
+
+    const detalle = this.expedienteSeleccionado.firmas.firmantesDetalle;
+    if (Array.isArray(detalle) && detalle.length > 0) {
+      const yaEnDetalle = detalle.some((f: any) => {
+        if (!f) return false;
+        if (perfil.numero_socio != null && f.numero_socio != null && Number(f.numero_socio) === Number(perfil.numero_socio)) return true;
+        if (perfil.legajo && f.legajo && String(f.legajo).trim() === String(perfil.legajo).trim()) return true;
+        return false;
+      });
+      if (yaEnDetalle) return true;
+    }
+
+    const firmas = this.expedienteSeleccionado.firmas.juecesFirmantes || [];
     const legajo = String(perfil.legajo || '').trim();
-    if (!legajo) return false;
-    return this.expedienteSeleccionado.firmas.juecesFirmantes.some(f => f.includes(legajo));
+    const nroSocio = perfil.numero_socio != null ? String(perfil.numero_socio).trim() : '';
+    return firmas.some(f =>
+      (legajo && f.includes(legajo)) || (nroSocio && f.includes(nroSocio))
+    );
   }
 
   get reglamentosResolucionCitas(): ReglamentoCiteView[] {
@@ -428,6 +446,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   // Tribunal de la causa (S4-04): inhibición de involucrados y suplencia automática (Art. 95)
   composicion: ComposicionTribunalDTO | null = null;
   cargandoComposicion = false;
+  private composicionExpedienteId: string | null = null;
 
   // Modal de Exclusión Fundada (SCRUM-102)
   mostrarModalExclusion = false;
@@ -440,8 +459,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   mostrarModalEnmienda = false;
   motivoEnmienda = '';
   considerandosEnmienda = '';
+  puntajeEnmiendaInput: number | null = null;
+  puntajesEnmiendaPorSocio: { [socioId: number]: string } = {};
   enmendandoResolucion = false;
   errorEnmienda = '';
+
+  get involucradosActivosEnmienda(): InvolucradoJustificacion[] {
+    return (this.involucradosJustificacion || []).filter(f => !f.esta_excluido);
+  }
 
   // Evaluación y ratificación de puntaje en descargo individual (Modal 6)
   readonly escalaPuntajes = ESCALA_PUNTAJES;
@@ -514,10 +539,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get todosLosDescargosVistos(): boolean {
-    if (!this.involucradosJustificacion || this.involucradosJustificacion.length === 0) {
+    const activos = (this.involucradosJustificacion || []).filter(fila => !fila.esta_excluido);
+    if (activos.length === 0) {
       return false;
     }
-    return this.involucradosJustificacion.every(
+    return activos.every(
       fila => !fila.descargo || this.getEstadoDescargo(fila) === 'Leído'
     );
   }
@@ -531,7 +557,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   get puedeVerResolucion(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
-    return estado === 'emitido' || estado === 'pendiente_correos';
+    return estado === 'emitido' || estado === 'pendiente_correos' || estado === 'pendiente_firma';
   }
 
   get puedeEnmendarResolucion(): boolean {
@@ -721,7 +747,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
   construirVistosPorDefecto(): string {
     const num = this.expedienteSeleccionado ? this.formatCaseNumber(this.expedienteSeleccionado.numero) : 'S/N';
-    const titulo = this.expedienteSeleccionado?.titulo || this.expedienteSeleccionado?.motivo || 'Causa Disciplinaria';
+    const titulo = this.expedienteSeleccionado?.titulo || this.expedienteSeleccionado?.motivo || 'Expediente Disciplinario';
     const fecha = this.expedienteSeleccionado?.fechaCreacion ? new Date(this.expedienteSeleccionado.fechaCreacion).toLocaleDateString('es-AR') : 'reciente';
     const solicitante = this.expedienteSeleccionado ? this.formatSolicitante(this.expedienteSeleccionado) : 'Comisión Directiva';
 
@@ -734,7 +760,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       lineasReglamentos = '   1. Reglamento Procesal Disciplinario 2026.';
     }
 
-    return `VISTO:\n1. Las actuaciones obrantes en el Expediente ${num}, caratulado "${titulo}", promovido por ${solicitante} con fecha ${fecha}.\n2. Lo normado y garantizado en los siguientes artículos e instrumentos reglamentarios:\n${lineasReglamentos}\n3. Las constancias documentales, descargos tipificados y elementos probatorios aportados a la causa.`;
+    return `VISTO:\n1. Las actuaciones obrantes en el Expediente ${num}, caratulado "${titulo}", promovido por ${solicitante} con fecha ${fecha}.\n2. Lo normado y garantizado en los siguientes artículos e instrumentos reglamentarios:\n${lineasReglamentos}\n3. Las constancias documentales, descargos tipificados y elementos probatorios aportados al expediente.`;
   }
 
   construirConsiderandosPorDefecto(exp?: Expediente | null): string {
@@ -904,6 +930,18 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (this.columnaScrolledBottom[estado] !== atBottom) {
       this.columnaScrolledBottom[estado] = atBottom;
       this.cdr?.markForCheck();
+    }
+  }
+
+  onColumnaWheel(event: WheelEvent): void {
+    const el = event.currentTarget as HTMLElement | null;
+    if (!el) return;
+    const canScroll = el.scrollHeight > el.clientHeight;
+    if (!canScroll) return;
+    const scrollingDown = event.deltaY > 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    const scrollingUp = event.deltaY < 0 && el.scrollTop > 0;
+    if (scrollingDown || scrollingUp) {
+      event.stopPropagation();
     }
   }
 
@@ -1563,6 +1601,14 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       next: composicion => {
         this.cargandoComposicion = false;
         this.composicion = composicion;
+        this.composicionExpedienteId = String(expedienteId);
+        if (
+          (this.modalFirmaAbierto || this.modalVotacionAbierto) &&
+          this.expedienteSeleccionado &&
+          String(this.expedienteSeleccionado.id) === String(expedienteId)
+        ) {
+          this.aplicarInferenciaFirmaDesdeComposicion();
+        }
         this.cdr?.markForCheck();
       },
       error: err => {
@@ -1576,6 +1622,24 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   private limpiarComposicion(): void {
     this.composicion = null;
     this.cargandoComposicion = false;
+    this.composicionExpedienteId = null;
+  }
+
+  private aplicarInferenciaFirmaDesdeComposicion(): void {
+    const perfil = this.usuarioActualPerfil;
+    const legajoNum = perfil?.legajo ? Number(perfil.legajo) : null;
+    const asiento = this.composicion?.asientos?.find(a =>
+      (legajoNum != null && !isNaN(legajoNum) && a.nro_socio === legajoNum) ||
+      (perfil?.first_name && a.nombre && a.nombre.toLowerCase().includes(perfil.first_name.toLowerCase()))
+    );
+
+    if (asiento) {
+      this.esSuplenteFirma = asiento.condicion === 'SUPLENTE';
+      this.anioSocialFirma = asiento.anio_social || null;
+    } else {
+      this.esSuplenteFirma = false;
+      this.anioSocialFirma = null;
+    }
   }
 
   cargarJustificaciones(expedienteId: number | string): void {
@@ -1618,6 +1682,9 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           }
         }
         this.cargandoJustificaciones = false;
+        if (this.mostrarModalEnmienda) {
+          this.inicializarPuntajesEnmiendaPorSocio();
+        }
         this.cdr?.markForCheck();
       },
       error: err => {
@@ -1703,6 +1770,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const motivo = (this.motivoExclusion || '').trim();
     if (motivo.length < 10) {
       this.errorExclusion = 'El motivo de exclusión es obligatorio y debe tener al menos 10 caracteres.';
+      this.notifications.warning(this.errorExclusion);
       return;
     }
 
@@ -1716,7 +1784,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       next: (resp) => {
         this.excluyendoInvolucrado = false;
         this.notifications.success(
-          `Socio ${this.involucradoAExcluir?.legajo} excluido fundadamente de la causa.`
+          `Socio N° ${this.involucradoAExcluir?.numero_socio ?? this.involucradoAExcluir?.legajo} excluido fundadamente del expediente.`
         );
         this.cerrarModalExclusion();
 
@@ -1734,14 +1802,28 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         // Si se archivó administrativamente por exclusión de todos los involucrados
         if (resp.expediente_archivado && this.expedienteSeleccionado) {
           this.expedienteSeleccionado.estado = 'emitido';
+          this.expedienteSeleccionado.estadoDisplay = 'Emitidos';
           this.expedienteSeleccionado.puntos = 0;
-          this.notifications.success(
-            'Al no quedar imputados activos, la causa ha sido archivada sin efecto.'
+          const enLista = (this.expedientes || []).find(
+            e => String(e.id) === String(this.expedienteSeleccionado?.id)
           );
+          if (enLista) {
+            enLista.estado = 'emitido';
+            enLista.estadoDisplay = 'Emitidos';
+            enLista.puntos = 0;
+          }
+          this.markExpedientesDirty();
+          this.notifications.success(
+            'Al no quedar imputados activos, el expediente ha sido archivado sin efecto.'
+          );
+          this.cerrarModales();
+          this.refrescarVistaActual();
+          return;
         }
 
         // Recargar el detalle completo del expediente para sincronizar estados
         this.cargarJustificaciones(expId);
+        this.refrescarVistaActual();
       },
       error: (err) => {
         this.excluyendoInvolucrado = false;
@@ -1752,6 +1834,38 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  private inicializarPuntajesEnmiendaPorSocio(): void {
+    const mapa: { [socioId: number]: string } = {};
+    const pedido = this.expedienteSeleccionado?.puntos ?? 0;
+
+    for (const inv of this.involucradosActivosEnmienda) {
+      let raw = '0.0';
+      if (inv.descargo?.puntaje_ratificado != null) {
+        raw = String(inv.descargo.puntaje_ratificado);
+      } else if (inv.descargo?.decisiones_causal?.[0]?.puntaje_final != null) {
+        raw = String(inv.descargo.decisiones_causal[0].puntaje_final);
+      } else if (inv.descargo?.valoraciones_t03?.[0]?.puntaje_final != null) {
+        raw = String(inv.descargo.valoraciones_t03[0].puntaje_final);
+      } else if (inv.descargo) {
+        raw = String(this.getPuntajeFinalInvolucrado(inv));
+      } else if (this.expedienteSeleccionado?.puntaje_solicitado) {
+        raw = this.expedienteSeleccionado.puntaje_solicitado;
+      } else if (Number(pedido) === -0.25) {
+        raw = 'LLAMADO_ATENCION';
+      } else if (Number(pedido) === 0.25) {
+        raw = 'FELICITACION';
+      } else {
+        raw = Number(pedido).toFixed(1);
+      }
+
+      const match = this.escalaPuntajes.find(
+        op => op.valor === raw || (!isNaN(Number(op.valor)) && !isNaN(Number(raw)) && Number(op.valor) === Number(raw))
+      );
+      mapa[inv.socioId] = match ? match.valor : '0.0';
+    }
+    this.puntajesEnmiendaPorSocio = mapa;
+  }
+
   abrirModalEnmienda(exp?: Expediente | null): void {
     if (exp) {
       this.expedienteSeleccionado = exp;
@@ -1759,11 +1873,21 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (!this.expedienteSeleccionado) return;
     this.motivoEnmienda = '';
     this.considerandosEnmienda = this.expedienteSeleccionado.considerandos || '';
+    this.puntajeEnmiendaInput = null;
+    this.puntajesEnmiendaPorSocio = {};
     this.errorEnmienda = '';
     this.enmendandoResolucion = false;
     this.modalDetalleAbierto = false;
     this.modalResolucionAbierto = false;
     this.mostrarModalEnmienda = true;
+    if (this.involucradosJustificacion.length > 0) {
+      this.inicializarPuntajesEnmiendaPorSocio();
+    } else if (
+      this.expedienteSeleccionado.id &&
+      !isNaN(Number(this.expedienteSeleccionado.id))
+    ) {
+      this.cargarJustificaciones(this.expedienteSeleccionado.id);
+    }
     this.scrollLock.lock();
     this.enfocarModalActivo();
   }
@@ -1772,6 +1896,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.mostrarModalEnmienda = false;
     this.motivoEnmienda = '';
     this.considerandosEnmienda = '';
+    this.puntajeEnmiendaInput = null;
+    this.puntajesEnmiendaPorSocio = {};
     this.errorEnmienda = '';
     this.enmendandoResolucion = false;
     if (this.expedienteSeleccionado) {
@@ -1785,6 +1911,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const motivo = (this.motivoEnmienda || '').trim();
     if (motivo.length < 10) {
       this.errorEnmienda = 'El motivo de enmienda es obligatorio y debe tener al menos 10 caracteres.';
+      this.notifications.warning(this.errorEnmienda);
       return;
     }
 
@@ -1792,10 +1919,50 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.errorEnmienda = '';
 
     const expId = Number(this.expedienteSeleccionado.id);
-    const payload = {
+    const payload: {
+      motivo_enmienda: string;
+      considerandos?: string;
+      articulos_resolutivos?: string;
+      nuevos_puntajes?: Array<{ socio_id: number; puntaje: number | string }>;
+    } = {
       motivo_enmienda: motivo,
       considerandos: this.considerandosEnmienda.trim() || undefined
     };
+
+    const activosEnmienda = this.involucradosActivosEnmienda.filter(f => f.socioId > 0);
+    if (activosEnmienda.length > 0 && Object.keys(this.puntajesEnmiendaPorSocio).length > 0) {
+      payload.nuevos_puntajes = activosEnmienda.map(inv => {
+        const val = this.puntajesEnmiendaPorSocio[inv.socioId] ?? '0.0';
+        const puntaje = (val === 'LLAMADO_ATENCION' || val === 'FELICITACION') ? val : Number(val);
+        return { socio_id: Number(inv.socioId), puntaje };
+      });
+      const lineasSocios = activosEnmienda.map(inv => {
+        const val = this.puntajesEnmiendaPorSocio[inv.socioId] ?? '0.0';
+        const nom = this.getNombreCompletoInvolucrado(inv);
+        const grupo = inv.grupo ? ` (Grupo ${inv.grupo})` : '';
+        const op = this.escalaPuntajes.find(o => o.valor === val);
+        const ptsLabel = op ? op.label : val;
+        return `• Socio N° ${inv.numero_socio ?? 'S/D'} - ${nom}${grupo}: Puntaje Final ${ptsLabel}.`;
+      }).join('\n');
+      payload.articulos_resolutivos = `ARTÍCULO 1°.- Aplicar la resolución disciplinaria rectificada conforme al siguiente detalle de puntos finales consolidados:\n${lineasSocios}\n\nARTÍCULO 2°.- Notifíquese a la Comisión Directiva y a los socios involucrados, regístrese, publíquese y archívese.`;
+    } else if (
+      this.puntajeEnmiendaInput !== null &&
+      String(this.puntajeEnmiendaInput) !== '' &&
+      !isNaN(Number(this.puntajeEnmiendaInput))
+    ) {
+      const puntajeNum = Number(this.puntajeEnmiendaInput);
+      const socioIds = activosEnmienda.length > 0
+        ? activosEnmienda.map(f => Number(f.socioId))
+        : (this.expedienteSeleccionado.sociosInvolucrados || [])
+            .filter((s: any) => !s.esta_excluido && Number(s.id) > 0)
+            .map((s: any) => Number(s.id));
+      if (socioIds.length > 0) {
+        payload.nuevos_puntajes = socioIds.map(socio_id => ({
+          socio_id,
+          puntaje: puntajeNum
+        }));
+      }
+    }
 
     this.expedienteApi.enmendarResolucion(expId, payload).subscribe({
       next: (resp) => {
@@ -1805,16 +1972,35 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         );
         this.cerrarModalEnmienda();
         if (this.expedienteSeleccionado) {
-          this.expedienteSeleccionado.estado = 'pendiente_correos';
+          this.expedienteSeleccionado.estado = 'pendiente_firma';
           this.expedienteSeleccionado.estadoDisplay = 'Pendiente de Firma';
           if (resp?.resolucion_nueva_detalle?.considerandos) {
             this.expedienteSeleccionado.considerandos = resp.resolucion_nueva_detalle.considerandos;
           }
+          if (resp?.resolucion_nueva_detalle?.articulos_resolutivos) {
+            this.expedienteSeleccionado.seResuelve = resp.resolucion_nueva_detalle.articulos_resolutivos;
+            this.expedienteSeleccionado.articulosResolutivos = resp.resolucion_nueva_detalle.articulos_resolutivos;
+          }
           this.expedienteSeleccionado.firmas = {
             juecesFirmantes: [],
+            firmantesDetalle: [],
             hashCriptografico: '',
             timestamp: ''
           };
+          const enLista = (this.expedientes || []).find(
+            e => String(e.id) === String(this.expedienteSeleccionado?.id)
+          );
+          if (enLista) {
+            enLista.estado = 'pendiente_firma';
+            enLista.estadoDisplay = 'Pendiente de Firma';
+            enLista.firmas = {
+              juecesFirmantes: [],
+              firmantesDetalle: [],
+              hashCriptografico: '',
+              timestamp: ''
+            };
+          }
+          this.markExpedientesDirty();
         }
         this.cerrarModales();
         this.cargarDatosTablero();
@@ -2019,6 +2205,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.modalCatalogoResolucionAbierto = false;
     this.modalVotacionAbierto = true;
     this.fechaActualResolucion = new Date();
+    this.aplicarInferenciaFirmaDesdeComposicion();
+    if (
+      this.puedeConsultarComposicion &&
+      (!this.composicion || this.composicionExpedienteId !== String(exp.id))
+    ) {
+      this.cargarComposicion(exp.id);
+    }
     this.scrollLock.lock();
     this.enfocarModalActivo();
     this.filtroReglamentosResolucion = '';
@@ -2159,19 +2352,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.firmando = false;
 
     // Inferencia de condición y año desde composición o perfil (EARS-99.2)
-    const perfil = this.usuarioActualPerfil;
-    const legajoNum = perfil?.legajo ? Number(perfil.legajo) : null;
-    const asiento = this.composicion?.asientos?.find(a =>
-      (legajoNum != null && !isNaN(legajoNum) && a.nro_socio === legajoNum) ||
-      (perfil?.first_name && a.nombre && a.nombre.toLowerCase().includes(perfil.first_name.toLowerCase()))
-    );
-
-    if (asiento) {
-      this.esSuplenteFirma = asiento.condicion === 'SUPLENTE';
-      this.anioSocialFirma = asiento.anio_social || null;
-    } else {
-      this.esSuplenteFirma = false;
-      this.anioSocialFirma = null;
+    this.aplicarInferenciaFirmaDesdeComposicion();
+    if (
+      this.puedeConsultarComposicion &&
+      (!this.composicion || this.composicionExpedienteId !== String(exp.id))
+    ) {
+      this.cargarComposicion(exp.id);
     }
 
     this.scrollLock.lock();
@@ -2214,6 +2400,8 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.mostrarModalEnmienda = false;
     this.motivoEnmienda = '';
     this.considerandosEnmienda = '';
+    this.puntajeEnmiendaInput = null;
+    this.puntajesEnmiendaPorSocio = {};
     this.errorEnmienda = '';
     this.enmendandoResolucion = false;
     this.reglamentacionExpandida = false;
@@ -2356,10 +2544,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       considerandos,
       articulos_resolutivos: seResuelve,
       reglamentos_respaldantes: reglamentos,
-      expedientes_referenciados: refIds
+      expedientes_referenciados: refIds,
+      es_suplente: this.esSuplenteFirma,
+      ...(this.anioSocialFirma ? { anio_social: this.anioSocialFirma } : {})
     };
 
-    const actualizarLocalYFinalizar = (hash?: string) => {
+    const actualizarLocalYFinalizar = (hash?: string, firmantesTd?: any[]) => {
       this.dataService.votarDictamen(exp.id, this.votosJueces, considerandos, {
         vistos,
         considerandos,
@@ -2389,8 +2579,12 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
         numeroResolucion: exp.numero,
         aprobado: true
       };
+      const firmantesList = Array.isArray(firmantesTd)
+        ? firmantesTd.map(f => typeof f === 'string' ? f : (f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`))
+        : [];
       exp.firmas = {
-        juecesFirmantes: [],
+        juecesFirmantes: firmantesList,
+        firmantesDetalle: Array.isArray(firmantesTd) ? firmantesTd : [],
         hashCriptografico: hash || '',
         timestamp: ''
       };
@@ -2403,7 +2597,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     if (exp.id && !isNaN(Number(exp.id))) {
       this.expedienteApi.crearResolucion(exp.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
         next: res => {
-          actualizarLocalYFinalizar(res?.contenido_hash);
+          actualizarLocalYFinalizar(res?.contenido_hash, res?.firmantes_td);
           this.cdr?.markForCheck();
         },
         error: (errCrear) => {
@@ -2411,7 +2605,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           if (errCrear?.status === 409) {
             this.expedienteApi.actualizarResolucion(exp.id, payload).pipe(takeUntil(this.destroy$)).subscribe({
               next: res => {
-                actualizarLocalYFinalizar(res?.contenido_hash);
+                actualizarLocalYFinalizar(res?.contenido_hash, res?.firmantes_td);
                 this.cdr?.markForCheck();
               },
               error: (errPatch) => {
@@ -2436,17 +2630,25 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
   descargarPdfResolucion(): void {
     if (!this.expedienteSeleccionado) return;
     const expId = this.expedienteSeleccionado.id;
+    // La ventana se abre en el gesto del usuario para que el navegador no la bloquee.
+    const ventana = window.open('', '_blank');
     this.expedienteApi.descargarPreviewResolucionPdf(expId).pipe(takeUntil(this.destroy$)).subscribe({
       next: blob => {
-        const url = this.createTrackedObjectUrl(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `resolucion-${expId}.pdf`;
-        a.click();
-        this.scheduleTimer(() => this.revokeTrackedObjectUrl(url), 10000);
+        const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+        const url = this.createTrackedObjectUrl(pdfBlob);
+        if (ventana) {
+          ventana.location.href = url;
+        } else {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `resolucion-${expId}.pdf`;
+          a.click();
+        }
+        this.scheduleTimer(() => this.revokeTrackedObjectUrl(url), 60000);
       },
       error: err => {
-        this.notifications.error(httpErrorMessage(err, 'No se pudo descargar la vista previa de la resolución en PDF.'));
+        ventana?.close();
+        this.notifications.error(httpErrorMessage(err, 'No se pudo abrir la vista previa de la resolución en PDF.'));
       }
     });
   }
@@ -2457,15 +2659,22 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.firmando = true;
     this.cdr?.markForCheck();
 
-    const finalizarExito = (firmasActualizadas: string[], estadoRes?: string, hash?: string, issuedAt?: string) => {
+    const finalizarExito = (
+      firmasActualizadas: string[],
+      estadoRes?: string,
+      hash?: string,
+      issuedAt?: string,
+      firmantesDetalle?: any[]
+    ) => {
       exp.firmas = {
         juecesFirmantes: firmasActualizadas,
+        firmantesDetalle: firmantesDetalle ?? exp.firmas?.firmantesDetalle ?? [],
         hashCriptografico: hash || exp.firmas?.hashCriptografico || '',
         timestamp: issuedAt || exp.firmas?.timestamp || ''
       };
       if (firmasActualizadas.length >= 3 || estadoRes === 'ISSUED') {
-        exp.estado = 'pendiente_correos';
-        exp.estadoDisplay = 'Pendiente de Envío';
+        exp.estado = 'emitido';
+        exp.estadoDisplay = 'Emitidos';
         this.mostrarNotificacion('Resolución perfeccionada con las 3 firmas digitales e impacto en saldo de socios.');
       } else {
         this.mostrarNotificacion(`Firma digital estampada exitosamente (${firmasActualizadas.length}/3 firmas recolectadas).`);
@@ -2486,7 +2695,13 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
           const firmas = Array.isArray(res.firmantes_td)
             ? res.firmantes_td.map(f => typeof f === 'string' ? f : (f.etiqueta || `${f.legajo} - ${f.full_name} - ${f.grupo}`))
             : [];
-          finalizarExito(firmas, res.estado, res.contenido_hash, res.issued_at);
+          finalizarExito(
+            firmas,
+            res.estado,
+            res.contenido_hash,
+            res.issued_at,
+            Array.isArray(res.firmantes_td) ? res.firmantes_td : undefined
+          );
         },
         error: () => {
           const perfil = this.auth.getCurrentUser();
@@ -2570,6 +2785,26 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
       case 'urgente': return 'priority_high';
       case 'baja': return 'arrow_downward';
       default: return 'horizontal_rule';
+    }
+  }
+
+  readonly ordenUrgencias: NivelUrgencia[] = ['baja', 'normal', 'urgente'];
+
+  decrementarUrgencia(): void {
+    if (!this.expedienteSeleccionado) return;
+    const actual = this.expedienteSeleccionado.urgencia || 'normal';
+    const idx = this.ordenUrgencias.indexOf(actual);
+    if (idx > 0) {
+      this.cambiarUrgenciaExpediente(this.ordenUrgencias[idx - 1]);
+    }
+  }
+
+  incrementarUrgencia(): void {
+    if (!this.expedienteSeleccionado) return;
+    const actual = this.expedienteSeleccionado.urgencia || 'normal';
+    const idx = this.ordenUrgencias.indexOf(actual);
+    if (idx !== -1 && idx < this.ordenUrgencias.length - 1) {
+      this.cambiarUrgenciaExpediente(this.ordenUrgencias[idx + 1]);
     }
   }
 

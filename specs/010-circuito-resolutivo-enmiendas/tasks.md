@@ -10,7 +10,7 @@
 ## Desglose Atómico de Tareas (<30 minutos)
 
 - [x] **T10.1 (SCRUM-101) Persistencia de `puntaje_ratificado` en Backend [TDD]:**  
-      Agregar columna `puntaje_ratificado = models.CharField(max_length=20, null=True, blank=True)` en `DescargoExpediente`, generar migración `0026_circuito_resolutivo_enmiendas.py`, persistir el valor en `CausalResolutionService.decide` y exponerlo en `visor_serializers.py` y `DescargoDetalleSerializer`.  
+      Agregar columna `puntaje_ratificado = models.CharField(max_length=20, null=True, blank=True)` en `DescargoExpediente`, generar migraciones `0027_descargo_puntaje_ratificado.py`, `0028_descargo_exclusion_involucrado.py` y `0029_enmienda_resolucion.py`, persistir el valor en `CausalResolutionService.decide` y exponerlo en `visor_serializers.py` y `DescargoDetalleSerializer`.  
       *Hecho cuando:* Tests en `test_causal_resolution_service.py` y `test_visor_expediente.py` confirman persistencia y recuperación del valor tras guardar.
 
 - [x] **T10.2 (SCRUM-101) Sincronización de Puntaje Ratificado en Frontend [TDD]:**  

@@ -154,14 +154,14 @@ export class VisorExpedienteComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.cargando = false;
           if (err.status === 403) {
-            this.errorCarga = 'Acceso denegado: No posee facultades para consultar esta causa reservada.';
+            this.errorCarga = 'Acceso denegado: No posee facultades para consultar este expediente reservado.';
             this.notifications.error('No tenés permisos para sustanciar o consultar este expediente.');
           } else if (err.status === 404) {
             this.errorCarga = 'El expediente solicitado no existe o fue archivado.';
             this.notifications.error('Expediente no encontrado.');
           } else {
             this.errorCarga = 'Ocurrió un error al cargar los datos del expediente. Intente nuevamente.';
-            this.notifications.error('Error al cargar la causa disciplinaria.');
+            this.notifications.error('Error al cargar el expediente disciplinario.');
           }
           this.cdr?.markForCheck();
         },
