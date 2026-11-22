@@ -16,7 +16,7 @@
                     [ngClass]="soloAlertas ? 'badge-warning text-dark' : 'badge-light text-dark'"
                     style="cursor: pointer;"
                     (click)="toggleFiltroAlerta()"
-                    title="Clic para filtrar socios en alerta disciplinaria (saldo <= -7 pts)">
+                    title="Clic para filtrar socios en alerta disciplinaria (saldo menor o igual a {{ umbralAlertaTexto }} pts)">
                 <i class="material-icons align-middle mr-1" [ngClass]="soloAlertas ? 'text-dark' : 'text-warning'" style="font-size: 16px;">warning</i>
                 {{ cantidadSociosEnAlerta }} en alerta
               </span>
@@ -214,8 +214,8 @@
                     <!-- Socio -->
                     <td>
                       <div class="font-weight-bold text-dark">{{ s.nombre }} {{ s.apellido }}</div>
-                      <span class="sr-only" *ngIf="s.saldo <= -10">Límite de cese estatutario</span>
-                      <span class="sr-only" *ngIf="s.saldo > -10 && s.saldo <= -7">Alerta preventiva</span>
+                      <span class="sr-only" *ngIf="getNivel(s) === 'critico'">Límite de cese estatutario</span>
+                      <span class="sr-only" *ngIf="getNivel(s) === 'preventivo'">Alerta preventiva</span>
                     </td>
 
                     <!-- N° de Socio -->

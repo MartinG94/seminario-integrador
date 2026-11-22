@@ -1,10 +1,10 @@
-# Plan 010 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD
+# Plan 011 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD
 
 ## 1. Arquitectura
 
 ```
 core/domain/system_parameters.py      Catálogo y validación (dominio puro, sin Django)
-core/models.py                        ParametroSistema, CambioRolTribunal (solo inserción)
+core/models.py                        SystemParameterChange, TribunalRoleChange (solo inserción)
 core/services/system_parameters.py    Lectura del valor vigente, alta de versión e historial
 core/services/tribunal_members.py     Alta y revocación del rol TD con auditoría
 core/api/                             Serializers, vistas y rutas REST
@@ -15,7 +15,7 @@ frontend/src/app/services/admin-api.service.ts
 - El catálogo de parámetros vive en código: define clave, tarjeta, tipo, límites y valor inicial. La base solo guarda los cambios.
 - El valor vigente de una clave es su último registro; si no hay registros, rige el valor inicial del catálogo.
 - El plazo de apelación reutiliza `ParametroPlazoApelacion` (PB-02) como almacenamiento, para no tener dos fuentes de verdad.
-- Los correos sin modificar se resuelven con las variables de entorno existentes (`CD_EMAIL`, `COMISION_DIRECTIVA_EMAIL`, `TRIBUNAL_EMAIL`).
+- Los correos sin modificar se resuelven con las variables de entorno existentes (`CD_EMAIL` como única fuente para Comisión Directiva —`COMISION_DIRECTIVA_EMAIL` queda como alias que la hereda— y `TRIBUNAL_EMAIL`).
 
 ## 2. Esquema (tablas nuevas)
 
@@ -24,26 +24,28 @@ No existe en el esquema legacy ni en el actual una tabla de configuración gener
 ```sql
 CREATE TABLE core_parametro_sistema (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  clave VARCHAR(50) NOT NULL,
-  valor JSON NOT NULL,
-  valor_anterior JSON NULL,
-  autor_id INT NULL,              -- FK auth_user, PROTECT
+  `key` VARCHAR(50) NOT NULL,
+  value JSON NOT NULL,
+  previous_value JSON NULL,
+  author_id INT NULL,             -- FK auth_user, PROTECT
   created_at DATETIME(6) NOT NULL,
-  INDEX (clave, created_at)
+  INDEX (`key`, created_at)
 );
 
 CREATE TABLE core_cambio_rol_tribunal (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   socio_id BIGINT NOT NULL,       -- FK socios_socio, PROTECT
-  accion VARCHAR(10) NOT NULL,    -- ALTA | BAJA
-  rol_anterior VARCHAR(20) NOT NULL,
-  rol_nuevo VARCHAR(20) NOT NULL,
-  autor_id INT NOT NULL,          -- FK auth_user, PROTECT
+  action VARCHAR(10) NOT NULL,    -- ALTA | BAJA
+  previous_role VARCHAR(20) NOT NULL,
+  new_role VARCHAR(20) NOT NULL,
+  author_id INT NOT NULL,         -- FK auth_user, PROTECT
   created_at DATETIME(6) NOT NULL
 );
 ```
 
-Ambos modelos rechazan `save()` sobre registros existentes y `delete()`.
+Ambos modelos rechazan `save()` sobre registros existentes y `delete()`, y su `QuerySet` bloquea `update()`, `delete()`, `bulk_update()` y `bulk_create(update_conflicts=True)`.
+
+La migración se llama `core/0001_parametros_sistema_y_rol_tribunal.py`: no reutiliza `0001_initial`, porque entornos con el volumen MySQL previo ya registran una migración histórica `('core', '0001_initial')` y Django la daría por aplicada sin crear las tablas.
 
 ## 3. Endpoints
 
@@ -55,7 +57,10 @@ Ambos modelos rechazan `save()` sobre registros existentes y `delete()`.
 | `GET` | `/api/v1/admin/usuarios-td/` | `ADMIN` | Socios con rol TD |
 | `POST` | `/api/v1/admin/usuarios-td/` | `ADMIN` | `201` socio designado · `400` no elegible |
 | `DELETE` | `/api/v1/admin/usuarios-td/<socio_id>/` | `ADMIN` | `204` · `404` si no tiene rol TD |
+| `GET` | `/api/v1/admin/usuarios-td/candidatos/?search=` | `ADMIN` | Socios Ordinarios habilitados que coinciden (búsqueda en servidor, hasta 20) |
 | `GET` | `/api/v1/parametros/adjuntos/` | Autenticado | Límites vigentes de tamaño y cantidad |
+| `GET` | `/api/v1/parametros/umbrales/` | Autenticado | Umbral crítico, umbral preventivo y si la alerta preventiva está activa |
+| `GET` | `/api/v1/parametros/plazos/` | Autenticado | Plazos vigentes de descargo y de apelación |
 
 ## 4. Integración con el código existente
 

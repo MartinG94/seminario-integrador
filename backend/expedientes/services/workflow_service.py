@@ -138,7 +138,8 @@ class ExpedienteWorkflowService:
                 {
                     "estado": (
                         "El expediente permanece en período de justificaciones hasta que "
-                        "venza el plazo de 5 días hábiles."
+                        f"venza el plazo de {SystemParameterService.descargo_business_days()} "
+                        "días hábiles."
                     )
                 }
             )

@@ -495,11 +495,14 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ## 17. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
 
+> **Spec de Referencia:** [`specs/011-panel-administracion/spec.md`](specs/011-panel-administracion/spec.md)
+> **Plan Técnico:** [`specs/011-panel-administracion/plan.md`](specs/011-panel-administracion/plan.md)
 > **Tareas:** [`specs/011-panel-administracion/tasks.md`](specs/011-panel-administracion/tasks.md)
 
 - [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `ParametroSistema` de solo inserción, `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, alertas, correos y comprobantes.
 - [x] **TS5-03.2 Pantalla de administración exclusiva para ADMIN [TDD]:** Ruta `/admin/parametros` con `TribunalGuard`, entrada "Administración" en el menú y tarjetas temáticas Plazos, Umbrales, Correos y Adjuntos.
-- [x] **TS5-03.3 Miembros con rol TD [TDD]:** Tabla atómica, alta con búsqueda reactiva, revocación a Socio Ordinario y auditoría inmutable `CambioRolTribunal` vía `GET/POST/DELETE /api/v1/admin/usuarios-td/`.
+- [x] **TS5-03.3 Miembros con rol TD [TDD]:** Tabla atómica, alta con búsqueda reactiva, revocación a Socio Ordinario y auditoría inmutable `TribunalRoleChange` vía `GET/POST/DELETE /api/v1/admin/usuarios-td/`.
+- [x] **TS5-03.4 Revisión PR #78 [TDD]:** Integración con `main`, migración `core` sin colisión, umbrales y plazos vigentes en Ranking, Mis Expedientes y textos, tope de comprobantes configurable, `N° de Socio` real, búsqueda de candidatos en servidor, corrección del autocompletado, modo oscuro tokenizado y `strict: true`.
 
 ---
 

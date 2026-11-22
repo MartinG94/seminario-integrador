@@ -12,7 +12,7 @@ import { NotificationService, NotificationType, UserNotification } from '../../s
   styleUrls: ['./notification-center.component.scss']
 })
 export class NotificationCenterComponent implements AfterViewInit, OnDestroy {
-  @ViewChild(CdkPortal, { static: true }) portal: CdkPortal;
+  @ViewChild(CdkPortal, { static: true }) portal!: CdkPortal;
   private overlayRef: OverlayRef | null = null;
   private notificationElement: HTMLElement | null = null;
   private dialogOutlet: DomPortalOutlet | null = null;
@@ -75,8 +75,10 @@ export class NotificationCenterComponent implements AfterViewInit, OnDestroy {
     container.appendChild(outletElement);
     this.dialogOutlet = new DomPortalOutlet(outletElement, undefined, undefined, undefined, this.document);
     this.dialogOutlet.attach(new DomPortal(this.notificationElement));
-    this.dialogSubscriptions.add(this.activeDialog.beforeClosed().subscribe(() => this.releaseDialogOutlet()));
-    this.dialogSubscriptions.add(this.activeDialog.afterClosed().subscribe(() => this.followDialog()));
+    const dialogo = this.activeDialog;
+    if (!dialogo) { return; }
+    this.dialogSubscriptions.add(dialogo.beforeClosed().subscribe(() => this.releaseDialogOutlet()));
+    this.dialogSubscriptions.add(dialogo.afterClosed().subscribe(() => this.followDialog()));
   }
 
   private releaseDialogOutlet(): void {

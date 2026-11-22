@@ -2699,7 +2699,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
             firmas,
             res.estado,
             res.contenido_hash,
-            res.issued_at,
+            res.issued_at ?? undefined,
             Array.isArray(res.firmantes_td) ? res.firmantes_td : undefined
           );
         },

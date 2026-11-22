@@ -11,6 +11,8 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { RankingSociosComponent } from '../ranking-socios/ranking-socios.component';
+import { UMBRALES_INICIALES } from '../ranking-socios/ranking-thresholds';
+import { ParametrosVigentesService } from '../services/parametros-vigentes.service';
 import { ExpedientesSocioDialogComponent } from '../ranking-socios/expedientes-socio-dialog/expedientes-socio-dialog.component';
 import { MisExpedientesComponent } from '../mis-expedientes/mis-expedientes.component';
 import { GestionarExpedientesComponent } from '../gestionar-expedientes/gestionar-expedientes.component';
@@ -64,6 +66,7 @@ describe('Auditoría de Memoria y Ciclo de Vida Integral (T-87.19)', () => {
         { provide: RankingService, useValue: rankingSpy },
         { provide: NotificationService, useValue: notifSpy },
         { provide: MatDialog, useValue: dialogSpy },
+        { provide: ParametrosVigentesService, useValue: { umbrales: () => of({ ...UMBRALES_INICIALES }) } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -101,6 +104,9 @@ describe('Auditoría de Memoria y Ciclo de Vida Integral (T-87.19)', () => {
       const component = fixture.componentInstance;
       const pending = http.match((r) => r.url === `${environment.apiUrl}/expedientes/mis-expedientes/`);
       expect(pending.length).toBeGreaterThan(0);
+      // Parámetros vigentes (Spec 011): también deben cancelarse al destruir la vista.
+      const parametros = http.match((r) => r.url.startsWith(`${environment.apiUrl}/parametros/`));
+      pending.push(...parametros);
 
       fixture.destroy();
 

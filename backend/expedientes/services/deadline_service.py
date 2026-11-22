@@ -24,7 +24,7 @@ class DeadlineEnforcementService:
     """Servicio de aplicación para la ejecución del cierre de plazos vencidos."""
 
     ACTOR_CRON: str = "SISTEMA_CRON"
-    MOTIVO_EXPIRACION: str = "Expiración de plazo perentorio de 5 días hábiles — Art. 12 Inc. 2"
+    MOTIVO_EXPIRACION: str = "Expiración de plazo perentorio de descargo — Art. 12 Inc. 2"
 
     def close_expired_deadlines(self, ahora: datetime | None = None) -> int:
         """

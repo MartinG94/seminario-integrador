@@ -173,9 +173,9 @@ def filter_ranking_queryset(
             if digits:
                 qs = qs.filter(grupo_id_calc=int(digits))
 
-    # Filtro por umbral de alerta disciplinaria (saldo <= -7.00 pts)
+    # Filtro por umbral de alerta vigente: el preventivo si está activo, si no el crítico.
     if solo_alertas is True:
-        qs = qs.filter(saldo_historico_calc__lte=Decimal("-7.00"))
+        qs = qs.filter(saldo_historico_calc__lte=alert_threshold())
 
     # Filtro por subcomisión (por nombre insensible a acentos, ID numérico o sin subcomisión)
     if subcomision:
@@ -368,7 +368,7 @@ from ranking.domain.threshold_alerts import (  # noqa: E402
 
 
 def configured_threshold() -> UmbralConfig:
-    """Umbrales vigentes del panel de administración (Spec 010); el crítico sigue fijo en -10."""
+    """Umbrales vigentes del panel de administración (Spec 011); el crítico sigue fijo en -10."""
     from core.services.system_parameters import SystemParameterService
 
     try:
@@ -376,6 +376,14 @@ def configured_threshold() -> UmbralConfig:
     except Exception:
         return UmbralConfig()
     return UmbralConfig(umbral_preventivo=umbral, preventivo_activo=activo)
+
+
+def alert_threshold() -> Decimal:
+    """Saldo desde el cual un socio figura "en alerta" en el ranking (parámetros vigentes)."""
+    from core.services.system_parameters import SystemParameterService
+
+    preventivo, activo = SystemParameterService.preventive_threshold()
+    return preventivo if activo else SystemParameterService.critical_threshold()
 
 
 def evaluate_socio_threshold_crossing(

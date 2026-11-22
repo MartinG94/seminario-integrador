@@ -117,6 +117,7 @@ class OpeningNotificationService:
                 frontend_url=base_url,
                 expediente_id=expediente.id,
                 socio_id=expediente.socio_id,
+                dias_habiles=SystemParameterService.descargo_business_days(),
             )
 
             # Encolar en Outbox

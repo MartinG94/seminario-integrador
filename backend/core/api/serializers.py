@@ -1,4 +1,4 @@
-"""Contratos REST del panel de administración (Spec 010)."""
+"""Contratos REST del panel de administración (Spec 011)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,8 @@ def author_label(user: Any) -> str:
         return ""
     socio = getattr(user, "socio", None)
     if socio is not None:
-        return f"{socio.last_name}, {socio.first_name} ({socio.legajo})"
+        numero = socio.numero_socio if socio.numero_socio is not None else "s/n"
+        return f"{socio.last_name}, {socio.first_name} (N° de socio {numero})"
     return user.get_username()
 
 
@@ -67,7 +68,25 @@ class TribunalMemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Socio
-        fields = ["id", "legajo", "last_name", "first_name", "social_year", "email", "subcomision"]
+        fields = [
+            "id",
+            "numero_socio",
+            "legajo",
+            "last_name",
+            "first_name",
+            "social_year",
+            "email",
+            "subcomision",
+        ]
+        read_only_fields = fields
+
+
+class TribunalCandidateSerializer(serializers.ModelSerializer):
+    subcomision = serializers.CharField(source="subcomision.name", default=None, read_only=True)
+
+    class Meta:
+        model = Socio
+        fields = ["id", "numero_socio", "last_name", "first_name", "social_year", "subcomision"]
         read_only_fields = fields
 
 

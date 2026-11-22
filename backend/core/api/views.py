@@ -1,4 +1,4 @@
-"""Endpoints del panel de administración (Spec 010). Exclusivos del rol ADMIN."""
+"""Endpoints del panel de administración (Spec 011) y lecturas públicas de parámetros."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from accounts.permissions import IsAdminComputos
 from core.api.serializers import (
     AssignTribunalMemberSerializer,
     ParameterValueSerializer,
+    TribunalCandidateSerializer,
     TribunalMemberSerializer,
     change_payload,
     parameter_payload,
@@ -94,6 +95,46 @@ class AttachmentLimitsView(APIView):
                 "cantidad_maxima": limits.cantidad_maxima,
             }
         )
+
+
+class ThresholdsView(APIView):
+    """GET /api/v1/parametros/umbrales/ — umbrales vigentes para las vistas que los resaltan."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        preventivo, activo = SystemParameterService.preventive_threshold()
+        return Response(
+            {
+                "umbral_critico": format(SystemParameterService.critical_threshold(), "f"),
+                "umbral_preventivo": format(preventivo, "f"),
+                "umbral_preventivo_activo": activo,
+            }
+        )
+
+
+class DeadlinesView(APIView):
+    """GET /api/v1/parametros/plazos/ — plazos vigentes para textos y ayudas de la UI."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        from expedientes.models import ParametroPlazoApelacion
+
+        return Response(
+            {
+                "plazo_descargo_dias_habiles": SystemParameterService.descargo_business_days(),
+                "plazo_apelacion_dias_habiles": ParametroPlazoApelacion.vigente(),
+            }
+        )
+
+
+class TribunalCandidateListView(AdminView):
+    """GET /api/v1/admin/usuarios-td/candidatos/?search= — Socios Ordinarios elegibles."""
+
+    def get(self, request: Request) -> Response:
+        candidatos = TribunalMemberService.candidates(request.query_params.get("search", ""))
+        return Response(TribunalCandidateSerializer(candidatos, many=True).data)
 
 
 class TribunalMemberListView(AdminView):

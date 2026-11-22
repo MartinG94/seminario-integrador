@@ -47,12 +47,12 @@ describe('LoginComponent feedback', () => {
     component.ingresar();
     expect(notifications.error).toHaveBeenCalledOnceWith('Número de Socio no encontrado o cuenta no habilitada.');
     expect(component.enviando).toBeFalse();
-    auth.login.and.returnValue(of({} as never));
+    auth.login.and.returnValue(of({} as any));
     component.ingresar();
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/mis-expedientes');
   });
   it('permite iniciar sesión desde los chips demo usando numero_socio', () => {
-    auth.login.and.returnValue(of({} as never));
+    auth.login.and.returnValue(of({} as any));
     const chips: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('.btn-demo-chip');
     expect(chips.length).toBe(5);
     chips[0].click();

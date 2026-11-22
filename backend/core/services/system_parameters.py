@@ -1,4 +1,4 @@
-"""Lectura y modificación auditada de los parámetros del sistema (Spec 010).
+"""Lectura y modificación auditada de los parámetros del sistema (Spec 011).
 
 El valor vigente de una clave es su último registro; si nunca se modificó, rige el valor
 inicial del catálogo. Cada cambio inserta un registro nuevo: nada se actualiza ni se borra.
@@ -22,7 +22,7 @@ from core.domain.system_parameters import (
     normalize_value,
     to_python,
 )
-from core.models import ParametroSistema
+from core.models import SystemParameterChange
 
 BYTES_PER_MB: Final = 1024 * 1024
 
@@ -53,13 +53,17 @@ class AttachmentLimits:
         return self.tamano_maximo_mb * BYTES_PER_MB
 
 
-def _appeal_changes() -> list[ParameterChange]:
-    """El plazo de apelación se almacena en su tabla propia (PB-02)."""
+def _appeal_changes(limit: int | None = None) -> list[ParameterChange]:
+    """El plazo de apelación se almacena en su tabla propia (PB-02).
+
+    Con `limit`, sólo se leen los últimos `limit` cambios (más uno para su valor anterior).
+    """
     from expedientes.models import ParametroPlazoApelacion
 
-    registros = list(
-        ParametroPlazoApelacion.objects.select_related("autor").order_by("-created_at", "-id")
+    queryset = ParametroPlazoApelacion.objects.select_related("autor").order_by(
+        "-created_at", "-id"
     )
+    registros = list(queryset[: limit + 1] if limit is not None else queryset)
     cambios: list[ParameterChange] = []
     for index, registro in enumerate(registros):
         anterior = (
@@ -75,7 +79,16 @@ def _appeal_changes() -> list[ParameterChange]:
                 created_at=registro.created_at,
             )
         )
-    return cambios
+    return cambios[:limit] if limit is not None else cambios
+
+
+def _to_change(definition: ParameterDefinition, registro: SystemParameterChange) -> ParameterChange:
+    return ParameterChange(
+        valor=to_python(definition, registro.value),
+        valor_anterior=to_python(definition, registro.previous_value),
+        autor=registro.author,
+        created_at=registro.created_at,
+    )
 
 
 class SystemParameterService:
@@ -96,30 +109,18 @@ class SystemParameterService:
         if clave == catalog.PLAZO_APELACION:
             return _appeal_changes()
         return [
-            ParameterChange(
-                valor=to_python(definition, registro.valor),
-                valor_anterior=to_python(definition, registro.valor_anterior),
-                autor=registro.autor,
-                created_at=registro.created_at,
-            )
-            for registro in ParametroSistema.objects.filter(clave=clave).select_related("autor")
+            _to_change(definition, registro)
+            for registro in SystemParameterChange.objects.filter(key=clave).select_related("author")
         ]
 
     @classmethod
     def last_change(cls, clave: str) -> ParameterChange | None:
         definition = get_definition(clave)
         if clave == catalog.PLAZO_APELACION:
-            cambios = _appeal_changes()
+            cambios = _appeal_changes(limit=1)
             return cambios[0] if cambios else None
-        registro = ParametroSistema.objects.filter(clave=clave).select_related("autor").first()
-        if registro is None:
-            return None
-        return ParameterChange(
-            valor=to_python(definition, registro.valor),
-            valor_anterior=to_python(definition, registro.valor_anterior),
-            autor=registro.autor,
-            created_at=registro.created_at,
-        )
+        registro = SystemParameterChange.objects.filter(key=clave).select_related("author").first()
+        return _to_change(definition, registro) if registro else None
 
     @classmethod
     def get(cls, clave: str) -> Any:
@@ -144,20 +145,18 @@ class SystemParameterService:
                 T01AppealService.set_business_days(dias_habiles=valor, user=user)
             except T01AppealError as exc:
                 raise ParameterValidationError(str(exc)) from exc
-            return _appeal_changes()[0]
+            return _appeal_changes(limit=1)[0]
 
-        anterior = cls.get(clave)
+        # Se bloquea el último registro de la clave para que dos cambios simultáneos no
+        # tomen el mismo valor anterior.
+        ultimo = SystemParameterChange.objects.select_for_update().filter(key=clave).first()
+        anterior = ultimo.value if ultimo else cls.default_for(definition)
         if definition.tipo == catalog.ParameterType.DECIMAL and anterior is not None:
             anterior = format(Decimal(str(anterior)), "f")
-        registro = ParametroSistema.objects.create(
-            clave=clave, valor=valor, valor_anterior=anterior, autor=user
+        registro = SystemParameterChange.objects.create(
+            key=clave, value=valor, previous_value=anterior, author=user
         )
-        return ParameterChange(
-            valor=to_python(definition, registro.valor),
-            valor_anterior=to_python(definition, registro.valor_anterior),
-            autor=user,
-            created_at=registro.created_at,
-        )
+        return _to_change(definition, registro)
 
     # --- Accesos tipados para los consumidores ---
 
@@ -172,6 +171,10 @@ class SystemParameterService:
             Decimal(str(cls.get(catalog.UMBRAL_PREVENTIVO))),
             bool(cls.get(catalog.UMBRAL_PREVENTIVO_ACTIVO)),
         )
+
+    @classmethod
+    def critical_threshold(cls) -> Decimal:
+        return Decimal(str(cls.get(catalog.UMBRAL_CRITICO)))
 
     @classmethod
     def email(cls, clave: str, *, fallback: str | None = None) -> str:

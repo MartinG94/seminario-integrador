@@ -1,4 +1,4 @@
-"""API de parámetros del sistema (Spec 010, T2 a T4): RBAC, validación y auditoría."""
+"""API de parámetros del sistema (Spec 011, T2 a T4): RBAC, validación y auditoría."""
 
 from decimal import Decimal
 
@@ -6,7 +6,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 
-from core.models import ParametroSistema
+from core.models import SystemParameterChange
 from core.services.system_parameters import SystemParameterService
 from expedientes.models import ParametroPlazoApelacion
 from socios.models import Role
@@ -50,7 +50,7 @@ def test_non_admin_roles_get_403_on_every_admin_endpoint(make_socio, authenticat
     assert client.get(history_url("plazo_descargo_dias_habiles")).status_code == 403
     response = client.put(detail_url("plazo_descargo_dias_habiles"), {"valor": 9}, format="json")
     assert response.status_code == 403
-    assert not ParametroSistema.objects.exists()
+    assert not SystemParameterChange.objects.exists()
 
 
 # --- RF-02: consulta ---
@@ -92,15 +92,15 @@ def test_admin_updates_a_parameter_and_the_change_is_audited(admin_client) -> No
     assert response.status_code == 200
     assert response.data["valor"] == 7
     assert response.data["valor_inicial"] == 5
-    assert response.data["actualizado_por"] == "Apellido403655, Nombre (403655)"
+    assert response.data["actualizado_por"] == "Apellido403655, Nombre (N° de socio s/n)"
     assert response.data["actualizado_at"] is not None
-    registro = ParametroSistema.objects.get()
-    assert (registro.clave, registro.valor, registro.valor_anterior) == (
+    registro = SystemParameterChange.objects.get()
+    assert (registro.key, registro.value, registro.previous_value) == (
         "plazo_descargo_dias_habiles",
         7,
         5,
     )
-    assert registro.autor.get_username() == "403655"
+    assert registro.author.get_username() == "403655"
     assert SystemParameterService.descargo_business_days() == 7
 
 
@@ -113,8 +113,8 @@ def test_each_change_inserts_a_new_record_and_history_lists_them(admin_client) -
 
     assert response.status_code == 200
     assert [(c["valor"], c["valor_anterior"]) for c in response.data] == [(10, 7), (7, 5)]
-    assert response.data[0]["autor"] == "Apellido403655, Nombre (403655)"
-    assert ParametroSistema.objects.count() == 2
+    assert response.data[0]["autor"] == "Apellido403655, Nombre (N° de socio s/n)"
+    assert SystemParameterChange.objects.count() == 2
 
 
 @pytest.mark.parametrize(
@@ -138,7 +138,7 @@ def test_invalid_values_are_rejected_without_recording(admin_client, clave, valo
 
     assert response.status_code == 400
     assert isinstance(response.data["valor"][0], str)
-    assert not ParametroSistema.objects.exists()
+    assert not SystemParameterChange.objects.exists()
 
 
 @pytest.mark.django_db
@@ -153,14 +153,14 @@ def test_missing_value_and_unknown_key_are_rejected(admin_client) -> None:
 @pytest.mark.django_db
 def test_audit_records_cannot_be_edited_or_deleted(admin_client) -> None:
     admin_client.put(detail_url("adjuntos_tamano_maximo_mb"), {"valor": 8}, format="json")
-    registro = ParametroSistema.objects.get()
+    registro = SystemParameterChange.objects.get()
 
-    registro.valor = 20
+    registro.value = 20
     with pytest.raises(ValidationError):
         registro.save()
     with pytest.raises(ValidationError):
         registro.delete()
-    assert ParametroSistema.objects.get().valor == 8
+    assert SystemParameterChange.objects.get().value == 8
 
 
 # --- RF-05: umbral crítico reglamentario ---
@@ -172,7 +172,7 @@ def test_critical_threshold_cannot_be_modified(admin_client) -> None:
 
     assert response.status_code == 400
     assert "reglamentario" in response.data["valor"][0]
-    assert not ParametroSistema.objects.exists()
+    assert not SystemParameterChange.objects.exists()
 
 
 @pytest.mark.django_db
@@ -224,7 +224,7 @@ def test_appeal_deadline_is_shared_with_calendario(admin_client) -> None:
     assert response.status_code == 200
     assert response.data["valor"] == 9
     assert ParametroPlazoApelacion.vigente() == 9
-    assert not ParametroSistema.objects.exists()
+    assert not SystemParameterChange.objects.exists()
     assert admin_client.get(APPEAL_URL).data["dias_habiles"] == 9
 
     admin_client.put(APPEAL_URL, {"dias_habiles": 4}, format="json")

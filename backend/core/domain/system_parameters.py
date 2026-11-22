@@ -1,4 +1,4 @@
-"""Catálogo y validación de los parámetros del sistema (Spec 010).
+"""Catálogo y validación de los parámetros del sistema (Spec 011).
 
 Dominio puro: no depende de Django ni de la base. El catálogo define qué se puede
 configurar, con qué tipo y entre qué límites; la persistencia sólo guarda los cambios.
@@ -90,7 +90,7 @@ CATALOG: Final[tuple[ParameterDefinition, ...]] = (
         clave=UMBRAL_CRITICO,
         categoria=ParameterCategory.UMBRALES.value,
         etiqueta="Umbral crítico",
-        descripcion="Saldo que dispara la alerta crítica. Fijado por el Art. 93 del R.I.",
+        descripcion="Saldo que dispara la alerta crítica. Es un valor reglamentario fijo.",
         tipo=ParameterType.DECIMAL,
         default=Decimal("-10.0"),
         unidad="puntos",

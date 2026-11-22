@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -33,11 +33,21 @@ export interface CambioParametroDTO {
 
 export interface MiembroTribunalDTO {
   id: number;
+  numero_socio: number | null;
   legajo: string;
   last_name: string;
   first_name: string;
   social_year: number;
   email: string;
+  subcomision: string | null;
+}
+
+export interface CandidatoTribunalDTO {
+  id: number;
+  numero_socio: number | null;
+  last_name: string;
+  first_name: string;
+  social_year: number;
   subcomision: string | null;
 }
 
@@ -67,6 +77,12 @@ export class AdminApiService {
 
   listarMiembrosTribunal(): Observable<MiembroTribunalDTO[]> {
     return this.http.get<MiembroTribunalDTO[]>(`${this.adminUrl}/usuarios-td/`);
+  }
+
+  buscarCandidatosTribunal(termino: string): Observable<CandidatoTribunalDTO[]> {
+    return this.http.get<CandidatoTribunalDTO[]>(`${this.adminUrl}/usuarios-td/candidatos/`, {
+      params: new HttpParams().set('search', termino)
+    });
   }
 
   asignarMiembroTribunal(socioId: number): Observable<MiembroTribunalDTO> {

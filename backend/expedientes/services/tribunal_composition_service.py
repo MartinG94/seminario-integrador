@@ -14,8 +14,6 @@ Sin trámites manuales (Notas del PO sobre PR #63):
 
 from dataclasses import dataclass
 
-from django.conf import settings
-
 from core.domain.system_parameters import EMAIL_COMISION_DIRECTIVA
 from core.services.system_parameters import SystemParameterService
 from expedientes.domain.tribunal_composition import Composition, Condition, compose
@@ -217,11 +215,7 @@ class TribunalCompositionService:
         motivos = "\n".join(f"- {motivo}" for motivo in state.composition.ad_hoc_reasons)
         outbox, _ = EmailDispatcherService.create_or_get_outbox(
             {
-                "to": [
-                    SystemParameterService.email(
-                        EMAIL_COMISION_DIRECTIVA, fallback=settings.COMISION_DIRECTIVA_EMAIL
-                    )
-                ],
+                "to": [SystemParameterService.email(EMAIL_COMISION_DIRECTIVA)],
                 "subject": (
                     f"Expediente {expediente.numero}: requiere Tribunal Ad-Hoc / "
                     "convocatoria a Asamblea (Art. 95)"

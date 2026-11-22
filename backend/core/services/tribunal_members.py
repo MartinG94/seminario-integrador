@@ -1,4 +1,4 @@
-"""Alta y baja del rol TD con auditoría inmutable (Spec 010, RF-10 a RF-13)."""
+"""Alta y baja del rol TD con auditoría inmutable (Spec 011, RF-10 a RF-13)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,8 @@ from django.db import transaction
 from django.db.models import QuerySet
 
 from accounts import audit
-from core.models import AccionRolTribunal, CambioRolTribunal
+from core.models import TribunalRoleAction, TribunalRoleChange
+from socios.filters import AccentInsensitiveSearchFilter
 from socios.models import Role, Socio
 
 
@@ -20,7 +21,24 @@ class TribunalMemberNotFound(Exception):
     """El socio no integra el Tribunal de Disciplina."""
 
 
+CANDIDATES_LIMIT = 20
+
+
 class TribunalMemberService:
+    @staticmethod
+    def candidates(search: str) -> QuerySet[Socio]:
+        """Socios Ordinarios habilitados que coinciden con `search`, filtrados en el servidor."""
+        queryset = Socio.objects.filter(
+            role=Role.SOCIO, is_enabled=True, user__is_active=True
+        ).select_related("subcomision")
+        terms = (search or "").strip().split()
+        if not terms:
+            return queryset.none()
+        for term in terms:
+            regex = AccentInsensitiveSearchFilter.term_query(term)
+            queryset = queryset.filter(regex)
+        return queryset.order_by("last_name", "first_name", "id")[:CANDIDATES_LIMIT]
+
     @staticmethod
     def members() -> QuerySet[Socio]:
         return (
@@ -31,12 +49,12 @@ class TribunalMemberService:
 
     @staticmethod
     def _record(socio: Socio, *, accion: str, previous: str, actor: Any) -> None:
-        CambioRolTribunal.objects.create(
-            socio=socio, accion=accion, rol_anterior=previous, rol_nuevo=socio.role, autor=actor
+        TribunalRoleChange.objects.create(
+            socio=socio, action=accion, previous_role=previous, new_role=socio.role, author=actor
         )
         audit.log_role_change(
             identifier=actor.get_username(),
-            target=socio.legajo,
+            target=str(socio.numero_socio or socio.legajo),
             previous_role=previous,
             new_role=socio.role,
         )
@@ -44,10 +62,10 @@ class TribunalMemberService:
     @classmethod
     @transaction.atomic
     def assign(cls, *, socio_id: int, actor: Any) -> Socio:
-        socio = Socio.objects.select_for_update().filter(pk=socio_id).first()
+        socio = Socio.objects.select_for_update().select_related("user").filter(pk=socio_id).first()
         if socio is None:
             raise TribunalMemberError("El socio seleccionado no existe en el padrón.")
-        if not socio.is_enabled:
+        if not socio.is_enabled or not socio.user.is_active:
             raise TribunalMemberError("El socio seleccionado no tiene una cuenta habilitada.")
         if socio.role == Role.TD:
             raise TribunalMemberError("El socio ya integra el Tribunal de Disciplina.")
@@ -59,7 +77,7 @@ class TribunalMemberService:
         previous = socio.role
         socio.role = Role.TD
         socio.save(update_fields=["role"])
-        cls._record(socio, accion=AccionRolTribunal.ALTA, previous=previous, actor=actor)
+        cls._record(socio, accion=TribunalRoleAction.GRANT, previous=previous, actor=actor)
         return socio
 
     @classmethod
@@ -71,5 +89,5 @@ class TribunalMemberService:
         previous = socio.role
         socio.role = Role.SOCIO
         socio.save(update_fields=["role"])
-        cls._record(socio, accion=AccionRolTribunal.BAJA, previous=previous, actor=actor)
+        cls._record(socio, accion=TribunalRoleAction.REVOKE, previous=previous, actor=actor)
         return socio

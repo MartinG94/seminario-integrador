@@ -197,10 +197,8 @@ def resolver_destinatarios_alerta_critica(socio_email: str | None = None) -> lis
     try:
         from core.services.system_parameters import SystemParameterService
 
-        cd_email = SystemParameterService.email("email_comision_directiva", fallback=cd_email)
-        tribunal_email = SystemParameterService.email(
-            "email_tribunal_disciplina", fallback=tribunal_email
-        )
+        cd_email = SystemParameterService.email("email_comision_directiva") or cd_email
+        tribunal_email = SystemParameterService.email("email_tribunal_disciplina") or tribunal_email
     except Exception:
         pass
 

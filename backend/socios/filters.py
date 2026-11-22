@@ -58,21 +58,25 @@ class AccentInsensitiveSearchFilter(BaseFilterBackend):
             return queryset
 
         for term in terms:
-            regex_pattern = make_accent_insensitive_regex(term)
-            numero_socio_query = Q()
-            if term.isdigit():
-                numero_socio_query = Q(numero_socio=int(term))
-
-            term_query = (
-                Q(first_name__icontains=term)
-                | Q(first_name__iregex=regex_pattern)
-                | Q(last_name__icontains=term)
-                | Q(last_name__iregex=regex_pattern)
-                | numero_socio_query
-                | Q(legajo__icontains=term)
-                | Q(subcomision__name__icontains=term)
-                | Q(subcomision__name__iregex=regex_pattern)
-            )
-            queryset = queryset.filter(term_query)
+            queryset = queryset.filter(self.term_query(term))
 
         return queryset
+
+    @staticmethod
+    def term_query(term: str) -> Q:
+        """Condición de un término: nombre, apellido, N° de socio, legajo o subcomisión."""
+        regex_pattern = make_accent_insensitive_regex(term)
+        numero_socio_query = Q()
+        if term.isdigit():
+            numero_socio_query = Q(numero_socio=int(term))
+
+        return (
+            Q(first_name__icontains=term)
+            | Q(first_name__iregex=regex_pattern)
+            | Q(last_name__icontains=term)
+            | Q(last_name__iregex=regex_pattern)
+            | numero_socio_query
+            | Q(legajo__icontains=term)
+            | Q(subcomision__name__icontains=term)
+            | Q(subcomision__name__iregex=regex_pattern)
+        )

@@ -30,6 +30,11 @@ import {
 } from '../utils/reglamento-format.util';
 import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
 import { AdminApiService } from '../services/admin-api.service';
+import {
+  PLAZO_DESCARGO_INICIAL,
+  ParametrosVigentesService
+} from '../services/parametros-vigentes.service';
+import { UMBRALES_INICIALES, UmbralesVigentes, nivelSaldo } from '../ranking-socios/ranking-thresholds';
 import { TrackByUtils } from '../utils/track-by.util';
 
 @Component({
@@ -124,6 +129,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   // Límites vigentes del panel de administración (Spec 010); 5 y 5 MB hasta que respondan.
   LIMITE_DOCUMENTOS = 5;
   MAX_MB = 5;
+  /** Parámetros vigentes (Spec 011): umbrales de saldo y plazo de descargo. */
+  umbrales: UmbralesVigentes = { ...UMBRALES_INICIALES };
+  plazoDescargoDias = PLAZO_DESCARGO_INICIAL;
   get MAX_BYTES(): number { return this.MAX_MB * 1024 * 1024; }
   readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
@@ -151,23 +159,42 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     private expedienteApi: ExpedienteApiService,
     private scrollLock: ModalScrollLockService,
     private adminApi: AdminApiService,
+    private parametros: ParametrosVigentesService,
     private cdr: ChangeDetectorRef,
     @Optional() private ngZone?: NgZone
   ) {}
 
+  cargarParametrosVigentes(): void {
+    this.parametros
+      .umbrales()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(umbrales => {
+        this.umbrales = umbrales;
+        this.cdr?.markForCheck();
+      });
+    this.parametros
+      .plazoDescargoDiasHabiles()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(dias => {
+        this.plazoDescargoDias = dias;
+        this.cdr?.markForCheck();
+      });
+  }
+
   cargarLimitesAdjuntos(): void {
-    this.subs.push(this.adminApi.obtenerLimitesAdjuntos().subscribe({
+    this.adminApi.obtenerLimitesAdjuntos().pipe(takeUntil(this.destroy$)).subscribe({
       next: limites => {
         this.LIMITE_DOCUMENTOS = limites.cantidad_maxima;
         this.MAX_MB = limites.tamano_maximo_mb;
         this.cdr?.markForCheck();
       },
       error: () => { /* Rigen los valores iniciales; el servidor valida igual. */ }
-    }));
+    });
   }
 
   ngOnInit(): void {
     this.cargarLimitesAdjuntos();
+    this.cargarParametrosVigentes();
     const subPerfil = this.auth.perfil$
       .pipe(
         distinctUntilChanged((a, b) =>
@@ -1452,10 +1479,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getColorClasePuntos(puntos: number): string {
-    if (puntos < -9.0) {
+    const nivel = nivelSaldo(puntos, this.umbrales);
+    if (nivel === 'critico') {
       return 'puntos-rojo';
     }
-    if (puntos < -7.0) {
+    if (nivel === 'preventivo') {
       return 'puntos-amarillo';
     }
     if (puntos < 0) {
@@ -1465,10 +1493,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getHeaderClassPuntos(puntos: number): string {
-    if (puntos < -9.0) {
+    const nivel = nivelSaldo(puntos, this.umbrales);
+    if (nivel === 'critico') {
       return 'card-header-danger';
     }
-    if (puntos < -7.0) {
+    if (nivel === 'preventivo') {
       return 'card-header-warning';
     }
     if (puntos < 0) {

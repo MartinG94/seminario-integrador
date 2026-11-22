@@ -1,3 +1,5 @@
+// Mobile-first: la base es la vista de teléfono; los `min-width` amplían el diseño.
+// Sólo tokens de DESIGN.md; el modo oscuro se resuelve redefiniendo esos tokens.
 :host {
   display: block;
   color: var(--color-text-primary);
@@ -5,6 +7,8 @@
 }
 
 .admin-page {
+  > .container-fluid { padding: 0; }
+
   .admin-title {
     font-family: var(--font-h2);
     color: var(--color-text-primary);
@@ -22,12 +26,13 @@
 
   .admin-cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
 
   .admin-card {
     background: var(--color-surface-card);
+    color: var(--color-text-primary);
     border: 1px solid var(--color-border-main);
     border-radius: 8px;
     margin: 0;
@@ -35,6 +40,7 @@
 
   .admin-card-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 1.25rem;
@@ -46,7 +52,19 @@
     .material-icons { color: inherit; }
   }
 
-  .admin-card-header--actions .btn-alta { margin-left: auto; }
+  // El encabezado conserva el gradiente institucional en ambos temas: el botón
+  // usa siempre superficie clara con texto primario institucional.
+  .admin-card-header--actions .btn-alta {
+    width: 100%;
+    margin: 0;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background-color: var(--color-text-inverse);
+    border: 1px solid var(--color-text-inverse);
+    color: var(--grad-primary-start);
+    .material-icons { color: inherit; font-size: 1.125rem; margin-right: 0.25rem; }
+  }
 
   .admin-card-body { padding: 1.25rem; }
 
@@ -59,6 +77,7 @@
   .param-label { display: block; font-weight: 600; margin-bottom: 0.25rem; color: var(--color-text-primary); }
   .param-help, .param-meta { color: var(--color-text-secondary); font-size: 0.8125rem; margin: 0 0 0.5rem; }
   .param-meta { margin: 0.5rem 0 0; }
+  .param-error { color: var(--color-danger); font-size: 0.8125rem; font-weight: 600; margin: 0.5rem 0 0; }
 
   .param-row {
     display: flex;
@@ -67,17 +86,23 @@
     gap: 0.5rem 0.75rem;
   }
 
+  // 16px evita el zoom automático de iOS; el borde usa el texto secundario para
+  // superar 3:1 contra la superficie en ambos temas (WCAG 1.4.11).
   .form-control {
     background-color: var(--color-surface-card);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border-main);
+    border: 1px solid var(--color-text-secondary);
     border-radius: 4px;
-    height: 2.5rem;
+    min-height: 2.75rem;
     padding: 0.5rem;
+    font-size: 1rem;
+
+    &[aria-invalid='true'] { border-color: var(--color-danger); border-width: 2px; }
+    &::placeholder { color: var(--color-text-secondary); opacity: 1; }
   }
 
-  .param-input { width: 7rem; }
-  .param-input--email { width: 100%; max-width: 20rem; }
+  .param-input { width: 8rem; }
+  .param-input--email { width: 100%; }
   .param-unit { color: var(--color-text-secondary); }
 
   .param-readonly {
@@ -85,41 +110,51 @@
     small { display: block; font-weight: 400; color: var(--color-text-secondary); }
   }
 
-  .param-switch { display: inline-flex; align-items: center; gap: 0.5rem; margin: 0; cursor: pointer; }
+  .param-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    margin: 0;
+    cursor: pointer;
+    input { width: 1.25rem; height: 1.25rem; accent-color: var(--color-primary); }
+  }
 
   .btn.btn-primary {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
-    color: var(--color-text-inverse);
+    color: var(--color-on-primary);
     margin: 0;
-    min-height: 2.5rem;
+    min-height: 2.75rem;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     &:disabled { opacity: 0.6; cursor: not-allowed; }
     .material-icons { color: inherit; font-size: 1.125rem; margin-right: 0.25rem; }
   }
 
-  .admin-card-header .btn.btn-primary {
-    background-color: var(--color-surface-card);
-    border-color: var(--color-surface-card);
-    color: var(--color-primary);
-  }
-
   .btn.btn-danger {
     background-color: var(--color-danger);
     border-color: var(--color-danger);
-    color: var(--color-text-inverse);
+    color: var(--color-on-danger);
     margin: 0;
+    min-height: 2.75rem;
     &:disabled { opacity: 0.6; }
   }
 
   .btn-link, .btn-revocar {
     border: 0;
+    border-radius: 4px;
     background: transparent;
-    padding: 0.25rem 0.5rem;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    padding: 0.5rem 0.75rem;
     font: inherit;
+    font-weight: 600;
     cursor: pointer;
     color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
   }
 
   .btn-revocar {
@@ -127,6 +162,7 @@
     align-items: center;
     gap: 0.25rem;
     color: var(--color-danger);
+    text-decoration: none;
     .material-icons { font-size: 1.125rem; }
   }
 
@@ -135,6 +171,8 @@
     th, td { border-color: var(--color-border-main); vertical-align: middle; }
     th { font-weight: 600; color: var(--color-text-primary); }
   }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
 
   .admin-state {
     display: flex;
@@ -152,6 +190,8 @@
   }
 
   &.admin-dialog {
+    color: var(--color-text-primary);
+
     .dialog-heading {
       display: flex;
       align-items: center;
@@ -166,21 +206,24 @@
       border-radius: 4px;
       background: var(--color-surface);
       color: var(--color-text-primary);
-      width: 2.5rem;
-      height: 2.5rem;
+      width: 2.75rem;
+      height: 2.75rem;
+      flex-shrink: 0;
       cursor: pointer;
     }
+    .mat-dialog-content { color: var(--color-text-primary); }
     .form-control { width: 100%; }
-    .dialog-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
+    .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
   }
 
-  @media (max-width: 991px) {
-    .admin-cards { grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 601px) {
+    > .container-fluid { padding: 0 15px; }
+    .admin-card-header { flex-wrap: nowrap; }
+    .admin-card-header--actions .btn-alta { width: auto; margin-left: auto; }
+    .param-input--email { max-width: 20rem; }
   }
 
-  @media (max-width: 600px) {
-    > .container-fluid { padding: 0; }
-    .admin-card-header--actions { flex-wrap: wrap; .btn-alta { margin-left: 0; width: 100%; } }
-    .param-input--email { max-width: none; }
+  @media (min-width: 992px) {
+    .admin-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 }

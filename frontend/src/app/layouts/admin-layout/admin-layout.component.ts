@@ -16,7 +16,7 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   private locationSub: { unsubscribe: () => void } | null = null;
   private psMainPanel: PerfectScrollbar | null = null;
   private psSidebar: PerfectScrollbar | null = null;
-  private lastPoppedUrl: string;
+  private lastPoppedUrl: string | undefined;
   private yScrollStack: number[] = [];
 
   constructor( public location: Location, private router: Router) {}
@@ -44,7 +44,7 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
          } else if (event instanceof NavigationEnd) {
              if (event.url == this.lastPoppedUrl) {
                  this.lastPoppedUrl = undefined;
-                 window.scrollTo(0, this.yScrollStack.pop());
+                 window.scrollTo(0, this.yScrollStack.pop() ?? 0);
              } else
                  window.scrollTo(0, 0);
          }
@@ -65,7 +65,7 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
           }
       }
 
-      const window_width = $(window).width();
+      const window_width = $(window).width() ?? 0;
       let $sidebar = $('.sidebar');
       let $sidebar_responsive = $('body > .navbar-collapse');
       let $sidebar_img_container = $sidebar.find('.sidebar-background');
@@ -140,7 +140,7 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit() {
       this.runOnRouteChange();
   }
-  isMaps(path){
+  isMaps(path: string){
       var titlee = this.location.prepareExternalUrl(this.location.path());
       titlee = titlee.slice( 1 );
       if(path == titlee){

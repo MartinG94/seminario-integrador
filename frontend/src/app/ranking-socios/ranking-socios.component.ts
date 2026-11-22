@@ -12,7 +12,14 @@ import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { RankingService } from '../services/ranking.service';
 import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
-import { RANKING_THRESHOLDS } from './ranking-thresholds';
+import {
+  UMBRALES_INICIALES,
+  UmbralesVigentes,
+  formatearPuntos,
+  nivelSaldo,
+  umbralAlerta
+} from './ranking-thresholds';
+import { ParametrosVigentesService } from '../services/parametros-vigentes.service';
 import { TrackByUtils } from '../utils/track-by.util';
 import { PaginatedResponse, RankingPaginationParams } from '../models/paginated-response.model';
 import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expedientes-socio-dialog.component';
@@ -149,6 +156,17 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
   cargando = false;
   error: string | null = null;
 
+  /** Umbrales vigentes del panel de administración (Spec 011). */
+  umbrales: UmbralesVigentes = { ...UMBRALES_INICIALES };
+
+  get umbralAlertaVigente(): number {
+    return umbralAlerta(this.umbrales);
+  }
+
+  get umbralAlertaTexto(): string {
+    return formatearPuntos(this.umbralAlertaVigente);
+  }
+
   // Cached filtered and paginated arrays to avoid layout thrashing and pure getters
   private _sociosOrdenadosCache: RankingSocio[] | null = null;
   private _sociosPaginadosCache: RankingSocio[] | null = null;
@@ -162,7 +180,8 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
     public rankingService: RankingService,
     public dialog: MatDialog,
     private notifications: NotificationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private parametros: ParametrosVigentesService
   ) {}
 
   private markDirty(): void {
@@ -248,6 +267,13 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
           this.cargarRanking();
         });
     }
+    this.parametros
+      .umbrales()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(umbrales => {
+        this.umbrales = umbrales;
+        this.markDirty();
+      });
     this.cargarRanking();
   }
 
@@ -467,21 +493,28 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
     return this.sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
 
+  getNivel(s: RankingSocio): 'critico' | 'preventivo' | 'regular' {
+    return nivelSaldo(s.saldo, this.umbrales);
+  }
+
   getRowClass(s: RankingSocio): string {
-    if (s.saldo <= RANKING_THRESHOLDS.cese) return 'row-cese';
-    if (s.saldo <= RANKING_THRESHOLDS.alerta) return 'row-alerta';
+    const nivel = this.getNivel(s);
+    if (nivel === 'critico') return 'row-cese';
+    if (nivel === 'preventivo') return 'row-alerta';
     return '';
   }
 
   getBadgeClase(socio: RankingSocio): string {
-    if (socio.saldo <= RANKING_THRESHOLDS.cese) return 'badge-mat-danger';
-    if (socio.saldo <= RANKING_THRESHOLDS.alerta) return 'badge-mat-warning';
+    const nivel = this.getNivel(socio);
+    if (nivel === 'critico') return 'badge-mat-danger';
+    if (nivel === 'preventivo') return 'badge-mat-warning';
     return 'badge-mat-success';
   }
 
   getEstadoDescripcion(socio: RankingSocio): string {
-    if (socio.saldo <= RANKING_THRESHOLDS.cese) return 'Límite Crítico: Cese Estatutario';
-    if (socio.saldo <= RANKING_THRESHOLDS.alerta) return 'Alerta Preventiva';
+    const nivel = this.getNivel(socio);
+    if (nivel === 'critico') return 'Límite Crítico: Cese Estatutario';
+    if (nivel === 'preventivo') return 'Alerta Preventiva';
     return 'Habilitado Regular';
   }
 
@@ -502,7 +535,8 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
   }
 
   get cantidadSociosEnAlerta(): number {
-    return this.socios.filter((s) => s.saldo <= RANKING_THRESHOLDS.alerta).length;
+    const umbral = this.umbralAlertaVigente;
+    return this.socios.filter((s) => s.saldo <= umbral).length;
   }
 
   get sociosOrdenados(): RankingSocio[] {
@@ -516,7 +550,8 @@ export class RankingSociosComponent implements OnInit, OnDestroy {
     let list = [...this.socios];
 
     if (this.soloAlertas) {
-      list = list.filter((s) => s.saldo <= RANKING_THRESHOLDS.alerta);
+      const umbral = this.umbralAlertaVigente;
+      list = list.filter((s) => s.saldo <= umbral);
     }
 
     if (this.filtroCategoria) {

@@ -244,7 +244,7 @@ def test_ranking_pagination_whitespace_ordering_uses_deterministic_tie_breaker(
 
 @pytest.mark.django_db
 def test_ranking_pagination_filters_grupo_solo_alertas_and_ordering_categoria(api_client, db):
-    """Verifica filtros server-side por grupo, solo_alertas (<= -7) y ordering=categoria."""
+    """Verifica filtros server-side por grupo, solo_alertas (umbral vigente) y orden."""
     from django.utils import timezone
 
     from padron.models import SocioEstadoHistorial
@@ -282,9 +282,22 @@ def test_ranking_pagination_filters_grupo_solo_alertas_and_ordering_categoria(ap
     create_legacy_record(PuntajeAplicado, idPuntajeAplicado=9002, socio=s2, puntajeAplicado=3.0)
     create_legacy_record(PuntajeGeneral, idPuntajeGeneral=9002, socio=s2, puntos=3.0)
 
+    # Con la alerta preventiva inactiva (valor inicial) sólo cuenta el umbral crítico (-10).
+    r_inactiva = api_client.get("/api/v1/ranking/?solo_alertas=true&page=1&page_size=10")
+    assert r_inactiva.status_code == status.HTTP_200_OK
+    assert r_inactiva.json()["results"] == []
+
+    from core.models import SystemParameterChange
+
+    SystemParameterChange.objects.create(key="umbral_preventivo_activo", value=True)
     r_alerta = api_client.get("/api/v1/ranking/?solo_alertas=true&page=1&page_size=10")
     assert r_alerta.status_code == status.HTTP_200_OK
     assert [x["id"] for x in r_alerta.json()["results"]] == ["9001"]
+
+    # Un umbral preventivo más exigente que el saldo deja de marcarlo.
+    SystemParameterChange.objects.create(key="umbral_preventivo", value="-9")
+    r_exigente = api_client.get("/api/v1/ranking/?solo_alertas=true&page=1&page_size=10")
+    assert r_exigente.json()["results"] == []
 
     r_grupo = api_client.get("/api/v1/ranking/?grupo=G58&page=1&page_size=10")
     assert r_grupo.status_code == status.HTTP_200_OK

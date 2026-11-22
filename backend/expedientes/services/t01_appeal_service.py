@@ -8,7 +8,6 @@
 from datetime import datetime
 from decimal import Decimal
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -214,7 +213,7 @@ class T01AppealService:
         )
         _enqueue_mail(
             key=f"t01-apelacion-{apelacion.pk}-tribunal",
-            to=SystemParameterService.email(EMAIL_TRIBUNAL, fallback=settings.TRIBUNAL_EMAIL),
+            to=SystemParameterService.email(EMAIL_TRIBUNAL),
             subject=asunto,
             body=cuerpo,
             metadata=metadata,

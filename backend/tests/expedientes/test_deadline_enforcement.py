@@ -80,7 +80,7 @@ class TestDeadlineEnforcementService:
         assert cambio.estado_anterior == EstadoExpedienteEnum.JUSTIFICANDO
         assert cambio.estado_nuevo == EstadoExpedienteEnum.REVISION_RESOLUCION
         assert cambio.actor == "SISTEMA_CRON"
-        assert "Expiración de plazo perentorio de 5 días hábiles" in cambio.motivo
+        assert "Expiración de plazo perentorio de descargo" in cambio.motivo
 
     def test_idempotencia_ejecuciones_repetidas(self, socio_fixture: Socio) -> None:
         """Múltiples corridas consecutivas no duplican la transición ni la auditoría."""
