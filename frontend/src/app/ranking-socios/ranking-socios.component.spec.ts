@@ -1,6 +1,10 @@
+import { ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
 import { of, throwError } from 'rxjs';
 
 import { RankingSociosComponent } from './ranking-socios.component';
@@ -8,7 +12,20 @@ import { RankingService } from '../services/ranking.service';
 import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
 import { RANKING_THRESHOLDS } from './ranking-thresholds';
+import { PaginatedResponse } from '../models/paginated-response.model';
 import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expedientes-socio-dialog.component';
+
+function mockPaginated(socios: RankingSocio[]): PaginatedResponse<RankingSocio> {
+  return {
+    count: socios.length,
+    total_pages: Math.ceil(socios.length / 10) || 1,
+    current_page: 1,
+    page_size: 10,
+    next: null,
+    previous: null,
+    results: socios,
+  };
+}
 
 describe('RankingSociosComponent', () => {
   let component: RankingSociosComponent;
@@ -20,7 +37,8 @@ describe('RankingSociosComponent', () => {
   const sociosMock: RankingSocio[] = [
     {
       id: '1',
-      legajo: '1001',
+      numero_socio: 1001,
+      legajo: '85421',
       nombre: 'Ana',
       apellido: 'Gómez',
       categoria: 'ACTIVO',
@@ -34,7 +52,8 @@ describe('RankingSociosComponent', () => {
     },
     {
       id: '2',
-      legajo: '1002',
+      numero_socio: 1002,
+      legajo: '89123',
       nombre: 'Bruno',
       apellido: 'Pérez',
       categoria: 'PASIVO',
@@ -53,12 +72,13 @@ describe('RankingSociosComponent', () => {
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
     notifications = jasmine.createSpyObj('NotificationService', ['error']);
 
-    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(sociosMock)));
 
     await TestBed.configureTestingModule({
-      imports: [FormsModule],
+      imports: [FormsModule, MatPaginatorModule, NoopAnimationsModule],
       declarations: [RankingSociosComponent],
       providers: [
+        { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
         { provide: NotificationService, useValue: notifications },
         { provide: RankingService, useValue: rankingServiceSpy },
         { provide: MatDialog, useValue: dialogSpy }
@@ -84,7 +104,7 @@ describe('RankingSociosComponent', () => {
       '[aria-label="Reintentar carga del ranking"]'
     ) as HTMLButtonElement;
     expect(retry).toBeTruthy();
-    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosMock));
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(sociosMock)));
     retry.click();
     fixture.detectChanges();
     expect(component.socios.length).toBe(2);
@@ -132,11 +152,11 @@ describe('RankingSociosComponent', () => {
 
   it('debería formatear saldo numéricamente con signo y 2 decimales sin texto pts ni badges', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([
+      of(mockPaginated([
         { ...sociosMock[0], id: '1', apellido: 'Alonso', grupo: 'G1', saldo: 4.5 },
         { ...sociosMock[0], id: '2', apellido: 'Bustos', grupo: 'G1', saldo: -7.25 },
         { ...sociosMock[0], id: '3', apellido: 'Castro', grupo: 'G1', saldo: 0 }
-      ])
+      ]))
     );
     fixture.detectChanges();
 
@@ -179,7 +199,7 @@ describe('RankingSociosComponent', () => {
     expect(component.getRowClass(sNormal2)).toBe('');
 
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([sCese1, sAlerta1, sNormal2])
+      of(mockPaginated([sCese1, sAlerta1, sNormal2]))
     );
     fixture.detectChanges();
 
@@ -193,12 +213,12 @@ describe('RankingSociosComponent', () => {
 
   it('debería precalcular posición fija sobre el padrón completo y mantenerla inmutable al filtrar o reordenar', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([
+      of(mockPaginated([
         { ...sociosMock[0], id: '1', nombre: 'Carlos', apellido: 'Zeta', saldo: 10 },
         { ...sociosMock[0], id: '2', nombre: 'Ana', apellido: 'Gómez', saldo: 5 },
         { ...sociosMock[0], id: '3', nombre: 'Beto', apellido: 'Alonso', saldo: 5 },
         { ...sociosMock[0], id: '4', nombre: 'Damián', apellido: 'Díaz', saldo: -2 }
-      ])
+      ]))
     );
     fixture.detectChanges();
 
@@ -241,11 +261,11 @@ describe('RankingSociosComponent', () => {
 
   it('debería filtrar socios por grupo dinámico', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([
+      of(mockPaginated([
         { ...sociosMock[0], id: '1', grupo: 'G58' },
         { ...sociosMock[0], id: '2', grupo: 'G60' },
         { ...sociosMock[0], id: '3', grupo: null }
-      ])
+      ]))
     );
     fixture.detectChanges();
 
@@ -299,13 +319,13 @@ describe('RankingSociosComponent', () => {
     });
 
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([
+      of(mockPaginated([
         crearSocio('1', 'Zapata', 'Ana', 5, 'G2'),
         crearSocio('2', 'Alonso', 'Bruno', 5, 'G1'),
         crearSocio('3', 'Alonso', 'Ana', 5, 'G1'),
         crearSocio('4', 'Zapata', 'Zoe', 10, 'G1'),
         crearSocio('5', 'Abad', 'Ana', -2, null)
-      ])
+      ]))
     );
 
     fixture.detectChanges();
@@ -317,22 +337,22 @@ describe('RankingSociosComponent', () => {
 
   it('debería soportar ordenamiento universal en todas las columnas', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([
-        { ...sociosMock[0], id: '1', legajo: '105', nombre: 'Zoe', apellido: 'Alonso', categoria: 'PASIVO', subcomision: 'Deportes', grupo: 'G2', saldo: 1 },
-        { ...sociosMock[0], id: '2', legajo: '98', nombre: 'Ana', apellido: 'Bustos', categoria: 'ACTIVO', subcomision: 'Buffet', grupo: 'G10', saldo: 10 },
-        { ...sociosMock[0], id: '3', legajo: '1002', nombre: 'Carlos', apellido: 'Castro', categoria: 'ACTIVO', subcomision: 'Cómputos', grupo: 'G1', saldo: -5 }
-      ])
+      of(mockPaginated([
+        { ...sociosMock[0], id: '1', numero_socio: 105, legajo: '90001', nombre: 'Zoe', apellido: 'Alonso', categoria: 'PASIVO', subcomision: 'Deportes', grupo: 'G2', saldo: 1 },
+        { ...sociosMock[0], id: '2', numero_socio: 98, legajo: '90002', nombre: 'Ana', apellido: 'Bustos', categoria: 'ACTIVO', subcomision: 'Buffet', grupo: 'G10', saldo: 10 },
+        { ...sociosMock[0], id: '3', numero_socio: 1002, legajo: '90003', nombre: 'Carlos', apellido: 'Castro', categoria: 'ACTIVO', subcomision: 'Cómputos', grupo: 'G1', saldo: -5 }
+      ]))
     );
     fixture.detectChanges();
 
-    // 1. Ordenar por legajo numérico (asc: 98, 105, 1002)
-    component.alternarOrden('legajo');
-    expect(component.sortKey).toBe('legajo');
+    // 1. Ordenar por número institucional (asc: 98, 105, 1002)
+    component.alternarOrden('numero_socio');
+    expect(component.sortKey).toBe('numero_socio');
     expect(component.sortDir).toBe('asc');
     expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['2', '1', '3']);
 
     // Legajo desc
-    component.alternarOrden('legajo');
+    component.alternarOrden('numero_socio');
     expect(component.sortDir).toBe('desc');
     expect(component.sociosOrdenados.map((s) => s.id)).toEqual(['3', '1', '2']);
 
@@ -381,10 +401,11 @@ describe('RankingSociosComponent', () => {
     const sociosPagina: RankingSocio[] = Array.from({ length: 13 }, (_, i) => ({
       ...sociosMock[0],
       id: String(i + 1),
-      legajo: String(2001 + i),
+      numero_socio: 2001 + i,
+      legajo: String(9001 + i),
       saldo: 13 - i
     }));
-    rankingServiceSpy.obtenerRanking.and.returnValue(of(sociosPagina));
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(sociosPagina)));
     fixture.detectChanges();
 
     expect(component.totalPaginas).toBe(2);
@@ -413,11 +434,38 @@ describe('RankingSociosComponent', () => {
       width: '100%',
       maxWidth: '700px',
       data: {
-        legajo: '1001',
+        numeroSocio: '1001',
         nombreSocio: 'Ana Gómez',
         saldo: 5
       }
     });
+  });
+
+  it('usa el número de socio institucional al abrir expedientes', () => {
+    fixture.detectChanges();
+    const socio = {
+      ...component.socios[0],
+      id: '89123',
+      numero_socio: 1002,
+      legajo: '89123'
+    };
+
+    component.abrirExpedientesSocio(socio);
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ExpedientesSocioDialogComponent,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({ numeroSocio: '1002' })
+      })
+    );
+  });
+
+  it('no usa legajo ni PK local como fallback del número institucional', () => {
+    const socioSinNumero = { ...sociosMock[0], id: '777', numero_socio: null, legajo: '89123' };
+    rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated([socioSinNumero])));
+    fixture.detectChanges();
+
+    expect(component.socios[0].numero_socio).toBeNull();
   });
 
   it('onRowKeyDown debe abrir expedientes al presionar Enter o Space', () => {
@@ -483,11 +531,11 @@ describe('RankingSociosComponent', () => {
 
   it('debería alternar entre pestaña general y alertas disciplinarias con cabecera teal', () => {
     rankingServiceSpy.obtenerRanking.and.returnValue(
-      of([
+      of(mockPaginated([
         { ...sociosMock[0], id: '1', apellido: 'Gómez', saldo: 5.0 },
         { ...sociosMock[0], id: '2', apellido: 'Pérez', saldo: -8.0 },
         { ...sociosMock[0], id: '3', apellido: 'López', saldo: -10.5 }
-      ])
+      ]))
     );
     component.ngOnInit();
     fixture.detectChanges();
@@ -510,5 +558,37 @@ describe('RankingSociosComponent', () => {
     component.setTab('general');
     fixture.detectChanges();
     expect(component.sociosOrdenados.length).toBe(3);
+  });
+
+  it('SCRUM-119: debería utilizar ChangeDetectionStrategy.OnPush', () => {
+    // Inspeccionar la metadata del componente
+    const cdStrategy = (RankingSociosComponent as any).ɵcmp?.onPush;
+    expect(cdStrategy).toBeTrue();
+  });
+
+  it('SCRUM-119: trackBySocioId retorna el identificador unívoco de cada socio', () => {
+    const s = sociosMock[0];
+    expect(component.trackBySocioId(0, s)).toBe('1');
+  });
+
+  it('SCRUM-119: ngOnDestroy emite y completa destroy$ evitando memory leaks', () => {
+    const destroySpy = spyOn((component as any).destroy$, 'next').and.callThrough();
+    const completeSpy = spyOn((component as any).destroy$, 'complete').and.callThrough();
+
+    component.ngOnDestroy();
+
+    expect(destroySpy).toHaveBeenCalled();
+    expect(completeSpy).toHaveBeenCalled();
+  });
+
+  it('SCRUM-119: sociosOrdenados y sociosPaginados reutilizan caché sin recalcular en accesos sucesivos', () => {
+    fixture.detectChanges();
+    const primeraInstanciaOrdenados = component.sociosOrdenados;
+    const segundaInstanciaOrdenados = component.sociosOrdenados;
+    expect(primeraInstanciaOrdenados).toBe(segundaInstanciaOrdenados);
+
+    const primeraInstanciaPaginados = component.sociosPaginados;
+    const segundaInstanciaPaginados = component.sociosPaginados;
+    expect(primeraInstanciaPaginados).toBe(segundaInstanciaPaginados);
   });
 });

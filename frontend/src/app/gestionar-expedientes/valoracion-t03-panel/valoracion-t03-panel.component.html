@@ -84,10 +84,20 @@
   <li *ngFor="let h of historial" class="mb-2 historial-t03">
     v{{h.version}} &bull;
     <span class="font-weight-bold" [ngClass]="h.resultado === 'ACCEPTED' ? 'text-success' : 'text-danger'">{{h.resultado_display}}</span>
-    &bull; {{h.autor_legajo}} ({{condicionAutor(h)}})
+    &bull; {{h.autor_numero_socio ?? '—'}} ({{condicionAutor(h)}})
     &bull; {{h.created_at | date:'dd/MM/yyyy HH:mm'}}
     <div *ngIf="h.antecedentes.length" class="text-muted">
-      Antecedentes: <span *ngFor="let antecedente of h.antecedentes; let ultimo = last">{{formatearNumero(antecedente.numero)}}{{ultimo ? '' : ', '}}</span>
+      <div class="small font-weight-bold mb-1">Antecedentes</div>
+      <table class="table table-sm table-borderless mb-0 tabla-antecedentes-historial">
+        <thead>
+          <tr><th scope="col">Expediente antecedente</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let antecedente of h.antecedentes">
+            <td>{{formatearNumero(antecedente.numero)}}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div class="text-muted">{{h.fundamento}}</div>
   </li>

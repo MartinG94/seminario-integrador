@@ -1,4 +1,13 @@
-import { Component, ElementRef, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  Renderer2,
+  ViewChild
+} from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
@@ -24,6 +33,7 @@ import {
   parseReglamentosList,
   ReglamentoCiteView
 } from '../utils/reglamento-format.util';
+import { TrackByUtils } from '../utils/track-by.util';
 
 export interface CatalogoReglamentoItem {
   raw: string;
@@ -38,14 +48,48 @@ export interface CatalogoReglamentoItem {
 @Component({
   selector: 'app-solicitar-puntos',
   templateUrl: './solicitar-puntos.component.html',
-  styleUrls: ['./solicitar-puntos.component.scss']
+  styleUrls: ['./solicitar-puntos.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SolicitarPuntosComponent implements OnInit, OnDestroy {
+  private readonly activeTimers = new Set<number>();
+  private cacheArticulosFiltradosKey = '';
+  private cacheArticulosFiltradosVal: CatalogoReglamentoItem[] = [];
+  private cacheRegCitasKey = '';
+  private cacheRegCitasVal: ReglamentoCiteView[] = [];
+  private cacheSolicitudesOrdenadasKey = '';
+  private cacheSolicitudesOrdenadasVal: SolicitudMonitoreo[] = [];
+
+  readonly trackBySocio = (index: number, socio: any): any =>
+    TrackByUtils.bySocio(index, socio);
+  readonly trackById = (index: number, item: any): any =>
+    TrackByUtils.byId(index, item);
+  readonly trackBySolicitud = (index: number, item: any): any =>
+    item?.numero || item?.id || index;
+  readonly trackByInvolucrado = (index: number, item: any): any =>
+    item?.socioId || item?.id || item?.legajo || index;
+  readonly trackByArticulo = (index: number, item: any): any =>
+    item?.raw || item?.citaCorta || index;
+
   socios: PadronSocio[] = [];
-  sociosSeleccionados: PadronSocio[] = [];
+  private _sociosSeleccionados: PadronSocio[] = [];
+  get sociosSeleccionados(): PadronSocio[] {
+    return this._sociosSeleccionados;
+  }
+  set sociosSeleccionados(val: PadronSocio[]) {
+    this._sociosSeleccionados = val;
+    this.cdr?.markForCheck();
+  }
   socioBusqueda = new FormControl('');
   sociosFiltrados: PadronSocio[] = [];
-  urgency: NivelUrgencia = 'normal';
+  private _urgency: NivelUrgencia = 'normal';
+  get urgency(): NivelUrgencia {
+    return this._urgency;
+  }
+  set urgency(val: NivelUrgencia) {
+    this._urgency = val;
+    this.cdr?.markForCheck();
+  }
   puntosSeleccionados: number | null = -1;
   causal = '';
   motivoTexto = '';
@@ -70,7 +114,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
   reglamentosSeleccionados: string[] = [];
   filtroReglamentos = '';
-  modalReglamentosAbierto = false;
+  private _modalReglamentosAbierto = false;
+  get modalReglamentosAbierto(): boolean { return this._modalReglamentosAbierto; }
+  set modalReglamentosAbierto(val: boolean) { this._modalReglamentosAbierto = val; this.cdr?.markForCheck(); }
   filtroDocumentoModal: 'TODOS' | 'Reglamento Interno' | 'Estatuto' = 'TODOS';
   reglamentoExpandidoForm: string | null = null;
   catalogoItemsModal: CatalogoReglamentoItem[] = [];
@@ -86,7 +132,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   borradorId: string | null = null;
   estado: 'DRAFT' | 'ISSUED' | null = null;
   numeroExpediente: string | null = null;
-  cargando = false;
+  private _cargando = false;
+  get cargando(): boolean { return this._cargando; }
+  set cargando(val: boolean) { this._cargando = val; this.cdr?.markForCheck(); }
 
   // Expedientes Referenciados / Antecedentes (Opcional)
   expedientesReferenciadosSeleccionados: AntecedenteT03DTO[] = [];
@@ -96,8 +144,14 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   catalogoExpedientesCargado = false;
 
   // Panel Mis Solicitudes T01 (SCRUM-75 / PB-04)
-  misSolicitudes: SolicitudMonitoreo[] = [];
-  cargandoSolicitudes = false;
+  private _misSolicitudes: SolicitudMonitoreo[] = [];
+  get misSolicitudes(): SolicitudMonitoreo[] { return this._misSolicitudes; }
+  set misSolicitudes(val: SolicitudMonitoreo[]) { this._misSolicitudes = val; this.cdr?.markForCheck(); }
+
+  private _cargandoSolicitudes = false;
+  get cargandoSolicitudes(): boolean { return this._cargandoSolicitudes; }
+  set cargandoSolicitudes(val: boolean) { this._cargandoSolicitudes = val; this.cdr?.markForCheck(); }
+
   failedToLoadRequests = false;
   busquedaControl = new FormControl('');
   estadoFiltro = new FormControl('');
@@ -112,7 +166,9 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   solicitudSeleccionada: SolicitudMonitoreo | null = null;
 
   // Pestañas principales: 'nueva' (Formulario T01) vs 'creadas' (Mis Solicitudes)
-  tabActiva: 'nueva' | 'creadas' = 'nueva';
+  private _tabActiva: 'nueva' | 'creadas' = 'nueva';
+  get tabActiva(): 'nueva' | 'creadas' { return this._tabActiva; }
+  set tabActiva(val: 'nueva' | 'creadas') { this._tabActiva = val; this.cdr?.markForCheck(); }
 
   /** Valor numérico que representa el Llamado de Atención (rank usado por el Tribunal). */
   static readonly PUNTOS_LLAMADO_ATENCION = -0.25;
@@ -181,7 +237,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     public dialog: MatDialog,
     private notifications: NotificationService,
     private renderer: Renderer2,
-    private scrollLock: ModalScrollLockService
+    private scrollLock: ModalScrollLockService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -190,12 +247,19 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: socios => {
         this.socios = socios;
+        this.cdr?.markForCheck();
       },
-      error: error => this.mostrarError(error)
+      error: error => {
+        this.mostrarError(error);
+        this.cdr?.markForCheck();
+      }
     });
     this.socioBusqueda.valueChanges.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(value => this.filtrarSocios(value || ''));
+    ).subscribe(value => {
+      this.filtrarSocios(value || '');
+      this.cdr?.markForCheck();
+    });
     this.expedienteApi.listarReglamentos().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
@@ -203,8 +267,12 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
         this.reglamentosDisponibles = response.reglamentos || [];
         this.articulosDisponibles = (response as any).articulos || [];
         this.actualizarCatalogoItemsModal();
+        this.cdr?.markForCheck();
       },
-      error: error => this.mostrarError(error)
+      error: error => {
+        this.mostrarError(error);
+        this.cdr?.markForCheck();
+      }
     });
 
     this.cargarMisSolicitudes();
@@ -221,14 +289,25 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.activeTimers.forEach(id => window.clearTimeout(id));
+    this.activeTimers.clear();
     this.scrollLock.reset();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
+  private scheduleTimer(callback: () => void, delayMs: number): void {
+    const id = window.setTimeout(() => {
+      this.activeTimers.delete(id);
+      callback();
+    }, delayMs);
+    this.activeTimers.add(id);
+  }
+
   cargarMisSolicitudes(): void {
     this.cargandoSolicitudes = true;
     this.failedToLoadRequests = false;
+    this.cdr?.markForCheck();
     const search = this.busquedaControl.value?.trim() || undefined;
     const estado = this.estadoFiltro.value || undefined;
     this.expedienteApi.listarMisSolicitudes({ search, estado }).pipe(
@@ -237,11 +316,13 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       next: solicitudes => {
         this.misSolicitudes = solicitudes;
         this.cargandoSolicitudes = false;
+        this.cdr?.markForCheck();
       },
       error: () => {
         this.failedToLoadRequests = true;
         this.notifications.error('No se pudieron cargar las solicitudes iniciadas.');
         this.cargandoSolicitudes = false;
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -255,7 +336,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     const idsYaSeleccionados = new Set(this.sociosSeleccionados.map(s => s.socio_id));
     this.sociosFiltrados = this.socios.filter(socio =>
       !idsYaSeleccionados.has(socio.socio_id) &&
-      [socio.legajo, socio.first_name, socio.last_name]
+      [socio.numero_socio?.toString(), socio.legajo, socio.first_name, socio.last_name]
         .some(valor => valor && valor.toLowerCase().includes(texto))
     );
   }
@@ -274,6 +355,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     }
     this.socioBusqueda.setValue('', { emitEvent: false });
     this.sociosFiltrados = [];
+    this.cdr?.markForCheck();
   }
 
   eliminarSocio(socioId: number): void {
@@ -281,6 +363,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       return;
     }
     this.sociosSeleccionados = this.sociosSeleccionados.filter(s => s.socio_id !== socioId);
+    this.cdr?.markForCheck();
   }
 
   nombreSocio(socio: PadronSocio): string {
@@ -290,38 +373,54 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   guardarBorrador(): void {
     if (this.estado === 'ISSUED') return;
     this.cargando = true;
+    this.cdr?.markForCheck();
     const request = this.borradorId ? this.expedienteApi.actualizarBorrador(this.borradorId, this.payload()) : this.expedienteApi.crearBorrador(this.payload());
-    request.subscribe({
+    request.pipe(takeUntil(this.destroy$)).subscribe({
       next: solicitud => {
         this.aplicarSolicitud(solicitud);
         this.notifications.success('Borrador guardado.');
         this.cargando = false;
+        this.cdr?.markForCheck();
         this.cargarMisSolicitudes();
       },
-      error: error => { this.mostrarError(error); this.cargando = false; }
+      error: error => {
+        this.mostrarError(error);
+        this.cargando = false;
+        this.cdr?.markForCheck();
+      }
     });
   }
 
   emitirT01(): void {
     if (!this.validarEmision() || this.estado === 'ISSUED') return;
     this.cargando = true;
+    this.cdr?.markForCheck();
     const guardar = this.borradorId ? this.expedienteApi.actualizarBorrador(this.borradorId, this.payload()) : this.expedienteApi.crearBorrador(this.payload());
-    guardar.subscribe({
+    guardar.pipe(takeUntil(this.destroy$)).subscribe({
       next: solicitud => this.emitirPersistido(solicitud),
-      error: error => { this.mostrarError(error); this.cargando = false; }
+      error: error => {
+        this.mostrarError(error);
+        this.cargando = false;
+        this.cdr?.markForCheck();
+      }
     });
   }
 
   private emitirPersistido(solicitud: SolicitudT01): void {
     this.aplicarSolicitud(solicitud);
-    this.expedienteApi.emitir(solicitud.id).subscribe({
+    this.expedienteApi.emitir(solicitud.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: emitida => {
         this.aplicarSolicitud(emitida);
-        this.notifications.success(`Expediente creado: ${emitida.numero_expediente}.`);
+        this.notifications.success(`Exp ${this.formatCaseNumber(emitida.numero_expediente)}.`);
         this.cargando = false;
+        this.cdr?.markForCheck();
         this.cargarMisSolicitudes();
       },
-      error: error => { this.mostrarError(error); this.cargando = false; }
+      error: error => {
+        this.mostrarError(error);
+        this.cargando = false;
+        this.cdr?.markForCheck();
+      }
     });
   }
 
@@ -364,6 +463,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     } else if (solicitud.involucrados && solicitud.involucrados.length > 0) {
       this.sociosSeleccionados = solicitud.involucrados.map(inv => ({
         socio_id: inv.socio_id || 0,
+        numero_socio: inv.numero_socio ?? null,
         legajo: inv.legajo || '',
         first_name: inv.first_name || '',
         last_name: inv.last_name || '',
@@ -394,15 +494,19 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     const confirmacion = window.confirm(`¿Estás seguro de que deseás eliminar el borrador "${solicitud.titulo || solicitud.numero}"?`);
     if (!confirmacion) return;
 
-    this.expedienteApi.eliminarBorrador(solicitud.id).subscribe({
+    this.expedienteApi.eliminarBorrador(solicitud.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.notifications.success('Borrador eliminado correctamente.');
         if (this.borradorId === solicitud.id) {
           this.resetearFormulario();
         }
+        this.cdr?.markForCheck();
         this.cargarMisSolicitudes();
       },
-      error: error => this.mostrarError(error)
+      error: error => {
+        this.mostrarError(error);
+        this.cdr?.markForCheck();
+      }
     });
   }
 
@@ -449,7 +553,12 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
 
   get articulosModalFiltrados(): CatalogoReglamentoItem[] {
     const busqueda = (this.filtroReglamentos || '').trim().toLowerCase();
-    return this.catalogoItemsModal.filter(item => {
+    const key = `${this.catalogoItemsModal.length}|${this.filtroDocumentoModal}|${busqueda}`;
+    if (key === this.cacheArticulosFiltradosKey && this.catalogoItemsModal.length > 0) {
+      return this.cacheArticulosFiltradosVal;
+    }
+    this.cacheArticulosFiltradosKey = key;
+    this.cacheArticulosFiltradosVal = this.catalogoItemsModal.filter(item => {
       if (this.filtroDocumentoModal !== 'TODOS' && item.documento !== this.filtroDocumentoModal) {
         return false;
       }
@@ -464,10 +573,17 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
         (`art. ${item.articulo}`).toLowerCase().includes(busqueda)
       );
     });
+    return this.cacheArticulosFiltradosVal;
   }
 
   get reglamentosSeleccionadosCitas(): ReglamentoCiteView[] {
-    return parseReglamentosList(this.reglamentosSeleccionados, null, this.articulosDisponibles);
+    const key = `${this.reglamentosSeleccionados.join('||')}|${this.articulosDisponibles.length}`;
+    if (key === this.cacheRegCitasKey) {
+      return this.cacheRegCitasVal;
+    }
+    this.cacheRegCitasKey = key;
+    this.cacheRegCitasVal = parseReglamentosList(this.reglamentosSeleccionados, null, this.articulosDisponibles);
+    return this.cacheRegCitasVal;
   }
 
   get reglamentoExpandidoFormDetalle(): ReglamentoCiteView | null {
@@ -482,7 +598,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.elementoFocoPrevio = (typeof document !== 'undefined' ? document.activeElement as HTMLElement : null);
     this.modalReglamentosAbierto = true;
     this.scrollLock.lock();
-    setTimeout(() => {
+    this.cdr?.markForCheck();
+    this.scheduleTimer(() => {
       if (this.modalReglamentosBody?.nativeElement) {
         this.modalReglamentosBody.nativeElement.scrollTop = 0;
       }
@@ -490,6 +607,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       if (this.modalSearchInput?.nativeElement) {
         this.modalSearchInput.nativeElement.focus({ preventScroll: true });
       }
+      this.cdr?.markForCheck();
     }, 0);
   }
 
@@ -500,6 +618,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       this.elementoFocoPrevio.focus({ preventScroll: true });
     }
     this.elementoFocoPrevio = null;
+    this.cdr?.markForCheck();
   }
 
   onModalReglamentosKeydown(event: KeyboardEvent): void {
@@ -601,10 +720,12 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
         this.catalogoExpedientesModal = catalogo;
         this.cargandoCatalogoExpedientes = false;
         this.catalogoExpedientesCargado = true;
+        this.cdr?.markForCheck();
       },
       error: error => {
         this.cargandoCatalogoExpedientes = false;
         this.mostrarError(error);
+        this.cdr?.markForCheck();
       }
     });
   }
@@ -653,15 +774,17 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     if (!this.misSolicitudes || this.misSolicitudes.length === 0) {
       return [];
     }
+    const key = `${this.misSolicitudes.length}|${this.misSolicitudes.map(s => `${s.id}:${s.estado}:${s.numero_expediente ?? ''}:${s.numero ?? ''}:${s.titulo}:${s.puntos ?? ''}:${s.urgencia ?? ''}:${s.estado_procesal ?? ''}`).join(',')}|${this.columnaOrden}|${this.ordenAscendente}`;
+    if (key === this.cacheSolicitudesOrdenadasKey) {
+      return this.cacheSolicitudesOrdenadasVal;
+    }
     const result = [...this.misSolicitudes];
     result.sort((a, b) => {
       let valA: any;
       let valB: any;
       switch (this.columnaOrden) {
         case 'numero':
-          valA = this.formatSolicitudExpediente(a);
-          valB = this.formatSolicitudExpediente(b);
-          break;
+          return this.compararNumerosExpediente(a.numero_expediente, b.numero_expediente);
         case 'titulo':
           valA = a.titulo || a.motivo || '';
           valB = b.titulo || b.motivo || '';
@@ -702,6 +825,8 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       if (valA > valB) return this.ordenAscendente ? 1 : -1;
       return 0;
     });
+    this.cacheSolicitudesOrdenadasKey = key;
+    this.cacheSolicitudesOrdenadasVal = result;
     return result;
   }
 
@@ -736,11 +861,12 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.solicitudSeleccionada = solicitud;
     this.modalDetalleAbierto = true;
     this.scrollLock.lock();
-    setTimeout(() => {
+    this.scheduleTimer(() => {
       const modalBody = (document.querySelector('.modal-detalle-body') || document.querySelector('.modal-dialog-custom')) as HTMLElement;
       if (modalBody) {
         modalBody.focus({ preventScroll: true });
       }
+      this.cdr?.markForCheck();
     }, 50);
   }
 
@@ -938,5 +1064,26 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       return 'Borrador sin número';
     }
     return this.formatCaseNumber(raw);
+  }
+
+  numeroExpedienteVisible(numero: string | null | undefined): string {
+    return numero ? `Exp ${this.formatCaseNumber(numero)}` : 'Borrador sin número';
+  }
+
+  private compararNumerosExpediente(
+    numeroA: string | null | undefined,
+    numeroB: string | null | undefined
+  ): number {
+    const parse = (numero: string | null | undefined): [number, number] | null => {
+      const match = /^(?:EXP-)?0*(\d+)\/(\d{4})$/i.exec((numero || '').trim());
+      return match ? [Number(match[2]), Number(match[1])] : null;
+    };
+    const a = parse(numeroA);
+    const b = parse(numeroB);
+    if (!a && !b) return 0;
+    if (!a) return this.ordenAscendente ? 1 : -1;
+    if (!b) return this.ordenAscendente ? -1 : 1;
+    const comparison = a[0] - b[0] || a[1] - b[1];
+    return this.ordenAscendente ? comparison : -comparison;
   }
 }

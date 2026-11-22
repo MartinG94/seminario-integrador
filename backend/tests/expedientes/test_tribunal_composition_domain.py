@@ -109,7 +109,7 @@ class TestCasosAdHoc:
         assert composition.requires_ad_hoc is True
         assert seat_ids(composition)[5] is None
         assert composition.ad_hoc_reasons == (
-            "El titular y el suplente del 5.º año están involucrados en la causa "
+            "El titular y el suplente del 5.º año están involucrados en el expediente "
             "(Art. 95 del Estatuto).",
         )
 
@@ -117,7 +117,8 @@ class TestCasosAdHoc:
         composition = compose(ROSTER, involved_ids={T4.socio_id, T5.socio_id, S6.socio_id})
         assert composition.requires_ad_hoc is True
         assert composition.ad_hoc_reasons == (
-            "3 integrantes del Tribunal están involucrados en la causa (Art. 95 del Estatuto).",
+            "3 integrantes del Tribunal están involucrados en el expediente "
+            "(Art. 95 del Estatuto).",
         )
 
     def test_casos_a_y_b_simultaneos(self):

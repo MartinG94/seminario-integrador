@@ -465,3 +465,42 @@ class TestVisorExpedienteAPI:
         hito_descarga = next(h for h in timeline if h["tipo"] == "DESCARGA_DOCUMENTO")
         assert "Descarga: constancia.pdf" in hito_descarga["titulo"]
         assert hito_descarga["icono"] == "file_download"
+
+    def test_visor_expone_puntaje_ratificado_y_puntaje_final(
+        self, expediente_causa, socio_imputado_1, vocal_td
+    ):
+        """Verifica que el visor serialice puntaje_ratificado y puntaje_final."""
+        descargo = DescargoExpediente.objects.create(
+            expediente=expediente_causa,
+            socio=socio_imputado_1,
+            tipo=TipoDescargoEnum.T02_CERTIFICADO,
+            causal="Examen en UTN FRC",
+            puntaje_ratificado="-1.5",
+        )
+
+        from expedientes.models import DecisionCausalDescargo, DecisionCausalEnum
+
+        DecisionCausalDescargo.objects.create(
+            expediente=expediente_causa,
+            descargo=descargo,
+            version=1,
+            decision=DecisionCausalEnum.REJECTED,
+            regla_sugerida=DecisionCausalEnum.REJECTED,
+            se_aparta_de_regla=True,
+            fundamento="Fundamento de prueba.",
+            descargo_snapshot={"puntaje_final": -1.5},
+            autor=vocal_td.user,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=vocal_td.user)
+        response = client.get(f"/api/v1/expedientes/{expediente_causa.id}/visor/")
+        assert response.status_code == status.HTTP_200_OK
+
+        involucrados = response.data["involucrados"]
+        assert len(involucrados) > 0
+        descargo_dto = involucrados[0]["descargo"]
+        assert descargo_dto is not None
+        assert descargo_dto.get("puntaje_ratificado") == "-1.5"
+        assert len(descargo_dto.get("decisiones_causal", [])) > 0
+        assert descargo_dto["decisiones_causal"][0].get("puntaje_final") == -1.5

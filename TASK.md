@@ -12,9 +12,9 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 | **Sprint 1** | 09/09 al 22/09 | **Walking Skeleton:** Autenticación JWT, Roles RBAC, Padrón institucional, Ranking oficial de puntos y Legajo de socio. | `SCRUM-34` a `SCRUM-39` (20 SP) | **Completado (20 SP)** |
 | **Sprint 2** | 23/09 al 06/10 | **Expedientes, Notificaciones y Monitoreo:** Formulario T01 multi-socio, competencias (Arts. 21-26), Outbox email, Tablero 6 Estados y Mis Solicitudes T01. | `SCRUM-40` a `SCRUM-44`, `SCRUM-75` (23 SP) | **Completado (23 SP)** |
 | **Sprint 3** | 08/10 al 20/10 | **Descargos, Evidencias, Calendario y Asistencias:** Formularios T02 y T03 con adjuntos protegidos, calendario de días hábiles, urgencia, asistencias, detalle Sala TD y resolución T02. | `SCRUM-45` a `SCRUM-50`, `SCRUM-52`, `SCRUM-76` a `SCRUM-84` (36 SP) | **Completado (36 SP)** |
-| **Sprint 4** | 22/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **En Curso (Activo)** |
-| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | Planificado |
-| **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | Planificado |
+| **Sprint 4** | 22/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **Completado (19 SP)** |
+| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | **Completado** |
+| **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | **En Curso (Activo)** |
 
 ---
 
@@ -433,9 +433,69 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14.1 Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
+## 15. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
 
-> **Tareas:** [`specs/010-panel-administracion/tasks.md`](specs/010-panel-administracion/tasks.md)
+> **Spec de Referencia:** [`specs/010-optimizacion-rendimiento/spec.md`](specs/010-optimizacion-rendimiento/spec.md)  
+> **Plan Técnico:** [`specs/010-optimizacion-rendimiento/plan.md`](specs/010-optimizacion-rendimiento/plan.md)  
+> **Tareas:** [`specs/010-optimizacion-rendimiento/tasks.md`](specs/010-optimizacion-rendimiento/tasks.md)
+
+### Slice 1: Fundaciones y Contratos Base (Backend & Frontend)
+- [x] **T-87.01 Contrato de Paginación Canónico Backend [TDD]:** `StandardResultsSetPagination(PageNumberPagination)` en `backend/core/pagination.py` (`page_size=20`, `max_page_size=100`, envolvente de 7 campos y manejo de errores RFC 9457 para 404). Tests en `backend/tests/core/test_pagination.py` (17/17 en verde).
+- [x] **T-87.02 Modelo de Paginación Frontend e Interfaz Genérica [TDD]:** Interfaz genérica `PaginatedResponse<T>` en `frontend/src/app/models/paginated-response.model.ts` y tests unitarios en `paginated-response.model.spec.ts` (2/2 en verde).
+- [x] **T-87.03 Utilitario Universal `TrackByUtils` Frontend [TDD]:** Funciones puras `byId`, `bySocio`, `byExpediente`, `byValue` en `frontend/src/app/utils/track-by.util.ts` y tests unitarios en `track-by.util.spec.ts` (31/31 en verde).
+
+### Slice 2: Optimización de Persistencia y Eliminación de N+1 (SCRUM-120)
+- [x] **T-87.04 Suite Base de Rendimiento ORM y Límites de Queries [TDD]:** `backend/tests/expedientes/test_orm_performance.py` con fixtures y tests usando `django_assert_num_queries` y `CaptureQueriesContext` para eventos, antecedentes, defer de BLOB y métricas de reportes (5/5 en verde).
+- [x] **T-87.05 Optimización de Eventos Institucionales (Eliminación de N+1) [TDD]:** `EventoInstitucionalViewSet.get_queryset()` con anotaciones condicionales `total_convocados_calc`, `total_presentes_calc`, `total_ausentes_calc` y adaptación de `EventoInstitucionalSerializer`. Verificado en $\le 3$ queries SQL ($O(1)$).
+- [x] **T-87.06 Diferimiento de Binarios BLOB en Evidencias de Expedientes [TDD]:** `EXPEDIENTE_LIST_PREFETCH` en `backend/expedientes/views/__init__.py` utilizando `Prefetch("evidencias", queryset=EvidenciaDescargo.objects.defer("contenido_blob").select_related("socio"))`.
+- [x] **T-87.07 Optimización de Catálogo de Antecedentes con Subquery [TDD]:** `T03ValuationService.list_emitted_antecedents` y `build_expedientes_referenciados_detalle` con `Subquery` correlacionada indexada sobre `CambioEstadoExpediente` (`fecha_emision_calc`), reduciendo a exactamente 1 consulta SQL para 100 antecedentes.
+- [x] **T-87.08 Batching en Reportes y Precarga de Subcomisiones [TDD]:** Batching en `ReportesService.obtener_metricas_subcomision` sobre `tribunal_puntajegeneral` y `select_related("subcomision")` en el prefetch de socios involucrados en causas.
+
+### Slice 3: Paginación Server-Side y Rendimiento de Ranking de Socios (SCRUM-118 + SCRUM-119)
+- [x] **T-87.09 Paginación Server-Side en `RankingListView` [TDD]:** Integración de `StandardResultsSetPagination` en `RankingListView` (`backend/ranking/views.py`), soportando `page`, `page_size`, `ordering` y `search` sobre el queryset reconciliado. Tests en `backend/tests/ranking/test_ranking_pagination.py` (9/9 en verde) y suite general de ranking en verde.
+- [x] **T-87.10 Adaptación del Servicio Frontend `ranking.service.ts` [TDD]:** Parámetros `RankingPaginationParams`, tipado `PaginatedResponse<RankingSocio>` y compatibilidad con respuestas flat array. Tests en `ranking.service.spec.ts` (4/4 en verde).
+- [x] **T-87.11 Refactorización OnPush, trackBy y MatPaginator en `RankingSociosComponent` [TDD]:** `ChangeDetectionStrategy.OnPush`, eliminación de getters impuros con caché inteligente, `trackBySocioId`, `takeUntil(this.destroy$)` en `ngOnDestroy` y `<mat-paginator>` server-side en `ranking-socios.component.html` (suite `ranking-socios.component.spec.ts` en verde dentro de Karma 664/664).
+
+### Slice 4: Paginación Server-Side y Rendimiento en Tablero y Gestión de Expedientes (SCRUM-118 + SCRUM-119)
+- [x] **T-87.12 Paginación Server-Side en `ExpedienteCollectionView` y `MisExpedientesView` [TDD]:** `StandardResultsSetPagination` y `PaginatedAPIViewMixin` en `GET /api/v1/expedientes/gestion/` y `GET /api/v1/expedientes/mis-expedientes/` con envolvente de 7 campos, filtros/ordenamiento `_apply_expediente_collection_filters_and_ordering` con tie-breaker `-id` y `InvalidPageError` RFC 9457. Tests en `backend/tests/expedientes/test_expediente_pagination.py` (9/9 en verde).
+- [x] **T-87.13 Adaptación de Servicios Frontend `tribunal-data.service.ts` y `expediente-api.service.ts` [TDD]:** Soporte de `PaginatedResponse<Expediente>` y parámetros `PaginationParams` (`page`, `page_size`, `ordering`, `search`, filtros) en `listarExpedientes`, `listarMisExpedientes` y `listarPorLegajo`. Suites `tribunal-data.service.spec.ts` y `expediente-api.service.spec.ts` en verde dentro de Karma 664/664.
+- [x] **T-87.14 Refactorización OnPush, trackBy y MatPaginator en `GestionarExpedientesComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), setters reactivos con `cdr?.markForCheck()`, caché para filtros y estados, 13 funciones `trackBy` puras en `*ngFor`, `<mat-paginator>` server-side en vista tabla (`listarExpedientes`) y desuscripciones completas con `takeUntil(this.destroy$)` y limpieza de timers/URLs en `ngOnDestroy`. Suite `gestionar-expedientes.component.spec.ts` en verde dentro de Karma 664/664.
+- [x] **T-87.15 Refactorización OnPush, trackBy y MatPaginator en `MisExpedientesComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), 6 funciones `trackBy` puras en `*ngFor`, `interval(1000)` aislado con `ngZone.runOutsideAngular`, caché en `expedientesOrdenados`, `<mat-paginator>` server-side sobre `listarMisExpedientes`, deduplicación de `perfil$` en `ngOnInit`, `scrollLock.reset()` y `takeUntil(this.destroy$)` completo en 14/14 suscripciones. Suite `mis-expedientes.component.spec.ts` en verde dentro de Karma 664/664.
+
+### Slice 5: Refactorización Transversal OnPush, trackBy y Ciclo de Vida en Componentes Restantes (SCRUM-119)
+- [x] **T-87.16 Optimización de `SolicitarPuntosComponent` y `AsistenciaEventoComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), setters reactivos y `cdr?.markForCheck()`, protección completa con `takeUntil(this.destroy$)` en todas las suscripciones, `<mat-paginator>` server-side en Mis Eventos + `page_size: 100` en planilla de `AsistenciaEventoComponent`, cachés en `solicitar-puntos` y `asistencia-evento`, y funciones `trackBy` puras. Suites en verde dentro de Karma 664/664.
+- [x] **T-87.17 Optimización de `ReportesComponent`, `CalendarioInstitucionalComponent` y `VisorExpedienteComponent` [TDD]:** `ChangeDetectionStrategy.OnPush` (`0 ngDoCheck`), `cdr?.markForCheck()`, pre-cálculo `recomputeEscalados()` (`O(1)`) en `ReportesComponent`, protección `takeUntil(this.destroy$)` completa, limpieza de `ObjectURL`/timers y funciones `trackBy` puras. Suites en verde dentro de Karma 664/664.
+- [x] **T-87.18 Paginación en `EventoInstitucionalViewSet` y Adaptación de `evento.service.ts` [TDD]:** `pagination_class = StandardResultsSetPagination` en `EventoInstitucionalViewSet` y soporte `PaginatedResponse<EventoInstitucional>` en `evento.service.ts`. Tests `backend/tests/expedientes/test_evento_pagination.py` (5/5 en verde) y `evento.service.spec.ts` en verde dentro de Karma 664/664.
+
+### Slice 6: Verificación Integral de Calidad, Auditoría de Memoria y Consistencia PO
+- [x] **T-87.19 Auditoría de Memoria y Detección de Fugas en Frontend (Heap Profiling):** Ejecución de 20 ciclos de navegación bajo Chrome Headless CDP (100 navegaciones entre `/ranking-socios`, `/gestionar-expedientes`, `/mis-expedientes`, `/eventos-asistencia` y `/reportes`) verificando Heap delta en estado estable Ciclos 10→20 de `+0.2515 MB` (`+0.2527 MB` en re-auditoría QA) ($\le 0.5\text{ MB}$ RNF-03) y `0` nodos DOM desconectados (`specs/010-optimizacion-rendimiento/memory_audit_report.md` y `frontend/src/app/utils/lifecycle-memory.spec.ts`), más limpieza `ngOnDestroy` en `NavbarComponent`, `SidebarComponent` y `AdminLayoutComponent`.
+- [x] **T-87.20 Verificación de Inmutabilidad del Esquema Legacy (Regla 6):** Inspección con `python manage.py makemigrations --check --dry-run` certificando "No changes detected", CERO alteraciones DDL sobre tablas preexistentes (`socio_*`, `tribunal_*`) y `managed = False` inalterado.
+- [x] **T-87.21 Validación de Consistencia con Notas del PO y Sistema de Diseño:** Verificación de ordenamientos de saldo/grupo, modal de detalle de socios, selector reactivo de socios (Select2), tokens `DESIGN.md` e inmutabilidad estricta de notificaciones centrales a 10 segundos abajo a la derecha (solicitud del PM, PR #49).
+- [x] **T-87.22 Ejecución de Suites Completas y Linter:** Frontend Karma `672/672 SUCCESS` (0 fallos), `npx tsc --skipLibCheck --noEmit` exit `0`, `npx ng build --configuration production` exit `0`; Backend `pytest` `1387 passed, 8 skipped` (skips MySQL-only en SQLite local), `ruff check .` exit `0`, `ruff format --check backend/` exit `0` (`235` archivos; `ruff format --check .` reporta únicamente 4 archivos `.md` en `docs/`), `manage.py check` exit `0`, `makemigrations --check --dry-run` exit `0`.
+
+---
+
+## 16. Sprint 5 — Desglose Atómico: US Macro 01 / SCRUM-89 (Circuito Resolutivo Oficial, Exclusión Fundada, Corrección de Puntaje Final y Enmiendas Trazables)
+
+> **Spec de Referencia:** [`specs/010-circuito-resolutivo-enmiendas/spec.md`](specs/010-circuito-resolutivo-enmiendas/spec.md)  
+> **Plan Técnico:** [`specs/010-circuito-resolutivo-enmiendas/plan.md`](specs/010-circuito-resolutivo-enmiendas/plan.md)  
+> **Tareas:** [`specs/010-circuito-resolutivo-enmiendas/tasks.md`](specs/010-circuito-resolutivo-enmiendas/tasks.md)  
+> **Estado:** **Plan Aprobado con PO (12/11/2026) — Listo para Inicio**
+
+- [x] **T10.1 (SCRUM-101) Persistencia de `puntaje_ratificado` en Backend [TDD]:** Columna `puntaje_ratificado` en `DescargoExpediente`, migración `0026`, actualización de `CausalResolutionService.decide` y exposición en serializers.
+- [x] **T10.2 (SCRUM-101) Sincronización de Puntaje Ratificado en Frontend [TDD]:** Actualización de `getPuntajeFinalInvolucrado` y visualización de puntaje en `gestionar-expedientes.component.ts`.
+- [x] **T10.3 (SCRUM-102) Dominio y Servicio de Exclusión Fundada [TDD]:** Campos de exclusión, `ExclusionInvolucradoService`, validación de rol TD, motivo >= 10 chars, aviso por Outbox y cierre administrativo a `EMITIDO` sin triple firma si es el último involucrado.
+- [x] **T10.4 (SCRUM-102) Endpoint REST y UI de Exclusión en Angular [TDD]:** Endpoint `POST /involucrados/<socio_id>/excluir/`, botón "Excluir Socio", modal de motivo y estado tachado con badge `Excluido`.
+- [x] **T10.5 (SCRUM-99) Firma Colegiada por Año Social con Inferencia y Selector de Suplencia [TDD]:** Inferencia automática de Titular/Suplente, selector visible para tribunal ad-hoc (Art. 95), etiqueta canónica `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]` y verificación de los 3 años sociales.
+- [x] **T10.6 (SCRUM-100) Emisión Oficial y Despacho Idempotente sin Duplicados [TDD]:** Sellado SHA-256, estado `EMITIDO`, despacho a socios, CD y TD con claves de idempotencia únicas en `EmailOutbox`.
+- [x] **T10.7 (SCRUM-103) Modelo y Servicio de Enmienda con Contra-asientos Opción B [TDD]:** Modelo `EnmiendaResolucion`, endpoint de enmienda, numeración `RESOLUCIÓN N/YYYY` (Art. 19), retorno a firmas y contra-asiento (reversión íntegra + nuevo asiento) en libro mayor sin UPDATE/DELETE.
+- [x] **T10.8 (SCRUM-103) Flujo de Enmienda en Frontend y Verificación Integral [TDD]:** Acción "Enmendar Resolución", modal de rectificación, pasaje a estado de firmas y suites completas en verde (`pytest`, `Karma`, `ruff`).
+
+---
+
+## 17. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
+
+> **Tareas:** [`specs/011-panel-administracion/tasks.md`](specs/011-panel-administracion/tasks.md)
 
 - [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `ParametroSistema` de solo inserción, `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, alertas, correos y comprobantes.
 - [x] **TS5-03.2 Pantalla de administración exclusiva para ADMIN [TDD]:** Ruta `/admin/parametros` con `TribunalGuard`, entrada "Administración" en el menú y tarjetas temáticas Plazos, Umbrales, Correos y Adjuntos.
@@ -443,7 +503,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 15. Instrucciones para la Actualización de este Archivo
+## 18. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, connection, models, transaction
+from django.db.utils import OperationalError
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
@@ -212,7 +213,7 @@ class ClasificacionExpedienteEnum(models.TextChoices):
 
 
 class ExpedienteNumberSequence(models.Model):
-    """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
+    """Contador correlativo anual de expedientes (CA1/CA4): N/YYYY.
 
     Una fila por año bloqueada con SELECT ... FOR UPDATE serializa la asignación:
     a diferencia del AUTO_INCREMENT de InnoDB, un rollback devuelve el número y
@@ -233,18 +234,37 @@ class ExpedienteNumberSequence(models.Model):
         año nuevo crea la suya. Ante una creación simultánea, la restricción única de
         `year` hace que sólo una inserción prospere y el resto relea la fila bloqueada.
         """
-        with transaction.atomic():
-            sequence = cls.objects.select_for_update().filter(year=year).first()
-            if sequence is None:
-                try:
-                    with transaction.atomic():
-                        cls.objects.create(year=year)
-                except IntegrityError:
-                    pass
-                sequence = cls.objects.select_for_update().get(year=year)
-            sequence.last_value += 1
-            sequence.save(update_fields=["last_value"])
-            return sequence.last_value
+        for attempt in range(3):
+            try:
+                with transaction.atomic():
+                    sequence = cls.objects.select_for_update().filter(year=year).first()
+                    if sequence is None:
+                        if connection.vendor == "mysql":
+                            table = connection.ops.quote_name(cls._meta.db_table)
+                            year_column = connection.ops.quote_name("year")
+                            value_column = connection.ops.quote_name("last_value")
+                            with connection.cursor() as cursor:
+                                cursor.execute(
+                                    f"INSERT INTO {table} ({year_column}, {value_column}) "
+                                    f"VALUES (%s, 0) ON DUPLICATE KEY UPDATE "
+                                    f"{year_column} = VALUES({year_column})",
+                                    [year],
+                                )
+                        else:
+                            try:
+                                cls.objects.create(year=year)
+                            except IntegrityError:
+                                pass
+                        sequence = cls.objects.select_for_update().get(year=year)
+                    sequence.last_value += 1
+                    sequence.save(update_fields=["last_value"])
+                    return sequence.last_value
+            except OperationalError as error:
+                code = error.args[0] if error.args else None
+                if code not in (1205, 1213) or attempt == 2:
+                    raise
+                if connection.in_atomic_block:
+                    raise
 
 
 class Expediente(models.Model):
@@ -467,6 +487,35 @@ class DescargoExpediente(models.Model):
         default=True,
         db_index=True,
         help_text="False cuando el socio retiró el descargo dentro del plazo (baja lógica).",
+    )
+    puntaje_ratificado = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="Puntaje final ratificado por el Tribunal de Disciplina tras la evaluación.",
+    )
+    esta_excluido = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True si el socio fue excluido de la causa por el Tribunal de Disciplina.",
+    )
+    motivo_exclusion = models.TextField(
+        blank=True,
+        default="",
+        help_text="Fundamento formal de la exclusión dictada por el TD (mínimo 10 caracteres).",
+    )
+    excluido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="exclusiones_involucrados",
+        help_text="Usuario integrante del TD que dictó la exclusión.",
+    )
+    excluido_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora de registro de la exclusión fundada.",
     )
 
     class Meta:
@@ -1809,6 +1858,37 @@ class Resolucion(models.Model):
         ):
             raise ValidationError("Una resolución emitida es inmutable.")
         return super().delete(*args, **kwargs)
+
+
+class EnmiendaResolucion(models.Model):
+    """Registro inmutable de trazabilidad de enmienda sobre una resolución emitida (SCRUM-103)."""
+
+    resolucion_anterior = models.ForeignKey(
+        Resolucion, on_delete=models.PROTECT, related_name="enmiendas_posteriores"
+    )
+    resolucion_nueva = models.OneToOneField(
+        Resolucion, on_delete=models.PROTECT, related_name="enmienda_origen"
+    )
+    motivo_enmienda = models.TextField(
+        help_text="Fundamento formal de la rectificación por error material o hecho sobreviniente."
+    )
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="enmiendas_solicitadas"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "expedientes_enmienda_resolucion"
+        verbose_name = "Enmienda de Resolución"
+        verbose_name_plural = "Enmiendas de Resoluciones"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        num = self.resolucion_anterior.numero_expediente_snapshot
+        return (
+            f"Enmienda Res.{self.resolucion_anterior.version} -> "
+            f"Res.{self.resolucion_nueva.version} ({num})"
+        )
 
 
 # Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy

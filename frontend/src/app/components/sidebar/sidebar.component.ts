@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TribunalDataService } from '../../services/tribunal-data.service';
 import { AuthService, PerfilSocio, RolRbac } from '../../services/auth.service';
 
@@ -40,7 +42,8 @@ export const MODULOS_FUERA_DE_ALCANCE: ModuloInfo[] = [];
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css']
 })
-export class SidebarComponent implements OnInit {
+export class SidebarComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   menuItems: RouteInfo[] = [];
   modulosFueraDeAlcance = MODULOS_FUERA_DE_ALCANCE;
   tribunalDesplegado = true;
@@ -53,10 +56,15 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit() {
     this.actualizarMenu();
-    this.auth.perfil$.subscribe(perfil => {
+    this.auth.perfil$.pipe(takeUntil(this.destroy$)).subscribe(perfil => {
       this.perfil = perfil;
       this.actualizarMenu();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   actualizarMenu(): void {

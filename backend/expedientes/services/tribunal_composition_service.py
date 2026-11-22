@@ -231,12 +231,12 @@ class TribunalCompositionService:
                     f"El expediente {expediente.numero} no puede ser resuelto por el Tribunal "
                     "de Disciplina ordinario porque:\n"
                     f"{motivos}\n\n"
-                    f"Integrantes del Tribunal involucrados en la causa:\n{apartados}\n\n"
+                    f"Integrantes del Tribunal involucrados en el expediente:\n{apartados}\n\n"
                     "Conforme al Art. 95 del Estatuto, corresponde convocar de inmediato a "
                     "Asamblea General. Los imputados conservan su plazo para presentar los "
                     "formularios T02/T03. Los integrantes que designe la Asamblea deben "
                     "recibir el rol de Tribunal de Disciplina en el sistema para resolver "
-                    "la causa.\n\n"
+                    "el expediente.\n\n"
                     "Sistema de Gestión Disciplinaria A.V.E.I.T."
                 ),
                 "idempotency_key": AD_HOC_NOTICE_KEY.format(expediente_id=expediente.pk),

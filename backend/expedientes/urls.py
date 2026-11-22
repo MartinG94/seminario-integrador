@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from expedientes.resolution_views import (
+    EnmiendaResolucionView,
     ResolucionEmitirView,
     ResolucionFirmarView,
     ResolucionPreviewView,
@@ -24,6 +25,7 @@ from expedientes.views import (
     EventoInstitucionalViewSet,
     EvidenciaDownloadView,
     EvidenciaUploadView,
+    ExcluirInvolucradoView,
     ExpedienteCollectionView,
     ExpedienteDetailView,
     ExpedientesPorSocioView,
@@ -76,6 +78,11 @@ urlpatterns = [
         "<int:expediente_id>/resolucion/emitir/",
         ResolucionEmitirView.as_view(),
         name="resolucion-emitir",
+    ),
+    path(
+        "<int:expediente_id>/enmendar/",
+        EnmiendaResolucionView.as_view(),
+        name="expediente-enmendar",
     ),
     # Reportes e Indicadores Institucionales (SCRUM-63)
     path("reportes/t01/", ReportesT01View.as_view(), name="reportes-t01"),
@@ -168,6 +175,11 @@ urlpatterns = [
         "<int:pk>/notificaciones/",
         CaseNotificationAuditView.as_view(),
         name="expediente-notificaciones",
+    ),
+    path(
+        "<int:pk>/involucrados/<int:socio_id>/excluir/",
+        ExcluirInvolucradoView.as_view(),
+        name="expediente-involucrado-excluir",
     ),
     path("<int:pk>/visor/", ExpedienteVisorView.as_view(), name="expediente-visor"),
     path("<int:pk>/", ExpedienteDetailView.as_view(), name="expediente-detail"),

@@ -9,6 +9,7 @@ from expedientes.services.attendance_strategy import (
     ManualAttendanceStrategy,
 )
 from expedientes.services.deadline_service import DeadlineEnforcementService
+from expedientes.services.exclusion_service import ExclusionInvolucradoService
 from expedientes.services.meeting_compliance_service import MeetingComplianceService
 from expedientes.services.meeting_notice_notification_service import (
     MeetingNoticeNotificationService,
@@ -24,6 +25,7 @@ __all__ = [
     "AttendanceStrategyFactory",
     "BiometricAttendanceStrategy",
     "DeadlineEnforcementService",
+    "ExclusionInvolucradoService",
     "ExpedienteWorkflowService",
     "ManualAttendanceStrategy",
     "MeetingComplianceService",
