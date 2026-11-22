@@ -1,4 +1,4 @@
-"""Catálogo y validación de los parámetros del sistema (Spec 011).
+"""Catálogo y validación de los parámetros del sistema (Spec 012).
 
 Dominio puro: no depende de Django ni de la base. El catálogo define qué se puede
 configurar, con qué tipo y entre qué límites; la persistencia sólo guarda los cambios.

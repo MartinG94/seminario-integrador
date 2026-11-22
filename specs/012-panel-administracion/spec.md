@@ -1,4 +1,4 @@
-# Spec 011 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD (MACRO-03 / SCRUM-91)
+# Spec 012 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD (MACRO-03 / SCRUM-91)
 
 > **Origen:** Notas del PO del 13/11/2026, sección 4 ("Panel de Administración (solo Admin)") y `PLAN_SPRINT_5_CONSOLIDADO.md` (N-07).
 > **Subtareas Jira:** `SCRUM-107` (S5-03.1), `SCRUM-108` (S5-03.2), `SCRUM-109` (S5-03.3).

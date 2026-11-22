@@ -368,7 +368,7 @@ from ranking.domain.threshold_alerts import (  # noqa: E402
 
 
 def configured_threshold() -> UmbralConfig:
-    """Umbrales vigentes del panel de administración (Spec 011); el crítico sigue fijo en -10."""
+    """Umbrales vigentes del panel de administración (Spec 012); el crítico sigue fijo en -10."""
     from core.services.system_parameters import SystemParameterService
 
     try:

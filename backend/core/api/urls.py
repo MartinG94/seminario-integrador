@@ -1,4 +1,4 @@
-"""Rutas del panel de administración y de los parámetros de lectura general (Spec 011)."""
+"""Rutas del panel de administración y de los parámetros de lectura general (Spec 012)."""
 
 from django.urls import path
 

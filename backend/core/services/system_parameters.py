@@ -1,4 +1,4 @@
-"""Lectura y modificación auditada de los parámetros del sistema (Spec 011).
+"""Lectura y modificación auditada de los parámetros del sistema (Spec 012).
 
 El valor vigente de una clave es su último registro; si nunca se modificó, rige el valor
 inicial del catálogo. Cada cambio inserta un registro nuevo: nada se actualiza ni se borra.

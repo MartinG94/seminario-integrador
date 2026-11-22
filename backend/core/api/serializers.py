@@ -1,4 +1,4 @@
-"""Contratos REST del panel de administración (Spec 011)."""
+"""Contratos REST del panel de administración (Spec 012)."""
 
 from __future__ import annotations
 

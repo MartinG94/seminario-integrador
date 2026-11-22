@@ -1,4 +1,4 @@
-"""Los parámetros configurados rigen en el comportamiento real del sistema (Spec 011, T5)."""
+"""Los parámetros configurados rigen en el comportamiento real del sistema (Spec 012, T5)."""
 
 from decimal import Decimal
 

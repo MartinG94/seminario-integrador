@@ -1,4 +1,4 @@
-"""Alta y baja del rol TD con auditoría inmutable (Spec 011, RF-10 a RF-13)."""
+"""Alta y baja del rol TD con auditoría inmutable (Spec 012, RF-10 a RF-13)."""
 
 from __future__ import annotations
 

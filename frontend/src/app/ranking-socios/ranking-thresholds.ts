@@ -1,4 +1,4 @@
-/** Umbrales de saldo vigentes (parámetros del sistema, Spec 011). */
+/** Umbrales de saldo vigentes (parámetros del sistema, Spec 012). */
 export interface UmbralesVigentes {
   critico: number;
   preventivo: number;

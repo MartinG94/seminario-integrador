@@ -1,4 +1,4 @@
-# Plan 011 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD
+# Plan 012 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD
 
 ## 1. Arquitectura
 

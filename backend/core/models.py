@@ -1,4 +1,4 @@
-"""Modelos de administración del sistema (Spec 011): sólo inserción, nunca se editan."""
+"""Modelos de administración del sistema (Spec 012): sólo inserción, nunca se editan."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Endpoints del panel de administración (Spec 011) y lecturas públicas de parámetros."""
+"""Endpoints del panel de administración (Spec 012) y lecturas públicas de parámetros."""
 
 from __future__ import annotations
 

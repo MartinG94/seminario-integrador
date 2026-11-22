@@ -25,7 +25,7 @@ function aNumero(valor: string, respaldo: number): number {
 }
 
 /**
- * Lectura de los parámetros vigentes para cualquier usuario autenticado (Spec 011).
+ * Lectura de los parámetros vigentes para cualquier usuario autenticado (Spec 012).
  * Cada consulta se resuelve una vez por sesión; ante un error rigen los valores iniciales.
  */
 @Injectable({ providedIn: 'root' })

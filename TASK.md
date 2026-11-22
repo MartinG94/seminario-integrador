@@ -398,7 +398,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14.1 Sprint 4 — Desglose Atómico: S4-05 / SCRUM-56 (Generar Resolución Oficial Canónica y Firma Colegiada por Año Social)
+## 15. Sprint 4 — Desglose Atómico: S4-05 / SCRUM-56 (Generar Resolución Oficial Canónica y Firma Colegiada por Año Social)
 
 - [x] **TS4-05.1 Modelo `Resolucion`, firmantes reales y servicio sin hardcodeos [TDD]:** Modelo `Resolucion` con numeración `NNN/AAAA`, estado `DRAFT`/`ISSUED`, `firmantes` JSON por año social (4.º, 5.º y 6.º), servicio `registrar_firma_resolucion` y emisión con hash SHA-256 sin nombres hardcodeados.
 - [x] **TS4-05.2 Persistencia de estado del expediente y endpoints REST [TDD]:** Transición persistente del expediente a `pendiente_correos` (con registro en `CambioEstadoExpediente`) al generar resolución en `POST`/`PATCH /api/v1/expedientes/<id>/resolucion/`, endpoint `POST /api/v1/expedientes/<id>/resolucion/firmar/` y previsualización PDF institucional.
@@ -408,7 +408,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 13.1 Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
+## 16. Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
 
 > **Tareas:** [`specs/009-reportes-e-informes/tasks.md`](specs/009-reportes-e-informes/tasks.md)
 
@@ -421,7 +421,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
+## 17. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
 
 > **Historia de Usuario:** S5-06: Como autoridad quiero recibir alertas de saldos críticos para actuar conforme al reglamento.  
 > **Criterios de Aceptación:** CA1 (Saldo negativo de 10 o más genera alerta crítica única por cruce descendente), CA2 (Destinatario y acción siguen acto aprobado / bloqueo normativo documentado), CA3 (Umbral -7 diferenciado, configurable y desactivable hasta validar Circular 001/2026), CA4 (Reversiones reevalúan sin borrar historial), CA5 (Cero información médica en notificaciones).
@@ -433,7 +433,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 15. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
+## 18. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
 
 > **Spec de Referencia:** [`specs/010-optimizacion-rendimiento/spec.md`](specs/010-optimizacion-rendimiento/spec.md)  
 > **Plan Técnico:** [`specs/010-optimizacion-rendimiento/plan.md`](specs/010-optimizacion-rendimiento/plan.md)  
@@ -475,7 +475,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 16. Sprint 5 — Desglose Atómico: US Macro 01 / SCRUM-89 (Circuito Resolutivo Oficial, Exclusión Fundada, Corrección de Puntaje Final y Enmiendas Trazables)
+## 19. Sprint 5 — Desglose Atómico: US Macro 01 / SCRUM-89 (Circuito Resolutivo Oficial, Exclusión Fundada, Corrección de Puntaje Final y Enmiendas Trazables)
 
 > **Spec de Referencia:** [`specs/010-circuito-resolutivo-enmiendas/spec.md`](specs/010-circuito-resolutivo-enmiendas/spec.md)  
 > **Plan Técnico:** [`specs/010-circuito-resolutivo-enmiendas/plan.md`](specs/010-circuito-resolutivo-enmiendas/plan.md)  
@@ -493,11 +493,11 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 17. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
+## 20. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
 
-> **Spec de Referencia:** [`specs/011-panel-administracion/spec.md`](specs/011-panel-administracion/spec.md)
-> **Plan Técnico:** [`specs/011-panel-administracion/plan.md`](specs/011-panel-administracion/plan.md)
-> **Tareas:** [`specs/011-panel-administracion/tasks.md`](specs/011-panel-administracion/tasks.md)
+> **Spec de Referencia:** [`specs/012-panel-administracion/spec.md`](specs/012-panel-administracion/spec.md)
+> **Plan Técnico:** [`specs/012-panel-administracion/plan.md`](specs/012-panel-administracion/plan.md)
+> **Tareas:** [`specs/012-panel-administracion/tasks.md`](specs/012-panel-administracion/tasks.md)
 
 - [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `ParametroSistema` de solo inserción, `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, alertas, correos y comprobantes.
 - [x] **TS5-03.2 Pantalla de administración exclusiva para ADMIN [TDD]:** Ruta `/admin/parametros` con `TribunalGuard`, entrada "Administración" en el menú y tarjetas temáticas Plazos, Umbrales, Correos y Adjuntos.
@@ -506,7 +506,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 18. Instrucciones para la Actualización de este Archivo
+## 21. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

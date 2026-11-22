@@ -129,7 +129,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   // Límites vigentes del panel de administración (Spec 010); 5 y 5 MB hasta que respondan.
   LIMITE_DOCUMENTOS = 5;
   MAX_MB = 5;
-  /** Parámetros vigentes (Spec 011): umbrales de saldo y plazo de descargo. */
+  /** Parámetros vigentes (Spec 012): umbrales de saldo y plazo de descargo. */
   umbrales: UmbralesVigentes = { ...UMBRALES_INICIALES };
   plazoDescargoDias = PLAZO_DESCARGO_INICIAL;
   get MAX_BYTES(): number { return this.MAX_MB * 1024 * 1024; }

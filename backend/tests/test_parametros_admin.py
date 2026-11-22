@@ -1,4 +1,4 @@
-"""API de parámetros del sistema (Spec 011, T2 a T4): RBAC, validación y auditoría."""
+"""API de parámetros del sistema (Spec 012, T2 a T4): RBAC, validación y auditoría."""
 
 from decimal import Decimal
 

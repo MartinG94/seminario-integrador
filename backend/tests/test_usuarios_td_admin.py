@@ -1,4 +1,4 @@
-"""Gestión de miembros con rol TD (Spec 011, T6): nómina, alta, revocación y auditoría."""
+"""Gestión de miembros con rol TD (Spec 012, T6): nómina, alta, revocación y auditoría."""
 
 import io
 import logging
