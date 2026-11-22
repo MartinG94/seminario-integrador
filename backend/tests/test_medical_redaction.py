@@ -43,3 +43,40 @@ def test_conserva_saltos_de_linea_y_agrupa_oraciones_consecutivas():
 
 def test_texto_vacio():
     assert censurar_datos_salud(None) == ""
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "Envió un saludo cordial al plenario.",
+        "Mantiene una conducta saludable.",
+        "La medición de asistencia fue correcta.",
+        "Se aplica la medida resuelta.",
+    ],
+)
+def test_no_censura_palabras_parecidas_sin_dato_de_salud(texto):
+    assert not contiene_datos_salud(texto)
+    assert censurar_datos_salud(texto) == texto
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "Estaba enferma ese día.",
+        "Tuvo una intervención quirúrgica.",
+        "Sufrió una lesión deportiva.",
+        "Presentó una fractura de muñeca.",
+        "Cursaba con fiebre alta.",
+        "Por su embarazo no pudo asistir.",
+        "Tuvo un accidente de tránsito.",
+        "Asiste a terapia semanal.",
+        "Pidió licencia médica.",
+    ],
+)
+def test_detecta_terminos_frecuentes_de_certificados(texto):
+    assert contiene_datos_salud(texto)
+
+
+def test_las_abreviaturas_no_cortan_la_oracion_censurada():
+    texto = "Según el Dr. Pérez estuvo internado. Se lo absuelve."
+    assert censurar_datos_salud(texto) == f"{TEXTO_RESERVADO} Se lo absuelve."

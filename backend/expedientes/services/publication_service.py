@@ -5,6 +5,7 @@ archivos ni identificadores internos de usuarios, y censura los datos de salud (
 """
 
 import hashlib
+from datetime import datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
@@ -46,7 +47,7 @@ def firmantes_publicos(firmantes: list[dict] | None) -> list[dict]:
         anio = firma.get("social_year") or firma.get("anio_social")
         publicos.append(
             {
-                "numero_socio": str(firma.get("legajo") or ""),
+                "numero_socio": str(firma.get("numero_socio") or ""),
                 "nombre": firma.get("full_name") or "",
                 "grupo": firma.get("grupo") or "",
                 "social_year": int(anio) if anio else None,
@@ -80,17 +81,18 @@ def construir_publicacion(resolucion: Resolucion, user: Any) -> dict[str, Any]:
         campo: getattr(resolucion, campo) or ""
         for campo in ("vistos", "considerandos", "articulos_resolutivos")
     }
+    textos["titulo"] = expediente.titulo or ""
     censurados = {campo: censurar_datos_salud(texto) for campo, texto in textos.items()}
+    reglamentos_originales = list(resolucion.reglamentos_respaldantes or [])
     reglamentos = [
-        censurar_datos_salud(r) if isinstance(r, str) else r
-        for r in (resolucion.reglamentos_respaldantes or [])
+        censurar_datos_salud(r) if isinstance(r, str) else r for r in reglamentos_originales
     ]
 
     return {
         "identificador": identificador_resolucion(resolucion),
         "expediente_id": expediente.pk,
         "expediente_numero": resolucion.numero_expediente_snapshot or expediente.numero,
-        "titulo": censurar_datos_salud(expediente.titulo or ""),
+        "titulo": censurados["titulo"],
         "version": resolucion.version,
         "fecha_emision": resolucion.issued_at.isoformat() if resolucion.issued_at else None,
         "vistos": censurados["vistos"],
@@ -101,8 +103,8 @@ def construir_publicacion(resolucion: Resolucion, user: Any) -> dict[str, Any]:
         "firmantes": firmantes_publicos(resolucion.firmantes),
         "impactos": [
             {
-                "socio_id": socio.pk,
-                "numero_socio": socio.legajo,
+                # Sin identificadores internos de usuario (RF-18): sólo el N° de socio.
+                "numero_socio": str(socio.numero_socio) if socio.numero_socio is not None else "",
                 "nombre": socio.first_name,
                 "apellido": socio.last_name,
                 "puntos": f"{impactos[socio.pk].puntos:.2f}" if socio.pk in impactos else None,
@@ -110,23 +112,51 @@ def construir_publicacion(resolucion: Resolucion, user: Any) -> dict[str, Any]:
             }
             for socio in imputados
         ],
-        "contiene_datos_reservados": censurados != textos,
+        "contiene_datos_reservados": censurados != textos or reglamentos != reglamentos_originales,
         "contenido_hash": resolucion.contenido_hash,
         "integridad_verificada": bool(resolucion.contenido_hash)
         and calcular_hash_resolucion(resolucion) == resolucion.contenido_hash,
     }
 
 
+def describir_impacto(puntos: str | None, medida: str | None) -> str:
+    """Texto institucional del impacto aplicado (las medidas nunca son puntos)."""
+    if medida == "LLAMADO_ATENCION":
+        return "Llamado de atención"
+    if medida == "FELICITACION":
+        return "Felicitación"
+    if puntos is None:
+        return "Sin movimiento registrado"
+    valor = Decimal(puntos)
+    if valor == 0:
+        return "Sin impacto en puntos"
+    return f"{valor:+.2f} puntos".replace(".", ",")
+
+
 def documento_pdf_publicado(publicacion: dict[str, Any]) -> SimpleNamespace:
     """Adaptador de la publicación censurada al generador de PDF institucional."""
+    fecha = publicacion.get("fecha_emision")
     return SimpleNamespace(
         estado="ISSUED",
+        es_publicacion=True,
         numero_expediente_snapshot=publicacion["expediente_numero"],
         version=publicacion["version"],
-        plantilla_version="publicación oficial",
+        plantilla_version="",
+        issued_at=datetime.fromisoformat(fecha) if fecha else None,
+        # Sólo el título censurado: nunca el motivo ni la solicitud originales.
+        expediente=SimpleNamespace(
+            solicitud_t01=SimpleNamespace(titulo=publicacion["titulo"]), motivo=""
+        ),
         vistos=publicacion["vistos"],
         considerandos=publicacion["considerandos"],
         articulos_resolutivos=publicacion["articulos_resolutivos"],
+        reglamentos_publicados=publicacion["reglamentos_respaldantes"],
+        impactos_publicados=[
+            {**impacto, "descripcion": describir_impacto(impacto["puntos"], impacto["medida"])}
+            for impacto in publicacion["impactos"]
+        ],
         firmantes=publicacion["firmantes"],
         puntos_finales=Decimal("0"),
+        contenido_hash=publicacion["contenido_hash"] or "",
+        integridad_verificada=publicacion["integridad_verificada"],
     )

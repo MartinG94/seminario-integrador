@@ -1,5 +1,8 @@
 """Saldo del socio y publicación oficial protegida (Spec 011, S5-02.2 y S5-02.3)."""
 
+import ipaddress
+import re
+
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
@@ -13,6 +16,7 @@ from expedientes.models import (
     EstadoResolucionEnum,
     Expediente,
     Resolucion,
+    TipoAccesoAuditoriaEnum,
 )
 from expedientes.permissions import IsImputadoOrTribunal
 from expedientes.services.ledger_service import LedgerService
@@ -64,15 +68,14 @@ class _PublicacionBaseView(APIView):
         )
         if resolucion is None:
             raise NotFound("La resolución de este expediente todavía no fue publicada.")
-        self._auditar(request, expediente)
+        self._auditar(request, expediente, self.tipo_acceso)
         return construir_publicacion(resolucion, request.user)
 
+    tipo_acceso = TipoAccesoAuditoriaEnum.CONSULTA
+
     @staticmethod
-    def _auditar(request: Request, expediente: Expediente) -> None:
-        forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-        ip_address = (
-            forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR")
-        )
+    def _auditar(request: Request, expediente: Expediente, tipo_acceso: str) -> None:
+        ip_address = ip_cliente(request)
         user = request.user
         socio = getattr(user, "socio", None)
         legajo = str(socio.legajo) if socio and socio.legajo else ""
@@ -82,6 +85,7 @@ class _PublicacionBaseView(APIView):
             usuario=user.username or legajo or str(user),
             legajo=legajo,
             rol=rol,
+            tipo_acceso=tipo_acceso,
             ip_address=ip_address,
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
@@ -97,12 +101,38 @@ class ResolucionPublicadaView(_PublicacionBaseView):
 class ResolucionPublicadaPdfView(_PublicacionBaseView):
     """GET /api/v1/expedientes/<id>/resolucion/publicada/pdf/"""
 
+    tipo_acceso = TipoAccesoAuditoriaEnum.DESCARGA_PDF
+
     def get(self, request: Request, expediente_id: int) -> HttpResponse:
         publicacion = self._publicacion(request, expediente_id)
         response = HttpResponse(
             build_resolution_preview_pdf(documento_pdf_publicado(publicacion)),
             content_type="application/pdf",
         )
-        numero = publicacion["expediente_numero"].replace("/", "-")
-        response["Content-Disposition"] = f'attachment; filename="resolucion-{numero}.pdf"'
+        response["Content-Disposition"] = (
+            f'attachment; filename="{nombre_archivo_pdf(publicacion["expediente_numero"])}"'
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "no-store"
         return response
+
+
+def nombre_archivo_pdf(numero_expediente: str) -> str:
+    """Nombre de archivo seguro: sólo letras, dígitos, guiones y guiones bajos."""
+    seguro = re.sub(r"[^A-Za-z0-9_-]+", "-", numero_expediente or "").strip("-")
+    return f"resolucion-{seguro or 'expediente'}.pdf"
+
+
+def ip_cliente(request: Request) -> str | None:
+    """IP del cliente validada; un `X-Forwarded-For` malformado no se guarda."""
+    candidatos = []
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        candidatos.append(forwarded.split(",")[0].strip())
+    candidatos.append(request.META.get("REMOTE_ADDR") or "")
+    for candidato in candidatos:
+        try:
+            return str(ipaddress.ip_address(candidato))
+        except ValueError:
+            continue
+    return None

@@ -1,12 +1,12 @@
 import { ComponentsModule } from '../components/components.module';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { async, ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { SpanishPaginatorIntl } from '../shared/spanish-paginator-intl';
 import { environment } from '../../environments/environment';
-import { MisExpedientesComponent } from './mis-expedientes.component';
+import { MisExpedientesComponent, mensajeErrorDescarga, nombreArchivoResolucion } from './mis-expedientes.component';
 import { NotificationService } from '../services/notification.service';
 import { TribunalDataService, Expediente } from '../services/tribunal-data.service';
 
@@ -937,7 +937,7 @@ describe('MisExpedientesComponent', () => {
       vistos: 'Visto.', considerandos: 'Faltó. [Dato de salud reservado]', articulos_resolutivos: 'Art. 1.',
       reglamentos_respaldantes: ['Art. 83 R.I.'], medidas: [],
       firmantes: [{ numero_socio: '78010', nombre: 'Ana', grupo: 'G59', social_year: 5, condicion: '', etiqueta: '78010 - Ana - G59', firmado_at: null }],
-      impactos: [{ socio_id: 1, numero_socio: '78001', nombre: 'Lu', apellido: 'Gas', puntos: '-2.00', medida: null }],
+      impactos: [{ numero_socio: '78001', nombre: 'Lu', apellido: 'Gas', puntos: '-2.00', medida: null }],
       contiene_datos_reservados: true, contenido_hash: 'abc', integridad_verificada: true
     };
 
@@ -965,20 +965,148 @@ describe('MisExpedientesComponent', () => {
       expect(notifications.error).toHaveBeenCalled();
     });
 
-    it('descarga el PDF publicado', () => {
+    it('descarga el PDF publicado con el enlace en el DOM y libera la URL después', fakeAsync(() => {
       component.resolucionPublicada = publicacion as any;
       spyOn(URL, 'createObjectURL').and.returnValue('blob:resolucion');
       spyOn(URL, 'revokeObjectURL');
-      const click = spyOn(HTMLAnchorElement.prototype, 'click');
+      let enDom = false;
+      let nombre = '';
+      const click = spyOn(HTMLAnchorElement.prototype, 'click').and.callFake(function (this: HTMLAnchorElement) {
+        enDom = document.body.contains(this);
+        nombre = this.download;
+      });
 
       component.descargarResolucionPdf();
+      component.descargarResolucionPdf(); // doble clic: una sola descarga
       const req = http.expectOne(`${apiUrl}/7/resolucion/publicada/pdf/`);
       expect(req.request.responseType).toBe('blob');
       req.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
 
-      expect(click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(enDom).toBeTrue();
+      expect(nombre).toBe('resolucion-EXP-0950-2026.pdf');
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+      tick(30000);
       expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:resolucion');
       expect(component.descargandoResolucionPdf).toBeFalse();
+    }));
+
+    it('muestra el detail del servidor aunque el error llegue como Blob', async () => {
+      component.resolucionPublicada = publicacion as any;
+      component.descargarResolucionPdf();
+      const cuerpo = new Blob([JSON.stringify({ detail: 'La resolución todavía no fue publicada.' })],
+        { type: 'application/json' });
+      http.expectOne(`${apiUrl}/7/resolucion/publicada/pdf/`).flush(cuerpo, { status: 404, statusText: 'Not Found' });
+      for (let intento = 0; intento < 20 && !notifications.error.calls.count(); intento++) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      expect(notifications.error).toHaveBeenCalledWith('La resolución todavía no fue publicada.');
+      expect(await mensajeErrorDescarga({ error: new Blob(['no-json']) })).toBe('No se pudo descargar la resolución.');
+      expect(component.descargandoResolucionPdf).toBeFalse();
+    });
+
+    it('arma nombres de archivo seguros reemplazando todas las barras', () => {
+      expect(nombreArchivoResolucion('EXP-0950/2026/B')).toBe('resolucion-EXP-0950-2026-B.pdf');
+      expect(nombreArchivoResolucion('"; rm')).toBe('resolucion-rm.pdf');
+      expect(nombreArchivoResolucion('')).toBe('resolucion-expediente.pdf');
+    });
+
+    it('Esc cierra sólo la publicación y no el detalle que queda debajo', () => {
+      component.modalDetalleAbierto = true;
+      component.abrirResolucionPublicada({ id: '7', estado: 'emitido' } as Expediente);
+      http.expectOne(`${apiUrl}/7/resolucion/publicada/`).flush(publicacion);
+      fixture.detectChanges();
+
+      const evento = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+      const stop = spyOn(evento, 'stopPropagation').and.callThrough();
+      component.onEscapeResolucion(evento);
+
+      expect(stop).toHaveBeenCalled();
+      expect(component.modalResolucionAbierto).toBeFalse();
+      expect(component.modalDetalleAbierto).toBeTrue();
+    });
+
+    it('lleva el foco al diálogo, vuelve el detalle inerte y restaura el foco al cerrar', fakeAsync(() => {
+      const disparador = document.createElement('button');
+      document.body.appendChild(disparador);
+      disparador.focus();
+      component.abrirResolucionPublicada({ id: '7', estado: 'emitido' } as Expediente, disparador);
+      fixture.detectChanges();
+      tick();
+      const dialogo: HTMLElement = fixture.nativeElement.querySelector('.modal-resolucion');
+      expect(dialogo.getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(dialogo);
+
+      http.expectOne(`${apiUrl}/7/resolucion/publicada/`).flush(publicacion);
+      component.cerrarResolucionPublicada();
+      tick();
+      expect(document.activeElement).toBe(disparador);
+      disparador.remove();
+    }));
+
+    it('bloquea el scroll también con la publicación abierta', () => {
+      const lock = spyOn((component as any).scrollLock, 'lock').and.callThrough();
+      component.abrirResolucionPublicada({ id: '7', estado: 'emitido' } as Expediente);
+      expect(lock).toHaveBeenCalled();
+      expect(document.body.classList.contains('modal-open')).toBeTrue();
+      http.expectOne(`${apiUrl}/7/resolucion/publicada/`).flush(publicacion);
+      component.cerrarResolucionPublicada();
+      expect(document.body.classList.contains('modal-open')).toBeFalse();
+    });
+
+    it('al cerrar en vuelo resetea la carga y descarta la respuesta obsoleta', () => {
+      component.abrirResolucionPublicada({ id: '7', estado: 'emitido' } as Expediente);
+      const pendiente = http.expectOne(`${apiUrl}/7/resolucion/publicada/`);
+      component.cerrarResolucionPublicada();
+      expect(component.cargandoResolucion).toBeFalse();
+      expect(pendiente.cancelled).toBeTrue();
+
+      component.abrirResolucionPublicada({ id: '8', estado: 'emitido' } as Expediente);
+      const primera = http.expectOne(`${apiUrl}/8/resolucion/publicada/`);
+      component.abrirResolucionPublicada({ id: '9', estado: 'emitido' } as Expediente);
+      expect(primera.cancelled).toBeTrue();
+      http.expectOne(`${apiUrl}/9/resolucion/publicada/`).flush({ ...publicacion, expediente_id: 9 });
+      expect(component.resolucionPublicada?.expediente_id).toBe(9);
+    });
+  });
+
+  describe('Carga y renderizado de puntos aplicados (Spec 011)', () => {
+    const listaUrl = `${apiUrl}/mis-expedientes/`;
+
+    it('el modal de detalle muestra lo aplicado por la resolución en causas emitidas', () => {
+      component.expedienteDetalle = {
+        id: '1', numero: 'EXP-0001/2026', estado: 'emitido', puntos: -3, puntosAplicados: '-1.50', medidaAplicada: null
+      } as unknown as Expediente;
+      component.modalDetalleAbierto = true;
+      fixture.detectChanges();
+      const valor = fixture.nativeElement.querySelector('.detalle-puntaje-aplicado') as HTMLElement;
+      expect(valor.textContent).toContain('-1.5');
+      expect(fixture.nativeElement.textContent).toContain('Puntaje aplicado:');
+      expect(fixture.nativeElement.querySelector('.puntaje-solicitado-val')).toBeNull();
+    });
+
+    it('notifica por el servicio central si la lista no se puede cargar', () => {
+      http.match(r => r.url === listaUrl).forEach(req => req.flush({ detail: 'x' }, { status: 500, statusText: 'Error' }));
+      expect(component.misExpedientes).toEqual([]);
+      expect(notifications.error).toHaveBeenCalledWith('No se pudieron cargar tus expedientes.');
+    });
+
+    it('renderiza los puntos aplicados en la vista paginada', () => {
+      http.match(r => r.url === listaUrl).forEach(req => req.flush({
+        count: 2, total_pages: 1, current_page: 1, page_size: 10, next: null, previous: null,
+        results: [
+          { id: 1, numero: 'EXP-0001/2026', estado: 'emitido', puntos: -3, puntos_aplicados: '-1.50', medida_aplicada: null },
+          { id: 2, numero: 'EXP-0002/2026', estado: 'emitido', puntos: 0, puntos_aplicados: '0.00', medida_aplicada: 'FELICITACION' }
+        ]
+      }));
+      fixture.detectChanges();
+      const root: HTMLElement = fixture.nativeElement;
+      const puntos = root.querySelector('.puntos-aplicados') as HTMLElement;
+      expect(puntos.textContent).toContain('-1.5');
+      expect(puntos.classList).toContain('puntos-rojo');
+      const medida = root.querySelector('.medida-aplicada') as HTMLElement;
+      expect(medida.textContent).toContain('Felicitación');
+      expect(medida.classList).toContain('medida-felicitacion');
     });
   });
 

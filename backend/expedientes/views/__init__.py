@@ -104,6 +104,7 @@ from expedientes.services.t03_valuation_service import (
     T03ValuationStateError,
     T03ValuationUnavailable,
     T03ValuationValidationError,
+    imputado_socio_ids,
     is_imputado,
 )
 from expedientes.services.tribunal_composition_service import (
@@ -679,8 +680,10 @@ class DescargoVersionesView(APIView):
             "descargo__socio"
         )
         socio = getattr(request.user, "socio", None)
-        es_autoridad = request.user.is_staff or bool(
-            socio and socio.is_enabled and socio.role in (Role.TD, Role.CD, Role.ADMIN)
+        es_imputado = socio is not None and socio.pk in imputado_socio_ids(expediente)
+        es_autoridad = not es_imputado and (
+            request.user.is_staff
+            or bool(socio and socio.is_enabled and socio.role in (Role.TD, Role.CD, Role.ADMIN))
         )
         if not es_autoridad:
             versiones = versiones.filter(descargo__socio=socio)
@@ -1206,9 +1209,12 @@ class ExpedienteDetailView(APIView):
             )
 
         self.check_object_permissions(request, expediente)
-        es_mis = request.query_params.get("origen") == "mis_expedientes"
-        context = {"request": request, "es_mis_expedientes": es_mis}
         socio = getattr(request.user, "socio", None)
+        es_imputado = socio is not None and socio.pk in imputado_socio_ids(expediente)
+        # El aislamiento del imputado no depende del parámetro `origen`: el serializer lo
+        # aplica siempre que el lector esté imputado en la causa (Spec 011, RF-10).
+        es_mis = request.query_params.get("origen") == "mis_expedientes" or es_imputado
+        context = {"request": request, "es_mis_expedientes": es_mis}
         if es_mis and socio is not None:
             context["impactos_socio"] = LedgerService.impactos_por_expediente(socio)
         serializer = ExpedienteListSerializer(expediente, context=context)

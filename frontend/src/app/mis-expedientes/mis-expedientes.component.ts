@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  ElementRef,
   NgZone,
   OnInit,
   OnDestroy,
   Optional,
-  Renderer2
+  Renderer2,
+  ViewChild
 } from '@angular/core';
 import { PageEvent } from '@angular/material/paginator';
 import { TribunalDataService, Expediente, LogJustificativo } from '../services/tribunal-data.service';
@@ -68,6 +70,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     ev?.id ? String(ev.id) : (ev?.nombre_original || ev?.name || String(index));
   readonly trackByLog = (index: number, log: any): string =>
     log?.id ? String(log.id) : `${log?.timestamp || ''}_${log?.operacion || ''}_${index}`;
+  readonly trackByTexto = (_index: number, texto: string): string => texto;
+  readonly trackByImpacto = (index: number, impacto: { numero_socio: string }): string =>
+    impacto.numero_socio || String(index);
+  readonly trackByFirmante = (index: number, firmante: { etiqueta: string }): string =>
+    firmante.etiqueta || String(index);
   readonly trackByFile = (index: number, file: any): string =>
     file ? (file.name + '_' + file.size) : String(index);
 
@@ -87,6 +94,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
   // Publicación oficial protegida de la resolución (Spec 011, S5-02.3)
   modalResolucionAbierto = false;
+  @ViewChild('dialogoResolucion') dialogoResolucion?: ElementRef<HTMLElement>;
+  private readonly cancelarResolucion$ = new Subject<void>();
+  private focoPrevioResolucion: HTMLElement | null = null;
   resolucionPublicada: ResolucionPublicadaDTO | null = null;
   cargandoResolucion = false;
   descargandoResolucionPdf = false;
@@ -305,34 +315,61 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     return exp.estado === 'emitido' && exp.puntosAplicados !== null && exp.puntosAplicados !== undefined;
   }
 
-  abrirResolucionPublicada(exp: Expediente): void {
+  abrirResolucionPublicada(exp: Expediente, disparador?: EventTarget | null): void {
+    // Una nueva apertura descarta cualquier respuesta anterior aún en vuelo.
+    this.cancelarResolucion$.next();
+    this.focoPrevioResolucion = (disparador instanceof HTMLElement ? disparador : null)
+      ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     this.modalResolucionAbierto = true;
     this.resolucionPublicada = null;
     this.cargandoResolucion = true;
-    this.expedienteApi.obtenerResolucionPublicada(exp.id).pipe(takeUntil(this.destroy$)).subscribe({
-      next: publicacion => {
-        this.resolucionPublicada = publicacion;
-        this.cargandoResolucion = false;
-        this.cdr?.markForCheck();
-      },
-      error: err => {
-        this.cargandoResolucion = false;
-        this.modalResolucionAbierto = false;
-        this.notifications.error(httpErrorMessage(err, 'No se pudo abrir la resolución.'));
-        this.cdr?.markForCheck();
-      }
-    });
+    this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    this.programarFocoResolucion();
+    this.expedienteApi.obtenerResolucionPublicada(exp.id)
+      .pipe(takeUntil(this.cancelarResolucion$), takeUntil(this.destroy$))
+      .subscribe({
+        next: publicacion => {
+          this.resolucionPublicada = publicacion;
+          this.cargandoResolucion = false;
+          this.cdr?.markForCheck();
+        },
+        error: err => {
+          this.cerrarResolucionPublicada();
+          this.notifications.error(httpErrorMessage(err, 'No se pudo abrir la resolución.'));
+        }
+      });
   }
 
   cerrarResolucionPublicada(): void {
+    this.cancelarResolucion$.next();
     this.modalResolucionAbierto = false;
     this.resolucionPublicada = null;
+    this.cargandoResolucion = false;
+    this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    const foco = this.focoPrevioResolucion;
+    this.focoPrevioResolucion = null;
+    if (foco && document.contains(foco)) {
+      this.scheduleTimer(() => foco.focus(), 0);
+    }
+  }
+
+  /** Esc cierra sólo la publicación, no el modal de detalle que queda debajo. */
+  onEscapeResolucion(event: Event): void {
+    event.stopPropagation();
+    this.cerrarResolucionPublicada();
+  }
+
+  private programarFocoResolucion(): void {
+    this.scheduleTimer(() => this.dialogoResolucion?.nativeElement.focus(), 0);
   }
 
   descargarResolucionPdf(): void {
     const publicacion = this.resolucionPublicada;
     if (!publicacion || this.descargandoResolucionPdf) return;
     this.descargandoResolucionPdf = true;
+    this.cdr?.markForCheck();
     this.expedienteApi.descargarResolucionPublicadaPdf(publicacion.expediente_id).pipe(takeUntil(this.destroy$)).subscribe({
       next: blob => {
         this.descargandoResolucionPdf = false;
@@ -340,14 +377,19 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         const url = URL.createObjectURL(blob);
         const enlace = document.createElement('a');
         enlace.href = url;
-        enlace.download = `resolucion-${publicacion.expediente_numero.replace('/', '-')}.pdf`;
+        enlace.download = nombreArchivoResolucion(publicacion.expediente_numero);
+        enlace.rel = 'noopener';
+        enlace.style.display = 'none';
+        document.body.appendChild(enlace);
         enlace.click();
-        URL.revokeObjectURL(url);
+        enlace.remove();
+        // Se libera la URL después de que el navegador tomó la descarga.
+        this.scheduleTimer(() => URL.revokeObjectURL(url), 30000);
       },
       error: err => {
         this.descargandoResolucionPdf = false;
         this.cdr?.markForCheck();
-        this.notifications.error(httpErrorMessage(err, 'No se pudo descargar la resolución.'));
+        void mensajeErrorDescarga(err).then(mensaje => this.notifications.error(mensaje));
       }
     });
   }
@@ -476,6 +518,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.cancelarResolucion$.next();
+    this.cancelarResolucion$.complete();
     this.activeTimers.forEach(id => window.clearTimeout(id));
     this.activeTimers.clear();
     if (this.tickerSub) {
@@ -919,7 +963,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   private actualizarScrollBloqueo(): void {
-    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
+    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto
+      || this.modalResolucionAbierto;
     const body = document.body;
     const docElem = document.documentElement;
     const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
@@ -1486,4 +1531,28 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
     return 'card-header-success';
   }
+}
+
+/** Nombre de archivo seguro para el PDF de la resolución: reemplaza toda barra y símbolo. */
+export function nombreArchivoResolucion(numeroExpediente: string | null | undefined): string {
+  const seguro = (numeroExpediente || '').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  return `resolucion-${seguro || 'expediente'}.pdf`;
+}
+
+/** Mensaje de error de una descarga: el `detail` JSON del servidor aunque llegue como Blob. */
+export async function mensajeErrorDescarga(err: unknown): Promise<string> {
+  const respaldo = 'No se pudo descargar la resolución.';
+  const cuerpo = (err as { error?: unknown } | null)?.error;
+  if (cuerpo instanceof Blob) {
+    try {
+      const datos = JSON.parse(await cuerpo.text()) as { detail?: unknown };
+      if (typeof datos.detail === 'string' && datos.detail.trim()) {
+        return datos.detail;
+      }
+    } catch {
+      return respaldo;
+    }
+    return respaldo;
+  }
+  return httpErrorMessage(err, respaldo);
 }

@@ -32,6 +32,7 @@ $grad-rose-mat: linear-gradient(60deg, #EC407A, #D81B60);
 // CSS Custom Properties — DESIGN.md Design Tokens (Light & Dark Theme)
 // ==========================================================================
 :root {
+  color-scheme: light;
   --color-primary: #151846;
   --color-accent: #6E9DDC;
   --color-tint: #B3D3E4;
@@ -48,6 +49,8 @@ $grad-rose-mat: linear-gradient(60deg, #EC407A, #D81B60);
   --color-warning: #92400E;
   --color-danger: #B91C1C;
   --color-info: #0369A1;
+  --color-on-primary: #FFFFFF;
+  --color-on-danger: #FFFFFF;
 
   --grad-primary-start: #151846;
   --grad-primary-end: #242A68;
@@ -78,6 +81,15 @@ body.dark-edition {
   --color-text-secondary: #94A3B8;
   --color-border-main: #334155;
   --color-border-focus: #6E9DDC;
+  // Variantes de alto contraste sobre superficies oscuras (WCAG 2.2 AA, DESIGN.md).
+  color-scheme: dark;
+  --color-primary: #B3D3E4;
+  --color-success: #86EFAC;
+  --color-warning: #FCD34D;
+  --color-danger: #FCA5A5;
+  --color-info: #7DD3FC;
+  --color-on-primary: #0F172A;
+  --color-on-danger: #0F172A;
 }
 
 // ==========================================

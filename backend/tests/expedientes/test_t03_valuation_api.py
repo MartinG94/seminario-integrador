@@ -452,8 +452,10 @@ class TestValuationsHiddenFromImputados:
         response = _client(member.user).get(f"/api/v1/expedientes/{t03_descargo.expediente_id}/")
 
         assert response.status_code == status.HTTP_200_OK
-        item = {d["id"]: d for d in response.data["descargos"]}[t03_descargo.id]
-        assert "valoraciones_t03" not in item
+        # Revisión PR #79 (B3): una autoridad imputada ve la causa como imputada, por lo que
+        # ni siquiera accede al descargo del coimputado, y menos a su valoración.
+        assert t03_descargo.id not in {d["id"] for d in response.data["descargos"]}
+        assert all("valoraciones_t03" not in d for d in response.data["descargos"])
         assert GROUNDS not in repr(response.data)
 
     def test_main_imputado_authority_does_not_see_valuations(self, t03_descargo, valued) -> None:

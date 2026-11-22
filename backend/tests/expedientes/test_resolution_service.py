@@ -465,7 +465,7 @@ def test_emitir_resolucion_despacha_correos_idempotentes_sin_duplicados(
     s6 = make_socio(legajo="60001", role=Role.TD, social_year=6)
 
     # Involucrar a un socio activo
-    socio_activo = make_socio(legajo="76050", email="activo@aveit.test")
+    socio_activo = make_socio(legajo="76050", email="activo@aveit.test", numero_socio=76050)
     causal_expediente.socios.add(socio_activo)
 
     # 1. Firmar las 3 firmas -> emite automáticamente

@@ -399,7 +399,10 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
                     meta_style,
                 ),
                 Paragraph(
-                    f"<b>Versión de plantilla:</b> {_paragraph_text(resolucion.plantilla_version)}",
+                    f"<b>Fecha de emisión:</b> {_paragraph_text(_format_fecha_cordoba(resolucion))}"
+                    if getattr(resolucion, "es_publicacion", False)
+                    else f"<b>Versión de plantilla:</b> "
+                    f"{_paragraph_text(resolucion.plantilla_version)}",
                     meta_style,
                 ),
             ],
@@ -441,6 +444,52 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
         if bloque.strip():
             story.append(Paragraph(_paragraph_text(bloque.strip()), resolutivo_style))
     story.append(Spacer(1, 16))
+
+    # 5.b Publicación oficial (Spec 011, RF-15/RF-20): reglamentos e impactos por socio.
+    reglamentos_publicados = getattr(resolucion, "reglamentos_publicados", None) or []
+    if reglamentos_publicados:
+        story.extend(
+            [_section_header("REGLAMENTOS RESPALDANTES", section_title_style), Spacer(1, 5)]
+        )
+        for reglamento in reglamentos_publicados:
+            story.append(Paragraph(f"• {_paragraph_text(reglamento)}", body_style))
+        story.append(Spacer(1, 11))
+
+    impactos_publicados = getattr(resolucion, "impactos_publicados", None) or []
+    if impactos_publicados:
+        story.extend([_section_header("IMPACTO POR SOCIO", section_title_style), Spacer(1, 5)])
+        filas = [
+            [
+                Paragraph("<b>N° de Socio</b>", meta_style),
+                Paragraph("<b>Apellido y nombre</b>", meta_style),
+                Paragraph("<b>Impacto aplicado</b>", meta_style),
+            ]
+        ]
+        for impacto in impactos_publicados:
+            filas.append(
+                [
+                    Paragraph(_paragraph_text(impacto.get("numero_socio") or "S/D"), meta_style),
+                    Paragraph(
+                        _paragraph_text(
+                            f"{impacto.get('apellido', '')}, {impacto.get('nombre', '')}"
+                        ),
+                        meta_style,
+                    ),
+                    Paragraph(_paragraph_text(impacto.get("descripcion") or "—"), meta_style),
+                ]
+            )
+        tabla_impactos = Table(filas, colWidths=[32 * mm, 90 * mm, 50 * mm], repeatRows=1)
+        tabla_impactos.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), COLOR_SURFACE),
+                    ("BOX", (0, 0), (-1, -1), 0.6, COLOR_BORDER),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.4, COLOR_BORDER),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        story.extend([tabla_impactos, Spacer(1, 16)])
 
     # 6. Grilla moderna de Firmas Colegiadas por Año Social (4.º, 5.º y 6.º)
     story.extend(
@@ -493,6 +542,19 @@ def build_resolution_preview_pdf(resolucion) -> bytes:
     story.append(firmas_table)
 
     contenido_hash = (getattr(resolucion, "contenido_hash", "") or "").strip()
+    integridad = getattr(resolucion, "integridad_verificada", None)
+    if contenido_hash and integridad is not None:
+        estado_integridad = "verificada" if integridad else "NO verificada"
+        story.extend(
+            [
+                Spacer(1, 10),
+                Paragraph(
+                    f"<b>Integridad del contenido ({estado_integridad}):</b> SHA-256 "
+                    f"{_paragraph_text(contenido_hash)}",
+                    ref_style,
+                ),
+            ]
+        )
 
     def _draw_footer(canvas, doc):
         canvas.saveState()

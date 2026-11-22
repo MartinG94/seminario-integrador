@@ -1,17 +1,17 @@
 """Dominio puro del libro mayor de puntos (Spec 011, S5-02.1).
 
-Sin dependencias de Django: clasifica el impacto individual de una resolución, aplica la
-regla 3:1 de llamados de atención y felicitaciones (Notas del PO, 07/10/2026, sección 6)
-y calcula el hash SHA-256 encadenado de cada asiento.
+Sin dependencias de Django: clasifica el impacto individual de una resolución (las medidas
+especiales nunca son puntos fraccionarios, Notas del PO 07/10/2026, sección 6) y calcula el
+hash SHA-256 encadenado de cada asiento.
 """
 
 import hashlib
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
-from typing import Any, NamedTuple
+from typing import Any
 
-CONSOLIDATION_THRESHOLD = 3
 GENESIS_HASH = "0" * 64
 _PRECISION = Decimal("0.01")
 
@@ -38,25 +38,13 @@ class TipoAsiento(StrEnum):
     FELICITACION = "FELICITACION"
     CONSOLIDACION_LLAMADOS = "CONSOLIDACION_LLAMADOS"
     CONSOLIDACION_FELICITACIONES = "CONSOLIDACION_FELICITACIONES"
+    REVERSION = "REVERSION"
 
 
 @dataclass(frozen=True)
 class ImpactoSocio:
     tipo: TipoImpacto
     puntos: Decimal
-
-
-@dataclass(frozen=True)
-class AsientoPlanificado:
-    tipo: TipoAsiento
-    puntos: Decimal
-    contador_resultante: int | None
-    impacta_libro_mayor: bool
-
-
-class ResultadoAcumulacion(NamedTuple):
-    contador: int
-    consolidado: bool
 
 
 def clasificar_impacto(valor: Any) -> ImpactoSocio:
@@ -81,53 +69,33 @@ def clasificar_impacto(valor: Any) -> ImpactoSocio:
     return ImpactoSocio(TipoImpacto.PUNTOS, puntos)
 
 
-def acumular_tres_a_uno(contador_actual: int) -> ResultadoAcumulacion:
-    """Suma una medida al contador y consolida al llegar a tres (descuenta tres)."""
-    if contador_actual < 0:
-        raise ValueError("El contador de medidas no puede ser negativo.")
-    nuevo = contador_actual + 1
-    if nuevo >= CONSOLIDATION_THRESHOLD:
-        return ResultadoAcumulacion(nuevo - CONSOLIDATION_THRESHOLD, True)
-    return ResultadoAcumulacion(nuevo, False)
+_TIPO_POR_IMPACTO = {
+    TipoImpacto.PUNTOS: TipoAsiento.PUNTOS_DIRECTOS,
+    TipoImpacto.SIN_IMPACTO: TipoAsiento.SIN_IMPACTO,
+    TipoImpacto.LLAMADO_ATENCION: TipoAsiento.LLAMADO_ATENCION,
+    TipoImpacto.FELICITACION: TipoAsiento.FELICITACION,
+}
 
 
-def planificar_asientos(impacto: ImpactoSocio, contador_actual: int) -> list[AsientoPlanificado]:
-    """Traduce un impacto en los asientos a registrar.
+def tipo_asiento_para(impacto: ImpactoSocio) -> TipoAsiento:
+    """Tipo de asiento que registra un impacto individual.
 
-    `contador_actual` es el contador de la medida que corresponde al impacto
-    (llamados para un llamado de atención, felicitaciones para una felicitación).
+    La consolidación 3:1 no se decide aquí: la aplica el motor único de acumulación
+    (`WarningAccumulationService`), que es quien mueve los contadores y acredita el punto.
     """
-    if impacto.tipo == TipoImpacto.PUNTOS:
-        return [
-            AsientoPlanificado(
-                TipoAsiento.PUNTOS_DIRECTOS, impacto.puntos.quantize(_PRECISION), None, True
-            )
-        ]
-    if impacto.tipo == TipoImpacto.SIN_IMPACTO:
-        return [AsientoPlanificado(TipoAsiento.SIN_IMPACTO, Decimal("0.00"), None, False)]
+    return _TIPO_POR_IMPACTO[impacto.tipo]
 
-    es_llamado = impacto.tipo == TipoImpacto.LLAMADO_ATENCION
-    contador, consolidado = acumular_tres_a_uno(contador_actual)
-    plan = [
-        AsientoPlanificado(
-            TipoAsiento.LLAMADO_ATENCION if es_llamado else TipoAsiento.FELICITACION,
-            Decimal("0.00"),
-            contador,
-            False,
-        )
-    ]
-    if consolidado:
-        plan.append(
-            AsientoPlanificado(
-                TipoAsiento.CONSOLIDACION_LLAMADOS
-                if es_llamado
-                else TipoAsiento.CONSOLIDACION_FELICITACIONES,
-                Decimal("-1.00") if es_llamado else Decimal("1.00"),
-                contador,
-                True,
-            )
-        )
-    return plan
+
+def impacta_libro_mayor(impacto: ImpactoSocio) -> bool:
+    """Sólo los puntos directos mueven el saldo; las medidas especiales nunca son puntos."""
+    return impacto.tipo == TipoImpacto.PUNTOS and impacto.puntos != Decimal("0.00")
+
+
+def normalizar_fecha(momento: datetime) -> str:
+    """Fecha en UTC con microsegundos: igual al escribir y al releer de MySQL DATETIME(6)."""
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=timezone.utc)
+    return momento.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def calcular_hash_asiento(
@@ -139,19 +107,33 @@ def calcular_hash_asiento(
     tipo: str,
     puntos: Decimal,
     contador_resultante: int | None,
-    created_at_iso: str,
+    nro_socio: int | None,
+    puntaje_aplicado_id: int | None,
+    autor_id: int | None,
+    created_at: datetime,
 ) -> str:
-    """SHA-256 del asiento encadenado al hash del asiento anterior del mismo socio."""
+    """SHA-256 del asiento encadenado al hash del asiento anterior del mismo socio.
+
+    Incluye todos los campos que identifican el movimiento: si cualquiera se altera, la
+    cadena deja de verificar.
+    """
+
+    def opcional(valor: int | None) -> str:
+        return "" if valor is None else str(valor)
+
     payload = "|".join(
         (
             hash_anterior,
             str(resolucion_id),
             str(expediente_id),
             str(socio_id),
+            opcional(nro_socio),
             str(tipo),
             str(Decimal(puntos).quantize(_PRECISION)),
-            "" if contador_resultante is None else str(contador_resultante),
-            created_at_iso,
+            opcional(contador_resultante),
+            opcional(puntaje_aplicado_id),
+            opcional(autor_id),
+            normalizar_fecha(created_at),
         )
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()

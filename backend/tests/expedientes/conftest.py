@@ -18,7 +18,7 @@ PDF_BYTES = b"%PDF-1.4 certificado medico"
 
 @pytest.fixture
 def causal_imputado(make_socio) -> Socio:
-    return make_socio(legajo="76001", role=Role.SOCIO)
+    return make_socio(legajo="76001", role=Role.SOCIO, numero_socio=76001)
 
 
 @pytest.fixture

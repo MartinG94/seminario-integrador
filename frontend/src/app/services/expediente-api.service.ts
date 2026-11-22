@@ -780,7 +780,6 @@ export interface FirmantePublicoDTO {
 }
 
 export interface ImpactoPublicadoDTO {
-  socio_id: number;
   numero_socio: string;
   nombre: string;
   apellido: string;

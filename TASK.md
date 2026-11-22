@@ -12,9 +12,9 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 | **Sprint 1** | 09/09 al 22/09 | **Walking Skeleton:** Autenticación JWT, Roles RBAC, Padrón institucional, Ranking oficial de puntos y Legajo de socio. | `SCRUM-34` a `SCRUM-39` (20 SP) | **Completado (20 SP)** |
 | **Sprint 2** | 23/09 al 06/10 | **Expedientes, Notificaciones y Monitoreo:** Formulario T01 multi-socio, competencias (Arts. 21-26), Outbox email, Tablero 6 Estados y Mis Solicitudes T01. | `SCRUM-40` a `SCRUM-44`, `SCRUM-75` (23 SP) | **Completado (23 SP)** |
 | **Sprint 3** | 08/10 al 20/10 | **Descargos, Evidencias, Calendario y Asistencias:** Formularios T02 y T03 con adjuntos protegidos, calendario de días hábiles, urgencia, asistencias, detalle Sala TD y resolución T02. | `SCRUM-45` a `SCRUM-50`, `SCRUM-52`, `SCRUM-76` a `SCRUM-84` (36 SP) | **Completado (36 SP)** |
-| **Sprint 4** | 22/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **En Curso (Activo)** |
-| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | Planificado |
-| **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | Planificado |
+| **Sprint 4** | 22/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **Completado (19 SP)** |
+| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | **Completado** |
+| **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | **En Curso (Activo)** |
 
 ---
 
@@ -398,7 +398,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14.1 Sprint 4 — Desglose Atómico: S4-05 / SCRUM-56 (Generar Resolución Oficial Canónica y Firma Colegiada por Año Social)
+## 15. Sprint 4 — Desglose Atómico: S4-05 / SCRUM-56 (Generar Resolución Oficial Canónica y Firma Colegiada por Año Social)
 
 - [x] **TS4-05.1 Modelo `Resolucion`, firmantes reales y servicio sin hardcodeos [TDD]:** Modelo `Resolucion` con numeración `NNN/AAAA`, estado `DRAFT`/`ISSUED`, `firmantes` JSON por año social (4.º, 5.º y 6.º), servicio `registrar_firma_resolucion` y emisión con hash SHA-256 sin nombres hardcodeados.
 - [x] **TS4-05.2 Persistencia de estado del expediente y endpoints REST [TDD]:** Transición persistente del expediente a `pendiente_correos` (con registro en `CambioEstadoExpediente`) al generar resolución en `POST`/`PATCH /api/v1/expedientes/<id>/resolucion/`, endpoint `POST /api/v1/expedientes/<id>/resolucion/firmar/` y previsualización PDF institucional.
@@ -408,7 +408,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 13.1 Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
+## 16. Sprint 6 — Desglose Atómico: S6-01 / SCRUM-63 (Reportes, Informes y Clasificación por Concepto del TD)
 
 > **Tareas:** [`specs/009-reportes-e-informes/tasks.md`](specs/009-reportes-e-informes/tasks.md)
 
@@ -421,7 +421,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
+## 17. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
 
 > **Historia de Usuario:** S5-06: Como autoridad quiero recibir alertas de saldos críticos para actuar conforme al reglamento.  
 > **Criterios de Aceptación:** CA1 (Saldo negativo de 10 o más genera alerta crítica única por cruce descendente), CA2 (Destinatario y acción siguen acto aprobado / bloqueo normativo documentado), CA3 (Umbral -7 diferenciado, configurable y desactivable hasta validar Circular 001/2026), CA4 (Reversiones reevalúan sin borrar historial), CA5 (Cero información médica en notificaciones).
@@ -433,17 +433,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 14.2 Sprint 5 — Desglose Atómico: MACRO-02 / SCRUM-59 (Libro Mayor Inmutable, Portal 'Mis Expedientes' y Publicación Oficial Protegida)
-
-> **Tareas:** [`specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md`](specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md)
-
-- [x] **TS5-02.1 Libro mayor transaccional inmutable con regla 3:1 [TDD]:** Asientos por socio al emitir la resolución en `tribunal_puntajeaplicado`, auditoría `AsientoLibroMayor` de solo inserción con hash encadenado, consolidación 3:1 de llamados y felicitaciones e idempotencia.
-- [x] **TS5-02.2 Portal 'Mis Expedientes' con aislamiento por socio [TDD]:** Saldo y pendientes 3:1 desde `GET /api/v1/expedientes/mis-expedientes/saldo/`, puntos aplicados por causa, sin lista local de respaldo y sin exponer descargos, comprobantes ni borradores de resolución ajenos.
-- [x] **TS5-02.3 Publicación protegida de resoluciones oficiales [TDD]:** `GET /api/v1/expedientes/<id>/resolucion/publicada/` y su PDF con censura de datos de salud, sin adjuntos privados, verificación de integridad, auditoría de consulta y modal de lectura en Mis Expedientes.
-
----
-
-## 15. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
+## 18. Sprint 5 — Desglose Atómico: Spec 010 / SCRUM-87 (Optimización Integral de Rendimiento: RAM, CPU y Base de Datos)
 
 > **Spec de Referencia:** [`specs/010-optimizacion-rendimiento/spec.md`](specs/010-optimizacion-rendimiento/spec.md)  
 > **Plan Técnico:** [`specs/010-optimizacion-rendimiento/plan.md`](specs/010-optimizacion-rendimiento/plan.md)  
@@ -485,7 +475,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 16. Sprint 5 — Desglose Atómico: US Macro 01 / SCRUM-89 (Circuito Resolutivo Oficial, Exclusión Fundada, Corrección de Puntaje Final y Enmiendas Trazables)
+## 19. Sprint 5 — Desglose Atómico: US Macro 01 / SCRUM-89 (Circuito Resolutivo Oficial, Exclusión Fundada, Corrección de Puntaje Final y Enmiendas Trazables)
 
 > **Spec de Referencia:** [`specs/010-circuito-resolutivo-enmiendas/spec.md`](specs/010-circuito-resolutivo-enmiendas/spec.md)  
 > **Plan Técnico:** [`specs/010-circuito-resolutivo-enmiendas/plan.md`](specs/010-circuito-resolutivo-enmiendas/plan.md)  
@@ -503,7 +493,20 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 17. Instrucciones para la Actualización de este Archivo
+## 20. Sprint 5 — Desglose Atómico: MACRO-02 / SCRUM-59 (Libro Mayor Inmutable, Portal 'Mis Expedientes' y Publicación Oficial Protegida)
+
+> **Spec de Referencia:** [`specs/011-libro-mayor-mis-expedientes-publicacion/spec.md`](specs/011-libro-mayor-mis-expedientes-publicacion/spec.md)  
+> **Plan Técnico:** [`specs/011-libro-mayor-mis-expedientes-publicacion/plan.md`](specs/011-libro-mayor-mis-expedientes-publicacion/plan.md)  
+> **Tareas:** [`specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md`](specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md)
+
+- [x] **TS5-02.1 Libro mayor transaccional inmutable con regla 3:1 [TDD]:** Asientos por socio al emitir la resolución en `tribunal_puntajeaplicado`, auditoría `AsientoLibroMayor` de solo inserción con hash encadenado, consolidación 3:1 de llamados y felicitaciones e idempotencia.
+- [x] **TS5-02.2 Portal 'Mis Expedientes' con aislamiento por socio [TDD]:** Saldo y pendientes 3:1 desde `GET /api/v1/expedientes/mis-expedientes/saldo/`, puntos aplicados por causa, sin lista local de respaldo y sin exponer descargos, comprobantes ni borradores de resolución ajenos.
+- [x] **TS5-02.3 Publicación protegida de resoluciones oficiales [TDD]:** `GET /api/v1/expedientes/<id>/resolucion/publicada/` y su PDF con censura de datos de salud, sin adjuntos privados, verificación de integridad, auditoría de consulta y modal de lectura en Mis Expedientes.
+
+- [x] **TS5-02.4 Revisión PR #79 [TDD]:** Integración con `main` (migración de merge `0031`), libro mayor con exclusión fundada, puntaje ratificado y `numero_socio`, motor 3:1 único sin doble conteo, enmiendas por contra-asiento en el mismo libro mayor, aislamiento del imputado sin depender de `?origen=`, publicación y PDF completos con encabezados seguros, censura de salud por palabra y modal accesible con tokens de modo oscuro.
+---
+
+## 21. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

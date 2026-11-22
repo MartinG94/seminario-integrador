@@ -1,19 +1,20 @@
-"""Dominio puro del libro mayor: impacto, regla 3:1 y hash encadenado (Spec 011, T1)."""
+"""Dominio puro del libro mayor: impacto, tipo de asiento y hash encadenado (Spec 011, T1)."""
 
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
 
 from ranking.domain.ledger import (
     GENESIS_HASH,
-    AsientoPlanificado,
     ImpactoSocio,
     TipoAsiento,
     TipoImpacto,
-    acumular_tres_a_uno,
     calcular_hash_asiento,
     clasificar_impacto,
-    planificar_asientos,
+    impacta_libro_mayor,
+    normalizar_fecha,
+    tipo_asiento_para,
 )
 
 pytestmark = pytest.mark.unit
@@ -48,50 +49,26 @@ class TestClasificarImpacto:
             clasificar_impacto(valor)
 
 
-class TestReglaTresAUno:
-    def test_primer_y_segundo_acumulado_no_consolidan(self):
-        assert acumular_tres_a_uno(0) == (1, False)
-        assert acumular_tres_a_uno(1) == (2, False)
-
-    def test_tercer_acumulado_consolida_y_descuenta_tres(self):
-        assert acumular_tres_a_uno(2) == (0, True)
-
-    def test_contador_legado_mayor_a_dos_tambien_consolida(self):
-        assert acumular_tres_a_uno(4) == (2, True)
-
-    def test_rechaza_contador_negativo(self):
-        with pytest.raises(ValueError):
-            acumular_tres_a_uno(-1)
-
-
-class TestPlanificarAsientos:
-    def test_puntos_directos_impactan_libro_mayor(self):
-        plan = planificar_asientos(ImpactoSocio(TipoImpacto.PUNTOS, Decimal("-2.00")), 0)
-        assert plan == [
-            AsientoPlanificado(TipoAsiento.PUNTOS_DIRECTOS, Decimal("-2.00"), None, True)
-        ]
-
-    def test_sin_impacto_queda_solo_en_auditoria(self):
-        plan = planificar_asientos(ImpactoSocio(TipoImpacto.SIN_IMPACTO, Decimal("0.00")), 0)
-        assert plan == [AsientoPlanificado(TipoAsiento.SIN_IMPACTO, Decimal("0.00"), None, False)]
-
-    def test_llamado_sin_consolidar_no_mueve_puntos(self):
-        plan = planificar_asientos(ImpactoSocio(TipoImpacto.LLAMADO_ATENCION, Decimal("0")), 1)
-        assert plan == [AsientoPlanificado(TipoAsiento.LLAMADO_ATENCION, Decimal("0.00"), 2, False)]
-
-    def test_tercer_llamado_consolida_menos_un_punto(self):
-        plan = planificar_asientos(ImpactoSocio(TipoImpacto.LLAMADO_ATENCION, Decimal("0")), 2)
-        assert plan == [
-            AsientoPlanificado(TipoAsiento.LLAMADO_ATENCION, Decimal("0.00"), 0, False),
-            AsientoPlanificado(TipoAsiento.CONSOLIDACION_LLAMADOS, Decimal("-1.00"), 0, True),
-        ]
-
-    def test_tercera_felicitacion_consolida_mas_un_punto(self):
-        plan = planificar_asientos(ImpactoSocio(TipoImpacto.FELICITACION, Decimal("0")), 2)
-        assert plan[-1] == AsientoPlanificado(
-            TipoAsiento.CONSOLIDACION_FELICITACIONES, Decimal("1.00"), 0, True
+class TestTipoDeAsiento:
+    def test_cada_impacto_tiene_un_unico_asiento(self):
+        assert tipo_asiento_para(ImpactoSocio(TipoImpacto.PUNTOS, Decimal("-2"))) == (
+            TipoAsiento.PUNTOS_DIRECTOS
         )
-        assert sum(a.puntos for a in plan) == Decimal("1.00")
+        assert tipo_asiento_para(ImpactoSocio(TipoImpacto.SIN_IMPACTO, Decimal("0"))) == (
+            TipoAsiento.SIN_IMPACTO
+        )
+        assert tipo_asiento_para(ImpactoSocio(TipoImpacto.LLAMADO_ATENCION, Decimal("0"))) == (
+            TipoAsiento.LLAMADO_ATENCION
+        )
+        assert tipo_asiento_para(ImpactoSocio(TipoImpacto.FELICITACION, Decimal("0"))) == (
+            TipoAsiento.FELICITACION
+        )
+
+    def test_solo_los_puntos_directos_mueven_el_saldo(self):
+        assert impacta_libro_mayor(ImpactoSocio(TipoImpacto.PUNTOS, Decimal("-1.00")))
+        assert not impacta_libro_mayor(ImpactoSocio(TipoImpacto.LLAMADO_ATENCION, Decimal("0")))
+        assert not impacta_libro_mayor(ImpactoSocio(TipoImpacto.FELICITACION, Decimal("0")))
+        assert not impacta_libro_mayor(ImpactoSocio(TipoImpacto.SIN_IMPACTO, Decimal("0")))
 
 
 class TestHashEncadenado:
@@ -102,7 +79,10 @@ class TestHashEncadenado:
         "tipo": TipoAsiento.PUNTOS_DIRECTOS,
         "puntos": Decimal("-2.00"),
         "contador_resultante": None,
-        "created_at_iso": "2026-11-15T10:00:00+00:00",
+        "nro_socio": 74907,
+        "puntaje_aplicado_id": 501,
+        "autor_id": 9,
+        "created_at": datetime(2026, 11, 15, 10, 0, 0, 123456, tzinfo=timezone.utc),
     }
 
     def test_hash_es_determinista_y_sha256(self):
@@ -116,3 +96,17 @@ class TestHashEncadenado:
         assert calcular_hash_asiento(base, **self.DATOS) != base
         alterado = {**self.DATOS, "puntos": Decimal("-3.00")}
         assert calcular_hash_asiento(GENESIS_HASH, **alterado) != base
+
+    @pytest.mark.parametrize(
+        ("campo", "valor"), [("nro_socio", 1), ("puntaje_aplicado_id", 2), ("autor_id", 3)]
+    )
+    def test_hash_cubre_numero_de_socio_movimiento_y_autor(self, campo, valor):
+        base = calcular_hash_asiento(GENESIS_HASH, **self.DATOS)
+        assert calcular_hash_asiento(GENESIS_HASH, **{**self.DATOS, campo: valor}) != base
+
+    def test_fecha_normalizada_a_utc_es_independiente_del_huso(self):
+        utc = self.DATOS["created_at"]
+        cordoba = utc.astimezone(timezone(timedelta(hours=-3)))
+        assert normalizar_fecha(utc) == normalizar_fecha(cordoba) == "2026-11-15T10:00:00.123456Z"
+        base = calcular_hash_asiento(GENESIS_HASH, **self.DATOS)
+        assert calcular_hash_asiento(GENESIS_HASH, **{**self.DATOS, "created_at": cordoba}) == base

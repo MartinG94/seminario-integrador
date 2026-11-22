@@ -150,16 +150,27 @@ class IsImputadoOrTribunal(BasePermission):
         identifier = getattr(user, "username", "-")
         resource = getattr(request, "path", "-")
 
-        # Autoridades de gestión siempre autorizadas (TD, CD, ADMIN) o staff activo
-        if socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN) or user.is_staff:
+        expediente = obj if hasattr(obj, "socios") else getattr(obj, "expediente", None)
+        es_imputado = bool(
+            socio
+            and expediente is not None
+            and (expediente.socio_id == socio.id or expediente.socios.filter(pk=socio.pk).exists())
+        )
+
+        # Autoridades de gestión (TD, CD, ADMIN) o staff activo, salvo sobre causas en las que
+        # el propio usuario está imputado: ahí rige el acceso del imputado (Spec 011, RF-10).
+        es_autoridad = bool(
+            socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
+        ) or (user.is_staff and not es_imputado)
+        if es_autoridad and not es_imputado:
             audit.log_access_granted(identifier=identifier, role=role, resource=resource)
             return True
 
-        # Socio imputado (titular o co-imputado): sólo si está habilitado
-        if socio and socio.is_enabled:
-            is_titular = getattr(obj, "socio_id", None) == socio.id
-            is_coimputado = hasattr(obj, "socios") and obj.socios.filter(pk=socio.pk).exists()
-            if is_titular or is_coimputado:
+        # Socio imputado (titular o co-imputado): sólo si está habilitado. Sobre un recurso
+        # hijo (p. ej. un comprobante) sólo accede a lo propio.
+        if socio and socio.is_enabled and es_imputado:
+            propio = obj is expediente or getattr(obj, "socio_id", None) == socio.id
+            if propio:
                 audit.log_access_granted(identifier=identifier, role=role, resource=resource)
                 return True
 
