@@ -236,6 +236,17 @@ class CausalResolutionService:
         )
         socio = getattr(user, "socio", None)
         se_aparta = (final_rank != pedido_dec) if has_numeric_final else (decision != suggested)
+
+        if final_snapshot_val is not None:
+            ratificado_val = str(final_snapshot_val)
+        elif decision == CausalDecision.ACCEPTED:
+            ratificado_val = "0.0"
+        else:
+            ratificado_val = str(expediente.puntos) if expediente.puntos is not None else "0.0"
+
+        descargo.puntaje_ratificado = ratificado_val
+        descargo.save(update_fields=["puntaje_ratificado"])
+
         return DecisionCausalDescargo.objects.create(
             expediente=expediente,
             descargo=descargo,

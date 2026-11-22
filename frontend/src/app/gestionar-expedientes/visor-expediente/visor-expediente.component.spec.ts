@@ -56,6 +56,7 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     responsables_td: [
       {
         titulo: 'Responsable 1',
+        numero_socio: 3001,
         legajo: '11239',
         nombre: 'Giuliano Toselli',
         grupo: 'G57',
@@ -64,6 +65,7 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
       },
       {
         titulo: 'Responsable 2',
+        numero_socio: 3002,
         legajo: '11737',
         nombre: 'Catalina Cerda Gallego',
         grupo: 'G58',
@@ -72,6 +74,7 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
       },
       {
         titulo: 'Responsable 3',
+        numero_socio: 3003,
         legajo: '11735',
         nombre: 'Candela Moreno Migliore',
         grupo: 'G59',
@@ -234,7 +237,7 @@ describe('VisorExpedienteComponent (US S4-01 / SCRUM-51)', () => {
     expect(el.textContent).toContain('Justificaciones en revisión');
 
     // 3 Responsables del TD
-    expect(el.textContent).toContain('11239');
+    expect(el.textContent).toContain('3001');
     expect(el.textContent).toContain('Giuliano Toselli');
     expect(el.textContent).toContain('G57');
 

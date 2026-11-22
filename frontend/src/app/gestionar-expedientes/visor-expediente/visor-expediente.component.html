@@ -119,7 +119,7 @@
               <div class="vocal-nombre" [title]="vocal.nombre">{{ vocal.nombre }}</div>
               <div class="d-flex align-items-center gap-2">
                 <span class="badge badge-primary py-1 px-2" style="font-size: 0.72rem;">{{ vocal.grupo }}</span>
-                <span class="text-muted small">Legajo: {{ vocal.legajo }}</span>
+                <span class="text-muted small">N.º de Socio: {{ vocal.numero_socio ?? '—' }}</span>
                 <span *ngIf="vocal.es_suplente" class="badge badge-secondary" style="font-size: 0.7rem;">(Suplente)</span>
               </div>
             </div>
@@ -214,7 +214,7 @@
               <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-2 px-3 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                   <span class="h6 mb-0 font-weight-bold text-navy">{{ inv.nombre }}</span>
-                  <span class="text-muted small">({{ inv.legajo }})</span>
+                  <span class="text-muted small">(N.º de Socio: {{ inv.numero_socio ?? '—' }})</span>
                   <span class="badge badge-primary">{{ inv.grupo }}</span>
                   <span class="badge badge-light">{{ inv.estado }}</span>
                 </div>
@@ -335,7 +335,7 @@
                           <span class="badge" [ngClass]="dec.decision === 'ACCEPTED' ? 'badge-success' : 'badge-danger'">
                             v{{ dec.version }}: {{ dec.decision_display }}
                           </span>
-                          <span class="text-muted ml-2">por {{ dec.autor_legajo }} ({{ dec.created_at | date:'dd/MM/yyyy HH:mm' }})</span>
+                          <span class="text-muted ml-2">por {{ dec.autor_numero_socio ?? '—' }} ({{ dec.created_at | date:'dd/MM/yyyy HH:mm' }})</span>
                           <div *ngIf="dec.fundamento" class="mt-1 text-dark italic">
                             "{{ dec.fundamento }}"
                           </div>
@@ -422,7 +422,7 @@
         Valorar Causal de Justificación (T02)
       </h3>
       <p class="text-muted small mb-3">
-        Socio: <strong>{{ involucradoSeleccionado?.nombre }} ({{ involucradoSeleccionado?.legajo }})</strong>
+        Socio: <strong>{{ involucradoSeleccionado?.nombre }} ({{ involucradoSeleccionado?.numero_socio ?? '—' }})</strong>
       </p>
 
       <div class="form-group mb-3">

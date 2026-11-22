@@ -37,8 +37,8 @@ describe('AsistenciaEventoComponent (Rediseño 2 Pestañas / SCRUM-50)', () => {
   };
 
   const mockAsistencias = [
-    { socio_id: 101, socio_nombre: 'Lucas Gastiaburu', socio_legajo: '74907', estado_asistencia: 'PRESENTE' as const, motivo: 'En sede' },
-    { socio_id: 102, socio_nombre: 'Lucas Guillén', socio_legajo: '85194', estado_asistencia: 'AUSENTE_INJUSTIFICADO' as const, motivo: 'Sin aviso' }
+    { socio_id: 101, socio_nombre: 'Lucas Gastiaburu', socio_numero_socio: 3001, socio_legajo: '74907', estado_asistencia: 'PRESENTE' as const, motivo: 'En sede' },
+    { socio_id: 102, socio_nombre: 'Lucas Guillén', socio_numero_socio: 3002, socio_legajo: '85194', estado_asistencia: 'AUSENTE_INJUSTIFICADO' as const, motivo: 'Sin aviso' }
   ];
 
   beforeEach(async () => {
@@ -161,8 +161,9 @@ describe('AsistenciaEventoComponent (Rediseño 2 Pestañas / SCRUM-50)', () => {
   });
 
   it('debe filtrar convocados por texto o estado', () => {
-    component.filtroTexto = '85194';
+    component.filtroTexto = '3002';
     expect(component.convocadosFiltrados.length).toBe(1);
+    expect(component.convocadosFiltrados[0].socio_numero_socio).toBe(3002);
     expect(component.convocadosFiltrados[0].socio_legajo).toBe('85194');
 
     component.filtroTexto = '';

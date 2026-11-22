@@ -42,7 +42,7 @@ def make_accent_insensitive_regex(term: str) -> str:
 class AccentInsensitiveSearchFilter(BaseFilterBackend):
     """
     Filtro de búsqueda multi-término para el Padrón de Socios (CA1).
-    Permite filtrar por first_name, last_name, legajo y subcomision__name
+    Permite filtrar por first_name, last_name, numero_socio, legajo y subcomision__name
     de forma insensible a mayúsculas y acentos tanto en SQLite como en MySQL.
     """
 
@@ -59,12 +59,16 @@ class AccentInsensitiveSearchFilter(BaseFilterBackend):
 
         for term in terms:
             regex_pattern = make_accent_insensitive_regex(term)
+            numero_socio_query = Q()
+            if term.isdigit():
+                numero_socio_query = Q(numero_socio=int(term))
 
             term_query = (
                 Q(first_name__icontains=term)
                 | Q(first_name__iregex=regex_pattern)
                 | Q(last_name__icontains=term)
                 | Q(last_name__iregex=regex_pattern)
+                | numero_socio_query
                 | Q(legajo__icontains=term)
                 | Q(subcomision__name__icontains=term)
                 | Q(subcomision__name__iregex=regex_pattern)

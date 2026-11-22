@@ -115,7 +115,8 @@ class TestOpeningNotificationTemplate:
 
         # Asunto formal
         assert (
-            payload.subject == "[SGD-AVEIT] Notificación de Apertura de Causa — Autos EXP-2026-0001"
+            payload.subject
+            == "[SGD-AVEIT] Notificación de Apertura de Expediente — Autos EXP-2026-0001"
         )
 
         # Cuerpo en texto plano

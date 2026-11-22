@@ -10,11 +10,12 @@ Implementa:
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, connection, models, transaction
+from django.db.utils import OperationalError
 from django.utils import timezone
 
 from expedientes.domain.calendar import compute_business_deadline
@@ -212,7 +213,7 @@ class ClasificacionExpedienteEnum(models.TextChoices):
 
 
 class ExpedienteNumberSequence(models.Model):
-    """Contador correlativo anual de expedientes (CA1/CA4): EXP-NNNN/YYYY.
+    """Contador correlativo anual de expedientes (CA1/CA4): N/YYYY.
 
     Una fila por año bloqueada con SELECT ... FOR UPDATE serializa la asignación:
     a diferencia del AUTO_INCREMENT de InnoDB, un rollback devuelve el número y
@@ -233,18 +234,37 @@ class ExpedienteNumberSequence(models.Model):
         año nuevo crea la suya. Ante una creación simultánea, la restricción única de
         `year` hace que sólo una inserción prospere y el resto relea la fila bloqueada.
         """
-        with transaction.atomic():
-            sequence = cls.objects.select_for_update().filter(year=year).first()
-            if sequence is None:
-                try:
-                    with transaction.atomic():
-                        cls.objects.create(year=year)
-                except IntegrityError:
-                    pass
-                sequence = cls.objects.select_for_update().get(year=year)
-            sequence.last_value += 1
-            sequence.save(update_fields=["last_value"])
-            return sequence.last_value
+        for attempt in range(3):
+            try:
+                with transaction.atomic():
+                    sequence = cls.objects.select_for_update().filter(year=year).first()
+                    if sequence is None:
+                        if connection.vendor == "mysql":
+                            table = connection.ops.quote_name(cls._meta.db_table)
+                            year_column = connection.ops.quote_name("year")
+                            value_column = connection.ops.quote_name("last_value")
+                            with connection.cursor() as cursor:
+                                cursor.execute(
+                                    f"INSERT INTO {table} ({year_column}, {value_column}) "
+                                    f"VALUES (%s, 0) ON DUPLICATE KEY UPDATE "
+                                    f"{year_column} = VALUES({year_column})",
+                                    [year],
+                                )
+                        else:
+                            try:
+                                cls.objects.create(year=year)
+                            except IntegrityError:
+                                pass
+                        sequence = cls.objects.select_for_update().get(year=year)
+                    sequence.last_value += 1
+                    sequence.save(update_fields=["last_value"])
+                    return sequence.last_value
+            except OperationalError as error:
+                code = error.args[0] if error.args else None
+                if code not in (1205, 1213) or attempt == 2:
+                    raise
+                if connection.in_atomic_block:
+                    raise
 
 
 class Expediente(models.Model):
@@ -468,6 +488,35 @@ class DescargoExpediente(models.Model):
         db_index=True,
         help_text="False cuando el socio retiró el descargo dentro del plazo (baja lógica).",
     )
+    puntaje_ratificado = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="Puntaje final ratificado por el Tribunal de Disciplina tras la evaluación.",
+    )
+    esta_excluido = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True si el socio fue excluido de la causa por el Tribunal de Disciplina.",
+    )
+    motivo_exclusion = models.TextField(
+        blank=True,
+        default="",
+        help_text="Fundamento formal de la exclusión dictada por el TD (mínimo 10 caracteres).",
+    )
+    excluido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="exclusiones_involucrados",
+        help_text="Usuario integrante del TD que dictó la exclusión.",
+    )
+    excluido_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora de registro de la exclusión fundada.",
+    )
 
     class Meta:
         db_table = "expedientes_descargo"
@@ -595,22 +644,58 @@ class AuditoriaDescargaEvidencia(models.Model):
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
+class TipoAccesoAuditoriaEnum(models.TextChoices):
+    CONSULTA = "CONSULTA", "Consulta en pantalla"
+    DESCARGA_PDF = "DESCARGA_PDF", "Descarga del PDF oficial"
+
+
+class InsertOnlyQuerySet(models.QuerySet):
+    """Bloquea las operaciones masivas que esquivan `save()` y `delete()` de instancia."""
+
+    def _immutable_message(self) -> str:
+        return getattr(self.model, "immutable_message", "El registro es inmutable.")
+
+    def update(self, **kwargs: Any) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def delete(self) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def bulk_update(self, objs: Any, fields: Any, **kwargs: Any) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def update_or_create(self, *args: Any, **kwargs: Any) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def bulk_create(self, objs: Any, *args: Any, **kwargs: Any) -> list[Any]:
+        if kwargs.get("update_conflicts") or kwargs.get("ignore_conflicts"):
+            raise ValidationError(self._immutable_message())
+        return super().bulk_create(objs, *args, **kwargs)
+
+
 class AuditoriaConsultaExpediente(models.Model):
     """Pista de auditoría inmutable de consultas en el visor autorizado (CA3)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    immutable_message = "Los registros de auditoría de consulta son inmutables."
+
     expediente = models.ForeignKey(
         Expediente,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="consultas_auditadas",
         db_index=True,
     )
     usuario = models.CharField(max_length=150)
     legajo = models.CharField(max_length=50, blank=True)
     rol = models.CharField(max_length=50)
+    tipo_acceso = models.CharField(
+        max_length=20, choices=TipoAccesoAuditoriaEnum.choices, default="CONSULTA"
+    )
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=500, blank=True)
     fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = InsertOnlyQuerySet.as_manager()
 
     class Meta:
         db_table = "expedientes_auditoria_consulta"
@@ -619,12 +704,12 @@ class AuditoriaConsultaExpediente(models.Model):
     def __str__(self) -> str:
         return f"Consulta {self.expediente.numero} por {self.usuario} ({self.fecha_hora})"
 
-    def save(self, *args, **kwargs) -> None:
-        if not self._state.adding:
-            raise ValidationError("Los registros de auditoría de consulta son inmutables.")
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding or kwargs.get("force_update") or kwargs.get("update_fields"):
+            raise ValidationError(self.immutable_message)
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
         raise ValidationError("Los registros de auditoría de consulta no pueden eliminarse.")
 
 
@@ -821,12 +906,15 @@ class InsertOnlyModel(models.Model):
     class Meta:
         abstract = True
 
-    def save(self, *args, **kwargs) -> None:
-        if not self._state.adding:
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Una instancia construida con una PK existente también se considera modificación.
+        if not self._state.adding or kwargs.get("force_update") or kwargs.get("update_fields"):
+            raise ValidationError(self.immutable_message)
+        if self.pk is not None and type(self)._default_manager.filter(pk=self.pk).exists():
             raise ValidationError(self.immutable_message)
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
         raise ValidationError(self.immutable_message)
 
 
@@ -1821,21 +1909,7 @@ class TipoAsientoLibroMayorEnum(models.TextChoices):
         "CONSOLIDACION_FELICITACIONES",
         "Tres felicitaciones (+1 punto)",
     )
-
-
-class InsertOnlyQuerySet(models.QuerySet):
-    """Bloquea las operaciones masivas que esquivan `save()` y `delete()` de instancia."""
-
-    immutable_message = "El libro mayor es de solo inserción."
-
-    def update(self, **kwargs):
-        raise ValidationError(self.immutable_message)
-
-    def delete(self):
-        raise ValidationError(self.immutable_message)
-
-    def bulk_update(self, objs, fields, **kwargs):
-        raise ValidationError(self.immutable_message)
+    REVERSION = "REVERSION", "Reversión por enmienda"
 
 
 class AsientoLibroMayor(InsertOnlyModel):
@@ -1889,6 +1963,37 @@ class AsientoLibroMayor(InsertOnlyModel):
 
     def __str__(self) -> str:
         return f"{self.expediente_id} · socio {self.socio_id}: {self.tipo} {self.puntos}"
+
+
+class EnmiendaResolucion(models.Model):
+    """Registro inmutable de trazabilidad de enmienda sobre una resolución emitida (SCRUM-103)."""
+
+    resolucion_anterior = models.ForeignKey(
+        Resolucion, on_delete=models.PROTECT, related_name="enmiendas_posteriores"
+    )
+    resolucion_nueva = models.OneToOneField(
+        Resolucion, on_delete=models.PROTECT, related_name="enmienda_origen"
+    )
+    motivo_enmienda = models.TextField(
+        help_text="Fundamento formal de la rectificación por error material o hecho sobreviniente."
+    )
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="enmiendas_solicitadas"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "expedientes_enmienda_resolucion"
+        verbose_name = "Enmienda de Resolución"
+        verbose_name_plural = "Enmiendas de Resoluciones"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        num = self.resolucion_anterior.numero_expediente_snapshot
+        return (
+            f"Enmienda Res.{self.resolucion_anterior.version} -> "
+            f"Res.{self.resolucion_nueva.version} ({num})"
+        )
 
 
 # Aliases retrocompatibles exigidos por las directivas arquitectónicas y el esquema legacy

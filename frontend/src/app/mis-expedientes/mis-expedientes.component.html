@@ -54,7 +54,7 @@
       </div>
     </div>
 
-    <!-- Tabla Principal de Causas con Pestañas Teal AVEIT -->
+    <!-- Tabla Principal de Expedientes con Pestañas Teal AVEIT -->
     <div class="row">
       <div class="col-md-12">
         <div class="card shadow-sm">
@@ -69,7 +69,7 @@
           <div class="card-body">
             <div *ngIf="misExpedientes.length === 0" class="text-center py-5">
               <i class="material-icons text-muted" style="font-size: 56px;">verified</i>
-              <h4 class="text-muted mt-2">No registras causas ni expedientes en trámite</h4>
+              <h4 class="text-muted mt-2">No registras expedientes en trámite</h4>
               <p class="text-muted small">Tu número de socio se encuentra en orden estatutario regular.</p>
             </div>
 
@@ -121,13 +121,13 @@
                       <ng-container *ngIf="tieneImpactoAplicado(exp); else puntosSolicitados">
                         <span *ngIf="exp.medidaAplicada; else puntosAplicadosTpl"
                               class="badge px-2 py-1 font-weight-bold medida-aplicada"
-                              [ngClass]="exp.medidaAplicada === 'FELICITACION' ? 'badge-success' : 'badge-warning text-dark'"
+                              [ngClass]="exp.medidaAplicada === 'FELICITACION' ? 'medida-felicitacion' : 'medida-llamado'"
                               title="Medida aplicada por la resolución (cada 3 suman o restan 1 punto)">
                           {{getMedidaLabel(exp.medidaAplicada)}}
                         </span>
                         <ng-template #puntosAplicadosTpl>
                           <span class="font-weight-bold tabular-nums puntos-aplicados"
-                                [ngClass]="puntosVisibles(exp) > 0 ? 'text-success' : (puntosVisibles(exp) < 0 ? 'text-danger' : 'text-muted')"
+                                [ngClass]="puntosVisibles(exp) > 0 ? 'puntos-verde' : (puntosVisibles(exp) < 0 ? 'puntos-rojo' : 'puntos-gris')"
                                 title="Puntos aplicados por la resolución">
                             {{formatPuntos(exp.puntosAplicados)}}
                           </span>
@@ -203,6 +203,8 @@
      role="dialog"
      aria-modal="true"
      tabindex="-1"
+     [attr.inert]="modalResolucionAbierto ? '' : null"
+     [attr.aria-hidden]="modalResolucionAbierto ? 'true' : null"
      (click)="cerrarModalDetalle()"
      (keydown.escape)="cerrarModalDetalle()"
      (wheel)="$event.stopPropagation()"
@@ -249,7 +251,22 @@
             </div>
 
             <div class="d-inline-flex align-items-center gap-2 flex-nowrap">
-              <span class="text-muted small font-weight-bold metadato-label mr-2">Puntaje:</span>
+              <span class="text-muted small font-weight-bold metadato-label mr-2">{{tieneImpactoAplicado(expedienteDetalle) ? 'Puntaje aplicado:' : 'Puntaje:'}}</span>
+              <!-- En causas emitidas rige lo aplicado por la resolución (libro mayor), no lo solicitado. -->
+              <ng-container *ngIf="tieneImpactoAplicado(expedienteDetalle); else modalPuntajeSolicitado">
+                <span *ngIf="expedienteDetalle.medidaAplicada; else modalPuntosAplicados"
+                      class="badge px-2 py-1 font-weight-bold medida-aplicada detalle-puntaje-aplicado"
+                      [ngClass]="expedienteDetalle.medidaAplicada === 'FELICITACION' ? 'medida-felicitacion' : 'medida-llamado'">
+                  {{getMedidaLabel(expedienteDetalle.medidaAplicada)}}
+                </span>
+                <ng-template #modalPuntosAplicados>
+                  <span class="font-weight-bold tabular-nums detalle-puntaje-aplicado"
+                        [ngClass]="puntosVisibles(expedienteDetalle) > 0 ? 'puntos-verde' : (puntosVisibles(expedienteDetalle) < 0 ? 'puntos-rojo' : 'puntos-gris')">
+                    {{formatPuntos(expedienteDetalle.puntosAplicados)}}
+                  </span>
+                </ng-template>
+              </ng-container>
+              <ng-template #modalPuntajeSolicitado>
               <ng-container *ngIf="expedienteDetalle.esFelicitacion; else modalCheckLlamado">
                 <span class="badge badge-success px-2 py-1 font-weight-bold">
                   <i class="material-icons" style="font-size: 14px; vertical-align: middle;">emoji_events</i> Felicitación
@@ -266,6 +283,7 @@
                     {{(expedienteDetalle.puntos || 0) > 0 ? '+' : ''}}{{expedienteDetalle.puntos}} pts
                   </span>
                 </ng-template>
+              </ng-template>
               </ng-template>
             </div>
           </div>
@@ -467,7 +485,7 @@
           <button *ngIf="expedienteDetalle?.estado === 'emitido'"
                   mat-raised-button
                   class="btn btn-info btn-ver-resolucion"
-                  (click)="abrirResolucionPublicada(expedienteDetalle)">
+                  (click)="abrirResolucionPublicada(expedienteDetalle, $event.currentTarget)">
             <i class="material-icons" style="font-size: 16px;">description</i> Resolución
           </button>
           <!-- Si la causa está en período de justificaciones -->
@@ -532,8 +550,10 @@
 </div>
 
 <!-- Modal de Resolución Oficial Publicada (Spec 011, S5-02.3) -->
-<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom" style="z-index: 1070;" (click)="cerrarResolucionPublicada()" (wheel)="$event.stopPropagation()">
-  <div class="modal-dialog-custom modal-resolucion" role="dialog" aria-modal="true" aria-labelledby="titulo-resolucion-publicada" (click)="$event.stopPropagation()">
+<div *ngIf="modalResolucionAbierto" class="modal-backdrop-custom" style="z-index: 1070;" (click)="cerrarResolucionPublicada()" (wheel)="$event.stopPropagation()"
+     (keydown.escape)="onEscapeResolucion($event)">
+  <div #dialogoResolucion class="modal-dialog-custom modal-resolucion" role="dialog" aria-modal="true" tabindex="-1"
+       aria-labelledby="titulo-resolucion-publicada" [attr.aria-busy]="cargandoResolucion" (click)="$event.stopPropagation()">
     <div class="card">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <div>
@@ -543,18 +563,18 @@
             <ng-container *ngIf="resolucionPublicada.fecha_emision"> &bull; {{resolucionPublicada.fecha_emision | date:'dd/MM/yyyy HH:mm'}} hs</ng-container>
           </p>
         </div>
-        <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarResolucionPublicada()" title="Cerrar ventana" aria-label="Cerrar">
-          <i class="material-icons">close</i>
+        <button type="button" mat-icon-button class="btn btn-link text-white p-0 m-0 btn-cerrar-resolucion" (click)="cerrarResolucionPublicada()" title="Cerrar ventana" aria-label="Cerrar resolución">
+          <i class="material-icons" aria-hidden="true">close</i>
         </button>
       </div>
       <div class="card-body resolucion-publicada-body">
-        <p *ngIf="cargandoResolucion" class="text-muted text-center py-4">Cargando resolución…</p>
+        <p *ngIf="cargandoResolucion" class="texto-secundario text-center py-4" role="status">Cargando resolución…</p>
 
         <ng-container *ngIf="resolucionPublicada as pub">
-          <p *ngIf="pub.titulo" class="font-weight-bold text-dark mb-3">{{pub.titulo}}</p>
+          <p *ngIf="pub.titulo" class="font-weight-bold titulo-publicacion mb-3">{{pub.titulo}}</p>
 
-          <p *ngIf="pub.contiene_datos_reservados" class="text-muted small mb-3 aviso-reservado">
-            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">lock</i>
+          <p *ngIf="pub.contiene_datos_reservados" class="small mb-3 aviso-reservado">
+            <i class="material-icons" style="font-size: 14px; vertical-align: middle;" aria-hidden="true">lock</i>
             Los datos de salud están reservados.
           </p>
 
@@ -574,24 +594,25 @@
           <section class="mb-3" *ngIf="pub.reglamentos_respaldantes.length > 0">
             <h5 class="font-weight-bold">Reglamentos</h5>
             <ul class="mb-0">
-              <li *ngFor="let reglamento of pub.reglamentos_respaldantes">{{reglamento}}</li>
+              <li *ngFor="let reglamento of pub.reglamentos_respaldantes; trackBy: trackByTexto">{{reglamento}}</li>
             </ul>
           </section>
 
           <section class="mb-3" *ngIf="pub.impactos.length > 0">
-            <h5 class="font-weight-bold">Puntos aplicados</h5>
-            <div class="table-responsive">
+            <h5 class="font-weight-bold" id="titulo-impactos">Puntos aplicados</h5>
+            <div class="table-responsive" tabindex="0" role="region" aria-labelledby="titulo-impactos">
               <table class="table table-sm tabla-impactos">
-                <thead class="text-muted small">
+                <caption class="sr-only">Impacto aplicado por la resolución a cada socio</caption>
+                <thead class="small">
                   <tr>
-                    <th>N° de Socio</th>
-                    <th>Apellido</th>
-                    <th>Nombre</th>
-                    <th>Puntos</th>
+                    <th scope="col">N° de Socio</th>
+                    <th scope="col">Apellido</th>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Puntos</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let impacto of pub.impactos">
+                  <tr *ngFor="let impacto of pub.impactos; trackBy: trackByImpacto">
                     <td>{{impacto.numero_socio}}</td>
                     <td>{{impacto.apellido}}</td>
                     <td>{{impacto.nombre}}</td>
@@ -607,22 +628,22 @@
           <section class="mb-2" *ngIf="pub.firmantes.length > 0">
             <h5 class="font-weight-bold">Firmas</h5>
             <ul class="list-unstyled mb-0">
-              <li *ngFor="let firmante of pub.firmantes" class="small">{{firmante.etiqueta}}</li>
+              <li *ngFor="let firmante of pub.firmantes; trackBy: trackByFirmante" class="small">{{firmante.etiqueta}}</li>
             </ul>
           </section>
 
-          <p class="small mb-0 integridad" [ngClass]="pub.integridad_verificada ? 'text-success' : 'text-danger'">
-            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">{{pub.integridad_verificada ? 'verified' : 'error'}}</i>
+          <p class="small mb-0 integridad" [ngClass]="pub.integridad_verificada ? 'estado-ok' : 'estado-error'">
+            <i class="material-icons" style="font-size: 14px; vertical-align: middle;" aria-hidden="true">{{pub.integridad_verificada ? 'verified' : 'error'}}</i>
             {{pub.integridad_verificada ? 'Documento íntegro' : 'No se pudo verificar la integridad'}}
           </p>
         </ng-container>
       </div>
       <div class="card-footer d-flex justify-content-between align-items-center">
-        <button mat-button class="btn btn-default" (click)="cerrarResolucionPublicada()">Cerrar</button>
-        <button mat-raised-button class="btn btn-primary btn-descargar-resolucion"
+        <button type="button" mat-button class="btn btn-default" (click)="cerrarResolucionPublicada()">Cerrar</button>
+        <button type="button" mat-raised-button class="btn btn-primary btn-descargar-resolucion"
                 [disabled]="!resolucionPublicada || descargandoResolucionPdf"
                 (click)="descargarResolucionPdf()">
-          <i class="material-icons" style="font-size: 16px;">download</i>
+          <i class="material-icons" style="font-size: 16px;" aria-hidden="true">download</i>
           {{descargandoResolucionPdf ? 'Descargando…' : 'Descargar PDF'}}
         </button>
       </div>

@@ -34,7 +34,7 @@
             </div>
             <div class="text-white-50 d-none d-md-block small font-weight-bold">
               <span *ngIf="tabActiva === 'nueva'">Apertura de Solicitud T-01</span>
-              <span *ngIf="tabActiva === 'creadas'">Seguimiento de Causas y Trámites</span>
+              <span *ngIf="tabActiva === 'creadas'">Seguimiento de Expedientes y Trámites</span>
             </div>
           </div>
 
@@ -54,10 +54,10 @@
                 </span>
               </div>
 
-              <div *ngIf="numeroExpediente" class="issued-banner d-flex flex-wrap align-items-center justify-content-between mb-4">
+              <div *ngIf="borradorId" class="issued-banner d-flex flex-wrap align-items-center justify-content-between mb-4">
                 <div class="d-flex align-items-center">
                   <i class="material-icons mr-2">verified</i>
-                  <span>Número de expediente emitido: <strong class="tabular-nums">{{ numeroExpediente }}</strong></span>
+                  <span><strong class="tabular-nums">{{ numeroExpedienteVisible(numeroExpediente) }}</strong></span>
                 </div>
                 <button type="button" class="btn btn-primary btn-sm" (click)="setTab('creadas')">
                   Ver en Solicitudes Creadas
@@ -246,7 +246,7 @@
                   <div class="d-flex align-items-start">
                     <div>
                       <h4 class="section-title">Socios involucrados <span class="required-mark">*</span></h4>
-                      <p class="section-subtitle">Buscá por legajo, apellido o nombre y agregá uno o más socios al expediente.</p>
+                      <p class="section-subtitle">Buscá por número de socio, apellido o nombre y agregá uno o más socios al expediente.</p>
                     </div>
                   </div>
                   <span class="badge-mat badge-mat-info tabular-nums" *ngIf="sociosSeleccionados.length > 0">
@@ -256,7 +256,7 @@
 
                 <!-- Buscador reactivo (Select2 / Autocomplete) -->
                 <mat-form-field appearance="outline" class="w-100" *ngIf="estado !== 'ISSUED'">
-                  <mat-label>Buscar socio por legajo, apellido o nombre</mat-label>
+                  <mat-label>Buscar socio por número de socio, apellido o nombre</mat-label>
                   <input matInput
                          [formControl]="socioBusqueda"
                          [matAutocomplete]="sociosAuto"
@@ -264,7 +264,7 @@
                   <mat-icon matSuffix>person_search</mat-icon>
                   <mat-autocomplete #sociosAuto="matAutocomplete" (optionSelected)="agregarSocio($event.option.value)">
                     <mat-option *ngFor="let socio of sociosFiltrados; trackBy: trackBySocio" [value]="socio">
-                      {{ nombreSocio(socio) }}<ng-container *ngIf="socio.legajo"> (Legajo {{ socio.legajo }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
+                      {{ nombreSocio(socio) }}<ng-container> (N.º de Socio {{ socio.numero_socio ?? '—' }})</ng-container><ng-container *ngIf="socio.subcomision"> - {{ socio.subcomision.name }}</ng-container>
                     </mat-option>
                   </mat-autocomplete>
                 </mat-form-field>
@@ -274,7 +274,7 @@
                   <table class="table table-sm table-hover align-middle mb-0">
                     <thead class="thead-light">
                       <tr>
-                        <th style="width: 120px;">Legajo</th>
+                        <th style="width: 120px;">N.º de Socio</th>
                         <th>Apellido y Nombre</th>
                         <th>Grupo</th>
                         <th>Subcomisión</th>
@@ -283,7 +283,7 @@
                     </thead>
                     <tbody>
                       <tr *ngFor="let s of sociosSeleccionados; trackBy: trackBySocio">
-                        <td><span class="badge-mat badge-mat-info tabular-nums">{{ s.legajo || 'S/D' }}</span></td>
+                        <td><span class="badge-mat badge-mat-info tabular-nums">{{ s.numero_socio ?? 'S/D' }}</span></td>
                         <td class="font-weight-bold text-dark">{{ s.last_name }}, {{ s.first_name }}</td>
                         <td class="tabular-nums">{{ s.grupo || 'S/D' }}</td>
                         <td>{{ s.subcomision?.name || 'Sin subcomisión' }}</td>
@@ -378,7 +378,7 @@
             <div *ngIf="tabActiva === 'creadas'">
               <div class="mb-3">
                 <h3 class="card-title text-dark font-weight-bold mb-1">Solicitudes Creadas</h3>
-                <p class="text-muted small mb-3">Seguimiento y consulta de causas y solicitudes iniciadas.</p>
+                <p class="text-muted small mb-3">Seguimiento y consulta de expedientes y solicitudes iniciadas.</p>
               </div>
 
               <div *ngIf="failedToLoadRequests && !cargandoSolicitudes" class="text-center py-4">
@@ -392,7 +392,7 @@
               <div class="row align-items-center mb-3">
                 <div class="col-md-7 mb-2 mb-md-0">
                   <mat-form-field appearance="outline" class="w-100">
-                    <mat-label>Buscar por causa, causal, expediente o socio...</mat-label>
+                    <mat-label>Buscar por expediente, causal o socio...</mat-label>
                     <input matInput [formControl]="busquedaControl" placeholder="Escribí para filtrar en tiempo real...">
                     <mat-icon matSuffix>search</mat-icon>
                   </mat-form-field>
@@ -449,13 +449,13 @@
                     <tr *ngFor="let s of misSolicitudesOrdenadas; trackBy: trackBySolicitud"
                         tabindex="0"
                         role="row"
-                        [attr.aria-label]="'Solicitud ' + formatSolicitudExpediente(s) + ' - ' + (s.titulo || s.motivo)"
+                        [attr.aria-label]="'Solicitud ' + numeroExpedienteVisible(s.numero_expediente) + ' - ' + (s.titulo || s.motivo)"
                         (click)="abrirDetalle(s)"
                         (keydown)="onTableKeyDown($event, s)"
                         style="cursor: pointer;">
                       <!-- Exp -->
                       <td class="font-weight-bold text-dark">
-                        {{ formatSolicitudExpediente(s) }}
+                        {{ numeroExpedienteVisible(s.numero_expediente) }}
                       </td>
 
                       <!-- Título -->
@@ -565,7 +565,7 @@
       <!-- Cabecera del Modal -->
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <span class="modal-badge-exp font-weight-bold text-white text-nowrap">
-          {{ solicitudSeleccionada.estado === 'DRAFT' ? 'Borrador sin número' : ('Exp: ' + formatSolicitudExpediente(solicitudSeleccionada)) }}
+          Exp: {{ numeroExpedienteVisible(solicitudSeleccionada.numero_expediente) }}
         </span>
         <div class="modal-titulo-central flex-grow-1 text-center px-3">
           <h4 class="card-title mb-0 font-weight-bold text-white">
@@ -692,15 +692,17 @@
               <thead>
                 <tr>
                   <th scope="col">N° de Socio</th>
-                  <th scope="col">Nombre Completo</th>
+                  <th scope="col">Apellido</th>
+                  <th scope="col">Nombre</th>
                   <th scope="col">Grupo</th>
                   <th scope="col">Subcomisión</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let s of solicitudSeleccionada.involucrados; trackBy: trackByInvolucrado">
-                  <td class="font-weight-bold legajo-cell">{{ s.legajo || '—' }}</td>
-                  <td class="nombre-cell">{{ s.last_name ? (s.last_name + ', ' + s.first_name) : (s.nombre || '—') }}</td>
+                  <td class="font-weight-bold legajo-cell">{{ s.numero_socio ?? '—' }}</td>
+                  <td class="apellido-cell">{{ s.last_name || '—' }}</td>
+                  <td class="nombre-cell">{{ s.first_name || s.nombre || '—' }}</td>
                   <td class="grupo-cell">{{ s.grupo || '—' }}</td>
                   <td>{{ s.subcomision || 'Sin subcomisión' }}</td>
                 </tr>

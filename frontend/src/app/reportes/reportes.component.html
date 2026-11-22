@@ -519,8 +519,10 @@
                   <thead class="bg-light text-muted small text-uppercase">
                     <tr>
                       <th class="text-center" style="width: 60px;">#</th>
-                      <th>Apellido y Nombre</th>
-                      <th>Legajo</th>
+                      <th>Apellido</th>
+                      <th>Nombre</th>
+                      <th>N.º de socio</th>
+                      <th>Legajo académico</th>
                       <th class="text-center">Grupo</th>
                       <th class="text-center">Puntajes Asignados Ciclo</th>
                       <th class="text-right pr-4" style="width: 180px;">Puntos Totales</th>
@@ -531,12 +533,16 @@
                         [class.table-record-row]="socio.legajo === '87414'">
                       <td class="text-center font-weight-bold text-muted">{{ socio.posicion }}.</td>
                       <td>
-                        <div class="font-weight-bold text-dark">{{ socio.apellido }}, {{ socio.nombre }}</div>
+                        <div class="font-weight-bold text-dark">{{ socio.apellido }}</div>
+                      </td>
+                      <td>
+                        <div class="font-weight-bold text-dark">{{ socio.nombre }}</div>
                         <span *ngIf="socio.legajo === '87414'" class="badge badge-warning text-dark small">
                           <i class="material-icons font-size-12">star</i> Récord Institucional
                         </span>
                       </td>
-                      <td class="font-family-monospace text-muted">{{ socio.legajo }}</td>
+                      <td class="font-family-monospace text-muted">{{ socio.numero_socio ?? 'S/D' }}</td>
+                      <td class="font-family-monospace text-muted">{{ socio.legajo ?? 'S/D' }}</td>
                       <td class="text-center text-muted">{{ socio.grupo }}</td>
                       <td class="text-center font-weight-bold"
                           [class.text-success]="socio.puntos_asignados_ciclo > 0"
@@ -609,7 +615,10 @@
                   <thead class="bg-light text-muted small text-uppercase">
                     <tr>
                       <th class="text-center" style="width: 50px;">#</th>
-                      <th>Socio / Subcomisión</th>
+                      <th>N.º de socio</th>
+                      <th>Apellido</th>
+                      <th>Nombre</th>
+                      <th>Subcomisión</th>
                       <th class="text-right pr-4">Puntaje Máximo</th>
                     </tr>
                   </thead>
@@ -622,10 +631,10 @@
                         <span *ngIf="t.posicion === 3">🥉</span>
                         <span *ngIf="t.posicion > 3" class="text-muted">{{ t.posicion }}.</span>
                       </td>
-                      <td>
-                        <div class="font-weight-bold text-dark">{{ t.nombre_completo }}</div>
-                        <span class="text-muted small">Socio #{{ t.socio_numero }} • {{ t.subcomision }}</span>
-                      </td>
+                      <td class="tabular-nums">{{ t.socio_numero }}</td>
+                      <td class="font-weight-bold text-dark">{{ t.apellido || t.nombre_completo }}</td>
+                      <td class="font-weight-bold text-dark">{{ t.nombre || '—' }}</td>
+                      <td class="text-muted">{{ t.subcomision }}</td>
                       <td class="text-right pr-4 font-weight-bold"
                           [class.text-warning]="t.posicion === 1"
                           [class.text-success]="t.posicion > 1">

@@ -81,4 +81,24 @@ describe('SidebarComponent', () => {
     expect(titulos).toContain('Crear Expediente');
   });
 
+  it('muestra numero_socio cuando está definido y — como fallback', () => {
+    component.perfil = {
+      legajo: '99999',
+      numero_socio: 74907,
+      first_name: 'Lucas',
+      last_name: 'Gastiaburu',
+      email: '74907@aveit.test',
+      role: 'SOCIO',
+      category: 'ACTIVE',
+      category_display: 'Socio Activo',
+      subcomision: 'Cómputos'
+    };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.user-role')?.textContent).toContain('N° de Socio 74907 · SOCIO');
+
+    component.perfil = { ...component.perfil, numero_socio: null };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.user-role')?.textContent).toContain('N° de Socio — · SOCIO');
+  });
+
 });

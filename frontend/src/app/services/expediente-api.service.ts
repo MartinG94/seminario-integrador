@@ -28,6 +28,7 @@ export const CATALOGO_CONCEPTOS_EXPEDIENTE = [
 
 export interface SocioInvolucrado {
   socio_id?: number;
+  numero_socio?: number | null;
   legajo?: string;
   first_name?: string;
   last_name?: string;
@@ -193,8 +194,10 @@ export interface DecisionCausalDTO {
   se_aparta_de_regla: boolean;
   fundamento: string;
   evidencias_valoradas: EvidenciaValorada[];
+  puntaje_final?: number | string | null;
   autor: string;
   autor_legajo: string;
+  autor_numero_socio?: number | null;
   autor_rol: string;
   created_at: string;
 }
@@ -223,6 +226,7 @@ export interface ValoracionT03DTO {
   antecedentes: AntecedenteCitadoDTO[];
   autor: string;
   autor_legajo: string;
+  autor_numero_socio?: number | null;
   autor_rol: string;
   autor_condicion: string;
   autor_condicion_display: string;
@@ -293,6 +297,8 @@ export interface GuardarResolucionPayload {
   articulos_resolutivos: string;
   reglamentos_respaldantes?: string[];
   expedientes_referenciados?: number[];
+  es_suplente?: boolean;
+  anio_social?: number | null;
 }
 
 export interface DescargoDetalleDTO {
@@ -312,21 +318,29 @@ export interface DescargoDetalleDTO {
   valoraciones_t03?: ValoracionT03DTO[];
   leido?: boolean;
   puntaje_ratificado?: number | string | null;
+  esta_excluido?: boolean;
+  motivo_exclusion?: string;
+  excluido_at?: string | null;
 }
 
 export interface SocioInvolucradoDetalleDTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   first_name?: string;
   last_name?: string;
   grupo?: string;
   estado?: string;
+  esta_excluido?: boolean;
+  motivo_exclusion?: string;
+  excluido_at?: string | null;
 }
 
 
 export interface ResponsableTdDTO {
   titulo: string;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   grupo: string;
@@ -367,6 +381,7 @@ export interface DescargoVisorDTO {
 
 export interface InvolucradoVisorDTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   first_name?: string;
@@ -374,9 +389,12 @@ export interface InvolucradoVisorDTO {
   grupo?: string;
   estado?: string;
   tiene_descargo: boolean;
-  estado_descargo: 'PRESENTADO' | 'PLAZO_VENCIDO_SIN_DESCARGO' | 'PENDIENTE' | 'NO_INICIADO';
+  estado_descargo: 'PRESENTADO' | 'PLAZO_VENCIDO_SIN_DESCARGO' | 'PENDIENTE' | 'NO_INICIADO' | 'EXCLUIDO';
   estado_descargo_display: string;
   descargo?: DescargoVisorDTO | null;
+  esta_excluido?: boolean;
+  motivo_exclusion?: string;
+  excluido_at?: string | null;
 }
 
 export interface TimelineHitoDTO {
@@ -454,6 +472,7 @@ export interface ExpedienteDetalleDTO {
 
 export interface SocioT01DTO {
   id: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
 }
@@ -892,8 +911,8 @@ export class ExpedienteApiService {
       );
   }
 
-  listarPorSocio(legajo: string): Observable<ExpedienteRankingDetalle[]> {
-    const params = new HttpParams().set('legajo', legajo);
+  listarPorSocio(numeroSocio: string): Observable<ExpedienteRankingDetalle[]> {
+    const params = new HttpParams().set('numero_socio', numeroSocio);
     return this.http.get<ExpedienteRankingDetalle[]>(`${this.apiUrl}/por-socio/`, { params });
   }
 
@@ -1121,8 +1140,14 @@ export class ExpedienteApiService {
     return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/emitir/`, {});
   }
 
-  firmarResolucionOficial(expedienteId: number | string): Observable<ResolucionOficialDTO> {
-    return this.http.post<ResolucionOficialDTO>(`${this.apiUrl}/${expedienteId}/resolucion/firmar/`, {});
+  firmarResolucionOficial(
+    expedienteId: number | string,
+    payload?: { es_suplente?: boolean; anio_social?: number }
+  ): Observable<ResolucionOficialDTO> {
+    return this.http.post<ResolucionOficialDTO>(
+      `${this.apiUrl}/${expedienteId}/resolucion/firmar/`,
+      payload || {}
+    );
   }
 
   descargarPreviewResolucionPdf(expedienteId: number | string): Observable<Blob> {
@@ -1184,6 +1209,44 @@ export class ExpedienteApiService {
       params,
       responseType: 'blob'
     });
+  }
+
+  excluirInvolucrado(
+    expedienteId: number,
+    socioId: number,
+    motivo: string
+  ): Observable<{
+    success: boolean;
+    mensaje: string;
+    expediente_id: number;
+    expediente_estado: string;
+    expediente_archivado: boolean;
+    activos_restantes_count: number;
+    socio_id: number;
+    socio_legajo: string;
+    esta_excluido: boolean;
+    motivo_exclusion: string;
+    excluido_at: string | null;
+  }> {
+    return this.http.post<any>(
+      `${this.apiUrl}/${expedienteId}/involucrados/${socioId}/excluir/`,
+      { motivo }
+    );
+  }
+
+  enmendarResolucion(
+    expedienteId: number | string,
+    payload: {
+      motivo_enmienda: string;
+      considerandos?: string;
+      articulos_resolutivos?: string;
+      nuevos_puntajes?: Array<{ socio_id: number; puntaje: number | string }>;
+    }
+  ): Observable<any> {
+    return this.http.post<any>(
+      `${this.apiUrl}/${expedienteId}/enmendar/`,
+      payload
+    );
   }
 }
 

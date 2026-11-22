@@ -626,6 +626,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
           this.convocados = asistencias.map(a => ({
             socio_id: a.socio_id,
             socio_nombre: a.socio_nombre || `Socio #${a.socio_id}`,
+            socio_numero_socio: a.socio_numero_socio,
             socio_legajo: a.socio_legajo || `${a.socio_id}`,
             socio_email: a.socio_email,
             socio_subcomision: a.socio_subcomision,
@@ -658,6 +659,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       {
         socio_id: 101,
         socio_nombre: 'Lucas Gastiaburu',
+        socio_numero_socio: 3001,
         socio_legajo: '74907',
         socio_subcomision: 'Cómputos e Informática',
         estado_asistencia: 'PRESENTE',
@@ -670,6 +672,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       {
         socio_id: 102,
         socio_nombre: 'Lucas Martín Guillén',
+        socio_numero_socio: 3002,
         socio_legajo: '85194',
         socio_subcomision: 'Cómputos e Informática',
         estado_asistencia: 'TARDANZA_LEVE',
@@ -682,6 +685,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       {
         socio_id: 103,
         socio_nombre: 'Nicolás Rosales',
+        socio_numero_socio: 3003,
         socio_legajo: '408917',
         socio_subcomision: 'Cómputos e Informática',
         estado_asistencia: 'AUSENTE_INJUSTIFICADO',
@@ -693,6 +697,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       {
         socio_id: 104,
         socio_nombre: 'Martín Cabrera',
+        socio_numero_socio: 3004,
         socio_legajo: '75012',
         socio_subcomision: 'Finanzas',
         estado_asistencia: 'JUSTIFICADO',
@@ -769,6 +774,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
       result = result.filter(
         c =>
           c.socio_nombre.toLowerCase().includes(q) ||
+          String(c.socio_numero_socio ?? '').includes(q) ||
           c.socio_legajo.toLowerCase().includes(q) ||
           (c.socio_subcomision && c.socio_subcomision.toLowerCase().includes(q))
       );

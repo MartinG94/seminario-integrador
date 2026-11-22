@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from expedientes.models import Resolucion
+from expedientes.models import EnmiendaResolucion, Resolucion
 
 
 class ResolucionSerializer(serializers.ModelSerializer):
@@ -104,3 +104,40 @@ class ResolucionSerializer(serializers.ModelSerializer):
         return build_expedientes_referenciados_detalle(
             getattr(obj, "expedientes_referenciados", None)
         )
+
+
+class EnmiendaResolucionSerializer(serializers.ModelSerializer):
+    resolucion_nueva_detalle = serializers.SerializerMethodField()
+    solicitado_por_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EnmiendaResolucion
+        fields = (
+            "id",
+            "resolucion_anterior",
+            "resolucion_nueva",
+            "resolucion_nueva_detalle",
+            "motivo_enmienda",
+            "solicitado_por",
+            "solicitado_por_nombre",
+            "created_at",
+        )
+        read_only_fields = (
+            "id",
+            "resolucion_anterior",
+            "resolucion_nueva",
+            "resolucion_nueva_detalle",
+            "solicitado_por",
+            "solicitado_por_nombre",
+            "created_at",
+        )
+
+    def get_resolucion_nueva_detalle(self, obj: EnmiendaResolucion) -> dict:
+        return ResolucionSerializer(obj.resolucion_nueva).data
+
+    def get_solicitado_por_nombre(self, obj: EnmiendaResolucion) -> str:
+        u = obj.solicitado_por
+        if not u:
+            return ""
+        name = f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+        return name or getattr(u, "username", str(u))

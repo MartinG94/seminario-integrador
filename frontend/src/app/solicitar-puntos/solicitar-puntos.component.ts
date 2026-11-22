@@ -336,7 +336,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     const idsYaSeleccionados = new Set(this.sociosSeleccionados.map(s => s.socio_id));
     this.sociosFiltrados = this.socios.filter(socio =>
       !idsYaSeleccionados.has(socio.socio_id) &&
-      [socio.legajo, socio.first_name, socio.last_name]
+      [socio.numero_socio?.toString(), socio.legajo, socio.first_name, socio.last_name]
         .some(valor => valor && valor.toLowerCase().includes(texto))
     );
   }
@@ -411,7 +411,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     this.expedienteApi.emitir(solicitud.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: emitida => {
         this.aplicarSolicitud(emitida);
-        this.notifications.success(`Expediente creado: ${emitida.numero_expediente}.`);
+        this.notifications.success(`Exp ${this.formatCaseNumber(emitida.numero_expediente)}.`);
         this.cargando = false;
         this.cdr?.markForCheck();
         this.cargarMisSolicitudes();
@@ -463,6 +463,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     } else if (solicitud.involucrados && solicitud.involucrados.length > 0) {
       this.sociosSeleccionados = solicitud.involucrados.map(inv => ({
         socio_id: inv.socio_id || 0,
+        numero_socio: inv.numero_socio ?? null,
         legajo: inv.legajo || '',
         first_name: inv.first_name || '',
         last_name: inv.last_name || '',
@@ -773,7 +774,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
     if (!this.misSolicitudes || this.misSolicitudes.length === 0) {
       return [];
     }
-    const key = `${this.misSolicitudes.length}|${this.misSolicitudes.map(s => `${s.id}:${s.estado}:${s.titulo}`).join(',')}|${this.columnaOrden}|${this.ordenAscendente}`;
+    const key = `${this.misSolicitudes.length}|${this.misSolicitudes.map(s => `${s.id}:${s.estado}:${s.numero_expediente ?? ''}:${s.numero ?? ''}:${s.titulo}:${s.puntos ?? ''}:${s.urgencia ?? ''}:${s.estado_procesal ?? ''}`).join(',')}|${this.columnaOrden}|${this.ordenAscendente}`;
     if (key === this.cacheSolicitudesOrdenadasKey) {
       return this.cacheSolicitudesOrdenadasVal;
     }
@@ -783,9 +784,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       let valB: any;
       switch (this.columnaOrden) {
         case 'numero':
-          valA = this.formatSolicitudExpediente(a);
-          valB = this.formatSolicitudExpediente(b);
-          break;
+          return this.compararNumerosExpediente(a.numero_expediente, b.numero_expediente);
         case 'titulo':
           valA = a.titulo || a.motivo || '';
           valB = b.titulo || b.motivo || '';
@@ -1065,5 +1064,26 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
       return 'Borrador sin número';
     }
     return this.formatCaseNumber(raw);
+  }
+
+  numeroExpedienteVisible(numero: string | null | undefined): string {
+    return numero ? `Exp ${this.formatCaseNumber(numero)}` : 'Borrador sin número';
+  }
+
+  private compararNumerosExpediente(
+    numeroA: string | null | undefined,
+    numeroB: string | null | undefined
+  ): number {
+    const parse = (numero: string | null | undefined): [number, number] | null => {
+      const match = /^(?:EXP-)?0*(\d+)\/(\d{4})$/i.exec((numero || '').trim());
+      return match ? [Number(match[2]), Number(match[1])] : null;
+    };
+    const a = parse(numeroA);
+    const b = parse(numeroB);
+    if (!a && !b) return 0;
+    if (!a) return this.ordenAscendente ? 1 : -1;
+    if (!b) return this.ordenAscendente ? -1 : 1;
+    const comparison = a[0] - b[0] || a[1] - b[1];
+    return this.ordenAscendente ? comparison : -comparison;
   }
 }

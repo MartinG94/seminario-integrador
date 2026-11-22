@@ -84,6 +84,7 @@ export interface ParticipacionSubcomisionItem {
 
 export interface SocioSubcomisionRow {
   posicion: number;
+  numero_socio?: number | null;
   legajo: string;
   apellido: string;
   nombre: string;
@@ -123,6 +124,8 @@ export interface TopHistoricoItem {
   posicion: number;
   socio_numero: number;
   nombre_completo: string;
+  apellido?: string;
+  nombre?: string;
   subcomision: string;
   puntaje_historico: number;
   record_destacado: boolean;

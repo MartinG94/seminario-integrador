@@ -132,12 +132,12 @@
                   <th role="button"
                       tabindex="0"
                       class="sortable-th"
-                      (click)="alternarOrden('legajo')"
-                      (keydown.enter)="alternarOrden('legajo')"
-                      (keydown.space)="alternarOrden('legajo'); $event.preventDefault()"
+                      (click)="alternarOrden('numero_socio')"
+                      (keydown.enter)="alternarOrden('numero_socio')"
+                      (keydown.space)="alternarOrden('numero_socio'); $event.preventDefault()"
                       title="Ordenar por número de socio"
-                      [attr.aria-sort]="sortKey === 'legajo' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
-                    N° de Socio <i class="material-icons">{{getIconoOrden('legajo')}}</i>
+                      [attr.aria-sort]="sortKey === 'numero_socio' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                    N° de Socio <i class="material-icons">{{getIconoOrden('numero_socio')}}</i>
                   </th>
 
                   <!-- 4. Categoría -->
@@ -204,7 +204,7 @@
                       (keydown)="onRowKeyDown($event, s)"
                       tabindex="0"
                       role="button"
-                      [attr.aria-label]="'Consultar expedientes de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + s.legajo"
+                      [attr.aria-label]="'Consultar expedientes de ' + s.nombre + ' ' + (s.apellido || '') + ', número de socio ' + (s.numero_socio ?? 'S/D')"
                       class="socio-row-clickable"
                       [ngClass]="getRowClass(s)"
                       title="Clic o presione Enter/Espacio para ver expedientes de {{s.nombre}} {{s.apellido}}">
@@ -219,7 +219,7 @@
                     </td>
 
                     <!-- N° de Socio -->
-                    <td class="tabular-nums">{{ s.legajo }}</td>
+                    <td class="tabular-nums">{{ s.numero_socio ?? 'S/D' }}</td>
 
                     <!-- Categoría -->
                     <td>

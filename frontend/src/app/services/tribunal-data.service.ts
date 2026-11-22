@@ -20,6 +20,7 @@ export type NivelUrgencia = 'baja' | 'normal' | 'urgente';
 
 export interface SocioInvolucrado {
   id: number | string;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   grupo?: string;
@@ -32,6 +33,7 @@ export interface BoardCaseDTO {
   socio: number;
   socio_nombre: string;
   socio_legajo: string;
+  socio_numero_socio?: number | null;
   subcomision: string;
   estado: EstadoExpediente;
   estado_display: string;
@@ -93,6 +95,7 @@ export interface Expediente {
   numero: string;
   socio: string;
   legajo: string;
+  numero_socio?: number | null;
   subcomision: string;
   motivo: string;
   titulo?: string;
@@ -169,6 +172,7 @@ export interface Expediente {
   articulosResolutivos?: string;
   firmas?: {
     juecesFirmantes: string[];
+    firmantesDetalle?: any[];
     hashCriptografico?: string;
     timestamp?: string;
     fechaSellado?: string;
@@ -529,10 +533,12 @@ export class TribunalDataService {
       puntaje_solicitado: puntajeSolicitadoFinal,
       puntajeSolicitado: puntajeSolicitadoFinal,
       cantidadSocios: c.cantidad_socios || (c.socios ? c.socios.length : 1),
-      sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
+      sociosInvolucrados: c.socios || (c.socio_legajo ? [{ id: c.socio, numero_socio: c.socio_numero_socio ?? null, legajo: c.socio_legajo, nombre: c.socio_nombre }] : []),
+      numero_socio: c.socio_numero_socio ?? null,
       plazoLimiteAt: c.plazo_limite_at || undefined,
       firmas: {
         juecesFirmantes: firmantesReales,
+        firmantesDetalle: Array.isArray(c.firmantes_td) ? c.firmantes_td : [],
         hashCriptografico: c.contenido_hash || '',
         timestamp: c.issued_at || '',
         fechaSellado: c.issued_at || ''

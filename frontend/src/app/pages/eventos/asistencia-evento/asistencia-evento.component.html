@@ -314,7 +314,7 @@
                         <input 
                           type="text" 
                           class="form-control" 
-                          placeholder="Escriba apellido, nombre o legajo..."
+                          placeholder="Escriba apellido, nombre o número de socio..."
                           [formControl]="filtroSocioControl"
                         />
                         <div class="spinner-border spinner-border-sm text-primary position-absolute" 
@@ -329,7 +329,7 @@
                              class="list-group-item list-group-item-action py-2"
                              *ngFor="let s of sociosEncontrados; trackBy: trackById"
                              (click)="seleccionarSocio(s)">
-                            <strong>{{ s.last_name }}, {{ s.first_name }}</strong> (Legajo: {{ s.legajo }})
+                            <strong>{{ s.last_name }}, {{ s.first_name }}</strong> (N.º de Socio: {{ s.numero_socio ?? '—' }})
                             <span class="badge badge-light ml-2">{{ s.subcomision || 'Sin subcomisión' }}</span>
                           </a>
                         </div>
@@ -338,7 +338,7 @@
                       <!-- Chips de socios seleccionados -->
                       <div class="mt-2" *ngIf="sociosSeleccionados.length > 0">
                         <span class="badge badge-primary mr-2 mb-1 p-2" *ngFor="let sel of sociosSeleccionados; trackBy: trackById">
-                          {{ sel.last_name }}, {{ sel.first_name }} ({{ sel.legajo }})
+                          {{ sel.last_name }}, {{ sel.first_name }} (N.º de Socio: {{ sel.numero_socio ?? '—' }})
                           <i class="material-icons align-middle cursor-pointer ml-1" style="font-size: 14px;" (click)="removerSocio(sel.id)">close</i>
                         </span>
                       </div>
@@ -519,7 +519,7 @@
                         type="text"
                         class="form-control form-control-sm text-dark bg-white mr-2"
                         style="width: 200px;"
-                        placeholder="Filtrar por nombre o legajo..."
+                        placeholder="Filtrar por nombre o número de socio..."
                         [(ngModel)]="filtroTexto"
                       />
                       <select class="form-control form-control-sm text-dark bg-white" style="width: 160px;" [(ngModel)]="filtroEstado">
@@ -547,7 +547,9 @@
                       <table class="table table-hover align-middle">
                         <thead class="text-primary font-weight-bold">
                           <tr>
-                            <th style="width: 25%;">Socio Convocado</th>
+                            <th style="width: 20%;">N.º de Socio</th>
+                            <th style="width: 20%;">Socio Convocado</th>
+                            <th style="width: 15%;">Subcomisión</th>
                             <th style="width: 20%;">Estado de Asistencia</th>
                             <th style="width: 35%;">Motivo / Observación Circunstanciada (Editable)</th>
                             <th style="width: 20%;" class="text-center">Acción / Registro</th>
@@ -555,13 +557,9 @@
                         </thead>
                         <tbody>
                           <tr *ngFor="let socio of convocadosFiltrados; trackBy: trackByConvocado" [class.table-light]="socio.estado_asistencia === 'PRESENTE'">
-                            <td>
-                              <strong>{{ socio.socio_nombre }}</strong>
-                              <div class="small text-muted">
-                                Legajo: <strong>{{ socio.socio_legajo }}</strong>
-                                <span *ngIf="socio.socio_subcomision"> • {{ socio.socio_subcomision }}</span>
-                              </div>
-                            </td>
+                            <td class="tabular-nums"><strong>{{ socio.socio_numero_socio ?? '—' }}</strong></td>
+                            <td><strong>{{ socio.socio_nombre }}</strong></td>
+                            <td>{{ socio.socio_subcomision || '—' }}</td>
 
                             <td>
                               <select

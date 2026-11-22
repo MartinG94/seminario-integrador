@@ -138,13 +138,13 @@ def compose(members: Iterable[Member], *, involved_ids: set[int]) -> Composition
             and not suplente_libre
         ):
             reasons.append(
-                f"El titular y el suplente del {year}.º año están involucrados en la causa "
+                f"El titular y el suplente del {year}.º año están involucrados en el expediente "
                 "(Art. 95 del Estatuto)."
             )
 
     if len(separated) >= AD_HOC_MIN_INVOLVED:
         reasons.append(
-            f"{len(separated)} integrantes del Tribunal están involucrados en la causa "
+            f"{len(separated)} integrantes del Tribunal están involucrados en el expediente "
             "(Art. 95 del Estatuto)."
         )
 
