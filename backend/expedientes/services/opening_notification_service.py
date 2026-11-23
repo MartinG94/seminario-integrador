@@ -15,6 +15,7 @@ from django.conf import settings
 from django.db import models, transaction
 from django.utils import timezone
 
+from core.services.system_parameters import SystemParameterService
 from expedientes.domain.opening_policy import OpeningNotificationTemplate
 from expedientes.models import EstadoExpedienteEnum, Expediente
 from notifications.models import EmailOutbox
@@ -97,7 +98,7 @@ class OpeningNotificationService:
             now = timezone.now()
             expediente.iniciar_plazo_descargo(
                 fecha_hora_inicio=now,
-                dias_habiles=5,
+                dias_habiles=SystemParameterService.descargo_business_days(),
                 actor=actor,
             )
 
@@ -116,6 +117,7 @@ class OpeningNotificationService:
                 frontend_url=base_url,
                 expediente_id=expediente.id,
                 socio_id=expediente.socio_id,
+                dias_habiles=SystemParameterService.descargo_business_days(),
             )
 
             # Encolar en Outbox

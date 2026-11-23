@@ -833,3 +833,17 @@ html.modal-open-scroll-lock,
 .modal-reglamentos-body {
   overscroll-behavior: contain;
 }
+
+// ==========================================
+// 9. Paneles de diálogo tokenizados (MatDialog)
+// ==========================================
+// `panelClass: 'aveit-dialog-panel'`: fondo y texto siguen el tema activo, de modo que
+// el contenido del diálogo nunca quede claro sobre claro u oscuro sobre oscuro.
+.aveit-dialog-panel .mat-dialog-container {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aveit-dialog-panel .mat-dialog-container { transition: none; animation: none; }
+}

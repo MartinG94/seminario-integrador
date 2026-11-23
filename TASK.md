@@ -506,7 +506,20 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS5-02.4 Revisión PR #79 [TDD]:** Integración con `main` (migración de merge `0031`), libro mayor con exclusión fundada, puntaje ratificado y `numero_socio`, motor 3:1 único sin doble conteo, enmiendas por contra-asiento en el mismo libro mayor, aislamiento del imputado sin depender de `?origen=`, publicación y PDF completos con encabezados seguros, censura de salud por palabra y modal accesible con tokens de modo oscuro.
 ---
 
-## 21. Instrucciones para la Actualización de este Archivo
+## 21. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
+
+> **Spec de Referencia:** [`specs/012-panel-administracion/spec.md`](specs/012-panel-administracion/spec.md)
+> **Plan Técnico:** [`specs/012-panel-administracion/plan.md`](specs/012-panel-administracion/plan.md)
+> **Tareas:** [`specs/012-panel-administracion/tasks.md`](specs/012-panel-administracion/tasks.md)
+
+- [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `ParametroSistema` de solo inserción, `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, alertas, correos y comprobantes.
+- [x] **TS5-03.2 Pantalla de administración exclusiva para ADMIN [TDD]:** Ruta `/admin/parametros` con `TribunalGuard`, entrada "Administración" en el menú y tarjetas temáticas Plazos, Umbrales, Correos y Adjuntos.
+- [x] **TS5-03.3 Miembros con rol TD [TDD]:** Tabla atómica, alta con búsqueda reactiva, revocación a Socio Ordinario y auditoría inmutable `TribunalRoleChange` vía `GET/POST/DELETE /api/v1/admin/usuarios-td/`.
+- [x] **TS5-03.4 Revisión PR #78 [TDD]:** Integración con `main`, migración `core` sin colisión, umbrales y plazos vigentes en Ranking, Mis Expedientes y textos, tope de comprobantes configurable, `N° de Socio` real, búsqueda de candidatos en servidor, corrección del autocompletado, modo oscuro tokenizado y `strict: true`.
+
+---
+
+## 22. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

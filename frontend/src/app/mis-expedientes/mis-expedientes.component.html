@@ -539,7 +539,7 @@
                     mat-button 
                     class="btn btn-danger"
                     disabled
-                    title="El plazo de 5 días hábiles ha expirado">
+                    title="El plazo para presentar el descargo ha expirado">
               <i class="material-icons" style="font-size: 16px;">timer_off</i> Plazo Expirado
             </button>
           </ng-container>
@@ -652,16 +652,17 @@
 </div>
 
 <!-- Modal de Justificativo -->
-<div *ngIf="modalAbierto" class="modal-backdrop-custom" style="z-index: 1060;" (click)="cerrarModal()" (wheel)="$event.stopPropagation()">
+<div *ngIf="modalAbierto" class="modal-backdrop-custom" style="z-index: 1060;" (click)="cerrarModal()" (wheel)="$event.stopPropagation()"
+     role="dialog" aria-modal="true" aria-labelledby="modal-descargo-titulo" (keydown.escape)="cerrarModal()">
   <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
     <div class="card">
       <div class="card-header card-header-primary d-flex justify-content-between align-items-center">
         <div>
-          <h4 class="card-title">{{esEdicion ? 'Editar Justificativo' : 'Añadir Justificativo'}}</h4>
+          <h4 class="card-title" id="modal-descargo-titulo">{{esEdicion ? 'Editar Justificativo' : 'Añadir Justificativo'}}</h4>
           <p class="card-category">Expediente: {{formatCaseNumber(expedienteSeleccionado?.numero)}} &bull; Socio: {{socioActual}}</p>
         </div>
-        <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarModal()" title="Cerrar ventana">
-          <i class="material-icons">close</i>
+        <button type="button" mat-icon-button class="btn btn-link text-white p-0 m-0 btn-cerrar-modal" (click)="cerrarModal()" title="Cerrar ventana" aria-label="Cerrar ventana">
+          <i class="material-icons" aria-hidden="true">close</i>
         </button>
       </div>
       <div class="card-body">
@@ -669,7 +670,7 @@
         <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center">
           <i class="material-icons mr-2 text-info" style="font-size: 20px;">info</i>
           <span class="small font-weight-bold">
-            Dispone de un plazo de 5 días hábiles desde la notificación para presentar su justificación.
+            Dispone de un plazo de {{ plazoDescargoDias }} días hábiles desde la notificación para presentar su justificación.
           </span>
         </div>
 
@@ -722,8 +723,10 @@
           
           <!-- Selector visible únicamente si no se alcanzó el cupo máximo -->
           <div *ngIf="puedeSubirMas" class="file-upload-wrapper mt-1">
-            <input #fileInput type="file" multiple class="d-none" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png">
-            <div class="dropzone-container"
+            <!-- El input queda en el árbol de accesibilidad (oculto sólo visualmente); la zona de arrastre es un atajo para mouse. -->
+            <input #fileInput id="descargo-archivos" type="file" multiple class="sr-only file-input-accesible" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png"
+                   aria-label="Adjuntar comprobantes" aria-describedby="descargo-archivos-ayuda">
+            <div class="dropzone-container" aria-hidden="true"
                  [class.dragging]="isDragging"
                  (dragover)="onDragOver($event)"
                  (dragleave)="onDragLeave($event)"
@@ -731,7 +734,7 @@
                  (click)="fileInput.click()">
               <i class="material-icons dropzone-icon">cloud_upload</i>
               <div class="dropzone-text">Arrastrá y soltá tus comprobantes acá o hacé clic para explorar</div>
-              <div class="dropzone-hint">Formatos admitidos: PDF, JPG, PNG (hasta 5 MB por archivo, máximo {{limiteActual}} documentos).</div>
+              <div class="dropzone-hint" id="descargo-archivos-ayuda">Formatos admitidos: PDF, JPG, PNG (hasta {{MAX_MB}} MB por archivo, máximo {{limiteActual}} documentos).</div>
             </div>
           </div>
 
@@ -756,8 +759,9 @@
                   <span class="small font-weight-bold text-dark">{{ev.nombre_original || ev.name}}</span>
                   <span class="badge badge-light text-muted ml-2">{{formatFileSize(ev.tamano_bytes || ev.size)}}</span>
                 </div>
-                <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerEvidenciaExistente(i)" title="Eliminar documento">
-                  <i class="material-icons" style="font-size: 18px;">delete</i>
+                <button type="button" class="btn btn-sm btn-link text-danger btn-quitar-adjunto" (click)="removerEvidenciaExistente(i)" title="Eliminar documento"
+                        [attr.aria-label]="'Eliminar documento ' + (ev.nombre_original || ev.name)">
+                  <i class="material-icons" style="font-size: 18px;" aria-hidden="true">delete</i>
                 </button>
               </li>
             </ul>
@@ -776,8 +780,9 @@
                   <span class="small font-weight-bold text-dark">{{file.name}}</span>
                   <span class="badge badge-light text-muted ml-2">{{formatFileSize(file.size)}}</span>
                 </div>
-                <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="removerArchivo(i)" title="Quitar archivo">
-                  <i class="material-icons" style="font-size: 18px;">delete</i>
+                <button type="button" class="btn btn-sm btn-link text-danger btn-quitar-adjunto" (click)="removerArchivo(i)" title="Quitar archivo"
+                        [attr.aria-label]="'Quitar archivo ' + file.name">
+                  <i class="material-icons" style="font-size: 18px;" aria-hidden="true">delete</i>
                 </button>
               </li>
             </ul>
@@ -800,24 +805,26 @@
 </div>
 
 <!-- Ventana Propia de Confirmación para Eliminación -->
-<div *ngIf="modalConfirmacionAbierto" class="modal-backdrop-custom modal-confirmacion-backdrop" style="z-index: 1070;" (click)="cerrarConfirmacion()">
+<div *ngIf="modalConfirmacionAbierto" class="modal-backdrop-custom modal-confirmacion-backdrop" style="z-index: 1070;" (click)="cerrarConfirmacion()"
+     role="alertdialog" aria-modal="true" aria-labelledby="modal-confirmacion-titulo" aria-describedby="modal-confirmacion-mensaje"
+     (keydown.escape)="cerrarConfirmacion(); $event.stopPropagation()">
   <div class="modal-dialog-custom modal-confirmacion-dialog" style="max-width: 480px;" (click)="$event.stopPropagation()">
     <div class="card border-0 shadow-lg">
       <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-3 px-4">
-        <h5 class="card-title text-white font-weight-bold mb-0 d-flex align-items-center">
-          <i class="material-icons mr-2">warning</i> {{modalConfirmacionTitulo}}
+        <h5 class="card-title text-white font-weight-bold mb-0 d-flex align-items-center" id="modal-confirmacion-titulo">
+          <i class="material-icons mr-2" aria-hidden="true">warning</i> {{modalConfirmacionTitulo}}
         </h5>
-        <button mat-icon-button class="btn btn-link text-white p-0 m-0" (click)="cerrarConfirmacion()" title="Cancelar">
-          <i class="material-icons">close</i>
+        <button type="button" mat-icon-button class="btn btn-link text-white p-0 m-0 btn-cerrar-modal" (click)="cerrarConfirmacion()" title="Cancelar" aria-label="Cancelar">
+          <i class="material-icons" aria-hidden="true">close</i>
         </button>
       </div>
       <div class="card-body py-4 px-4">
-        <p class="text-dark font-weight-normal mb-0" style="font-size: 15px; line-height: 1.5;">
+        <p class="text-dark font-weight-normal mb-0" id="modal-confirmacion-mensaje" style="font-size: 15px; line-height: 1.5;">
           {{modalConfirmacionMensaje}}
         </p>
       </div>
       <div class="card-footer d-flex justify-content-end gap-2 bg-light py-3 px-4">
-        <button mat-button class="btn btn-default mr-2" (click)="cerrarConfirmacion()">
+        <button type="button" mat-button class="btn btn-default mr-2" (click)="cerrarConfirmacion()" cdkFocusInitial>
           Cancelar
         </button>
         <button mat-raised-button color="warn" class="btn btn-danger" (click)="confirmarAccion()">

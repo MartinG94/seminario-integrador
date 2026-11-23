@@ -1215,9 +1215,12 @@ class PresentarDescargoSerializer(serializers.Serializer):
     def validate(self, attrs: dict) -> dict:
         tipo = attrs.get("tipo")
         evidencia_ids = attrs.get("evidencia_ids", [])
-        if len(evidencia_ids) > 5:
+        from core.services.system_parameters import SystemParameterService
+
+        cantidad_maxima = SystemParameterService.attachment_limits().cantidad_maxima
+        if len(evidencia_ids) > cantidad_maxima:
             raise serializers.ValidationError(
-                {"evidencia_ids": "Se admite un máximo de 5 comprobantes."}
+                {"evidencia_ids": f"Se admite un máximo de {cantidad_maxima} comprobantes."}
             )
 
         if tipo == TipoDescargoEnum.T02_CERTIFICADO:

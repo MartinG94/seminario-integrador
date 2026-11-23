@@ -2992,7 +2992,7 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
         autor_legajo: '11239',
         autor_rol: 'TD',
         created_at: '2026-03-06'
-      }));
+      } as any));
 
       const expTest: Expediente = {
         id: '200',
@@ -3043,7 +3043,7 @@ it('mostrarConsiderandosEnDetalle devuelve true en pendiente_firma, pendiente_co
           puntaje_final: 0
         })
       );
-      expect(fila.descargo.leido).toBeTrue();
+      expect(fila.descargo!.leido).toBeTrue();
       expect(component.modalDescargoAbierto).toBeFalse();
     });
   });

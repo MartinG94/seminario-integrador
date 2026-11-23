@@ -1043,7 +1043,7 @@ export class SolicitarPuntosComponent implements OnInit, OnDestroy {
   }
 
   private mostrarError(error: { status?: number; error?: unknown }): void {
-    const fallback = error?.status === 0 || error?.status >= 500
+    const fallback = error?.status === 0 || (error?.status ?? 0) >= 500
       ? 'El servicio no está disponible en este momento. Intentá nuevamente más tarde.'
       : 'No se pudo completar la operación.';
     this.notifications.error(httpErrorMessage(error, fallback));

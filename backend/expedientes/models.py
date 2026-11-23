@@ -383,7 +383,8 @@ class Expediente(models.Model):
         actor: str = "SISTEMA",
     ) -> datetime:
         """
-        Calcula y congela el plazo de 5 días hábiles a partir de fecha_hora_inicio.
+        Calcula y congela el plazo de descargo (días hábiles vigentes)
+        a partir de fecha_hora_inicio.
         Usa el calendario único y conserva la fecha/hora límite persistida (CA3).
         Transiciona al estado JUSTIFICANDO registrando trazabilidad y auditoría.
         """

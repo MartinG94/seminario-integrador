@@ -535,3 +535,25 @@
     overflow-y: auto;
   }
 }
+
+// Accesibilidad de los modales de descargo (revisión PR #78).
+.modal-backdrop-custom {
+  overscroll-behavior: contain;
+}
+
+// El input de archivos queda oculto sólo visualmente: su foco se refleja en la zona de arrastre.
+.file-input-accesible:focus-visible + .dropzone-container {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+// Objetivos táctiles de al menos 44×44 px para quitar adjuntos.
+.btn-quitar-adjunto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  margin: 0;
+}

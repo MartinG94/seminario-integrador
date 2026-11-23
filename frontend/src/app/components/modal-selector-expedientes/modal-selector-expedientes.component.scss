@@ -15,7 +15,8 @@
   width: 100%;
   max-width: 820px;
   max-height: 88vh;
-  background-color: #FFFFFF;
+  background-color: var(--color-surface-card);
+  color: var(--color-text-primary);
   border-radius: 12px;
   border: 1px solid var(--color-border-main, #e2e8f0);
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.28);
@@ -29,7 +30,7 @@
 }
 
 .modal-reglamentos-header {
-  background: linear-gradient(135deg, var(--color-primary, #151846) 0%, #1E293B 100%);
+  background: linear-gradient(135deg, var(--grad-primary-start, #151846) 0%, var(--grad-primary-end, #242A68) 100%);
   padding: 16px 22px;
   color: #FFFFFF;
 
@@ -54,7 +55,7 @@
 
 .modal-reglamentos-toolbar {
   padding: 14px 22px;
-  background-color: #F8FAFC;
+  background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border-main, #e2e8f0);
 }
 
@@ -65,9 +66,9 @@
 }
 
 .doc-tab-btn {
-  border: 1px solid #CBD5E1;
-  background-color: #FFFFFF;
-  color: #475569;
+  border: 1px solid var(--color-border-main);
+  background-color: var(--color-surface-card);
+  color: var(--color-text-secondary);
   font-size: 0.83rem;
   font-weight: 600;
   padding: 6px 14px;
@@ -90,15 +91,15 @@
   &.active {
     background-color: var(--color-primary, #151846);
     border-color: var(--color-primary, #151846);
-    color: #FFFFFF;
+    color: var(--color-on-primary);
 
     i.material-icons {
-      color: #FFFFFF !important;
+      color: var(--color-on-primary) !important;
     }
 
     .doc-tab-badge {
-      background-color: rgba(255, 255, 255, 0.22);
-      color: #FFFFFF;
+      background-color: var(--color-surface-card);
+      color: var(--color-primary, #151846);
     }
   }
 
@@ -107,7 +108,7 @@
     border-radius: 999px;
     font-size: 0.74rem;
     font-weight: 700;
-    background-color: #E2E8F0;
+    background-color: var(--color-surface);
     color: var(--color-primary, #151846);
   }
 }
@@ -120,16 +121,17 @@
   .search-icon {
     position: absolute;
     left: 12px;
-    color: #94A3B8;
+    color: var(--color-text-secondary);
     font-size: 20px;
     pointer-events: none;
   }
 
   .search-input-modal {
     padding: 9px 36px 9px 38px !important;
-    border: 1px solid #CBD5E1 !important;
+    border: 1px solid var(--color-border-main) !important;
     border-radius: 8px !important;
-    background-color: #FFFFFF !important;
+    background-color: var(--color-surface-card) !important;
+    color: var(--color-text-primary) !important;
     background-image: none !important;
     font-size: 0.88rem;
     height: 40px !important;
@@ -145,7 +147,7 @@
     right: 8px;
     background: none;
     border: none;
-    color: #94A3B8;
+    color: var(--color-text-secondary);
     cursor: pointer;
     display: inline-flex;
     padding: 4px;
@@ -176,18 +178,18 @@
   padding: 12px 14px;
   border: 1px solid var(--color-border-main, #e2e8f0);
   border-radius: 10px;
-  background-color: #FFFFFF;
+  background-color: var(--color-surface-card);
   cursor: pointer;
   transition: all 0.18s ease;
 
   &:hover {
     border-color: var(--color-accent, #6e9ddc);
-    background-color: #F8FAFC;
+    background-color: var(--color-surface-elevated);
   }
 
   &.selected {
     border-color: var(--color-primary, #151846);
-    background-color: #F0F5FF;
+    background-color: var(--color-surface-elevated);
     box-shadow: 0 0 0 1px var(--color-primary, #151846);
   }
 
@@ -199,17 +201,17 @@
   .custom-checkbox {
     width: 20px;
     height: 20px;
-    border: 2px solid #94A3B8;
+    border: 2px solid var(--color-text-secondary);
     border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #FFFFFF;
+    background-color: var(--color-surface-card);
     transition: all 0.15s ease;
 
     i.material-icons {
       font-size: 15px;
-      color: #FFFFFF;
+      color: var(--color-on-primary);
       font-weight: 700;
     }
 
@@ -231,8 +233,8 @@
     letter-spacing: 0.04em;
     padding: 2px 8px;
     border-radius: 5px;
-    background-color: #E2E8F0;
-    color: #475569;
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
 
     &.doc-pill-sancion {
       background-color: rgba(185, 28, 28, 0.12);
@@ -255,26 +257,27 @@
     font-weight: 700;
     padding: 1px 6px;
     border-radius: 4px;
-    background-color: #E2E8F0;
-    color: #1E293B;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
   }
 
   .catalogo-titulo-expediente {
     font-size: 0.88rem;
     font-weight: 600;
     line-height: 1.35;
+    color: var(--color-text-primary) !important;
   }
 
   .catalogo-cuerpo {
     font-size: 0.83rem;
     line-height: 1.4;
-    color: #475569;
+    color: var(--color-text-secondary) !important;
   }
 }
 
 .modal-reglamentos-footer {
   padding: 12px 22px;
-  background-color: #F8FAFC;
+  background-color: var(--color-surface);
   border-top: 1px solid var(--color-border-main, #e2e8f0);
 }
 

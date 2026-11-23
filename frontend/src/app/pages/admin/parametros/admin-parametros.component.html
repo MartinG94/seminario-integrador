@@ -1,0 +1,244 @@
+<div class="main-content admin-page">
+  <div class="container-fluid">
+    <h2 class="admin-title">Administración</h2>
+
+    <section class="admin-section" aria-labelledby="parametros-title" [attr.aria-busy]="cargandoParametros">
+      <h3 id="parametros-title" class="admin-section-title">Parámetros del sistema</h3>
+
+      <div *ngIf="cargandoParametros || errorParametros" class="admin-state">
+        <p *ngIf="cargandoParametros" role="status">Cargando parámetros…</p>
+        <button *ngIf="errorParametros && !cargandoParametros" type="button" mat-raised-button
+          class="btn btn-primary" (click)="cargarParametros()">
+          <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
+        </button>
+      </div>
+
+      <div *ngIf="!cargandoParametros && !errorParametros" class="admin-cards">
+        <article *ngFor="let tarjeta of tarjetas" class="card admin-card"
+          [attr.aria-labelledby]="'card-' + tarjeta.categoria">
+          <header class="admin-card-header">
+            <span class="material-icons" aria-hidden="true">{{ tarjeta.icono }}</span>
+            <h4 [id]="'card-' + tarjeta.categoria">{{ tarjeta.titulo }}</h4>
+          </header>
+          <div class="admin-card-body">
+            <div *ngFor="let p of parametrosDe(tarjeta.categoria)" class="param" [attr.data-clave]="p.clave">
+              <label class="param-label" [for]="'param-' + p.clave">{{ p.etiqueta }}</label>
+              <p class="param-help" [id]="'help-' + p.clave">{{ p.descripcion }}</p>
+
+              <div class="param-row">
+                <ng-container [ngSwitch]="p.editable ? p.tipo : 'READONLY'">
+                  <span *ngSwitchCase="'READONLY'" class="param-readonly" [id]="'param-' + p.clave">
+                    {{ formatearValor(p, p.valor) }} {{ p.unidad }}
+                    <small>Valor reglamentario, no editable.</small>
+                  </span>
+                  <label *ngSwitchCase="'BOOLEAN'" class="param-switch">
+                    <input type="checkbox" [id]="'param-' + p.clave" [(ngModel)]="borradores[p.clave]"
+                      (ngModelChange)="alEditar(p)" [disabled]="guardando[p.clave]"
+                      [attr.aria-describedby]="'help-' + p.clave">
+                    {{ borradores[p.clave] ? 'Activa' : 'Inactiva' }}
+                  </label>
+                  <input *ngSwitchCase="'EMAIL'" type="email" class="form-control param-input param-input--email"
+                    [id]="'param-' + p.clave" maxlength="150" [(ngModel)]="borradores[p.clave]"
+                    (ngModelChange)="alEditar(p)" [disabled]="guardando[p.clave]"
+                    autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+                    [attr.aria-invalid]="errores[p.clave] ? 'true' : 'false'"
+                    [attr.aria-describedby]="'help-' + p.clave + (errores[p.clave] ? ' error-' + p.clave : '')">
+                  <ng-container *ngSwitchDefault>
+                    <input type="number" class="form-control param-input" [id]="'param-' + p.clave"
+                      inputmode="decimal" [attr.min]="p.minimo" [attr.max]="p.maximo"
+                      [step]="p.tipo === 'DECIMAL' ? 0.01 : 1"
+                      [(ngModel)]="borradores[p.clave]" (ngModelChange)="alEditar(p)" [disabled]="guardando[p.clave]"
+                      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+                      [attr.aria-invalid]="errores[p.clave] ? 'true' : 'false'"
+                      [attr.aria-describedby]="'help-' + p.clave + ' rango-' + p.clave + (errores[p.clave] ? ' error-' + p.clave : '')">
+                    <span class="param-unit">{{ p.unidad }}</span>
+                  </ng-container>
+                </ng-container>
+
+                <ng-container *ngIf="p.editable">
+                  <button type="button" mat-raised-button class="btn btn-primary btn-guardar"
+                    [disabled]="!tieneCambios(p) || guardando[p.clave]" (click)="guardar(p)">
+                    {{ guardando[p.clave] ? 'Guardando…' : 'Guardar' }}
+                  </button>
+                  <button *ngIf="tieneCambios(p) && !guardando[p.clave]" type="button" class="btn-link"
+                    (click)="descartar(p)">Descartar</button>
+                </ng-container>
+              </div>
+
+              <p *ngIf="errores[p.clave]" class="param-error" [id]="'error-' + p.clave">{{ errores[p.clave] }}</p>
+
+              <p class="param-meta">
+                <span *ngIf="p.minimo !== null && p.editable" [id]="'rango-' + p.clave">
+                  Entre {{ formatearNumero(p.minimo) }} y {{ formatearNumero(p.maximo) }}.
+                </span>
+                <ng-container *ngIf="p.actualizado_por; else sinCambios">
+                  Último cambio: {{ p.actualizado_por }}, {{ p.actualizado_at | date:'dd/MM/yyyy HH:mm':huso }}.
+                </ng-container>
+                <ng-template #sinCambios>
+                  <span *ngIf="p.editable">Valor inicial.</span>
+                </ng-template>
+                <button *ngIf="p.editable" type="button" class="btn-link" (click)="verHistorial(p)"
+                  [disabled]="cargandoHistorial" aria-haspopup="dialog">
+                  Ver historial
+                </button>
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="admin-section card admin-card" aria-labelledby="miembros-title" [attr.aria-busy]="cargandoMiembros">
+      <header class="admin-card-header admin-card-header--actions">
+        <span class="material-icons" aria-hidden="true">gavel</span>
+        <h3 id="miembros-title">Miembros del Tribunal de Disciplina</h3>
+        <button type="button" mat-raised-button class="btn btn-alta" (click)="abrirAlta()"
+          aria-haspopup="dialog">
+          <span class="material-icons" aria-hidden="true">person_add</span> Agregar miembro
+        </button>
+      </header>
+      <div class="admin-card-body">
+        <div *ngIf="cargandoMiembros || errorMiembros || miembros.length === 0" class="admin-state">
+          <p *ngIf="cargandoMiembros" role="status">Cargando miembros…</p>
+          <button *ngIf="errorMiembros && !cargandoMiembros" type="button" mat-raised-button
+            class="btn btn-primary" (click)="cargarMiembros()">
+            <span class="material-icons" aria-hidden="true">refresh</span> Reintentar
+          </button>
+          <p *ngIf="!cargandoMiembros && !errorMiembros">No hay socios con rol TD.</p>
+        </div>
+
+        <div *ngIf="!cargandoMiembros && !errorMiembros && miembros.length" class="table-responsive"
+          tabindex="0" role="region" aria-labelledby="miembros-title">
+          <table class="table table-hover miembros-table">
+            <caption class="sr-only">Socios con rol TD y acción para revocarlo</caption>
+            <thead>
+              <tr>
+                <th scope="col">N° de Socio</th>
+                <th scope="col">Apellido</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Año social</th>
+                <th scope="col">Email</th>
+                <th scope="col" class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of miembros; trackBy: trackMiembro">
+                <td class="tabular-nums">{{ numeroSocio(m) }}</td>
+                <td>{{ m.last_name }}</td>
+                <td>{{ m.first_name }}</td>
+                <td>{{ m.social_year }}.º</td>
+                <td>{{ m.email }}</td>
+                <td class="text-right">
+                  <button type="button" class="btn-revocar" (click)="pedirRevocacion(m)" aria-haspopup="dialog"
+                    [attr.aria-label]="'Revocar rol TD a ' + m.first_name + ' ' + m.last_name">
+                    <span class="material-icons" aria-hidden="true">person_remove</span> Revocar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #historialTemplate>
+  <div class="admin-page admin-dialog">
+    <div class="dialog-heading">
+      <h2 mat-dialog-title id="historial-title">Historial · {{ parametroHistorial?.etiqueta }}</h2>
+      <button type="button" class="dialog-close" (click)="cerrarHistorial()" aria-label="Cerrar historial">
+        <span class="material-icons" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <mat-dialog-content>
+      <p *ngIf="!historial.length">Este parámetro todavía no fue modificado.</p>
+      <div *ngIf="historial.length" class="table-responsive" tabindex="0" role="region"
+        aria-labelledby="historial-title">
+        <table class="table">
+          <caption class="sr-only">Cambios registrados, del más reciente al más antiguo</caption>
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Valor anterior</th>
+              <th scope="col">Valor nuevo</th>
+              <th scope="col">Autor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of historial">
+              <td class="tabular-nums">{{ c.created_at | date:'dd/MM/yyyy HH:mm':huso }}</td>
+              <td>{{ parametroHistorial ? formatearValor(parametroHistorial, c.valor_anterior) : c.valor_anterior }}</td>
+              <td>{{ parametroHistorial ? formatearValor(parametroHistorial, c.valor) : c.valor }}</td>
+              <td>{{ c.autor || 'Sistema' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-dialog-content>
+  </div>
+</ng-template>
+
+<ng-template #altaTemplate>
+  <div class="admin-page admin-dialog">
+    <div class="dialog-heading">
+      <h2 mat-dialog-title id="alta-title">Agregar miembro del Tribunal</h2>
+      <button type="button" class="dialog-close" (click)="cerrarAlta()" aria-label="Cerrar">
+        <span class="material-icons" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <mat-dialog-content>
+      <label for="alta-busqueda" class="param-label">Socio</label>
+      <p class="param-help" id="alta-ayuda">
+        Escribí al menos {{ minCaracteres }} caracteres del nombre, apellido o N° de socio. Sólo pueden
+        designarse Socios Ordinarios con cuenta habilitada.
+      </p>
+      <input id="alta-busqueda" type="text" class="form-control"
+        autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+        placeholder="Nombre, apellido o N° de socio" aria-describedby="alta-ayuda alta-estado"
+        [(ngModel)]="busqueda" (ngModelChange)="buscar($event)" [matAutocomplete]="sociosAuto">
+      <mat-autocomplete #sociosAuto="matAutocomplete" [displayWith]="mostrarSocio"
+        (optionSelected)="seleccionar($event.option.value)">
+        <mat-option *ngFor="let s of candidatos; trackBy: trackCandidato" [value]="s">
+          {{ numeroSocio(s) }} · {{ s.last_name }}, {{ s.first_name }}
+        </mat-option>
+      </mat-autocomplete>
+      <p class="param-meta" id="alta-estado" role="status" aria-live="polite">
+        <span *ngIf="buscandoCandidatos">Buscando socios…</span>
+        <span *ngIf="sinCoincidencias">Sin coincidencias para «{{ terminoConsultado }}».</span>
+        <span *ngIf="socioSeleccionado">Seleccionado: {{ mostrarSocio(socioSeleccionado) }}.</span>
+      </p>
+    </mat-dialog-content>
+    <div class="dialog-actions">
+      <button type="button" class="btn-link" (click)="cerrarAlta()">Cancelar</button>
+      <button type="button" mat-raised-button class="btn btn-primary btn-confirmar-alta"
+        [disabled]="!socioSeleccionado || procesandoMiembro" (click)="confirmarAlta()">
+        {{ procesandoMiembro ? 'Guardando…' : 'Designar' }}
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #revocarTemplate>
+  <div class="admin-page admin-dialog">
+    <div class="dialog-heading">
+      <h2 mat-dialog-title id="revocar-title">Revocar rol TD</h2>
+      <button type="button" class="dialog-close" (click)="cerrarRevocacion()" aria-label="Cerrar">
+        <span class="material-icons" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <mat-dialog-content>
+      <p *ngIf="miembroARevocar">
+        {{ miembroARevocar.first_name }} {{ miembroARevocar.last_name }} (N° de Socio {{ numeroSocio(miembroARevocar) }})
+        dejará de integrar el Tribunal y volverá a ser Socio Ordinario.
+      </p>
+    </mat-dialog-content>
+    <div class="dialog-actions">
+      <button type="button" class="btn-link btn-cancelar-revocar" (click)="cerrarRevocacion()">Cancelar</button>
+      <button type="button" mat-raised-button class="btn btn-danger btn-confirmar-revocar"
+        [disabled]="procesandoMiembro" (click)="confirmarRevocacion()">
+        {{ procesandoMiembro ? 'Revocando…' : 'Revocar' }}
+      </button>
+    </div>
+  </div>
+</ng-template>

@@ -29,6 +29,7 @@ export const ROUTES: RouteInfo[] = [
     { path: '/calendario-institucional', title: 'Calendario Institucional', icon: 'calendar_month', class: '' },
     { path: '/reportes',               title: 'Reportes & Balance',    icon: 'analytics',       class: '', roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] },
     { path: '/eventos-asistencia',     title: 'Eventos & Asistencia',  icon: 'event_available', class: '', roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] },
+    { path: '/admin/parametros',       title: 'Administración',        icon: 'admin_panel_settings', class: '', roles: ['ADMIN'] },
 ];
 
 /**

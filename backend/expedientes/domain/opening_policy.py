@@ -83,6 +83,7 @@ class OpeningNotificationTemplate:
         frontend_url: str,
         expediente_id: int,
         socio_id: int,
+        dias_habiles: int = 5,
     ) -> NotificationPayload:
         """Construye la notificación de apertura verificando ausencia de datos sensibles."""
         # 1. Validación de privacidad (CA2 y Principio 6)
@@ -100,8 +101,8 @@ class OpeningNotificationTemplate:
             f"formalmente la apertura del expediente disciplinario N° {expediente_numero}.\n\n"
             f"• Expediente: Actuación disciplinaria en trámite\n"
             f"• Fecha y hora de despacho: {fecha_inicio_str}\n"
-            f"• Plazo de defensa: Dispone de un término fatal e improrrogable de cinco (5) días "
-            f"hábiles administrativos para presentar sus descargos "
+            f"• Plazo de defensa: Dispone de un término fatal e improrrogable de {dias_habiles} "
+            f"días hábiles administrativos para presentar sus descargos "
             f"(Art. 12 Inc. 2 del Reglamento Procesal 2026).\n"
             f"• Vencimiento del plazo: {fecha_limite_str}\n\n"
             f"Por razones de confidencialidad estatutaria y protección de datos personales, "
@@ -133,7 +134,7 @@ class OpeningNotificationTemplate:
             f'            <p style="margin: 4px 0;"><strong>Fecha de Despacho:</strong> '
             f"{fecha_inicio_str}</p>\n"
             '            <p style="margin: 4px 0;"><strong>Plazo de Descargo:</strong> '
-            "5 días hábiles administrativos</p>\n"
+            f"{dias_habiles} días hábiles administrativos</p>\n"
             '            <p style="margin: 4px 0; color: #b71c1c;">'
             f"<strong>Vencimiento Fatal:</strong> {fecha_limite_str}</p>\n"
             "        </div>\n"

@@ -18,6 +18,7 @@ AUTH_SUCCESS: Final = "AUTH_SUCCESS"
 AUTH_FAILURE: Final = "AUTH_FAILURE"
 ACCESS_GRANTED: Final = "ACCESS_GRANTED"
 ACCESS_DENIED: Final = "ACCESS_DENIED"
+ROLE_CHANGED: Final = "ROLE_CHANGED"
 
 # Un identificador de login demasiado largo suele ser un error de tipeo del
 # usuario (por ejemplo, pegar la contraseña en el campo de usuario). Se recorta
@@ -73,4 +74,16 @@ def log_access_denied(*, identifier: str, role: str, resource: str) -> None:
         _safe_identifier(identifier),
         role or "-",
         resource,
+    )
+
+
+def log_role_change(*, identifier: str, target: str, previous_role: str, new_role: str) -> None:
+    """Alta o baja de un rol RBAC: quién la hizo, sobre qué socio y con qué resultado."""
+    logger.info(
+        "event=%s user=%s target=%s previous_role=%s new_role=%s",
+        ROLE_CHANGED,
+        _safe_identifier(identifier),
+        _safe_identifier(target),
+        previous_role or "-",
+        new_role or "-",
     )

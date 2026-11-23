@@ -232,7 +232,7 @@ EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "sistema@example.org")
 CD_EMAIL = os.getenv("CD_EMAIL", "cd@example.org")
 # Destinatario de los avisos de Tribunal Ad-Hoc / convocatoria a Asamblea (Art. 95, S4-04).
-COMISION_DIRECTIVA_EMAIL = os.getenv("COMISION_DIRECTIVA_EMAIL", "cd@aveit.org")
+COMISION_DIRECTIVA_EMAIL = os.getenv("COMISION_DIRECTIVA_EMAIL", CD_EMAIL)
 # Casilla del Tribunal que recibe la constancia de cada apelación de T01 (PB-02).
 TRIBUNAL_EMAIL = os.getenv("TRIBUNAL_EMAIL", "tribunal@example.org")
 

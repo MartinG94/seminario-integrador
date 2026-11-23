@@ -16,7 +16,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     private readonly destroy$ = new Subject<void>();
     private timers: number[] = [];
     private activeLayerElement: HTMLElement | null = null;
-    private listTitles: any[];
+    private listTitles: any[] = [];
     location: Location;
     mobile_menu_visible: any = 0;
     private toggleButton: any;
@@ -133,7 +133,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
                 layerElement.classList.add('visible');
             }, 100);
 
-            layerElement.onclick = function() {
+            layerElement.onclick = function(this: any) {
               body.classList.remove('nav-open');
               this.mobile_menu_visible = 0;
               layerElement.classList.remove('visible');
