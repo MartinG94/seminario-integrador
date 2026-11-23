@@ -104,7 +104,10 @@ describe('Auditoría de Memoria y Ciclo de Vida Integral (T-87.19)', () => {
       const component = fixture.componentInstance;
       const pending = http.match((r) => r.url === `${environment.apiUrl}/expedientes/mis-expedientes/`);
       expect(pending.length).toBeGreaterThan(0);
-      // Parámetros vigentes (Spec 011): también deben cancelarse al destruir la vista.
+      // Saldo del libro mayor (Spec 011) y parámetros vigentes (Spec 012): también deben cancelarse al desmontar.
+      const saldoPendiente = http.match((r) => r.url === `${environment.apiUrl}/expedientes/mis-expedientes/saldo/`);
+      expect(saldoPendiente.length).toBeGreaterThan(0);
+      pending.push(...saldoPendiente);
       const parametros = http.match((r) => r.url.startsWith(`${environment.apiUrl}/parametros/`));
       pending.push(...parametros);
 

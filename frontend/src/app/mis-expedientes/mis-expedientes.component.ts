@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  ElementRef,
   NgZone,
   OnInit,
   OnDestroy,
   Optional,
-  Renderer2
+  Renderer2,
+  ViewChild
 } from '@angular/core';
 import { PageEvent } from '@angular/material/paginator';
 import { TribunalDataService, Expediente, LogJustificativo } from '../services/tribunal-data.service';
@@ -17,8 +19,10 @@ import {
   EvidenciaMetadata,
   DescargoVersionDto,
   HistorialT01DTO,
+  MiSaldoDTO,
   OperacionDescargo,
-  PeriodoApelacionDTO
+  PeriodoApelacionDTO,
+  ResolucionPublicadaDTO
 } from '../services/expediente-api.service';
 import { Subject, Subscription, interval } from 'rxjs';
 import { distinctUntilChanged, takeUntil } from 'rxjs/operators';
@@ -72,10 +76,14 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     ev?.id ? String(ev.id) : (ev?.nombre_original || ev?.name || String(index));
   readonly trackByLog = (index: number, log: any): string =>
     log?.id ? String(log.id) : `${log?.timestamp || ''}_${log?.operacion || ''}_${index}`;
+  readonly trackByTexto = (_index: number, texto: string): string => texto;
+  readonly trackByImpacto = (index: number, impacto: { numero_socio: string }): string =>
+    impacto.numero_socio || String(index);
+  readonly trackByFirmante = (index: number, firmante: { etiqueta: string }): string =>
+    firmante.etiqueta || String(index);
   readonly trackByFile = (index: number, file: any): string =>
     file ? (file.name + '_' + file.size) : String(index);
 
-  expedientes: Expediente[] = [];
   private _misExpedientes: Expediente[] = [];
   get misExpedientes(): Expediente[] {
     return this._misExpedientes;
@@ -89,6 +97,15 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   saldoNeto = 0;
   felicitaciones = 0;
   llamadosAtencion = 0;
+
+  // Publicación oficial protegida de la resolución (Spec 011, S5-02.3)
+  modalResolucionAbierto = false;
+  @ViewChild('dialogoResolucion') dialogoResolucion?: ElementRef<HTMLElement>;
+  private readonly cancelarResolucion$ = new Subject<void>();
+  private focoPrevioResolucion: HTMLElement | null = null;
+  resolucionPublicada: ResolucionPublicadaDTO | null = null;
+  cargandoResolucion = false;
+  descargandoResolucionPdf = false;
 
   // Ordenamiento y paginación server-side de tabla
   columnaOrden = 'numero';
@@ -208,24 +225,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       .subscribe(perfil => {
         this.socioActual = perfil ? `${perfil.first_name} ${perfil.last_name}` : '';
         this.cargarMisExpedientes();
+        this.cargarSaldo();
         this.cdr?.markForCheck();
       });
     this.subs.push(subPerfil);
-
-    const subExp = this.dataService.expedientes$.pipe(takeUntil(this.destroy$)).subscribe(list => {
-      this.expedientes = list;
-      if (!this.misExpedientes || this.misExpedientes.length === 0) {
-        this.filtrarMisExpedientes();
-      }
-      this.cdr?.markForCheck();
-    });
-    this.subs.push(subExp);
-
-    const subSocios = this.dataService.socios$.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.actualizarSaldoNeto();
-      this.cdr?.markForCheck();
-    });
-    this.subs.push(subSocios);
 
     // Actualizador dinámico del reloj fuera de NgZone para evitar detección global cada 1s sin plazos activos
     const startTicker = () => {
@@ -281,6 +284,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Solo el backend decide qué causas son del socio (aislamiento, Spec 011 RF-09):
+   * una respuesta vacía o fallida nunca se reemplaza por otra lista local.
+   */
   cargarMisExpedientes(): void {
     this.expedienteApi
       .listarMisExpedientes({
@@ -305,25 +312,141 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
           this.serverPaginated =
             !isArrayResp && typeof expedientesApi?.count === 'number';
 
-          if (items && Array.isArray(items) && (items.length > 0 || this.serverPaginated)) {
-            this.misExpedientes = items.map(e => this.mapearExpedienteApi(e));
-            this.sincronizarDetalleAbierto();
-            this.actualizarSaldoNeto();
-          } else {
-            this.filtrarMisExpedientes();
-            if (!this.serverPaginated) {
-              this.totalRegistros = this.misExpedientes.length;
-            }
-          }
+          this.misExpedientes = Array.isArray(items)
+            ? items.map((e: any) => this.mapearExpedienteApi(e))
+            : [];
+          this.sincronizarDetalleAbierto();
           this.cdr?.markForCheck();
         },
-        error: () => {
+        error: err => {
           this.serverPaginated = false;
-          this.filtrarMisExpedientes();
-          this.totalRegistros = this.misExpedientes.length;
+          this.misExpedientes = [];
+          this.totalRegistros = 0;
+          this.notifications.error(httpErrorMessage(err, 'No se pudieron cargar tus expedientes.'));
           this.cdr?.markForCheck();
         }
       });
+  }
+
+  /** Saldo y llamados/felicitaciones pendientes del libro mayor (Spec 011, RF-12). */
+  cargarSaldo(): void {
+    this.expedienteApi.obtenerMiSaldo().pipe(takeUntil(this.destroy$)).subscribe({
+      next: saldo => {
+        this.aplicarSaldo(saldo);
+        this.cdr?.markForCheck();
+      },
+      error: err => this.notifications.error(httpErrorMessage(err, 'No se pudo cargar tu saldo de puntos.'))
+    });
+  }
+
+  aplicarSaldo(saldo: MiSaldoDTO): void {
+    const valor = Number(saldo.saldo);
+    this.saldoNeto = isNaN(valor) ? 0 : valor;
+    this.felicitaciones = saldo.felicitaciones_pendientes ?? 0;
+    this.llamadosAtencion = saldo.llamados_pendientes ?? 0;
+  }
+
+  /** Puntos que se muestran en la columna: los aplicados si la causa está emitida, si no los pedidos. */
+  puntosVisibles(exp: Expediente): number {
+    if (exp.estado === 'emitido' && exp.puntosAplicados !== null && exp.puntosAplicados !== undefined) {
+      return exp.puntosAplicados;
+    }
+    return Number(exp.puntos || 0);
+  }
+
+  tieneImpactoAplicado(exp: Expediente): boolean {
+    return exp.estado === 'emitido' && exp.puntosAplicados !== null && exp.puntosAplicados !== undefined;
+  }
+
+  abrirResolucionPublicada(exp: Expediente, disparador?: EventTarget | null): void {
+    // Una nueva apertura descarta cualquier respuesta anterior aún en vuelo.
+    this.cancelarResolucion$.next();
+    this.focoPrevioResolucion = (disparador instanceof HTMLElement ? disparador : null)
+      ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    this.modalResolucionAbierto = true;
+    this.resolucionPublicada = null;
+    this.cargandoResolucion = true;
+    this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    this.programarFocoResolucion();
+    this.expedienteApi.obtenerResolucionPublicada(exp.id)
+      .pipe(takeUntil(this.cancelarResolucion$), takeUntil(this.destroy$))
+      .subscribe({
+        next: publicacion => {
+          this.resolucionPublicada = publicacion;
+          this.cargandoResolucion = false;
+          this.cdr?.markForCheck();
+        },
+        error: err => {
+          this.cerrarResolucionPublicada();
+          this.notifications.error(httpErrorMessage(err, 'No se pudo abrir la resolución.'));
+        }
+      });
+  }
+
+  cerrarResolucionPublicada(): void {
+    this.cancelarResolucion$.next();
+    this.modalResolucionAbierto = false;
+    this.resolucionPublicada = null;
+    this.cargandoResolucion = false;
+    this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    const foco = this.focoPrevioResolucion;
+    this.focoPrevioResolucion = null;
+    if (foco && document.contains(foco)) {
+      this.scheduleTimer(() => foco.focus(), 0);
+    }
+  }
+
+  /** Esc cierra sólo la publicación, no el modal de detalle que queda debajo. */
+  onEscapeResolucion(event: Event): void {
+    event.stopPropagation();
+    this.cerrarResolucionPublicada();
+  }
+
+  private programarFocoResolucion(): void {
+    this.scheduleTimer(() => this.dialogoResolucion?.nativeElement.focus(), 0);
+  }
+
+  descargarResolucionPdf(): void {
+    const publicacion = this.resolucionPublicada;
+    if (!publicacion || this.descargandoResolucionPdf) return;
+    this.descargandoResolucionPdf = true;
+    this.cdr?.markForCheck();
+    this.expedienteApi.descargarResolucionPublicadaPdf(publicacion.expediente_id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: blob => {
+        this.descargandoResolucionPdf = false;
+        this.cdr?.markForCheck();
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = nombreArchivoResolucion(publicacion.expediente_numero);
+        enlace.rel = 'noopener';
+        enlace.style.display = 'none';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        // Se libera la URL después de que el navegador tomó la descarga.
+        this.scheduleTimer(() => URL.revokeObjectURL(url), 30000);
+      },
+      error: err => {
+        this.descargandoResolucionPdf = false;
+        this.cdr?.markForCheck();
+        void mensajeErrorDescarga(err).then(mensaje => this.notifications.error(mensaje));
+      }
+    });
+  }
+
+  getMedidaLabel(medida: string | null | undefined): string {
+    if (medida === 'LLAMADO_ATENCION') return 'Llamado de atención';
+    if (medida === 'FELICITACION') return 'Felicitación';
+    return '';
+  }
+
+  formatPuntos(valor: string | number | null | undefined): string {
+    const numero = Number(valor ?? 0);
+    if (isNaN(numero)) return '0 pts';
+    return `${numero > 0 ? '+' : ''}${numero} pts`;
   }
 
   /** El detalle abierto es una copia: se reapunta a la lista recién recibida para que botones y avisos reflejen el backend. */
@@ -389,6 +512,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       esLlamado: this.esExpedienteLlamado(raw),
       puntaje_solicitado: raw.puntaje_solicitado || null,
       puntajeSolicitado: raw.puntaje_solicitado || null,
+      puntosAplicados: raw.puntos_aplicados !== null && raw.puntos_aplicados !== undefined
+        ? Number(raw.puntos_aplicados)
+        : null,
+      medidaAplicada: raw.medida_aplicada ?? null,
       justificacionAprobada: justificacionAprobada,
       plazoInicioAt: raw.plazo_inicio_at,
       plazoLimiteAt: raw.plazo_limite_at,
@@ -413,27 +540,6 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     };
   }
 
-  /** Los expedientes del socio en sesión y cálculo de saldo neto de expedientes emitidos. */
-  private filtrarMisExpedientes(): void {
-    const perfil = this.auth.getPerfil();
-    const nombre = this.socioActual.trim().toLowerCase();
-    const legajo = perfil?.legajo ? String(perfil.legajo).trim().toLowerCase() : '';
-
-    this.misExpedientes = (nombre || legajo)
-      ? this.expedientes.filter(e => {
-          const matchNombre = !!(nombre && e.socio && e.socio.trim().toLowerCase() === nombre);
-          const matchLegajo = !!(legajo && e.legajo && String(e.legajo).trim().toLowerCase() === legajo);
-          const matchInvolucrado = (e.sociosInvolucrados || []).some(s => {
-            const sNombre = (s.nombre || '').trim().toLowerCase();
-            const sLegajo = s.legajo ? String(s.legajo).trim().toLowerCase() : '';
-            return (nombre && sNombre === nombre) || (legajo && sLegajo === legajo);
-          });
-          return matchNombre || matchLegajo || matchInvolucrado;
-        })
-      : [];
-    this.actualizarSaldoNeto();
-  }
-
   private esExpedienteFelicitacion(rawOrExp: any): boolean {
     if (!rawOrExp) return false;
     if (rawOrExp.esFelicitacion || rawOrExp.es_felicitacion) return true;
@@ -452,44 +558,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     return !Number.isNaN(pts) && (Math.abs(pts - (-0.25)) < 0.01 || Math.abs(pts - (-0.33)) < 0.01);
   }
 
-  /**
-   * Calcula el saldo de puntos estrictamente a partir de los expedientes emitidos (cerrados).
-   * Aplica la exención de puntos para justificaciones aprobadas y la consolidación 3:1 de felicitaciones/llamados.
-   */
-  public actualizarSaldoNeto(): void {
-    const emitidos = this.misExpedientes.filter(e => e.estado === 'emitido');
-    let puntosOrdinarios = 0;
-    let felCount = 0;
-    let llamCount = 0;
-
-    for (const exp of emitidos) {
-      // Ignorar aquellos con justificación aprobada (descargo presentado con resolución o causal aprobada)
-      const esJustAprobada = Boolean(
-        exp.justificacionAprobada ||
-        (exp.descargoPresentado && (exp.tipo === 'falta' || Number(exp.puntos) < 0))
-      );
-      if (esJustAprobada) {
-        continue;
-      }
-
-      const pts = Number(exp.puntos || 0);
-      if (this.esExpedienteFelicitacion(exp)) {
-        felCount++;
-      } else if (this.esExpedienteLlamado(exp)) {
-        llamCount++;
-      } else {
-        puntosOrdinarios += pts;
-      }
-    }
-
-    this.saldoNeto = puntosOrdinarios + Math.floor(felCount / 3) - Math.floor(llamCount / 3);
-    this.felicitaciones = felCount % 3;
-    this.llamadosAtencion = llamCount % 3;
-  }
-
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.cancelarResolucion$.next();
+    this.cancelarResolucion$.complete();
     this.activeTimers.forEach(id => window.clearTimeout(id));
     this.activeTimers.clear();
     if (this.tickerSub) {
@@ -933,7 +1006,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   private actualizarScrollBloqueo(): void {
-    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto;
+    const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto
+      || this.modalResolucionAbierto;
     const body = document.body;
     const docElem = document.documentElement;
     const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
@@ -1433,8 +1507,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         valB = new Date(b.fechaCreacion || 0).getTime();
       }
       if (this.columnaOrden === 'puntos') {
-        valA = Number(a.puntos || 0);
-        valB = Number(b.puntos || 0);
+        valA = this.puntosVisibles(a);
+        valB = this.puntosVisibles(b);
       }
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
@@ -1505,4 +1579,28 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     }
     return 'card-header-success';
   }
+}
+
+/** Nombre de archivo seguro para el PDF de la resolución: reemplaza toda barra y símbolo. */
+export function nombreArchivoResolucion(numeroExpediente: string | null | undefined): string {
+  const seguro = (numeroExpediente || '').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  return `resolucion-${seguro || 'expediente'}.pdf`;
+}
+
+/** Mensaje de error de una descarga: el `detail` JSON del servidor aunque llegue como Blob. */
+export async function mensajeErrorDescarga(err: unknown): Promise<string> {
+  const respaldo = 'No se pudo descargar la resolución.';
+  const cuerpo = (err as { error?: unknown } | null)?.error;
+  if (cuerpo instanceof Blob) {
+    try {
+      const datos = JSON.parse(await cuerpo.text()) as { detail?: unknown };
+      if (typeof datos.detail === 'string' && datos.detail.trim()) {
+        return datos.detail;
+      }
+    } catch {
+      return respaldo;
+    }
+    return respaldo;
+  }
+  return httpErrorMessage(err, respaldo);
 }

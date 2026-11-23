@@ -36,6 +36,16 @@ def sign_url(expediente_id: int) -> str:
     return f"{resolution_url(expediente_id)}firmar/"
 
 
+@pytest.fixture(autouse=True)
+def numero_socio_titular(request):
+    """El libro mayor usa el N° de socio institucional (SCRUM-114) como clave."""
+    if "causal_imputado" not in request.fixturenames:
+        return
+    titular = request.getfixturevalue("causal_imputado")
+    titular.numero_socio = 76001
+    titular.save(update_fields=["numero_socio"])
+
+
 @pytest.mark.django_db
 def test_solicitar_enmienda_crea_nueva_resolucion_version_2_y_registro_enmienda(
     causal_expediente, causal_vocal, make_socio
@@ -183,7 +193,7 @@ def test_emision_resolucion_enmendada_genera_contraasientos_opcion_b_en_libro_ma
     causal_expediente.puntos = Decimal("-3.00")
     causal_expediente.save()
 
-    socio = make_socio(legajo="76070", role=Role.SOCIO)
+    socio = make_socio(legajo="76070", role=Role.SOCIO, numero_socio=76070)
     causal_expediente.socios.add(socio)
 
     # Registro contable previo en el libro mayor (-3.00 pts)
@@ -191,7 +201,7 @@ def test_emision_resolucion_enmendada_genera_contraasientos_opcion_b_en_libro_ma
         cursor.execute(
             "INSERT INTO tribunal_puntajeaplicado (puntajeAplicado, socio_id, expediente_id) "
             "VALUES (%s, %s, %s)",
-            [-3.0, socio.id, causal_expediente.id],
+            [-3.0, socio.numero_socio, causal_expediente.id],
         )
 
     Resolucion.objects.create(
@@ -230,7 +240,9 @@ def test_emision_resolucion_enmendada_genera_contraasientos_opcion_b_en_libro_ma
 
     # Verificar libro mayor (tribunal_puntajeaplicado) bajo Opción B:
     asientos = list(
-        PuntajeAplicado.objects.filter(expediente_id=causal_expediente.id, socio_id=socio.id)
+        PuntajeAplicado.objects.filter(
+            expediente_id=causal_expediente.id, socio_id=socio.numero_socio
+        )
     )
     # Debe haber exactamente 3 asientos:
     # 1. Asiento inicial: -3.00
@@ -309,7 +321,7 @@ def test_emitir_enmienda_preserva_puntos_finales_sobre_decision_causal_previa(
     causal_expediente.puntos = Decimal("-3.00")
     causal_expediente.save()
 
-    socio = make_socio(legajo="76101", role=Role.SOCIO)
+    socio = make_socio(legajo="76101", role=Role.SOCIO, numero_socio=76101)
     causal_expediente.socios.add(socio)
 
     descargo = DescargoExpediente.objects.create(
@@ -367,8 +379,8 @@ def test_enmienda_contra_asientos_omite_socio_excluido(causal_expediente, causal
     causal_expediente.puntos = Decimal("-2.00")
     causal_expediente.save()
 
-    socio_activo = make_socio(legajo="76102", role=Role.SOCIO)
-    socio_excluido = make_socio(legajo="76103", role=Role.SOCIO)
+    socio_activo = make_socio(legajo="76102", role=Role.SOCIO, numero_socio=76102)
+    socio_excluido = make_socio(legajo="76103", role=Role.SOCIO, numero_socio=76103)
     causal_expediente.socios.add(socio_activo, socio_excluido)
 
     DescargoExpediente.objects.create(
@@ -392,7 +404,7 @@ def test_enmienda_contra_asientos_omite_socio_excluido(causal_expediente, causal
         cursor.execute(
             "INSERT INTO tribunal_puntajeaplicado (puntajeAplicado, socio_id, expediente_id) "
             "VALUES (%s, %s, %s)",
-            [-2.0, socio_activo.id, causal_expediente.id],
+            [-2.0, socio_activo.numero_socio, causal_expediente.id],
         )
 
     Resolucion.objects.create(
@@ -421,12 +433,12 @@ def test_enmienda_contra_asientos_omite_socio_excluido(causal_expediente, causal
     asientos_activo = [
         Decimal(str(a.puntajeAplicado))
         for a in PuntajeAplicado.objects.filter(
-            expediente_id=causal_expediente.id, socio_id=socio_activo.id
+            expediente_id=causal_expediente.id, socio_id=socio_activo.numero_socio
         )
     ]
     asientos_excluido = list(
         PuntajeAplicado.objects.filter(
-            expediente_id=causal_expediente.id, socio_id=socio_excluido.id
+            expediente_id=causal_expediente.id, socio_id=socio_excluido.numero_socio
         )
     )
     assert sum(asientos_activo) == Decimal("-1.00")
@@ -503,14 +515,14 @@ def test_enmienda_individual_con_llamado_atencion_y_articulos_personalizados(
     causal_expediente.puntos = Decimal("-2.00")
     causal_expediente.save()
 
-    socio = make_socio(legajo="76105", role=Role.SOCIO)
+    socio = make_socio(legajo="76105", role=Role.SOCIO, numero_socio=76105)
     causal_expediente.socios.add(socio)
 
     with connection.cursor() as cursor:
         cursor.execute(
             "INSERT INTO tribunal_puntajeaplicado (puntajeAplicado, socio_id, expediente_id) "
             "VALUES (%s, %s, %s)",
-            [-2.0, socio.id, causal_expediente.id],
+            [-2.0, socio.numero_socio, causal_expediente.id],
         )
 
     Resolucion.objects.create(
@@ -549,7 +561,7 @@ def test_enmienda_individual_con_llamado_atencion_y_articulos_personalizados(
     asientos = [
         Decimal(str(a.puntajeAplicado))
         for a in PuntajeAplicado.objects.filter(
-            expediente_id=causal_expediente.id, socio_id=socio.id
+            expediente_id=causal_expediente.id, socio_id=socio.numero_socio
         )
     ]
     assert sum(asientos) == Decimal("0.00")

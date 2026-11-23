@@ -10,7 +10,7 @@ Implementa:
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -645,22 +645,58 @@ class AuditoriaDescargaEvidencia(models.Model):
         return f"Descarga {self.evidencia_id} por {self.usuario} ({self.fecha_hora})"
 
 
+class TipoAccesoAuditoriaEnum(models.TextChoices):
+    CONSULTA = "CONSULTA", "Consulta en pantalla"
+    DESCARGA_PDF = "DESCARGA_PDF", "Descarga del PDF oficial"
+
+
+class InsertOnlyQuerySet(models.QuerySet):
+    """Bloquea las operaciones masivas que esquivan `save()` y `delete()` de instancia."""
+
+    def _immutable_message(self) -> str:
+        return getattr(self.model, "immutable_message", "El registro es inmutable.")
+
+    def update(self, **kwargs: Any) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def delete(self) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def bulk_update(self, objs: Any, fields: Any, **kwargs: Any) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def update_or_create(self, *args: Any, **kwargs: Any) -> NoReturn:
+        raise ValidationError(self._immutable_message())
+
+    def bulk_create(self, objs: Any, *args: Any, **kwargs: Any) -> list[Any]:
+        if kwargs.get("update_conflicts") or kwargs.get("ignore_conflicts"):
+            raise ValidationError(self._immutable_message())
+        return super().bulk_create(objs, *args, **kwargs)
+
+
 class AuditoriaConsultaExpediente(models.Model):
     """Pista de auditoría inmutable de consultas en el visor autorizado (CA3)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    immutable_message = "Los registros de auditoría de consulta son inmutables."
+
     expediente = models.ForeignKey(
         Expediente,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="consultas_auditadas",
         db_index=True,
     )
     usuario = models.CharField(max_length=150)
     legajo = models.CharField(max_length=50, blank=True)
     rol = models.CharField(max_length=50)
+    tipo_acceso = models.CharField(
+        max_length=20, choices=TipoAccesoAuditoriaEnum.choices, default="CONSULTA"
+    )
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=500, blank=True)
     fecha_hora = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = InsertOnlyQuerySet.as_manager()
 
     class Meta:
         db_table = "expedientes_auditoria_consulta"
@@ -669,12 +705,12 @@ class AuditoriaConsultaExpediente(models.Model):
     def __str__(self) -> str:
         return f"Consulta {self.expediente.numero} por {self.usuario} ({self.fecha_hora})"
 
-    def save(self, *args, **kwargs) -> None:
-        if not self._state.adding:
-            raise ValidationError("Los registros de auditoría de consulta son inmutables.")
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding or kwargs.get("force_update") or kwargs.get("update_fields"):
+            raise ValidationError(self.immutable_message)
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
         raise ValidationError("Los registros de auditoría de consulta no pueden eliminarse.")
 
 
@@ -871,12 +907,15 @@ class InsertOnlyModel(models.Model):
     class Meta:
         abstract = True
 
-    def save(self, *args, **kwargs) -> None:
-        if not self._state.adding:
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Una instancia construida con una PK existente también se considera modificación.
+        if not self._state.adding or kwargs.get("force_update") or kwargs.get("update_fields"):
+            raise ValidationError(self.immutable_message)
+        if self.pk is not None and type(self)._default_manager.filter(pk=self.pk).exists():
             raise ValidationError(self.immutable_message)
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
         raise ValidationError(self.immutable_message)
 
 
@@ -1859,6 +1898,72 @@ class Resolucion(models.Model):
         ):
             raise ValidationError("Una resolución emitida es inmutable.")
         return super().delete(*args, **kwargs)
+
+
+class TipoAsientoLibroMayorEnum(models.TextChoices):
+    PUNTOS_DIRECTOS = "PUNTOS_DIRECTOS", "Puntos directos"
+    SIN_IMPACTO = "SIN_IMPACTO", "Sin impacto en puntos"
+    LLAMADO_ATENCION = "LLAMADO_ATENCION", "Llamado de atención"
+    FELICITACION = "FELICITACION", "Felicitación"
+    CONSOLIDACION_LLAMADOS = "CONSOLIDACION_LLAMADOS", "Tres llamados de atención (-1 punto)"
+    CONSOLIDACION_FELICITACIONES = (
+        "CONSOLIDACION_FELICITACIONES",
+        "Tres felicitaciones (+1 punto)",
+    )
+    REVERSION = "REVERSION", "Reversión por enmienda"
+
+
+class AsientoLibroMayor(InsertOnlyModel):
+    """Auditoría inmutable de cada asiento originado por una resolución emitida (Spec 011).
+
+    El monto que suma el saldo vive en la tabla legada `tribunal_puntajeaplicado`
+    (`puntaje_aplicado_id`); este registro agrega la resolución de origen, el tipo,
+    el contador 3:1 resultante, el autor y el hash encadenado por socio.
+    """
+
+    immutable_message = "El libro mayor es de solo inserción."
+
+    resolucion = models.ForeignKey(
+        Resolucion, on_delete=models.PROTECT, related_name="asientos_libro_mayor"
+    )
+    expediente = models.ForeignKey(
+        Expediente, on_delete=models.PROTECT, related_name="asientos_libro_mayor"
+    )
+    socio = models.ForeignKey(
+        "socios.Socio", on_delete=models.PROTECT, related_name="asientos_libro_mayor"
+    )
+    nro_socio = models.PositiveIntegerField(null=True, blank=True, db_index=True)
+    tipo = models.CharField(max_length=30, choices=TipoAsientoLibroMayorEnum.choices)
+    puntos = models.DecimalField(max_digits=10, decimal_places=2)
+    contador_resultante = models.PositiveSmallIntegerField(null=True, blank=True)
+    puntaje_aplicado_id = models.IntegerField(null=True, blank=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="asientos_libro_mayor",
+    )
+    hash_anterior = models.CharField(max_length=64)
+    hash_transaccion = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+
+    objects = InsertOnlyQuerySet.as_manager()
+
+    class Meta:
+        db_table = "expedientes_asiento_libro_mayor"
+        verbose_name = "Asiento del libro mayor"
+        verbose_name_plural = "Asientos del libro mayor"
+        ordering = ["socio_id", "created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["resolucion", "socio", "tipo"],
+                name="unique_asiento_por_resolucion_socio_tipo",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.expediente_id} · socio {self.socio_id}: {self.tipo} {self.puntos}"
 
 
 class EnmiendaResolucion(models.Model):

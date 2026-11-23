@@ -225,7 +225,7 @@ def test_consolidated_provider_con_llamado_de_atencion(
 
     assert decision is not None
     assert "Llamado de atención" in decision.medidas
-    assert decision.puntos_finales == Decimal("-0.25")
+    assert decision.puntos_finales == Decimal("0.00")
     assert decision.resultado == "SANCTION"
 
 
@@ -465,7 +465,7 @@ def test_emitir_resolucion_despacha_correos_idempotentes_sin_duplicados(
     s6 = make_socio(legajo="60001", role=Role.TD, social_year=6)
 
     # Involucrar a un socio activo
-    socio_activo = make_socio(legajo="76050", email="activo@aveit.test")
+    socio_activo = make_socio(legajo="76050", email="activo@aveit.test", numero_socio=76050)
     causal_expediente.socios.add(socio_activo)
 
     # 1. Firmar las 3 firmas -> emite automáticamente

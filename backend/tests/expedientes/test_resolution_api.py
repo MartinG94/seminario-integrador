@@ -6,6 +6,15 @@ from expedientes.models import EstadoResolucionEnum, Resolucion
 from socios.models import Role
 
 
+def _contexto_td(vocal) -> dict:
+    """Lector integrante del TD: los imputados no ven borradores (Spec 011, RF-11)."""
+    from rest_framework.test import APIRequestFactory
+
+    request = APIRequestFactory().get("/")
+    request.user = vocal.user
+    return {"request": request}
+
+
 def resolution_url(expediente_id: int) -> str:
     return f"/api/v1/expedientes/{expediente_id}/resolucion/"
 
@@ -404,7 +413,7 @@ def test_expediente_list_serializer_expone_datos_resolucion(causal_expediente, c
         created_by=causal_vocal.user,
     )
 
-    data = ExpedienteListSerializer(causal_expediente).data
+    data = ExpedienteListSerializer(causal_expediente, context=_contexto_td(causal_vocal)).data
     assert data["resolucion_estado"] == "DRAFT"
     assert len(data["firmantes_td"]) == 1
     assert data["vistos"] == "Vistos serializados."
@@ -473,7 +482,7 @@ def test_creacion_resolucion_guarda_reglamentos_respaldantes_y_los_expone(
 
     # Validar que ExpedienteListSerializer expone los reglamentos de la resolución
     causal_expediente.refresh_from_db()
-    data = ExpedienteListSerializer(causal_expediente).data
+    data = ExpedienteListSerializer(causal_expediente, context=_contexto_td(causal_vocal)).data
     assert data["reglamentos_respaldantes"] == reglamentos
     assert data["reglamento_asociado"] == reglamentos[0]
     assert data["considerandos"] == "Considerando específico del TD."

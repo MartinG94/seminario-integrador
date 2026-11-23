@@ -1,6 +1,5 @@
 """Casos de uso transaccionales de resolución oficial."""
 
-import hashlib
 import logging
 from decimal import Decimal
 
@@ -21,9 +20,9 @@ from expedientes.models import (
     EstadoResolucionEnum,
     Expediente,
     Resolucion,
-    SolicitudT01,
 )
 from expedientes.serializers.visor_serializers import cargar_mapa_grupos
+from expedientes.services.publication_service import calcular_hash_resolucion
 from notifications.models import EmailOutbox
 from notifications.services import EmailDispatcherService
 from ranking.domain.threshold_alerts import AlertaSanitizer
@@ -43,79 +42,36 @@ class UnavailableClosedDecisionProvider:
 
 
 class ExpedienteConsolidatedDecisionProvider:
-    """Consolida la decisión de un expediente en etapa de resolución sin votación nominal."""
+    """Consolida la decisión de un expediente en etapa de resolución sin votación nominal.
+
+    El impacto de cada imputado se calcula con la misma regla que usa el libro mayor
+    (`resolver_impacto_socio`): exclusión fundada, puntaje ratificado, decisión causal o
+    valoración T03 vigentes y, en su defecto, lo solicitado. Las medidas especiales nunca
+    son puntos fraccionarios (regla 3:1 de las Notas del PO).
+    """
 
     def get_closed_decision(self, expediente_id: int) -> ClosedDecision | None:
-        try:
-            expediente = (
-                Expediente.objects.prefetch_related(
-                    "descargos__decisiones_causal",
-                    "solicitud_t01",
-                )
-                .filter(pk=expediente_id)
-                .first()
-            )
-        except Exception:
-            return None
+        from expedientes.services.ledger_service import impactos_dictaminados
+        from ranking.domain.ledger import TipoImpacto
 
+        expediente = Expediente.objects.prefetch_related("socios").filter(pk=expediente_id).first()
         if expediente is None:
             return None
-
-        # Si aún no está en etapa de revisión/resolución/firma, retorna None
+        # Si aún no está en etapa de revisión/resolución/firma, no hay dictamen.
         if expediente.estado in (EstadoExpedienteEnum.CREADO, EstadoExpedienteEnum.JUSTIFICANDO):
             return None
 
-        puntos = (
-            Decimal(str(expediente.puntos)) if expediente.puntos is not None else Decimal("0.00")
-        )
+        impactos = impactos_dictaminados(expediente)
+        puntos_finales = sum(
+            (i.puntos for i in impactos.values() if i.tipo == TipoImpacto.PUNTOS),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
         medidas: list[str] = []
+        if any(i.tipo == TipoImpacto.LLAMADO_ATENCION for i in impactos.values()):
+            medidas.append("Llamado de atención")
+        if any(i.tipo == TipoImpacto.FELICITACION for i in impactos.values()):
+            medidas.append("Felicitación")
 
-        # Revisar solicitud T01 si existe
-        solicitud_t01 = getattr(expediente, "solicitud_t01", None)
-        if solicitud_t01 and getattr(solicitud_t01, "puntaje_especial", None):
-            if solicitud_t01.puntaje_especial == SolicitudT01.PuntajeEspecial.LLAMADO_ATENCION:
-                medidas.append("Llamado de atención")
-            elif solicitud_t01.puntaje_especial == SolicitudT01.PuntajeEspecial.FELICITACION:
-                medidas.append("Felicitación")
-
-        # Revisar descargos activos (excluyendo socios excluidos) y sus decisiones más recientes
-        descargos_all = list(expediente.descargos.all())
-        if descargos_all:
-            descargos_activos = [d for d in descargos_all if not getattr(d, "esta_excluido", False)]
-            if not descargos_activos:
-                puntos = Decimal("0.00")
-            else:
-                for descargo in descargos_activos:
-                    raw_rat = getattr(descargo, "puntaje_ratificado", None)
-                    has_rat = raw_rat is not None and str(raw_rat).strip() != ""
-                    ultima_decision = descargo.decisiones_causal.order_by("-version").first()
-                    ptos_val = None
-                    if has_rat:
-                        ptos_val = str(raw_rat).strip()
-                    elif ultima_decision:
-                        snapshot = ultima_decision.descargo_snapshot or {}
-                        ptos_val = snapshot.get("puntaje_final")
-
-                    if ptos_val == "LLAMADO_ATENCION":
-                        if "Llamado de atención" not in medidas:
-                            medidas.append("Llamado de atención")
-                        puntos = Decimal("-0.25")
-                    elif ptos_val == "FELICITACION":
-                        if "Felicitación" not in medidas:
-                            medidas.append("Felicitación")
-                        puntos = Decimal("0.25")
-                    elif ptos_val is not None:
-                        try:
-                            puntos = Decimal(str(ptos_val))
-                        except Exception:
-                            pass
-                    elif ultima_decision:
-                        if ultima_decision.decision == "ACCEPTED":
-                            puntos = Decimal("0.00")
-                        elif ultima_decision.decision == "REJECTED":
-                            puntos = Decimal(str(expediente.puntos))
-
-        puntos_finales = puntos.quantize(Decimal("0.01"))
         if puntos_finales < Decimal("0.00") or "Llamado de atención" in medidas:
             resultado = "SANCTION"
         elif puntos_finales > Decimal("0.00") or "Felicitación" in medidas:
@@ -349,25 +305,19 @@ def emitir_resolucion(
     resolucion.estado = EstadoResolucionEnum.ISSUED
     resolucion.issued_by = emisor
     resolucion.issued_at = timezone.now()
-    payload = "|".join(
-        (
-            resolucion.numero_expediente_snapshot,
-            resolucion.vistos,
-            resolucion.considerandos,
-            resolucion.articulos_resolutivos,
-            str(resolucion.puntos_finales),
-            repr(resolucion.medidas),
-        )
-    )
-    resolucion.contenido_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    resolucion.contenido_hash = calcular_hash_resolucion(resolucion)
     resolucion.save()
 
-    # Contra-asientos de enmienda bajo Opción B (EARS-103.3)
+    # Libro mayor inmutable en la misma transacción de la emisión (Spec 011, RF-01).
+    # Una enmienda registra su contra-asiento (reversión íntegra) y el nuevo impacto
+    # (Opción B, SCRUM-103) por el mismo camino: nunca se duplican movimientos.
+    from expedientes.services.ledger_service import LedgerService
+
     enmienda = EnmiendaResolucion.objects.filter(resolucion_nueva=resolucion).first()
     if enmienda:
-        from expedientes.services.enmienda_service import EnmiendaService
-
-        EnmiendaService.aplicar_contra_asientos_opcion_b(enmienda)
+        LedgerService.registrar_enmienda(enmienda, emisor)
+    else:
+        LedgerService.registrar_resolucion(resolucion, emisor)
 
     # Despacho atómico e idempotente de notificaciones (EARS-100.2)
     _, hubo_fallo_correos = despachar_notificaciones_resolucion_emitida_con_estado(resolucion)

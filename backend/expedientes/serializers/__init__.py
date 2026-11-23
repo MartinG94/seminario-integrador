@@ -20,6 +20,7 @@ from expedientes.domain.descargo_rules import (
     MAX_DESCARGO_TEXT_LENGTH,
     descargo_text_too_long_message,
 )
+from expedientes.domain.medical_redaction import censurar_datos_salud
 from expedientes.domain.puntaje_especial import PuntajeEspecial
 from expedientes.models import (
     ConceptoExpedienteEnum,
@@ -28,9 +29,11 @@ from expedientes.models import (
     DescargoExpediente,
     DescargoVersion,
     EstadoExpedienteEnum,
+    EstadoResolucionEnum,
     EvidenciaDescargo,
     Expediente,
     Holiday,
+    Resolucion,
     SolicitudT01,
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
@@ -49,6 +52,8 @@ from expedientes.serializers.evento_serializers import (
 from expedientes.serializers.reglamento_serializers import ArticuloReglamentoSerializer
 from expedientes.serializers.visor_serializers import ExpedienteVisorSerializer
 from expedientes.services.causal_resolution_service import current_evidence_for
+from expedientes.services.ledger_service import ImpactoAplicado
+from expedientes.services.publication_service import firmantes_publicos
 from expedientes.services.t03_valuation_service import imputado_socio_ids
 from padron.factory import get_padron_repository
 from socios.models import Role, Socio, Subcomision
@@ -440,6 +445,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
     issued_at = serializers.SerializerMethodField()
     expedientes_referenciados = serializers.SerializerMethodField()
     expedientes_referenciados_detalle = serializers.SerializerMethodField()
+    puntos_aplicados = serializers.SerializerMethodField()
+    medida_aplicada = serializers.SerializerMethodField()
 
     class Meta:
         model = Expediente
@@ -493,7 +500,60 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
             "articulos_resolutivos",
             "contenido_hash",
             "issued_at",
+            "puntos_aplicados",
+            "medida_aplicada",
         ]
+
+    def _lector(self) -> Socio | None:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return None
+        return getattr(user, "socio", None)
+
+    def _ve_como_autoridad(self, obj: Expediente | None = None) -> bool:
+        """TD/CD/Admin o staff sobre causas ajenas (RF-10).
+
+        En Mis Expedientes, y en cualquier causa donde el lector esté imputado, rige la vista
+        del imputado: el rol institucional no habilita ver lo de los coimputados ni lo reservado,
+        con o sin el parámetro `?origen=mis_expedientes`.
+        """
+        if self.context.get("es_mis_expedientes"):
+            return False
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        socio = getattr(user, "socio", None)
+        if obj is not None and socio is not None and socio.pk in imputado_socio_ids(obj):
+            return False
+        role = getattr(socio, "role", "")
+        return bool(
+            (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or user.is_staff
+        )
+
+    def _resolucion_visible(self, obj: Expediente) -> Resolucion | None:
+        """Resolución que puede ver el lector: los imputados solo la emitida (RF-11)."""
+        res = _obtener_resolucion_reciente(obj)
+        if res is None or self._ve_como_autoridad(obj):
+            return res
+        return res if res.estado == EstadoResolucionEnum.ISSUED else None
+
+    def _resolucion_emitida_visible(self, obj: Expediente) -> bool:
+        res = self._resolucion_visible(obj)
+        return res is not None and res.estado == EstadoResolucionEnum.ISSUED
+
+    def _impacto_propio(self, obj: Expediente) -> ImpactoAplicado | None:
+        impactos = self.context.get("impactos_socio")
+        return impactos.get(obj.pk) if impactos else None
+
+    def get_puntos_aplicados(self, obj: Expediente) -> str | None:
+        impacto = self._impacto_propio(obj)
+        return f"{impacto.puntos:.2f}" if impacto else None
+
+    def get_medida_aplicada(self, obj: Expediente) -> str | None:
+        impacto = self._impacto_propio(obj)
+        return impacto.medida if impacto else None
 
     def get_es_felicitacion(self, obj: Expediente) -> bool:
         return _es_felicitacion(obj)
@@ -502,7 +562,19 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return _es_llamado(obj)
 
     def get_justificacion_aprobada(self, obj: Expediente) -> bool:
-        for d in obj.descargos.all():
+        descargos = [d for d in obj.descargos.all() if d.es_vigente]
+        if not self._ve_como_autoridad(obj):
+            # El imputado sólo conoce el resultado de SU descargo y recién con la emisión.
+            lector = self._lector()
+            if lector is None or not self._resolucion_emitida_visible(obj):
+                return False
+            descargos = [d for d in descargos if d.socio_id == lector.pk]
+            for d in descargos:
+                ultima = max(d.decisiones_causal.all(), key=lambda x: x.version, default=None)
+                if ultima is not None and ultima.decision == DecisionCausalEnum.ACCEPTED:
+                    return True
+            return False
+        for d in descargos:
             for dec in d.decisiones_causal.all():
                 if dec.decision == DecisionCausalEnum.ACCEPTED:
                     return True
@@ -532,7 +604,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return _obtener_razon_expediente(obj)
 
     def get_titulo(self, obj: Expediente) -> str:
-        return _obtener_titulo_expediente(obj)
+        titulo = _obtener_titulo_expediente(obj)
+        return titulo if self._ve_como_autoridad(obj) else censurar_datos_salud(titulo)
 
     def get_reglamento_asociado(self, obj: Expediente) -> str:
         return _obtener_reglamento_asociado(obj)
@@ -677,11 +750,10 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         if not user or not user.is_authenticated:
             return []
         socio = getattr(user, "socio", None)
-        role = getattr(socio, "role", "")
         # Usar .all() precargado por prefetch_related para no disparar
         # queries adicionales por cada expediente
         todas = obj.evidencias.all()
-        if (socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)) or user.is_staff:
+        if self._ve_como_autoridad(obj):
             vigentes = [ev for ev in todas if ev.es_vigente]
         elif socio and socio.is_enabled:
             vigentes = [ev for ev in todas if ev.es_vigente and ev.socio_id == socio.pk]
@@ -715,10 +787,9 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         if not user or not user.is_authenticated:
             return []
         socio = getattr(user, "socio", None)
-        role = getattr(socio, "role", "")
-        is_authority = (
-            socio and socio.is_enabled and role in (Role.TD, Role.CD, Role.ADMIN)
-        ) or user.is_staff
+        is_authority = self._ve_como_autoridad(obj)
+        # Antes de la emisión, la valoración del TD es reservada también para el imputado.
+        valoracion_visible = is_authority or self._resolucion_emitida_visible(obj)
 
         descargos_list = [
             d for d in obj.descargos.all() if d.es_vigente or getattr(d, "esta_excluido", False)
@@ -789,8 +860,8 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
                 "texto": d.texto,
                 "presentado_at": d.presentado_at.isoformat() if d.presentado_at else None,
                 "evidencias": EvidenciaMetadataSerializer(evs, many=True).data,
-                "leido": leido,
-                "puntaje_ratificado": puntaje_ratificado,
+                "leido": leido if valoracion_visible else False,
+                "puntaje_ratificado": puntaje_ratificado if valoracion_visible else None,
                 "esta_excluido": getattr(d, "esta_excluido", False),
                 "motivo_exclusion": getattr(d, "motivo_exclusion", ""),
                 "excluido_at": (
@@ -814,31 +885,39 @@ class ExpedienteListSerializer(serializers.ModelSerializer):
         return result
 
     def get_resolucion_estado(self, obj: Expediente) -> str | None:
-        res = _obtener_resolucion_reciente(obj)
+        res = self._resolucion_visible(obj)
         return res.estado if res else None
 
+    def _texto_resolucion(self, obj: Expediente, campo: str) -> str:
+        res = self._resolucion_visible(obj)
+        if not res:
+            return ""
+        texto = getattr(res, campo) or ""
+        return texto if self._ve_como_autoridad(obj) else censurar_datos_salud(texto)
+
     def get_firmantes_td(self, obj: Expediente) -> list:
-        res = _obtener_resolucion_reciente(obj)
-        return res.firmantes or [] if res else []
+        res = self._resolucion_visible(obj)
+        if not res:
+            return []
+        if self._ve_como_autoridad(obj):
+            return res.firmantes or []
+        return firmantes_publicos(res.firmantes)
 
     def get_vistos(self, obj: Expediente) -> str:
-        res = _obtener_resolucion_reciente(obj)
-        return res.vistos if res else ""
+        return self._texto_resolucion(obj, "vistos")
 
     def get_considerandos(self, obj: Expediente) -> str:
-        res = _obtener_resolucion_reciente(obj)
-        return res.considerandos if res else ""
+        return self._texto_resolucion(obj, "considerandos")
 
     def get_articulos_resolutivos(self, obj: Expediente) -> str:
-        res = _obtener_resolucion_reciente(obj)
-        return res.articulos_resolutivos if res else ""
+        return self._texto_resolucion(obj, "articulos_resolutivos")
 
     def get_contenido_hash(self, obj: Expediente) -> str:
-        res = _obtener_resolucion_reciente(obj)
+        res = self._resolucion_visible(obj)
         return res.contenido_hash if res else ""
 
     def get_issued_at(self, obj: Expediente) -> str | None:
-        res = _obtener_resolucion_reciente(obj)
+        res = self._resolucion_visible(obj)
         return res.issued_at.isoformat() if res and res.issued_at else None
 
     def get_expedientes_referenciados(self, obj: Expediente) -> list[int]:

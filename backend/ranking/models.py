@@ -1,5 +1,7 @@
 """Mapeos de sólo lectura de los puntajes legados consumidos por ranking."""
 
+from decimal import Decimal
+
 from django.db import models
 
 from padron.models import ReadOnlyModel, Socio
@@ -61,3 +63,21 @@ class PuntajeAplicado(ReadOnlyModel):
 
     def __str__(self) -> str:
         return f"Socio {self.socio_id}: {self.puntajeAplicado} pts"
+
+    @classmethod
+    def registrar_movimiento(
+        cls, *, nro_socio: int, puntos: Decimal, expediente_id: int
+    ) -> "PuntajeAplicado":
+        """Única vía productiva de escritura: inserta un movimiento nuevo (Spec 011, RF-03).
+
+        No existe camino para modificar ni eliminar movimientos: `save()` sobre un registro
+        existente, `delete()` y las operaciones masivas siguen bloqueados (Regla Innegociable 3).
+        """
+        monto = Decimal(puntos).quantize(Decimal("0.01"))
+        if monto == Decimal("0.00"):
+            raise ValueError("El libro mayor no registra movimientos en cero.")
+        movimiento = cls(puntajeAplicado=monto, socio_id=nro_socio, expediente_id=expediente_id)
+        movimiento._allow_write = True
+        movimiento.save(force_insert=True)
+        movimiento._allow_write = False
+        return movimiento

@@ -83,6 +83,7 @@ from expedientes.services.causal_resolution_service import (
 from expedientes.services.deadline_service import DeadlineEnforcementService
 from expedientes.services.descargo_version_service import DescargoVersionService
 from expedientes.services.evidence_service import EvidenceService
+from expedientes.services.ledger_service import LedgerService
 from expedientes.services.opening_notification_service import (
     CaseNotificationQueryService,
     InvalidCaseStatusError,
@@ -104,6 +105,7 @@ from expedientes.services.t03_valuation_service import (
     T03ValuationStateError,
     T03ValuationUnavailable,
     T03ValuationValidationError,
+    imputado_socio_ids,
     is_imputado,
 )
 from expedientes.services.tribunal_composition_service import (
@@ -368,20 +370,20 @@ class MisExpedientesView(PaginatedAPIViewMixin, APIView):
             "page" in request.query_params or "page_size" in request.query_params
         )
         is_all_requested = request.query_params.get("all", "").lower() in ("true", "1", "yes")
+        # Aislamiento y puntos aplicados del socio en ambas variantes (Spec 011, RF-10 y RF-13).
+        context = {
+            "request": request,
+            "es_mis_expedientes": True,
+            "impactos_socio": LedgerService.impactos_por_expediente(socio),
+        }
 
         if is_paginated_requested and not is_all_requested:
             page = self.paginate_queryset(queryset)
             if page is not None:
-                serializer = ExpedienteListSerializer(
-                    page,
-                    many=True,
-                    context={"request": request, "es_mis_expedientes": True},
-                )
+                serializer = ExpedienteListSerializer(page, many=True, context=context)
                 return self.get_paginated_response(serializer.data)
 
-        serializer = ExpedienteListSerializer(
-            queryset, many=True, context={"request": request, "es_mis_expedientes": True}
-        )
+        serializer = ExpedienteListSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -681,8 +683,10 @@ class DescargoVersionesView(APIView):
             "descargo__socio"
         )
         socio = getattr(request.user, "socio", None)
-        es_autoridad = request.user.is_staff or bool(
-            socio and socio.is_enabled and socio.role in (Role.TD, Role.CD, Role.ADMIN)
+        es_imputado = socio is not None and socio.pk in imputado_socio_ids(expediente)
+        es_autoridad = not es_imputado and (
+            request.user.is_staff
+            or bool(socio and socio.is_enabled and socio.role in (Role.TD, Role.CD, Role.ADMIN))
         )
         if not es_autoridad:
             versiones = versiones.filter(descargo__socio=socio)
@@ -1210,10 +1214,15 @@ class ExpedienteDetailView(APIView):
             )
 
         self.check_object_permissions(request, expediente)
-        es_mis = request.query_params.get("origen") == "mis_expedientes"
-        serializer = ExpedienteListSerializer(
-            expediente, context={"request": request, "es_mis_expedientes": es_mis}
-        )
+        socio = getattr(request.user, "socio", None)
+        es_imputado = socio is not None and socio.pk in imputado_socio_ids(expediente)
+        # El aislamiento del imputado no depende del parámetro `origen`: el serializer lo
+        # aplica siempre que el lector esté imputado en la causa (Spec 011, RF-10).
+        es_mis = request.query_params.get("origen") == "mis_expedientes" or es_imputado
+        context = {"request": request, "es_mis_expedientes": es_mis}
+        if es_mis and socio is not None:
+            context["impactos_socio"] = LedgerService.impactos_por_expediente(socio)
+        serializer = ExpedienteListSerializer(expediente, context=context)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request, pk: int) -> Response:

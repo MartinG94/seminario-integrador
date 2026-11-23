@@ -65,6 +65,7 @@ def make_socio(db, subcomision):
         is_enabled: bool = True,
         password: str = VALID_PASSWORD,
         email: str | None = None,
+        numero_socio: int | None = None,
     ) -> Socio:
         email = email or f"socio{legajo}@aveit.test"
         user = UserModel.objects.create_user(username=legajo, email=email, password=password)
@@ -78,6 +79,7 @@ def make_socio(db, subcomision):
             social_year=social_year,
             role=role,
             is_enabled=is_enabled,
+            numero_socio=numero_socio,
         )
 
     return _make

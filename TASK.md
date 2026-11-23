@@ -493,7 +493,20 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 20. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
+## 20. Sprint 5 — Desglose Atómico: MACRO-02 / SCRUM-59 (Libro Mayor Inmutable, Portal 'Mis Expedientes' y Publicación Oficial Protegida)
+
+> **Spec de Referencia:** [`specs/011-libro-mayor-mis-expedientes-publicacion/spec.md`](specs/011-libro-mayor-mis-expedientes-publicacion/spec.md)  
+> **Plan Técnico:** [`specs/011-libro-mayor-mis-expedientes-publicacion/plan.md`](specs/011-libro-mayor-mis-expedientes-publicacion/plan.md)  
+> **Tareas:** [`specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md`](specs/011-libro-mayor-mis-expedientes-publicacion/tasks.md)
+
+- [x] **TS5-02.1 Libro mayor transaccional inmutable con regla 3:1 [TDD]:** Asientos por socio al emitir la resolución en `tribunal_puntajeaplicado`, auditoría `AsientoLibroMayor` de solo inserción con hash encadenado, consolidación 3:1 de llamados y felicitaciones e idempotencia.
+- [x] **TS5-02.2 Portal 'Mis Expedientes' con aislamiento por socio [TDD]:** Saldo y pendientes 3:1 desde `GET /api/v1/expedientes/mis-expedientes/saldo/`, puntos aplicados por causa, sin lista local de respaldo y sin exponer descargos, comprobantes ni borradores de resolución ajenos.
+- [x] **TS5-02.3 Publicación protegida de resoluciones oficiales [TDD]:** `GET /api/v1/expedientes/<id>/resolucion/publicada/` y su PDF con censura de datos de salud, sin adjuntos privados, verificación de integridad, auditoría de consulta y modal de lectura en Mis Expedientes.
+
+- [x] **TS5-02.4 Revisión PR #79 [TDD]:** Integración con `main` (migración de merge `0031`), libro mayor con exclusión fundada, puntaje ratificado y `numero_socio`, motor 3:1 único sin doble conteo, enmiendas por contra-asiento en el mismo libro mayor, aislamiento del imputado sin depender de `?origen=`, publicación y PDF completos con encabezados seguros, censura de salud por palabra y modal accesible con tokens de modo oscuro.
+---
+
+## 21. Sprint 5 — Desglose Atómico: MACRO-03 / SCRUM-91 (Panel de Administración: Parámetros del Sistema y Miembros con Rol TD)
 
 > **Spec de Referencia:** [`specs/012-panel-administracion/spec.md`](specs/012-panel-administracion/spec.md)
 > **Plan Técnico:** [`specs/012-panel-administracion/plan.md`](specs/012-panel-administracion/plan.md)
@@ -506,7 +519,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 ---
 
-## 21. Instrucciones para la Actualización de este Archivo
+## 22. Instrucciones para la Actualización de este Archivo
 
 1. Cuando inicies una tarea del Sprint activo, mantenla visible como tu objetivo único.
 2. Al finalizar la tarea y validar que todos sus tests estén en verde, edita este archivo y marca el casillero correspondiente: `- [x] Tn. ...`.

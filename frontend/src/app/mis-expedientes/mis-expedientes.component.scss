@@ -33,7 +33,8 @@
     margin-bottom: 0;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
     border-radius: 6px;
-    background: #ffffff;
+    background: var(--color-surface-card);
+    color: var(--color-text-primary);
     overflow: hidden;
 
     .card-header {
@@ -75,28 +76,97 @@
 
     .card-footer {
       flex-shrink: 0;
-      border-top: 1px solid #e2e8f0;
-      background: #f8fafc;
+      border-top: 1px solid var(--color-border-main);
+      background: var(--color-surface);
       padding: 12px 20px;
       border-radius: 0 0 6px 6px;
     }
   }
 }
 
+// Indicadores de saldo y puntos con tokens de DESIGN.md (4.5:1 en ambos temas).
 .puntos-verde {
-  color: #4caf50 !important;
+  color: var(--color-success) !important;
 }
 
 .puntos-gris {
-  color: #757575 !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .puntos-amarillo {
-  color: #ff9800 !important;
+  color: var(--color-warning) !important;
 }
 
 .puntos-rojo {
-  color: #f44336 !important;
+  color: var(--color-danger) !important;
+}
+
+.medida-felicitacion,
+.medida-llamado {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+.medida-felicitacion {
+  color: var(--color-success);
+}
+
+.medida-llamado {
+  color: var(--color-warning);
+}
+
+// Modal de Resolución Oficial Publicada (Spec 011): todo el texto hereda los tokens del
+// tema, para que VISTO, CONSIDERANDO, reglamentos, firmas e impactos se lean en modo oscuro.
+.modal-resolucion {
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  .card-body,
+  .card-body h5,
+  .card-body li,
+  .texto-resolucion,
+  .titulo-publicacion {
+    color: var(--color-text-primary);
+  }
+
+  .texto-secundario,
+  .aviso-reservado,
+  .tabla-impactos thead th {
+    color: var(--color-text-secondary);
+  }
+
+  .tabla-impactos {
+    color: var(--color-text-primary);
+
+    th,
+    td {
+      border-color: var(--color-border-main);
+    }
+  }
+
+  .table-responsive:focus-visible,
+  .btn:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  .estado-ok {
+    color: var(--color-success);
+  }
+
+  .estado-error {
+    color: var(--color-danger);
+  }
+
+  .card-footer .btn-default {
+    color: var(--color-text-primary);
+  }
 }
 
 .table thead th,
@@ -447,6 +517,22 @@
   &:focus {
     outline: 2px solid #252b6b;
     outline-offset: -2px;
+  }
+}
+
+// ========================================================
+// Resolución oficial publicada (Spec 011, S5-02.3)
+// ========================================================
+.modal-resolucion {
+  .texto-resolucion {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    margin-bottom: 0;
+  }
+
+  .resolucion-publicada-body {
+    max-height: 70vh;
+    overflow-y: auto;
   }
 }
 

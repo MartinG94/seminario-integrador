@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.db import connection, transaction
+from django.db import transaction
 
 from expedientes.models import (
     CambioEstadoExpediente,
@@ -201,111 +201,11 @@ class EnmiendaService:
 
     @classmethod
     def aplicar_contra_asientos_opcion_b(cls, enmienda: EnmiendaResolucion) -> None:
-        """Registra en libro mayor reversión íntegra y nuevo asiento definitivo (EARS-103.3)."""
-        resolucion_ant = enmienda.resolucion_anterior
-        resolucion_nueva = enmienda.resolucion_nueva
-        expediente = resolucion_nueva.expediente
+        """Registra en el libro mayor la reversión íntegra y el nuevo asiento (EARS-103.3).
 
-        ptos_ant = (
-            Decimal(str(resolucion_ant.puntos_finales))
-            if resolucion_ant.puntos_finales is not None
-            else Decimal("0.00")
-        )
-        ptos_nuevo = (
-            Decimal(str(resolucion_nueva.puntos_finales))
-            if resolucion_nueva.puntos_finales is not None
-            else Decimal("0.00")
-        )
+        Delega en `LedgerService.registrar_enmienda`, que es idempotente y deja la auditoría
+        encadenada en `AsientoLibroMayor`; nunca escribe SQL directo sobre el libro mayor.
+        """
+        from expedientes.services.ledger_service import LedgerService
 
-        # Determinar socios involucrados
-        socios = list(expediente.socios.all())
-        if expediente.socio and expediente.socio not in socios:
-            socios.append(expediente.socio)
-
-        # Consultar socios que ya tenían registros contables previos para este expediente
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT DISTINCT socio_id FROM tribunal_puntajeaplicado WHERE expediente_id = %s",
-                [expediente.id],
-            )
-            existing_ledger_sids = {row[0] for row in cursor.fetchall()}
-
-        # Obtener excluidos y puntajes ratificados individuales (por PK y nroSocio legacy)
-        excluidos_ids: set[int] = set()
-        ratificados_map: dict[int, str] = {}
-        for d in DescargoExpediente.objects.filter(expediente=expediente).select_related("socio"):
-            keys = {d.socio_id}
-            nro = getattr(d.socio, "numero_socio", None) if d.socio else None
-            if nro is not None:
-                keys.add(int(nro))
-            if d.esta_excluido:
-                excluidos_ids.update(keys)
-            elif d.puntaje_ratificado is not None:
-                for k in keys:
-                    ratificados_map[k] = d.puntaje_ratificado
-
-        socio_ids = set(existing_ledger_sids)
-        for s in socios:
-            nro = getattr(s, "numero_socio", None)
-            if s.id in existing_ledger_sids:
-                ledger_sid = s.id
-            elif nro is not None and int(nro) in existing_ledger_sids:
-                ledger_sid = int(nro)
-            elif nro is not None and connection.vendor == "mysql":
-                ledger_sid = int(nro)
-            else:
-                ledger_sid = s.id
-            socio_ids.add(ledger_sid)
-
-        with connection.cursor() as cursor:
-            for sid in socio_ids:
-                cursor.execute(
-                    "SELECT COALESCE(SUM(puntajeAplicado), 0), COUNT(*) "
-                    "FROM tribunal_puntajeaplicado WHERE expediente_id = %s AND socio_id = %s",
-                    [expediente.id, sid],
-                )
-                saldo_prev, count_prev = cursor.fetchone()
-
-                if sid in excluidos_ids:
-                    if Decimal(str(saldo_prev)) != Decimal("0"):
-                        cursor.execute(
-                            "INSERT INTO tribunal_puntajeaplicado "
-                            "(puntajeAplicado, socio_id, expediente_id) "
-                            "VALUES (%s, %s, %s)",
-                            [-float(saldo_prev), sid, expediente.id],
-                        )
-                    continue
-
-                ptos_ant_socio = Decimal(str(saldo_prev)) if count_prev > 0 else ptos_ant
-                ptos_nuevo_socio = ptos_nuevo
-                if sid in ratificados_map:
-                    rat_val = str(ratificados_map[sid]).strip()
-                    if rat_val in ("LLAMADO_ATENCION", "FELICITACION"):
-                        ptos_nuevo_socio = Decimal("0.00")
-                    else:
-                        try:
-                            ptos_nuevo_socio = Decimal(rat_val)
-                        except Exception:
-                            ptos_nuevo_socio = ptos_nuevo
-
-                # 1. Asiento de reversión íntegra (monto opuesto exacto)
-                cursor.execute(
-                    "INSERT INTO tribunal_puntajeaplicado "
-                    "(puntajeAplicado, socio_id, expediente_id) "
-                    "VALUES (%s, %s, %s)",
-                    [-float(ptos_ant_socio), sid, expediente.id],
-                )
-                # 2. Asiento nuevo definitivo por el valor rectificado
-                cursor.execute(
-                    "INSERT INTO tribunal_puntajeaplicado "
-                    "(puntajeAplicado, socio_id, expediente_id) "
-                    "VALUES (%s, %s, %s)",
-                    [float(ptos_nuevo_socio), sid, expediente.id],
-                )
-
-        logger.info(
-            "Contra-asientos Opción B registrados para expediente %s (Res. %s -> %s)",
-            expediente.id,
-            resolucion_ant.version,
-            resolucion_nueva.version,
-        )
+        LedgerService.registrar_enmienda(enmienda, enmienda.solicitado_por)
