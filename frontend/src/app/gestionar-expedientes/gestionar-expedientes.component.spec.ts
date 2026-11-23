@@ -214,6 +214,70 @@ describe('GestionarExpedientesComponent', () => {
     expect(component.cargarDatosTablero).toHaveBeenCalled();
   });
 
+  it('debe mostrar el botón Abrir Período de Justificaciones en el modal de detalle sólo para TD cuando el expediente está creado y transicionarlo al hacer clic', () => {
+    const expMock = {
+      id: '1',
+      numero: 'EXP-001',
+      socio: 'Lucas G',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Falta',
+      fechaCreacion: '2026-03-01',
+      estado: 'creado' as const,
+      horasRestantes: 0,
+      tipo: 'falta' as const,
+      puntos: -1,
+      transicionesPermitidas: ['justificando' as const]
+    };
+
+    spyOn(authService, 'tieneRol').and.callFake((...roles: string[]) => roles.includes('TD'));
+    spyOn(dataService, 'transicionarExpediente').and.returnValue(of({ detail: 'Ok' }));
+    spyOn(component, 'cargarDatosTablero');
+
+    component.expedienteSeleccionado = expMock;
+    component.modalDetalleAbierto = true;
+    fixture.detectChanges();
+
+    const btnModal = fixture.nativeElement.querySelector('.btn-abrir-justificaciones') as HTMLButtonElement | null;
+    expect(btnModal).not.toBeNull();
+
+    btnModal!.click();
+    fixture.detectChanges();
+
+    expect(dataService.transicionarExpediente).toHaveBeenCalledWith('1', 'justificando');
+    expect(component.modalDetalleAbierto).toBeFalse();
+    expect(component.cargarDatosTablero).toHaveBeenCalled();
+  });
+
+  it('no debe mostrar el botón Abrir Período de Justificaciones si el rol no es TD o el estado no es creado', () => {
+    const expMock = {
+      id: '1',
+      numero: 'EXP-001',
+      socio: 'Lucas G',
+      legajo: '74907',
+      subcomision: 'Cómputos',
+      motivo: 'Falta',
+      fechaCreacion: '2026-03-01',
+      estado: 'justificando' as const,
+      horasRestantes: 120,
+      tipo: 'falta' as const,
+      puntos: -1
+    };
+
+    const rolSpy = spyOn(authService, 'tieneRol').and.returnValue(true);
+    component.expedienteSeleccionado = expMock;
+    component.modalDetalleAbierto = true;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.btn-abrir-justificaciones')).toBeNull();
+
+    expMock.estado = 'creado' as any;
+    rolSpy.and.returnValue(false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.btn-abrir-justificaciones')).toBeNull();
+  });
+
   it('onTableKeyDown debe navegar entre filas con ArrowDown y ArrowUp sin hacer scroll', () => {
     const expMock = {
       id: '1',

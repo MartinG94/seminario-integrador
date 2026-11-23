@@ -307,6 +307,15 @@
                           aria-label="Ver Involucrados">
                     <i class="material-icons">group</i>
                   </button>
+                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'creado'"
+                          mat-button
+                          class="btn btn-primary btn-link btn-just-icon btn-abrir-justificaciones-tabla"
+                          [disabled]="transicionandoEstado"
+                          (click)="transicionarEstado(exp, 'justificando', $event)"
+                          title="Abrir Período de Justificaciones"
+                          aria-label="Abrir Período de Justificaciones">
+                    <i class="material-icons">schedule</i>
+                  </button>
                   <button *ngIf="puedeVotarOFirmar && exp.estado === 'revision_resolucion'" 
                           mat-button 
                           class="btn btn-warning btn-link btn-just-icon" 
@@ -573,6 +582,16 @@
                 (click)="abrirVisor(expedienteSeleccionado)" 
                 title="Sustanciar / Visor">
           <i class="material-icons" style="font-size: 16px;">menu_book</i> Sustanciar / Visor
+        </button>
+
+        <button *ngIf="puedeAbrirJustificaciones && expedienteSeleccionado"
+                mat-raised-button
+                type="button"
+                class="btn btn-primary btn-abrir-justificaciones"
+                [disabled]="transicionandoEstado"
+                (click)="transicionarEstado(expedienteSeleccionado, 'justificando', $event)">
+          <i class="material-icons" style="font-size: 16px;">schedule</i>
+          {{ transicionandoEstado ? 'Abriendo período...' : 'Abrir Período de Justificaciones' }}
         </button>
 
         <button *ngIf="puedeGenerarResolucion"

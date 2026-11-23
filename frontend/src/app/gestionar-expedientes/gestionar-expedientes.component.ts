@@ -519,6 +519,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.auth.tieneRol('TD');
   }
 
+  get puedeAbrirJustificaciones(): boolean {
+    return this.puedeVotarOFirmar && this.expedienteSeleccionado?.estado === 'creado';
+  }
+
   get puedeConsultarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
     return !!estado && ESTADOS_CONSULTA_CAUSAL.includes(estado) && this.auth.tieneRol('TD', 'CD', 'ADMIN');
@@ -1274,19 +1278,30 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
   }
 
+  transicionandoEstado = false;
+
   // Transición accesible mediante botón con teclado (CA3 y CA4)
   transicionarEstado(exp: Expediente, nuevoEstado: EstadoExpediente, event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
+    if (this.transicionandoEstado) {
+      return;
+    }
+    this.transicionandoEstado = true;
     const labelDestino = this.getEstadoLabel(nuevoEstado);
     this.dataService.transicionarExpediente(exp.id, nuevoEstado).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
+        this.transicionandoEstado = false;
         this.mostrarNotificacion(`Expediente ${exp.numero} transicionado a "${labelDestino}".`);
+        if (this.modalDetalleAbierto && this.expedienteSeleccionado?.id === exp.id) {
+          this.cerrarModales();
+        }
         this.refrescarVistaActual();
         this.cdr?.markForCheck();
       },
       error: (err) => {
+        this.transicionandoEstado = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo realizar la transición.'));
         this.cdr?.markForCheck();
       }
