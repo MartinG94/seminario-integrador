@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGD-AVEIT — Ranking de Socios: Padrón y Saldos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/manual-base.css">
+</head>
+<body>
+<section class="page-cover">
+  <div class="cover-content">
+    <div class="cover-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+    <h1 class="cover-title">Ranking de Socios</h1>
+    <p class="cover-subtitle">Padrón y Saldos</p>
+  </div>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 1</span>
+    <p class="step-text">Click en la opción de <strong>"Ranking de Socios"</strong> del menú lateral</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact">
+      <div class="ui-sidebar">
+        <div class="ui-nav-list">
+          <div class="ui-nav-item sub" style="padding:4px 8px;">
+            <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> <span>Mis Expedientes</span></span>
+          </div>
+          <div class="ui-nav-item sub" style="padding:4px 8px;">
+            <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> <span>Reglamentos</span></span>
+          </div>
+          <div class="highlight-box pad-sm">
+            <div class="ui-nav-item sub active" style="padding:4px 8px;">
+              <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> <span>Ranking de Socios</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-row reverse">
+  <div class="step-info">
+    <span class="step-pill">PASO 2</span>
+    <p class="step-text">Usar los filtros de <strong>Subcomisión</strong>, <strong>Grupo</strong> o el buscador <strong>"Filtrar socio..."</strong></p>
+      <p class="step-note">Clickear en "Limpiar" restablece los filtros. Puede filtrar socios en alerta desde el chip superior.</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact">
+      <div class="ui-card">
+        <div class="ui-card-header-teal">
+          <span class="font-bold" style="font-size:10.5px;">Ranking Disciplinario de Socios</span>
+          <span class="ui-badge badge-warning"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FCD34D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 3 en alerta</span>
+        </div>
+        <div class="p-8">
+          <div class="highlight-box pad-sm">
+            <div class="ui-form-row" style="gap:5px;">
+              <span class="ui-select" style="width:auto;flex:1;">Todas las subcomisiones ▾</span>
+              <span class="ui-select" style="width:auto;">Todos los grupos ▾</span>
+              <span class="ui-select" style="width:auto;">10 filas ▾</span>
+              <span class="ui-input" style="width:120px;">Filtrar socio...</span>
+              <span class="ui-btn ui-btn-sm ui-btn-outline">Limpiar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-stack">
+  <div class="step-info">
+    <span class="step-pill">PASO 3</span>
+    <p class="step-text">Clickear en la cabecera <strong>"Puntos"</strong> para ordenar por saldo, o usar el orden inicial por <strong>Grupo + Alfabético</strong></p>
+      <p class="step-note">Por defecto ordena por Grupo (G57 a G60) y luego alfabéticamente por Apellido y Nombre. Puntos en verde (positivo) o rojo (negativo).</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop wide">
+      <div class="ui-card">
+        <table class="ui-table">
+          <thead>
+            <tr>
+              <th>Posición <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg></th>
+              <th>Socio <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg></th>
+              <th>N° de Socio <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg></th>
+              <th>Grupo <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg></th>
+              <th>Subcomisión <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg></th>
+              <th style="text-align:right;">
+                <span class="highlight-box inline pad-sm" style="border-width:2px !important;color:#F8FAFC;">
+                  Puntos <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg>
+                </span>
+              </th>
+              <th style="text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-bold text-muted tabular-nums">#1</td>
+              <td class="font-bold">Toselli, Giuliano</td>
+              <td class="tabular-nums">11239</td>
+              <td class="tabular-nums">G57</td>
+              <td>Relaciones Públicas</td>
+              <td style="text-align:right;" class="font-bold text-success tabular-nums">+4.00</td>
+              <td style="text-align:center;"><span class="ui-btn ui-btn-sm ui-btn-outline"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Expedientes</span></td>
+            </tr>
+            <tr>
+              <td class="font-bold text-muted tabular-nums">#2</td>
+              <td class="font-bold">Cerda Gallego, Catalina</td>
+              <td class="tabular-nums">11737</td>
+              <td class="tabular-nums">G58</td>
+              <td>Académica</td>
+              <td style="text-align:right;" class="font-bold text-success tabular-nums">+2.00</td>
+              <td style="text-align:center;"><span class="ui-btn ui-btn-sm ui-btn-outline"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Expedientes</span></td>
+            </tr>
+            <tr>
+              <td class="font-bold text-muted tabular-nums">#3</td>
+              <td class="font-bold">Gastiaburu, Lucas</td>
+              <td class="tabular-nums">74907</td>
+              <td class="tabular-nums">G59</td>
+              <td>Cómputos</td>
+              <td style="text-align:right;" class="font-bold text-success tabular-nums">+1.00</td>
+              <td style="text-align:center;"><span class="ui-btn ui-btn-sm ui-btn-outline"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Expedientes</span></td>
+            </tr>
+            <tr>
+              <td class="font-bold text-muted tabular-nums">#18</td>
+              <td class="font-bold">Moya, Abril Sofía</td>
+              <td class="tabular-nums">12123</td>
+              <td class="tabular-nums">G60</td>
+              <td>Difusión</td>
+              <td style="text-align:right;" class="font-bold text-danger tabular-nums">-3.00</td>
+              <td style="text-align:center;"><span class="ui-btn ui-btn-sm ui-btn-outline"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Expedientes</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">1 de 2</span>
+  </footer>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-stack">
+  <div class="step-info">
+    <span class="step-pill">PASO 4</span>
+    <p class="step-text">Clickear en el botón <strong>"Expedientes"</strong> en la columna "Acciones" o sobre la fila del socio</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop wide">
+      <div class="ui-card">
+        <table class="ui-table">
+          <thead>
+            <tr>
+              <th>Posición</th><th>Socio</th><th>N° de Socio</th><th>Grupo</th><th>Subcomisión</th><th style="text-align:right;">Puntos</th><th style="text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="selected">
+              <td class="font-bold text-muted tabular-nums">#3</td>
+              <td class="font-bold">Gastiaburu, Lucas</td>
+              <td class="tabular-nums">74907</td>
+              <td class="tabular-nums">G59</td>
+              <td>Cómputos</td>
+              <td style="text-align:right;" class="font-bold text-success tabular-nums">+1.00</td>
+              <td style="text-align:center;">
+                <span class="highlight-box inline pad-sm">
+                  <span class="ui-btn ui-btn-sm ui-btn-cyan"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Expedientes</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="font-bold text-muted tabular-nums">#18</td>
+              <td class="font-bold">Moya, Abril Sofía</td>
+              <td class="tabular-nums">12123</td>
+              <td class="tabular-nums">G60</td>
+              <td>Difusión</td>
+              <td style="text-align:right;" class="font-bold text-danger tabular-nums">-3.00</td>
+              <td style="text-align:center;"><span class="ui-btn ui-btn-sm ui-btn-outline"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Expedientes</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 5</span>
+    <p class="step-text">Revisar el historial de expedientes que conforman el saldo del socio en la ventana emergente</p>
+      <p class="step-note">Muestra código EXP-NNNN/YYYY, fecha DD/MM/YYYY, urgencia, estado, puntos y título.</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact light">
+      <div class="ui-modal">
+        <div class="ui-modal-header">
+          <div>
+            <div>Detalle de expedientes</div>
+            <div style="font-size:8.5px;font-weight:500;opacity:0.85;">Lucas Gastiaburu · N° de socio 74907</div>
+          </div>
+          <span>✕</span>
+        </div>
+        <div class="ui-modal-body" style="gap:6px;">
+          <div class="highlight-box pad-sm">
+            <div class="flex flex-col gap-6">
+              <div style="border:1px solid #CBD5E1;border-radius:4px;padding:6px 8px;background:#F8FAFC;">
+                <div class="flex justify-between items-center">
+                  <strong class="tabular-nums">EXP-0031/2026</strong>
+                  <span class="ui-badge badge-normal">Normal</span>
+                </div>
+                <div class="text-xs text-muted tabular-nums">04/10/2026 · Estado: Emitido</div>
+                <div class="text-xs"><strong>Puntos:</strong> <span class="text-success font-bold tabular-nums">+3.00</span></div>
+                <div class="text-xs"><strong>Título:</strong> Colaboración Jornada Ingresantes</div>
+              </div>
+              <div style="border:1px solid #CBD5E1;border-radius:4px;padding:6px 8px;background:#F8FAFC;">
+                <div class="flex justify-between items-center">
+                  <strong class="tabular-nums">EXP-0042/2026</strong>
+                  <span class="ui-badge badge-urgent">Urgente</span>
+                </div>
+                <div class="text-xs text-muted tabular-nums">12/11/2026 · Estado: En plazo</div>
+                <div class="text-xs"><strong>Puntos:</strong> <span class="text-danger font-bold tabular-nums">-2.00</span></div>
+                <div class="text-xs"><strong>Título:</strong> Inasistencia Asamblea Ordinaria</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ui-modal-footer">
+          <span class="ui-btn ui-btn-sm ui-btn-outline">Cerrar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">2 de 2</span>
+  </footer>
+</section>
+</body>
+</html>

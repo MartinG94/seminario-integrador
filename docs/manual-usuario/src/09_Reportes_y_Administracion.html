@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes y Administración - Manual de Usuario SGD-AVEIT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/manual-base.css">
+</head>
+<body>
+<section class="page-cover">
+  <div class="cover-content">
+    <div class="cover-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+    <h1 class="cover-title">Reportes y Admin</h1>
+    <p class="cover-subtitle">Balances y Parámetros</p>
+  </div>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 1</span>
+    <p class="step-text">Roles TD, CD, Revisores y Admin: click en <strong>"Reportes & Balance"</strong> en el menú lateral.</p>
+      <p class="step-note">Incluye pestañas: Solicitudes, Reuniones, Subcomisiones, Histórico y Resumen General.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop compact">
+  <div class="ui-sidebar">
+    <div class="ui-sidebar-logo">
+      <div class="ui-logo-badge">AV</div>
+      <div>
+        <div class="font-bold text-sm" style="color:#FFFFFF;">SGD-AVEIT</div>
+        <div class="text-xs text-muted">Tribunal de Disciplina</div>
+      </div>
+    </div>
+    <div class="ui-sidebar-user">
+      <div class="ui-avatar">CM</div>
+      <div>
+        <div class="font-bold text-xs" style="color:#F8FAFC;">Candela Moreno</div>
+        <div class="text-xs text-muted">N° de Socio 11735 · TD / CD / Revisores / Admin</div>
+      </div>
+    </div>
+    <div class="ui-nav-list">
+      <div class="ui-nav-item">
+        <span class="ui-nav-item-left"><span class="font-bold">⚖ Tribunal</span></span>
+        <span>▾</span>
+      </div>
+      <div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Mis Expedientes</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Reglamentos</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Crear Expediente</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Ranking de Socios</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Gestionar Expedientes</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Calendario Institucional</span></span></div><div class="ui-nav-item active sub highlight-box"><span class="ui-nav-item-left"><span>▸</span><span>Reportes & Balance</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Eventos & Asistencia</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Administración</span></span></div>
+    </div>
+  </div>
+</div>
+  </div>
+</article>
+<article class="step-stack inline-info">
+  <div class="step-info">
+    <span class="step-pill">PASO 2</span>
+    <p class="step-text">Seleccionar la vista deseada, filtrar por subcomisión y clickear en <strong>"Exportar CSV"</strong> para descargar el balance.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop wide dark-card">
+  <div class="ui-tabs highlight-box">
+    <span class="ui-tab active">SOLICITUDES</span>
+    <span class="ui-tab">REUNIONES</span>
+    <span class="ui-tab">SUBCOMISIONES</span>
+    <span class="ui-tab">HISTÓRICO</span>
+    <span class="ui-tab">RESUMEN GENERAL</span>
+  </div>
+  <div class="ui-crop-pad flex flex-col gap-6">
+    <div class="flex items-center justify-between gap-6">
+      <div class="flex items-center gap-6">
+        <span class="ui-label">Subcomisión Socio:</span>
+        <div class="ui-select" style="width:155px;">Todas las Subcomisiones ▾</div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="ui-btn ui-btn-sm ui-btn-outline">Limpiar</span>
+        <span class="ui-btn ui-btn-sm ui-btn-cyan highlight-box">Exportar CSV</span>
+        <span class="ui-btn ui-btn-sm ui-btn-primary">Imprimir</span>
+      </div>
+    </div>
+    <div class="ui-stat-grid">
+      <div class="ui-stat-card">
+        <div class="ui-stat-icon navy">📄</div>
+        <div><p class="ui-stat-label">Expedientes</p><p class="ui-stat-value">148</p></div>
+      </div>
+      <div class="ui-stat-card">
+        <div class="ui-stat-icon info">👥</div>
+        <div><p class="ui-stat-label">Socios Alc.</p><p class="ui-stat-value">92</p></div>
+      </div>
+      <div class="ui-stat-card">
+        <div class="ui-stat-icon success">+</div>
+        <div><p class="ui-stat-label">Pts Positivos</p><p class="ui-stat-value text-success">+64.5</p></div>
+      </div>
+      <div class="ui-stat-card">
+        <div class="ui-stat-icon danger">−</div>
+        <div><p class="ui-stat-label">Pts Negativos</p><p class="ui-stat-value text-danger">-41.0</p></div>
+      </div>
+    </div>
+    <div class="flex flex-col gap-4" style="background:#0F172A;padding:7px 9px;border-radius:5px;border:1px solid #334155;">
+      <div class="text-xs font-bold">Expedientes por Clasificación (Resumen General)</div>
+      <div class="flex items-center justify-between text-xs gap-6">
+        <span style="width:130px;">Inasistencia a reunión</span>
+        <div style="flex:1;height:7px;background:#1E293B;border-radius:4px;overflow:hidden;"><div style="width:78%;height:100%;background:#29ABE2;"></div></div>
+        <span class="tabular-nums font-bold">58</span>
+      </div>
+      <div class="flex items-center justify-between text-xs gap-6">
+        <span style="width:130px;">Mérito / Jornada</span>
+        <div style="flex:1;height:7px;background:#1E293B;border-radius:4px;overflow:hidden;"><div style="width:52%;height:100%;background:#16A34A;"></div></div>
+        <span class="tabular-nums font-bold">39</span>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">1 de 3</span>
+  </footer>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row reverse">
+  <div class="step-info">
+    <span class="step-pill">PASO 3</span>
+    <p class="step-text">En <strong>"Histórico"</strong> y <strong>"Resumen General"</strong>, analizar la evolución anual, subcomisiones y mayores puntajes.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop dark-card">
+  <div class="ui-card-header-navy">
+    <span class="font-bold text-sm">Cuadro de Honor · Histórico y Resumen</span>
+    <span class="ui-badge badge-warning">Ciclo 2013–2026</span>
+  </div>
+  <div class="ui-crop-pad">
+    <table class="ui-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>N° de Socio</th>
+          <th>Apellido y Nombre</th>
+          <th>Subcomisión</th>
+          <th>Puntaje</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="selected">
+          <td class="font-bold">1.</td>
+          <td class="tabular-nums font-bold">11779</td>
+          <td>Sánchez, Diego Gabriel</td>
+          <td>Cómputos</td>
+          <td class="text-warning font-bold tabular-nums">+18.5 pts</td>
+        </tr>
+        <tr>
+          <td class="font-bold">2.</td>
+          <td class="tabular-nums font-bold">11239</td>
+          <td>Toselli, Giuliano</td>
+          <td>Comisión Directiva</td>
+          <td class="text-success font-bold tabular-nums">+14.0 pts</td>
+        </tr>
+        <tr>
+          <td class="font-bold">3.</td>
+          <td class="tabular-nums font-bold">11737</td>
+          <td>Cerda Gallego, Catalina</td>
+          <td>Prensa y Difusión</td>
+          <td class="text-success font-bold tabular-nums">+12.5 pts</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+  </div>
+</article>
+<article class="step-stack inline-info">
+  <div class="step-info">
+    <span class="step-pill">PASO 4</span>
+    <p class="step-text">Solo Admin: ingresar a <strong>"Administración"</strong> para editar plazos, umbral preventivo, correos y límites de adjuntos.</p>
+      <p class="step-note">El umbral crítico (-10) es reglamentario y no editable; el preventivo (-7) puede ajustarse o desactivarse.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop wide dark-card">
+  <div class="ui-card-header-navy">
+    <span class="font-bold text-sm">Administración · Parámetros del sistema (Solo Admin)</span>
+    <span class="ui-badge badge-cyan">Auditoría activa</span>
+  </div>
+  <div class="ui-crop-pad">
+    <div class="ui-form-grid-2">
+      <div style="background:#0F172A;border:1px solid #334155;border-radius:5px;padding:7px 9px;">
+        <div class="font-bold text-xs text-cyan mb-4">⏱ Plazos</div>
+        <div class="flex items-center justify-between text-xs mb-4">
+          <span>Plazo de descargo</span>
+          <span class="tabular-nums font-bold">5 días hábiles</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span>Plazo de apelación T01</span>
+          <span class="tabular-nums font-bold">5 días hábiles</span>
+        </div>
+      </div>
+      <div class="highlight-box pad-sm" style="background:#0F172A;border-radius:5px;">
+        <div class="font-bold text-xs text-warning mb-4">⚠ Umbrales de puntos</div>
+        <div class="flex items-center justify-between text-xs mb-4">
+          <span>Umbral crítico (fijo)</span>
+          <span class="tabular-nums font-bold text-danger">-10 puntos</span>
+        </div>
+        <div class="flex items-center justify-between text-xs mb-4">
+          <span>Umbral preventivo</span>
+          <span class="tabular-nums font-bold text-warning">-7 puntos</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span>Alerta preventiva activa</span>
+          <span class="ui-badge badge-neutral">Inactiva</span>
+        </div>
+      </div>
+      <div style="background:#0F172A;border:1px solid #334155;border-radius:5px;padding:7px 9px;">
+        <div class="font-bold text-xs text-cyan mb-4">✉&nbsp; Correos institucionales</div>
+        <div class="text-xs text-muted">CD: cd@aveit.frc.utn.edu.ar · TD: td@aveit.frc.utn.edu.ar</div>
+      </div>
+      <div style="background:#0F172A;border:1px solid #334155;border-radius:5px;padding:7px 9px;">
+        <div class="font-bold text-xs text-cyan mb-4">📎 Comprobantes adjuntos</div>
+        <div class="text-xs text-muted tabular-nums">Máx. 5 MB por archivo · Hasta 5 comprobantes</div>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">2 de 3</span>
+  </footer>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 5</span>
+    <p class="step-text">Confirmar cambios con <strong>"Guardar"</strong> o revisar modificaciones previas en <strong>"Ver historial"</strong>.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop dark-card">
+  <div class="ui-crop-pad flex flex-col gap-6">
+    <div class="flex items-center justify-between gap-4" style="background:#0F172A;padding:6px 8px;border-radius:5px;border:1px solid #334155;">
+      <span class="text-xs"><strong>Umbral preventivo:</strong> <span class="tabular-nums">-7,0 puntos</span></span>
+      <div class="flex items-center gap-4">
+        <span class="ui-btn ui-btn-sm ui-btn-primary">Guardar</span>
+        <span class="ui-btn ui-btn-sm ui-btn-outline highlight-box">Ver historial</span>
+      </div>
+    </div>
+    <table class="ui-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Anterior</th>
+          <th>Nuevo</th>
+          <th>Autor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tabular-nums">20/11/2026 18:10</td>
+          <td class="tabular-nums">-6,0</td>
+          <td class="tabular-nums font-bold text-cyan">-7,0</td>
+          <td>Admin Cómputos</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+  </div>
+</article>
+<article class="step-stack inline-info">
+  <div class="step-info">
+    <span class="step-pill">PASO 6</span>
+    <p class="step-text">En <strong>"Miembros del Tribunal de Disciplina"</strong>, designar integrantes vía <strong>Select2</strong> o usar <strong>"Revocar"</strong> para dar de baja.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop wide dark-card">
+  <div class="ui-card-header-navy">
+    <span class="font-bold text-sm">Miembros del Tribunal de Disciplina</span>
+    <span class="ui-btn ui-btn-sm ui-btn-cyan highlight-box">+ Agregar miembro</span>
+  </div>
+  <div class="ui-crop-pad flex flex-col gap-6">
+    <div class="ui-select2">
+      <div class="ui-select2-input">
+        <span>Buscar socio (Select2): Moreno...</span>
+        <span class="text-muted">🔍</span>
+      </div>
+      <div class="ui-select2-dropdown">
+        <div class="ui-select2-item active">11735 · Moreno Migliore, Candela (G59)</div>
+      </div>
+    </div>
+    <table class="ui-table">
+      <thead>
+        <tr>
+          <th>N° de Socio</th>
+          <th>Apellido</th>
+          <th>Nombre</th>
+          <th>Año social</th>
+          <th>Email</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tabular-nums font-bold">11239</td>
+          <td>Toselli</td>
+          <td>Giuliano</td>
+          <td class="tabular-nums">5.º</td>
+          <td class="text-muted">gtoselli@aveit...</td>
+          <td><span class="ui-btn ui-btn-sm ui-btn-danger">Revocar</span></td>
+        </tr>
+        <tr>
+          <td class="tabular-nums font-bold">11735</td>
+          <td>Moreno Migliore</td>
+          <td>Candela</td>
+          <td class="tabular-nums">4.º</td>
+          <td class="text-muted">cmoreno@aveit...</td>
+          <td><span class="ui-btn ui-btn-sm ui-btn-danger">Revocar</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">3 de 3</span>
+  </footer>
+</section>
+</body>
+</html>

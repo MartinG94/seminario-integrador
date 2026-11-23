@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eventos y Asistencia - Manual de Usuario SGD-AVEIT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/manual-base.css">
+</head>
+<body>
+<section class="page-cover">
+  <div class="cover-content">
+    <div class="cover-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+    <h1 class="cover-title">Eventos y Asistencia</h1>
+    <p class="cover-subtitle">Convocatorias y Cierre</p>
+  </div>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 1</span>
+    <p class="step-text">Roles autorizados (CD, TD, Revisores y Admin): click en <strong>"Eventos & Asistencia"</strong> en el menú lateral.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop compact">
+  <div class="ui-sidebar">
+    <div class="ui-sidebar-logo">
+      <div class="ui-logo-badge">AV</div>
+      <div>
+        <div class="font-bold text-sm" style="color:#FFFFFF;">SGD-AVEIT</div>
+        <div class="text-xs text-muted">Tribunal de Disciplina</div>
+      </div>
+    </div>
+    <div class="ui-sidebar-user">
+      <div class="ui-avatar">CM</div>
+      <div>
+        <div class="font-bold text-xs" style="color:#F8FAFC;">Candela Moreno</div>
+        <div class="text-xs text-muted">N° de Socio 11735 · CD / TD / Revisores</div>
+      </div>
+    </div>
+    <div class="ui-nav-list">
+      <div class="ui-nav-item">
+        <span class="ui-nav-item-left"><span class="font-bold">⚖ Tribunal</span></span>
+        <span>▾</span>
+      </div>
+      <div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Mis Expedientes</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Reglamentos</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Crear Expediente</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Ranking de Socios</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Gestionar Expedientes</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Calendario Institucional</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Reportes & Balance</span></span></div><div class="ui-nav-item active sub highlight-box"><span class="ui-nav-item-left"><span>▸</span><span>Eventos & Asistencia</span></span></div><div class="ui-nav-item sub"><span class="ui-nav-item-left"><span>•</span><span>Administración</span></span></div>
+    </div>
+  </div>
+</div>
+  </div>
+</article>
+<article class="step-stack inline-info">
+  <div class="step-info">
+    <span class="step-pill">PASO 2</span>
+    <p class="step-text">En <strong>"Generar Evento"</strong>, definir categoría, fecha, modalidad y padrón a citar, y clickear en <strong>"Generar Evento"</strong>.</p>
+      <p class="step-note">Vista resumida de referencia (módulo en proceso de rediseño). Convocatorias con < 2 días hábiles quedan No Sancionables.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop wide dark-card">
+  <div class="ui-tabs">
+    <span class="ui-tab active highlight-box">GENERAR EVENTO</span>
+    <span class="ui-tab">MIS EVENTOS <span class="ui-badge badge-navy" style="margin-left:3px;">3</span></span>
+  </div>
+  <div class="ui-crop-pad flex flex-col gap-6">
+    <div class="ui-form-grid-2">
+      <div class="ui-field">
+        <label class="ui-label">Categoría y Título del Evento *</label>
+        <div class="ui-input">Reunión Colegiada · Asamblea Ordinaria Noviembre</div>
+      </div>
+      <div class="ui-field">
+        <label class="ui-label">Fecha, Hora de Inicio y Modalidad *</label>
+        <div class="ui-input tabular-nums">26/11/2026 19:00 · Presencial Sede Central</div>
+      </div>
+    </div>
+    <div class="ui-form-grid-2">
+      <div class="ui-field">
+        <label class="ui-label">Modo de Convocatoria *</label>
+        <div class="ui-select">Por Grupo Social (G57 - G60) ▾</div>
+      </div>
+      <div class="ui-field">
+        <label class="ui-label">Grupo / Subcomisión / Socios (Select2)</label>
+        <div class="ui-select">G58 · G59 · G60 seleccionados</div>
+      </div>
+    </div>
+    <div class="flex items-center justify-between gap-6">
+      <span class="ui-badge badge-success">✓ Preaviso ≥ 2 días hábiles: Carácter Sancionable</span>
+      <span class="ui-btn ui-btn-primary highlight-box">Generar Evento</span>
+    </div>
+  </div>
+</div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">1 de 2</span>
+  </footer>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row reverse">
+  <div class="step-info">
+    <span class="step-pill">PASO 3</span>
+    <p class="step-text">En la pestaña <strong>"Mis Eventos"</strong>, notificar convocatorias y clickear en <strong>"Ver Detalle"</strong> para tomar asistencia.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop wide dark-card">
+  <div class="ui-tabs">
+    <span class="ui-tab">GENERAR EVENTO</span>
+    <span class="ui-tab active">MIS EVENTOS</span>
+  </div>
+  <div class="ui-crop-pad">
+    <table class="ui-table">
+      <thead>
+        <tr>
+          <th>Nombre o Título</th>
+          <th>Inicio</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="selected">
+          <td><strong>Asamblea Ordinaria Noviembre</strong><br><span class="text-xs text-muted">Convocados: 42</span></td>
+          <td class="tabular-nums">26/11/2026 19:00</td>
+          <td><span class="ui-badge badge-success">EN_CURSO</span></td>
+          <td class="flex items-center gap-4">
+            <span class="ui-btn ui-btn-sm ui-btn-cyan highlight-box">Ver Detalle</span>
+            <span class="ui-btn ui-btn-sm ui-btn-warning">Fijar Fin</span>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Jornada Inventario Sede</strong><br><span class="text-xs text-muted">Convocados: 15</span></td>
+          <td class="tabular-nums">29/11/2026 10:00</td>
+          <td><span class="ui-badge badge-info">CREADO</span></td>
+          <td class="flex items-center gap-4">
+            <span class="ui-btn ui-btn-sm ui-btn-outline">Ver Detalle</span>
+            <span class="ui-btn ui-btn-sm ui-btn-success">Notificar</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+  </div>
+</article>
+<article class="step-stack inline-info">
+  <div class="step-info">
+    <span class="step-pill">PASO 4</span>
+    <p class="step-text">Marcar cada asistencia en la planilla y clickear en <strong>"Cerrar Asistencia"</strong> para concluir el evento.</p>
+      <p class="step-note">Al cerrar un evento sancionable, las inasistencias injustificadas generan expedientes automáticos.</p>
+  </div>
+  <div class="step-visual">
+    <div class="ui-crop wide dark-card">
+  <div class="ui-card-header-navy">
+    <span class="font-bold text-sm">Planilla Nominal de Asistencia · Modo Manual / Biométrico</span>
+    <span class="ui-badge badge-info">Presentes: 40 · Ausentes: 2</span>
+  </div>
+  <div class="ui-crop-pad flex flex-col gap-6">
+    <table class="ui-table">
+      <thead>
+        <tr>
+          <th>N° de Socio</th>
+          <th>Socio Convocado</th>
+          <th>Subcomisión</th>
+          <th>Estado de Asistencia</th>
+          <th>Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tabular-nums font-bold">11779</td>
+          <td>Sánchez, Diego Gabriel</td>
+          <td>Cómputos</td>
+          <td><span class="ui-badge badge-success">Presente ▾</span></td>
+          <td class="text-muted">En sede a tiempo</td>
+        </tr>
+        <tr>
+          <td class="tabular-nums font-bold">12015</td>
+          <td>Pérez, Lucas Matías</td>
+          <td>Prensa y Difusión</td>
+          <td><span class="ui-badge badge-danger">Ausente Injustificado ▾</span></td>
+          <td class="text-muted">Sin aviso ni constancia</td>
+        </tr>
+        <tr>
+          <td class="tabular-nums font-bold">11980</td>
+          <td>Gómez, Sofía</td>
+          <td>RR.HH.</td>
+          <td><span class="ui-badge badge-warning">Tardanza Leve ▾</span></td>
+          <td class="text-muted">Ingreso +18 min</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="flex items-center justify-between">
+      <span class="ui-btn ui-btn-outline">Guardar Planilla</span>
+      <span class="ui-btn ui-btn-danger highlight-box">Cerrar Asistencia</span>
+    </div>
+  </div>
+</div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">2 de 2</span>
+  </footer>
+</section>
+</body>
+</html>

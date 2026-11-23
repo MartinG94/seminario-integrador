@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGD-AVEIT — Acceso al Sistema: Ingreso y Navegación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/manual-base.css">
+</head>
+<body>
+<section class="page-cover">
+  <div class="cover-content">
+    <div class="cover-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+    <h1 class="cover-title">Acceso al Sistema</h1>
+    <p class="cover-subtitle">Ingreso y Navegación</p>
+  </div>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 1</span>
+    <p class="step-text">Escribir su Número de Socio en el campo <strong>"Número de Socio"</strong></p>
+      <p class="step-note">Sin puntos ni guiones (ej.: 74907).</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact">
+      <div class="ui-login-wrap" style="padding:10px 14px;">
+        <div class="ui-login-card" style="padding:10px 12px;">
+          <div class="ui-login-title">SGD-AVEIT</div>
+          <div class="ui-login-sub">Sistema de Gestión del Tribunal de Disciplina y Premiaciones</div>
+          <div class="ui-field" style="margin-bottom:8px;">
+            <label class="ui-label">Número de Socio</label>
+            <div class="highlight-box pad-sm">
+              <div class="ui-input" style="font-weight:700;letter-spacing:0.4px;">74907</div>
+            </div>
+          </div>
+          <div class="ui-btn ui-btn-primary w-full" style="opacity:0.9;">INICIAR SESIÓN</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-row reverse">
+  <div class="step-info">
+    <span class="step-pill">PASO 2</span>
+    <p class="step-text">Clickear en el botón <strong>"Iniciar sesión"</strong> para ingresar al sistema</p>
+      <p class="step-note">En entorno de pruebas también puede elegir un chip de rol demo.</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact">
+      <div class="ui-login-wrap" style="padding:10px 14px;">
+        <div class="ui-login-card" style="padding:10px 12px;">
+          <div class="ui-field" style="margin-bottom:7px;">
+            <label class="ui-label">Número de Socio</label>
+            <div class="ui-input">74907</div>
+          </div>
+          <div class="highlight-box pad-sm" style="margin-bottom:7px;">
+            <div class="ui-btn ui-btn-primary w-full">INICIAR SESIÓN</div>
+          </div>
+          <div style="border-top:1px dashed #334155;padding-top:6px;">
+            <div class="text-xs text-muted" style="text-align:center;margin-bottom:4px;">Ingreso rápido por rol (demo):</div>
+            <div class="ui-demo-grid" style="justify-content:center;margin-top:0;">
+              <span class="ui-demo-chip"><span style="color:#7DD3FC;">SOCIO</span> 74907</span>
+              <span class="ui-demo-chip"><span style="color:#7DD3FC;">REVISORES</span> 85194</span>
+              <span class="ui-demo-chip"><span style="color:#7DD3FC;">CD</span> 87414</span>
+              <span class="ui-demo-chip"><span style="color:#7DD3FC;">TD</span> 408917</span>
+              <span class="ui-demo-chip"><span style="color:#7DD3FC;">ADMIN</span> 403655</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 3</span>
+    <p class="step-text">Click en el menú <strong>"Tribunal"</strong> y elegir la sección a consultar</p>
+      <p class="step-note">Las opciones visibles cambian según su rol (Socio, Revisores, CD, TD o Admin).</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact">
+      <div class="ui-sidebar">
+        <div class="ui-sidebar-logo">
+          <span class="ui-logo-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M3 14l2-7 2 7a2 2 0 0 1-4 0z"/><path d="M17 14l2-7 2 7a2 2 0 0 1-4 0z"/></svg></span>
+          <div>
+            <div class="font-bold text-sm" style="color:#FFFFFF;line-height:1.1;">SGD-AVEIT</div>
+            <div class="text-xs" style="color:#94A3B8;font-size:8px;">Tribunal de Disciplina</div>
+          </div>
+        </div>
+        <div class="ui-sidebar-user">
+          <span class="ui-avatar">LG</span>
+          <div>
+            <div class="font-bold" style="font-size:10px;color:#FFFFFF;">Lucas Gastiaburu</div>
+            <div style="font-size:8.5px;color:#CBD5E1;">N° de Socio 74907 · SOCIO</div>
+          </div>
+        </div>
+        <div class="ui-nav-list">
+          <div class="ui-nav-item" style="font-weight:700;color:#FFFFFF;">
+            <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M3 14l2-7 2 7a2 2 0 0 1-4 0z"/><path d="M17 14l2-7 2 7a2 2 0 0 1-4 0z"/></svg> <span>Tribunal</span></span>
+            <span>▴</span>
+          </div>
+          <div class="highlight-box pad-sm">
+            <div class="ui-nav-item sub active" style="padding:4px 8px;">
+              <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> <span>Mis Expedientes</span></span>
+            </div>
+          </div>
+          <div class="ui-nav-item sub" style="padding:4px 8px;">
+            <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> <span>Reglamentos</span></span>
+          </div>
+          <div class="ui-nav-item sub" style="padding:4px 8px;">
+            <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> <span>Ranking de Socios</span></span>
+          </div>
+          <div class="ui-nav-item sub" style="padding:4px 8px;">
+            <span class="ui-nav-item-left"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> <span>Calendario Institucional</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">1 de 2</span>
+  </footer>
+</section>
+<section class="page-step">
+  <header class="step-header">
+    <h2 class="step-brand-title">AVEIT | Sistema</h2>
+    <p class="step-brand-url">https://aveit.frc.utn.edu.ar/</p>
+    <div class="step-header-shield">
+      <svg class="aveit-shield-svg" viewBox="0 0 240 244" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escudo institucional AVEIT" style="width:100%;height:auto;display:block;">
+  <!-- Halo blanco exterior para contraste limpio sobre cintas cyan -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Mitad superior cyan (#29ABE2) -->
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C203,102 205,105 206,108 L34,108 C35,105 37,102 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="#29ABE2"/>
+  <!-- Mitad inferior blanca (#FFFFFF) -->
+  <path d="M34,108 L206,108 C217,132 219,165 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C21,165 23,132 34,108 Z"
+        fill="#FFFFFF"/>
+  <!-- Línea divisoria horizontal y contorno azul marino (#10375C) -->
+  <line x1="34" y1="108" x2="206" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M78,10 L162,10 L162,16 L176,16 L176,28 L168,28 C168,36 174,42 183,38 C186,32 193,28 200,32 L228,74 C232,80 227,89 218,88 C212,87 208,82 204,76 C198,81 196,90 202,100 C216,125 220,162 214,191 C207,216 184,228 152,231 C134,233 125,236 120,241 C115,236 106,233 88,231 C56,228 33,216 26,191 C20,162 24,125 38,100 C44,90 42,81 36,76 C32,82 28,87 22,88 C13,89 8,80 12,74 L40,32 C47,28 54,32 57,38 C66,42 72,36 72,28 L64,28 L64,16 L78,16 Z"
+        fill="none" stroke="#10375C" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Leyenda superior ARGENTINA -->
+  <text x="120" y="61" text-anchor="middle" fill="#FFFFFF"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18.5" font-weight="700" letter-spacing="0.8">ARGENTINA</text>
+  <!-- Cuadro central blanco con emblema UTN -->
+  <rect x="86" y="74" width="68" height="68" fill="#FFFFFF" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="120" y1="86" x2="120" y2="130" stroke="#10375C" stroke-width="5.5"/>
+  <line x1="98" y1="108" x2="142" y2="108" stroke="#10375C" stroke-width="5.5"/>
+  <path d="M103,88 C105,100 112,106 120,106 C128,106 135,100 137,88" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <path d="M103,128 C105,116 112,110 120,110 C128,110 135,116 137,128" fill="none" stroke="#10375C" stroke-width="5.5" stroke-linecap="butt"/>
+  <!-- Leyenda inferior AVEIT -->
+  <text x="120" y="198" text-anchor="middle" fill="#10375C"
+        font-family="Rockwell, 'Roboto Slab', Georgia, 'Times New Roman', serif" font-size="42" font-weight="900" letter-spacing="1.2">AVEIT</text>
+</svg>
+    </div>
+  </header>
+  <main class="steps-container">
+    <article class="step-stack">
+  <div class="step-info">
+    <span class="step-pill">PASO 4</span>
+    <p class="step-text">Usar la barra superior para cambiar entre <strong>Modo Claro / Oscuro</strong> y revisar notificaciones</p>
+      <p class="step-note">La campana alerta sobre plazos próximos a vencer y citaciones activas.</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop wide">
+      <div class="ui-navbar" style="padding:8px 12px;">
+        <div class="font-bold" style="font-size:12px;color:#F8FAFC;">Mis Expedientes</div>
+        <div class="ui-navbar-actions">
+          <div class="ui-input" style="width:155px;padding:4px 8px;font-size:9px;display:flex;align-items:center;justify-content:space-between;color:#94A3B8;">
+            <span>Buscar en el sistema...</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="highlight-box inline pad-sm" style="gap:5px;">
+            <span class="ui-icon-pill" title="Alternar Modo Claro/Oscuro"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> <span>Tema</span></span>
+            <span class="ui-icon-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> <span class="ui-bell-count">2</span></span>
+          </div>
+          <span class="ui-icon-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3"/><path d="M15 12h3"/><path d="M7 16h10"/></svg> <span>N° 74907 · SOCIO ▾</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-row">
+  <div class="step-info">
+    <span class="step-pill">PASO 5</span>
+    <p class="step-text">Clickear en su <strong>N° de Socio</strong> arriba a la derecha y elegir <strong>"Cerrar sesión"</strong></p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact light" style="background:#F8FAFC;">
+      <div class="ui-navbar" style="justify-content:flex-end;gap:6px;padding:6px 10px;">
+        <span class="ui-icon-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span class="ui-icon-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> <span class="ui-bell-count">2</span></span>
+        <span class="ui-icon-pill" style="border-color:#151846;font-weight:700;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3"/><path d="M15 12h3"/><path d="M7 16h10"/></svg> <span>N° 74907 · SOCIO ▾</span></span>
+      </div>
+      <div style="padding:6px 10px 8px;display:flex;justify-content:flex-end;">
+        <div style="width:225px;border:1px solid #CBD5E1;border-radius:6px;background:#FFFFFF;box-shadow:0 6px 16px rgba(15,23,42,0.12);overflow:hidden;">
+          <div style="padding:7px 10px;border-bottom:1px solid #E2E8F0;background:#F8FAFC;">
+            <div class="font-bold" style="font-size:10px;color:#151846;">Gastiaburu, Lucas</div>
+            <div style="font-size:8.5px;color:#475569;">Número de Socio 74907 · Activo · Rol SOCIO</div>
+          </div>
+          <div style="padding:5px 6px;">
+            <div class="highlight-box pad-sm" style="display:flex;align-items:center;gap:6px;color:#B91C1C;font-weight:700;font-size:10px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> <span>Cerrar sesión</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<article class="step-row reverse">
+  <div class="step-info">
+    <span class="step-pill">PASO 6</span>
+    <p class="step-text">Leer las notificaciones abajo a la derecha o cerrarlas desde la <strong>"X"</strong></p>
+      <p class="step-note">Duran 10 segundos, se desvanecen solas y no desaparecen al cambiar de pantalla.</p>
+  </div>
+  <div class="step-visual">
+    
+    <div class="ui-crop compact light ui-crop-pad">
+      <div class="text-xs text-muted" style="margin-bottom:4px;">Esquina inferior derecha de la pantalla:</div>
+      <div class="ui-toast-area" style="flex-direction:column;align-items:flex-end;gap:5px;margin-top:0;">
+        <div class="ui-toast success" style="width:100%;max-width:100%;">
+          <div class="flex items-center gap-6">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:middle;" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <div>
+              <div class="font-bold" style="font-size:9.5px;">Éxito</div>
+              <div style="font-size:8.5px;color:#E2E8F0;">Justificación y documentos registrados correctamente.</div>
+            </div>
+          </div>
+          <span class="highlight-box inline pad-sm" style="border-width:2px !important;">
+            <span class="ui-toast-close" style="padding:0 3px;color:#FFFFFF;">✕</span>
+          </span>
+        </div>
+        <div class="ui-toast info" style="width:100%;max-width:100%;opacity:0.92;">
+          <div class="flex items-center gap-6">
+            <span class="font-bold" style="color:#7DD3FC;">ⓘ</span>
+            <div style="font-size:8.5px;color:#E2E8F0;"><strong>Información:</strong> El aviso dura 10 segundos y no se borra al navegar.</div>
+          </div>
+          <span class="ui-toast-close">✕</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+  </main>
+  <footer class="step-footer">
+    <span class="page-number">2 de 2</span>
+  </footer>
+</section>
+</body>
+</html>
