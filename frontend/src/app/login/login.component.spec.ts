@@ -12,7 +12,7 @@ describe('LoginComponent feedback', () => {
   let auth: jasmine.SpyObj<AuthService>;
   let notifications: jasmine.SpyObj<NotificationService>;
   beforeEach(async () => {
-    auth = jasmine.createSpyObj('AuthService', ['isAuthenticated', 'login']);
+    auth = jasmine.createSpyObj('AuthService', ['isAuthenticated', 'login', 'resetDemoDatabase']);
     auth.isAuthenticated.and.returnValue(false);
     notifications = jasmine.createSpyObj('NotificationService', ['error', 'warning', 'success']);
     await TestBed.configureTestingModule({
@@ -57,5 +57,37 @@ describe('LoginComponent feedback', () => {
     expect(chips.length).toBe(5);
     chips[0].click();
     expect(auth.login).toHaveBeenCalledWith('74907');
+  });
+
+  it('reinicia la base de datos demo desde el botón .btn-reset-demo y notifica éxito o error', () => {
+    auth.resetDemoDatabase.and.returnValue(of({
+      detail: 'Base de datos reiniciada con 2 expedientes de demostración.',
+      expedientes: ['EXP-0001/2026', 'EXP-0002/2026']
+    }));
+
+    const resetBtn: HTMLButtonElement | null = fixture.nativeElement.querySelector('.btn-reset-demo');
+    expect(resetBtn).toBeTruthy();
+    expect(resetBtn?.textContent).toContain('Reiniciar base de datos (Demo)');
+
+    resetBtn?.click();
+    fixture.detectChanges();
+
+    expect(auth.resetDemoDatabase).toHaveBeenCalledTimes(1);
+    expect(notifications.success).toHaveBeenCalledWith(
+      'Base de datos reiniciada con 2 expedientes de demostración.'
+    );
+    expect(component.reiniciandoDb).toBeFalse();
+
+    auth.resetDemoDatabase.and.returnValue(throwError(() => ({
+      status: 403,
+      error: { detail: 'Esta acción solo está disponible en modo desarrollo.' }
+    })));
+    resetBtn?.click();
+    fixture.detectChanges();
+
+    expect(notifications.error).toHaveBeenCalledWith(
+      'Esta acción solo está disponible en modo desarrollo.'
+    );
+    expect(component.reiniciandoDb).toBeFalse();
   });
 });

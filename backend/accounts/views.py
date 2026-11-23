@@ -1,9 +1,11 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.serializers import LoginSerializer, SocioProfileSerializer
+from core.services.demo_reset_service import reset_regularidad_database
 
 
 class LoginView(APIView):
@@ -38,3 +40,25 @@ class MeView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response(SocioProfileSerializer(socio).data)
+
+
+class ResetDemoDatabaseView(APIView):
+    """POST /api/v1/auth/reset-demo-db/ — reinicia datos transaccionales en modo DEBUG."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        if not settings.DEBUG:
+            return Response(
+                {"detail": "Esta acción solo está disponible en modo desarrollo."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        result = reset_regularidad_database()
+        return Response(
+            {
+                "detail": "Base de datos reiniciada con 2 expedientes de demostración.",
+                "expedientes": result["expedientes"],
+            },
+            status=status.HTTP_200_OK,
+        )

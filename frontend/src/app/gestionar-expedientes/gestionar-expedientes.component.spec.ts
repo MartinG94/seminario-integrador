@@ -2547,6 +2547,27 @@ describe('GestionarExpedientesComponent', () => {
       );
     });
 
+    it('permite hacer clic en .btn-confirmar-resolucion con considerandosTexto vacío y muestra advertencia', () => {
+      spyOn(dataService, 'votarDictamen');
+      const exp = crearExpConReglamentos();
+      component.abrirModalVotacion(exp);
+      component.reglamentosSeleccionadosResolucion = ['Estatuto - Art. 25: Deberes'];
+      component.considerandosTexto = '';
+      fixture.detectChanges();
+
+      const btn: HTMLButtonElement | null = fixture.nativeElement.querySelector('.btn-confirmar-resolucion');
+      expect(btn).toBeTruthy();
+      expect(btn?.disabled).toBeFalse();
+
+      btn?.click();
+
+      expect(notifications.warning).toHaveBeenCalledWith(
+        'El campo CONSIDERANDO es obligatorio.'
+      );
+      expect(dataService.votarDictamen).not.toHaveBeenCalled();
+      expect(component.modalVotacionAbierto).toBeTrue();
+    });
+
     it('llama a crearResolucion con plantilla_version v1 y persiste pendiente_firma si exp.id es numérico', () => {
       spyOn(expedienteApi, 'crearResolucion').and.returnValue(of({
         id: 1,

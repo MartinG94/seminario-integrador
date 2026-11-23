@@ -222,7 +222,12 @@ LOGGING = {
 
 # --- Notificaciones & Servicio de Correo (Outbox Resiliente) ---
 INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "aveit-internal-service-secret-2026")
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
+    if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend",
+)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")

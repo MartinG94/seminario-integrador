@@ -36,6 +36,16 @@
             <span class="legajo-num">{{ demo.numero_socio }}</span>
           </button>
         </div>
+
+        <div class="aveit-login__demo-reset">
+          <button
+            type="button"
+            class="btn-reset-demo"
+            [disabled]="reiniciandoDb"
+            (click)="reiniciarBaseDatos()">
+            {{ reiniciandoDb ? 'Reiniciando…' : 'Reiniciar base de datos (Demo)' }}
+          </button>
+        </div>
       </div>
     </form>
 

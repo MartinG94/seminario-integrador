@@ -2502,6 +2502,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     const considerandos = (this.considerandosTexto || '').trim();
     if (!considerandos) {
       this.notifications.warning('El campo CONSIDERANDO es obligatorio.');
+      document.getElementById('resolucion-considerandos')?.focus();
       return;
     }
 

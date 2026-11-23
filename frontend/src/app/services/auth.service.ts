@@ -25,6 +25,11 @@ export interface LoginResponse {
   user: PerfilSocio;
 }
 
+export interface ResetDemoResponse {
+  detail: string;
+  expedientes: string[];
+}
+
 const ACCESS_TOKEN_KEY = 'aveit.access';
 const REFRESH_TOKEN_KEY = 'aveit.refresh';
 const PROFILE_KEY = 'aveit.perfil';
@@ -51,6 +56,10 @@ export class AuthService {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(PROFILE_KEY);
     this.perfilSubject.next(null);
+  }
+
+  resetDemoDatabase(): Observable<ResetDemoResponse> {
+    return this.http.post<ResetDemoResponse>(`${environment.apiUrl}/auth/reset-demo-db/`, {});
   }
 
   getToken(): string | null {

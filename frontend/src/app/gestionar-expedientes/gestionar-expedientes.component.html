@@ -765,7 +765,8 @@
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h5 id="seccion-considerando-titulo" class="font-weight-bold text-dark mb-0 d-flex align-items-center">
               <i class="material-icons text-info mr-1" style="font-size: 20px;">edit_note</i>
-              CONSIDERANDO:
+              CONSIDERANDO: <span class="text-danger">*</span>
+              <span class="small font-weight-normal text-muted ml-1">(obligatorio)</span>
             </h5>
           </div>
           <p class="small text-muted mb-2">
@@ -885,7 +886,7 @@
         <button mat-raised-button 
                 type="button" 
                 class="btn btn-warning btn-confirmar-resolucion d-inline-flex align-items-center" 
-                [disabled]="guardandoResolucion || reglamentosSeleccionadosResolucion.length === 0 || !considerandosTexto.trim()"
+                [disabled]="guardandoResolucion"
                 (click)="confirmarVotacion()">
           <i class="material-icons" style="font-size: 16px;">gavel</i>
           <span class="ml-1">{{guardandoResolucion ? 'Generando...' : 'Guardar y Continuar en Firma'}}</span>

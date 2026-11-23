@@ -14,6 +14,7 @@ import { NotificationService } from '../services/notification.service';
 export class LoginComponent implements OnInit {
   formulario: FormGroup;
   enviando = false;
+  reiniciandoDb = false;
 
   cuentasDemo = [
     { numero_socio: '74907', rol: 'SOCIO', nombre: 'Lucas Gastiaburu' },
@@ -53,6 +54,28 @@ export class LoginComponent implements OnInit {
   seleccionarDemo(numeroSocio: string): void {
     this.formulario.patchValue({ identifier: numeroSocio });
     this.ingresar();
+  }
+
+  reiniciarBaseDatos(): void {
+    if (this.reiniciandoDb) { return; }
+    this.reiniciandoDb = true;
+    this.auth.resetDemoDatabase().subscribe({
+      next: res => {
+        this.reiniciandoDb = false;
+        this.notifications.success(
+          res?.detail || 'Base de datos reiniciada con 2 expedientes de demostración.'
+        );
+      },
+      error: (error: HttpErrorResponse) => {
+        this.reiniciandoDb = false;
+        const detail = error?.error?.detail;
+        this.notifications.error(
+          typeof detail === 'string' && detail.trim()
+            ? detail
+            : 'No pudimos reiniciar la base de datos. Intentá nuevamente en unos instantes.'
+        );
+      }
+    });
   }
 
   ingresar(): void {
