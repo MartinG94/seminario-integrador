@@ -11,7 +11,8 @@ import { RankingSociosComponent } from './ranking-socios.component';
 import { RankingService } from '../services/ranking.service';
 import { NotificationService } from '../services/notification.service';
 import { RankingSocio } from './ranking-socio.model';
-import { RANKING_THRESHOLDS } from './ranking-thresholds';
+import { UmbralesVigentes } from './ranking-thresholds';
+import { ParametrosVigentesService } from '../services/parametros-vigentes.service';
 import { PaginatedResponse } from '../models/paginated-response.model';
 import { ExpedientesSocioDialogComponent } from './expedientes-socio-dialog/expedientes-socio-dialog.component';
 
@@ -67,7 +68,12 @@ describe('RankingSociosComponent', () => {
     }
   ];
 
+  // Por defecto se simula la alerta preventiva activa en -7 (valor inicial del catálogo).
+  let umbralesVigentes: UmbralesVigentes;
+  const parametrosStub = { umbrales: () => of(umbralesVigentes) };
+
   beforeEach(async () => {
+    umbralesVigentes = { critico: -10, preventivo: -7, preventivoActivo: true };
     rankingServiceSpy = jasmine.createSpyObj('RankingService', ['obtenerRanking']);
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
     notifications = jasmine.createSpyObj('NotificationService', ['error']);
@@ -81,7 +87,8 @@ describe('RankingSociosComponent', () => {
         { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
         { provide: NotificationService, useValue: notifications },
         { provide: RankingService, useValue: rankingServiceSpy },
-        { provide: MatDialog, useValue: dialogSpy }
+        { provide: MatDialog, useValue: dialogSpy },
+        { provide: ParametrosVigentesService, useValue: parametrosStub }
       ]
     }).compileComponents();
 
@@ -180,10 +187,8 @@ describe('RankingSociosComponent', () => {
     expect(celda3).not.toContain('+0.00');
   });
 
-  it('debería asignar clases de alerta .row-cese (<= -10) y .row-alerta (-10 < saldo <= -7) según RANKING_THRESHOLDS', () => {
-    expect(RANKING_THRESHOLDS.cese).toBe(-10);
-    expect(RANKING_THRESHOLDS.alerta).toBe(-7);
-
+  it('debería asignar clases de alerta .row-cese (<= -10) y .row-alerta (-10 < saldo <= -7) según los umbrales vigentes', () => {
+    component.umbrales = { critico: -10, preventivo: -7, preventivoActivo: true };
     const sCese1 = { ...sociosMock[0], saldo: -10 };
     const sCese2 = { ...sociosMock[0], saldo: -14.5 };
     const sAlerta1 = { ...sociosMock[0], saldo: -7 };
@@ -590,5 +595,46 @@ describe('RankingSociosComponent', () => {
     const primeraInstanciaPaginados = component.sociosPaginados;
     const segundaInstanciaPaginados = component.sociosPaginados;
     expect(primeraInstanciaPaginados).toBe(segundaInstanciaPaginados);
+  });
+
+  describe('umbrales configurados en el panel de administración', () => {
+    const socios = () => [
+      { ...sociosMock[0], id: '1', apellido: 'Uno', saldo: -1 },
+      { ...sociosMock[0], id: '2', apellido: 'Dos', saldo: -3 },
+      { ...sociosMock[0], id: '3', apellido: 'Tres', saldo: -8 },
+      { ...sociosMock[0], id: '4', apellido: 'Cuatro', saldo: -12 }
+    ];
+
+    it('con la alerta preventiva inactiva sólo resalta el umbral crítico', () => {
+      umbralesVigentes = { critico: -10, preventivo: -2, preventivoActivo: false };
+      rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(socios())));
+      fixture.detectChanges();
+
+      expect(component.getRowClass(component.socios[2])).toBe('');
+      expect(component.getRowClass(component.socios[3])).toBe('row-cese');
+      expect(component.cantidadSociosEnAlerta).toBe(1);
+      expect(component.umbralAlertaTexto).toBe('-10');
+    });
+
+    it('con la alerta preventiva activa en -2 resalta y cuenta desde ese saldo', () => {
+      umbralesVigentes = { critico: -10, preventivo: -2, preventivoActivo: true };
+      rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(socios())));
+      fixture.detectChanges();
+
+      expect(component.getRowClass(component.socios[0])).toBe('');
+      expect(component.getRowClass(component.socios[1])).toBe('row-alerta');
+      expect(component.getEstadoDescripcion(component.socios[1])).toBe('Alerta Preventiva');
+      expect(component.cantidadSociosEnAlerta).toBe(3);
+      const badge = (fixture.nativeElement as HTMLElement).querySelector('.badge-pill') as HTMLElement;
+      expect(badge.getAttribute('title')).toContain('-2 pts');
+    });
+
+    it('acepta umbrales decimales y los muestra con coma', () => {
+      umbralesVigentes = { critico: -10, preventivo: -8.5, preventivoActivo: true };
+      rankingServiceSpy.obtenerRanking.and.returnValue(of(mockPaginated(socios())));
+      fixture.detectChanges();
+      expect(component.umbralAlertaTexto).toBe('-8,5');
+      expect(component.getRowClass(component.socios[2])).toBe('');
+    });
   });
 });

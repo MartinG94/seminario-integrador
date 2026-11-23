@@ -239,7 +239,7 @@ table.table-mat tbody tr:focus {
     white-space: nowrap;
     text-transform: none;
     letter-spacing: normal;
-    color: var(--color-text-inverse);
+    color: var(--color-on-primary);
 
     &.badge-mat-danger { background: var(--color-danger); }
     &.badge-mat-info { background: var(--color-info); }
@@ -541,7 +541,7 @@ body.dark-edition,
   &:hover,
   &:focus {
     background-color: var(--color-danger);
-    color: var(--color-text-inverse);
+    color: var(--color-on-danger);
   }
 }
 
@@ -1119,7 +1119,7 @@ body.dark-edition,
 
   &.has-items {
     background-color: var(--color-primary, #{$aveit-navy});
-    color: #FFFFFF;
+    color: var(--color-on-primary);
   }
 }
 
@@ -1141,7 +1141,8 @@ body.dark-edition,
   width: 100%;
   max-width: 780px;
   max-height: 88vh;
-  background-color: #FFFFFF;
+  background-color: var(--color-surface-card);
+  color: var(--color-text-primary);
   border-radius: 12px;
   border: 1px solid var(--color-border-main, #CBD5E1);
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.28);
@@ -1155,7 +1156,7 @@ body.dark-edition,
 }
 
 .modal-reglamentos-header {
-  background: linear-gradient(135deg, #151846 0%, #1E293B 100%);
+  background: linear-gradient(135deg, var(--grad-primary-start) 0%, var(--grad-primary-end) 100%);
   padding: 16px 22px;
   color: #FFFFFF;
 
@@ -1180,7 +1181,7 @@ body.dark-edition,
 
 .modal-reglamentos-toolbar {
   padding: 14px 22px;
-  background-color: #F8FAFC;
+  background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border-main, #E2E8F0);
 }
 
@@ -1191,8 +1192,8 @@ body.dark-edition,
 }
 
 .doc-tab-btn {
-  border: 1px solid #CBD5E1;
-  background-color: #FFFFFF;
+  border: 1px solid var(--color-border-main);
+  background-color: var(--color-surface-card);
   color: var(--color-text-secondary, #64748B);
   font-size: 0.83rem;
   font-weight: 600;
@@ -1216,11 +1217,11 @@ body.dark-edition,
   &.active {
     background-color: var(--color-primary, #{$aveit-navy});
     border-color: var(--color-primary, #{$aveit-navy});
-    color: #FFFFFF;
+    color: var(--color-on-primary);
 
     .doc-tab-badge {
-      background-color: rgba(255, 255, 255, 0.22);
-      color: #FFFFFF;
+      background-color: var(--color-surface-card);
+      color: var(--color-primary, #{$aveit-navy});
     }
   }
 
@@ -1229,7 +1230,7 @@ body.dark-edition,
     border-radius: 999px;
     font-size: 0.74rem;
     font-weight: 700;
-    background-color: #E2E8F0;
+    background-color: var(--color-surface);
     color: var(--color-primary, #{$aveit-navy});
   }
 }
@@ -1242,16 +1243,17 @@ body.dark-edition,
   .search-icon {
     position: absolute;
     left: 12px;
-    color: var(--color-text-muted, #94A3B8);
+    color: var(--color-text-secondary);
     font-size: 20px;
     pointer-events: none;
   }
 
   .search-input-modal {
     padding: 9px 36px 9px 38px !important;
-    border: 1px solid #CBD5E1 !important;
+    border: 1px solid var(--color-border-main) !important;
     border-radius: 8px !important;
-    background-color: #FFFFFF !important;
+    background-color: var(--color-surface-card) !important;
+    color: var(--color-text-primary) !important;
     background-image: none !important;
     font-size: 0.88rem;
     height: 40px !important;
@@ -1267,7 +1269,7 @@ body.dark-edition,
     right: 8px;
     background: none;
     border: none;
-    color: var(--color-text-muted, #94A3B8);
+    color: var(--color-text-secondary);
     cursor: pointer;
     display: inline-flex;
     padding: 4px;
@@ -1297,18 +1299,18 @@ body.dark-edition,
   padding: 12px 14px;
   border: 1px solid var(--color-border-main, #E2E8F0);
   border-radius: 10px;
-  background-color: #FFFFFF;
+  background-color: var(--color-surface-card);
   cursor: pointer;
   transition: all 0.18s ease;
 
   &:hover {
     border-color: var(--color-accent, #{$aveit-cyan});
-    background-color: #F8FAFC;
+    background-color: var(--color-surface-elevated);
   }
 
   &.selected {
     border-color: var(--color-primary, #{$aveit-navy});
-    background-color: #F0F5FF;
+    background-color: var(--color-surface-elevated);
     box-shadow: 0 0 0 1px var(--color-primary, #{$aveit-navy});
   }
 
@@ -1320,17 +1322,17 @@ body.dark-edition,
   .custom-checkbox {
     width: 20px;
     height: 20px;
-    border: 2px solid #94A3B8;
+    border: 2px solid var(--color-text-secondary);
     border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #FFFFFF;
+    background-color: var(--color-surface-card);
     transition: all 0.15s ease;
 
     i.material-icons {
       font-size: 15px;
-      color: #FFFFFF;
+      color: var(--color-on-primary);
       font-weight: 700;
     }
 
@@ -1352,7 +1354,7 @@ body.dark-edition,
     letter-spacing: 0.04em;
     padding: 2px 8px;
     border-radius: 5px;
-    background-color: #E2E8F0;
+    background-color: var(--color-surface);
     color: var(--color-text-secondary, #64748B);
 
     &.doc-pill-estatuto {
@@ -1362,7 +1364,7 @@ body.dark-edition,
 
     &.doc-pill-interno {
       background-color: rgba(0, 151, 167, 0.14);
-      color: #006064;
+      color: var(--color-info);
     }
   }
 
@@ -1380,7 +1382,7 @@ body.dark-edition,
 
 .modal-reglamentos-footer {
   padding: 12px 22px;
-  background-color: #F8FAFC;
+  background-color: var(--color-surface);
   border-top: 1px solid var(--color-border-main, #E2E8F0);
 }
 

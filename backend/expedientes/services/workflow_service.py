@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from core.services.system_parameters import SystemParameterService
 from expedientes.domain.calendar import compute_business_deadline
 from expedientes.domain.holiday_provider import DbHolidayProvider
 from expedientes.models import (
@@ -137,7 +138,8 @@ class ExpedienteWorkflowService:
                 {
                     "estado": (
                         "El expediente permanece en período de justificaciones hasta que "
-                        "venza el plazo de 5 días hábiles."
+                        f"venza el plazo de {SystemParameterService.descargo_business_days()} "
+                        "días hábiles."
                     )
                 }
             )
@@ -156,7 +158,7 @@ class ExpedienteWorkflowService:
                 expediente, start_at
             ) or compute_business_deadline(
                 start_at=start_at,
-                business_days=5,
+                business_days=SystemParameterService.descargo_business_days(),
                 holiday_provider=DbHolidayProvider(),
             )
             fields_to_update.extend(["plazo_inicio_at", "plazo_limite_at"])

@@ -127,7 +127,7 @@ class TestOpeningNotificationTemplate:
         assert sample_data["motivo_caratula"] not in payload.body_text
         assert "05/10/2026 10:00" in payload.body_text
         assert "12/10/2026 10:00" in payload.body_text
-        assert "cinco (5) días hábiles" in payload.body_text
+        assert "5 días hábiles administrativos" in payload.body_text
         assert "Art. 12 Inc. 2" in payload.body_text
         assert "https://tribunal.aveit.utn.edu.ar/mis-expedientes/42" in payload.body_text
         assert "Tribunal de Disciplina — A.V.E.I.T. (UTN FRC)" in payload.body_text

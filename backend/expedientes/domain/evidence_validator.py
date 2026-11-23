@@ -56,7 +56,9 @@ class EvidenceValidator:
         return sanitized or "comprobante_adjunto"
 
     @classmethod
-    def validate_file(cls, content: bytes, filename: str) -> ValidatedEvidence:
+    def validate_file(
+        cls, content: bytes, filename: str, max_bytes: int = MAX_FILE_SIZE_BYTES
+    ) -> ValidatedEvidence:
         """
         Valida el contenido binario, detecta tipo MIME por magic bytes y calcula metadatos.
 
@@ -68,9 +70,10 @@ class EvidenceValidator:
         if size_bytes == 0:
             raise EvidenceValidationError("El archivo se encuentra vacío.")
 
-        if size_bytes > MAX_FILE_SIZE_BYTES:
+        if size_bytes > max_bytes:
+            max_mb = max_bytes // (1024 * 1024)
             msg = (
-                f"El archivo excede el tamaño máximo permitido de 5 MB "
+                f"El archivo excede el tamaño máximo permitido de {max_mb} MB "
                 f"({size_bytes} bytes recibidos)."
             )
             raise EvidenceValidationError(msg)
@@ -113,15 +116,17 @@ class EvidenceValidator:
         )
 
     @classmethod
-    def validate_quota(cls, tipo_descargo: str, count: int) -> None:
+    def validate_quota(cls, tipo_descargo: str, count: int, max_count: int = 5) -> None:
         """
         Valida que la cantidad de documentos respete los límites de la modalidad procesal.
 
-        - T02: mínimo 1 obligatorio, máximo 3.
-        - T03: opcional (0 a 5).
+        - T02: mínimo 1 obligatorio.
+        - Máximo configurable (5 por defecto, Spec 010).
         """
-        if count > 5:
-            raise EvidenceValidationError("Se admite un máximo de 5 comprobantes probatorios.")
+        if count > max_count:
+            raise EvidenceValidationError(
+                f"Se admite un máximo de {max_count} comprobantes probatorios."
+            )
         if count < 0:
             raise EvidenceValidationError("La cantidad de comprobantes no puede ser negativa.")
 

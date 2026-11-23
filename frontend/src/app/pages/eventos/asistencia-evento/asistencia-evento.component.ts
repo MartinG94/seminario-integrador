@@ -978,7 +978,7 @@ export class AsistenciaEventoComponent implements OnInit, OnDestroy {
         if (this.eventoActivo) {
           this.eventoActivo.estado = 'FINALIZADO';
         }
-        const expCount = this.eventoActivo.es_sancionable ? this.totalAusentes : 0;
+        const expCount = this.eventoActivo?.es_sancionable ? this.totalAusentes : 0;
         this.notificationService.success(
           `Convocatoria cerrada formalmente. Se abrieron ${expCount} expedientes en estado Expediente Creado.`
         );

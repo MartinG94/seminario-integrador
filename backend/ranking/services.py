@@ -173,9 +173,9 @@ def filter_ranking_queryset(
             if digits:
                 qs = qs.filter(grupo_id_calc=int(digits))
 
-    # Filtro por umbral de alerta disciplinaria (saldo <= -7.00 pts)
+    # Filtro por umbral de alerta vigente: el preventivo si está activo, si no el crítico.
     if solo_alertas is True:
-        qs = qs.filter(saldo_historico_calc__lte=Decimal("-7.00"))
+        qs = qs.filter(saldo_historico_calc__lte=alert_threshold())
 
     # Filtro por subcomisión (por nombre insensible a acentos, ID numérico o sin subcomisión)
     if subcomision:
@@ -367,6 +367,25 @@ from ranking.domain.threshold_alerts import (  # noqa: E402
 )
 
 
+def configured_threshold() -> UmbralConfig:
+    """Umbrales vigentes del panel de administración (Spec 012); el crítico sigue fijo en -10."""
+    from core.services.system_parameters import SystemParameterService
+
+    try:
+        umbral, activo = SystemParameterService.preventive_threshold()
+    except Exception:
+        return UmbralConfig()
+    return UmbralConfig(umbral_preventivo=umbral, preventivo_activo=activo)
+
+
+def alert_threshold() -> Decimal:
+    """Saldo desde el cual un socio figura "en alerta" en el ranking (parámetros vigentes)."""
+    from core.services.system_parameters import SystemParameterService
+
+    preventivo, activo = SystemParameterService.preventive_threshold()
+    return preventivo if activo else SystemParameterService.critical_threshold()
+
+
 def evaluate_socio_threshold_crossing(
     socio_id: int,
     saldo_anterior: Decimal,
@@ -380,7 +399,7 @@ def evaluate_socio_threshold_crossing(
     metadata_adicional: Optional[dict[str, Any]] = None,
 ) -> EvaluacionCruceResult:
     """Evalúa cruces de umbrales (-10 crítico y -7 preventivo) ante movimientos de saldo (S5-06)."""
-    umbral_cfg = config or UmbralConfig()
+    umbral_cfg = config or configured_threshold()
     return ThresholdAlertEngine.evaluar_cruce(
         socio_id=socio_id,
         saldo_anterior=saldo_anterior,
@@ -408,7 +427,7 @@ def reevaluate_socio_reversal(
     motivo_reversion: str = "Reversión / contramovimiento autorizado",
 ) -> tuple[EvaluacionCruceResult, list[RegistroAlerta]]:
     """Reevalúa umbrales tras reversión o contramovimiento preservando historial (S5-06)."""
-    umbral_cfg = config or UmbralConfig()
+    umbral_cfg = config or configured_threshold()
     return ThresholdAlertEngine.reevaluar_por_reversion(
         socio_id=socio_id,
         saldo_anterior=saldo_anterior,
@@ -436,7 +455,7 @@ def reevaluate_socio_rectification(
     motivo_rectificacion: str = "Rectificación de saldo autorizada",
 ) -> tuple[EvaluacionCruceResult, list[RegistroAlerta]]:
     """Reevalúa umbrales tras rectificación de saldo preservando historial (S5-06)."""
-    umbral_cfg = config or UmbralConfig()
+    umbral_cfg = config or configured_threshold()
     return ThresholdAlertEngine.reevaluar_por_rectificacion(
         socio_id=socio_id,
         saldo_anterior=saldo_anterior,

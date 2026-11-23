@@ -25,6 +25,15 @@ colors:
   dark-text-primary: "#F8FAFC"
   dark-text-secondary: "#94A3B8"
   dark-border-main: "#334155"
+  dark-primary: "#B3D3E4"
+  dark-success: "#86EFAC"
+  dark-warning: "#FCD34D"
+  dark-danger: "#FCA5A5"
+  dark-info: "#7DD3FC"
+  on-primary: "#FFFFFF"
+  on-danger: "#FFFFFF"
+  dark-on-primary: "#0F172A"
+  dark-on-danger: "#0F172A"
   gradient-primary-start: "#151846"
   gradient-primary-end: "#242A68"
   gradient-info-start: "#0284C7"
@@ -244,6 +253,9 @@ El Modo Oscuro de SGD-AVEIT evita el negro absoluto (`#000000`), implementando t
 | **`dark-text-primary`** | `#F8FAFC` | Blanco frío de alto contraste para títulos y datos principales. | **14.2 : 1** (AAA) |
 | **`dark-text-secondary`** | `#94A3B8` | Gris azulado claro para etiquetas de apoyo y columnas de tabla. | **5.9 : 1** (AA) |
 | **`dark-border-main`** | `#334155` | Líneas de división y bordes de inputs en modo oscuro. | Contraste 3:1 |
+| **`dark-primary`** | `#B3D3E4` | Títulos, enlaces y fondos de botones primarios sobre superficies oscuras. | Contraste 4.5:1 |
+| **`dark-success` / `dark-warning` / `dark-danger` / `dark-info`** | `#86EFAC` / `#FCD34D` / `#FCA5A5` / `#7DD3FC` | Estados semánticos (texto, bordes e indicadores) en modo oscuro. | Contraste 4.5:1 |
+| **`on-primary` / `on-danger`** | `#FFFFFF` (claro) · `#0F172A` (oscuro) | Texto sobre fondos `primary` y `danger` en cada tema. | Contraste 4.5:1 |
 
 ### 2.3. Semántica de Estados y Alertas Disciplinarias
 

@@ -553,7 +553,7 @@ textarea.form-control-aveit {
   }
 
   .urgency-choice-label {
-    color: var(--color-text-inverse);
+    color: var(--color-on-primary);
     font-size: 13px;
     font-weight: 600;
     line-height: 1.2;
@@ -567,7 +567,7 @@ textarea.form-control-aveit {
     width: 20px;
     height: 20px;
     margin: 0;
-    border: 2px solid var(--color-text-inverse);
+    border: 2px solid var(--color-on-primary);
     border-radius: 4px;
     background: transparent;
     cursor: inherit;
@@ -575,7 +575,7 @@ textarea.form-control-aveit {
     &:focus { outline: none; }
 
     &:checked {
-      background: var(--color-text-inverse);
+      background: var(--color-on-primary);
 
       &::after {
         content: '';

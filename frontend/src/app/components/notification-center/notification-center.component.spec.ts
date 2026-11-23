@@ -8,7 +8,7 @@ import { NotificationService } from '../../services/notification.service';
 import { NotificationCenterComponent } from './notification-center.component';
 
 @Component({ template: '<ng-template #content><h2 mat-dialog-title>Prueba</h2><mat-dialog-content>Contenido</mat-dialog-content></ng-template>' })
-class DialogTestComponent { @ViewChild('content') content: TemplateRef<unknown>; }
+class DialogTestComponent { @ViewChild('content') content!: TemplateRef<unknown>; }
 
 describe('NotificationCenterComponent', () => {
   let fixture: ComponentFixture<NotificationCenterComponent>;

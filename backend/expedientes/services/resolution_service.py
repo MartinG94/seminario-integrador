@@ -4,11 +4,12 @@ import hashlib
 import logging
 from decimal import Decimal
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
+from core.domain.system_parameters import EMAIL_COMISION_DIRECTIVA, EMAIL_TRIBUNAL
+from core.services.system_parameters import SystemParameterService
 from expedientes.domain.closed_decision import ClosedDecision, ClosedDecisionProvider
 from expedientes.models import (
     CambioEstadoExpediente,
@@ -496,9 +497,7 @@ def despachar_notificaciones_resolucion_emitida_con_estado(
             hubo_fallo = True
 
     # 2. Notificar a Comisión Directiva
-    cd_email = getattr(settings, "COMISION_DIRECTIVA_EMAIL", None) or getattr(
-        settings, "CD_EMAIL", "cd@aveit.org"
-    )
+    cd_email = SystemParameterService.email(EMAIL_COMISION_DIRECTIVA)
     asunto_cd = f"[AVEIT] Notificación CD: Emisión de {identificador} ({numero_exp})"
     cuerpo_cd = (
         "Estimados Miembros de la Comisión Directiva:\n\n"
@@ -533,7 +532,7 @@ def despachar_notificaciones_resolucion_emitida_con_estado(
         hubo_fallo = True
 
     # 3. Notificar a Tribunal de Disciplina
-    td_email = getattr(settings, "TRIBUNAL_EMAIL", "td@aveit.org")
+    td_email = SystemParameterService.email(EMAIL_TRIBUNAL)
     asunto_td = f"[AVEIT] Notificación TD: Perfeccionamiento de {identificador}"
     cuerpo_td = (
         "Estimados Integrantes del Tribunal de Disciplina:\n\n"

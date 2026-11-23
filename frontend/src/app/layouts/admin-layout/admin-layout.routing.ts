@@ -19,6 +19,7 @@ import { UpgradeComponent } from '../../upgrade/upgrade.component';
 import { TribunalGuard } from '../../services/tribunal.guard';
 import { EnDesarrolloComponent } from '../../components/en-desarrollo/en-desarrollo.component';
 import { CalendarioInstitucionalComponent } from '../../calendario-institucional/calendario-institucional.component';
+import { AdminParametrosComponent } from '../../pages/admin/parametros/admin-parametros.component';
 
 export const AdminLayoutRoutes: Routes = [
     { path: 'mis-expedientes',        component: MisExpedientesComponent },
@@ -60,6 +61,12 @@ export const AdminLayoutRoutes: Routes = [
       component: EventosAsistenciaComponent,
       canActivate: [TribunalGuard],
       data: { roles: ['FISCALIZADORA', 'CD', 'TD', 'ADMIN'] }
+    },
+    {
+      path: 'admin/parametros',
+      component: AdminParametrosComponent,
+      canActivate: [TribunalGuard],
+      data: { roles: ['ADMIN'] }
     },
     { path: 'dashboard',              component: DashboardComponent },
     { path: 'table-list',             component: TableListComponent },

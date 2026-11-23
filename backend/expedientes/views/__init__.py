@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.pagination import PaginatedAPIViewMixin, StandardResultsSetPagination
+from core.services.system_parameters import SystemParameterService
 from expedientes.domain.calendar import compute_business_deadline
 from expedientes.domain.causal_resolution import CausalDecision
 from expedientes.domain.evidence_validator import EvidenceValidationError, EvidenceValidator
@@ -187,6 +188,8 @@ def filter_expedientes_by_legajo(queryset, legajo: str):
         | Q(socios__id__in=local_socio_ids)
     ).distinct()
 
+
+PLAZO_EXPIRADO_DETAIL = "El plazo perentorio para presentar el descargo ha expirado."
 
 ALLOWED_EXPEDIENTE_ORDERING_FIELDS = {
     "id",
@@ -469,7 +472,7 @@ class PresentarDescargoView(APIView):
             if not expediente.esta_en_plazo(ahora=now):
                 return Response(
                     {
-                        "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                        "detail": PLAZO_EXPIRADO_DETAIL,
                         "plazo_limite_at": expediente.plazo_limite_at,
                         "server_time": now,
                     },
@@ -608,7 +611,7 @@ class PresentarDescargoView(APIView):
         if not expediente.esta_en_plazo(ahora=now):
             return Response(
                 {
-                    "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                    "detail": PLAZO_EXPIRADO_DETAIL,
                     "plazo_limite_at": expediente.plazo_limite_at,
                     "server_time": now,
                 },
@@ -696,8 +699,8 @@ class EvidenciaUploadView(APIView):
     - POST /api/v1/expedientes/<pk>/evidencia/
     - Requiere autenticación.
     - Valida titularidad del socio (imputado en la causa).
-    - Valida que el expediente esté en estado 'justificando' y dentro del plazo de 5 días hábiles.
-    - Valida cupos (T02 máx 3, T03 máx 5) y formatos válidos (PDF/JPG/PNG <= 5 MB).
+    - Valida que el expediente esté en estado 'justificando' y dentro del plazo de descargo vigente.
+    - Valida la cantidad y el tamaño máximos vigentes (parámetros del sistema) y el formato.
     - Persiste en BD LONGBLOB (Directiva PO).
     """
 
@@ -731,7 +734,7 @@ class EvidenciaUploadView(APIView):
         if not expediente.esta_en_plazo(ahora=now):
             return Response(
                 {
-                    "detail": "El plazo perentorio de 5 días hábiles ha expirado.",
+                    "detail": PLAZO_EXPIRADO_DETAIL,
                     "plazo_limite_at": expediente.plazo_limite_at,
                     "server_time": now,
                 },
@@ -757,19 +760,21 @@ class EvidenciaUploadView(APIView):
             elif expediente.descargo_tipo:
                 tipo_descargo = expediente.descargo_tipo
 
-        if tipo_descargo:
-            vigentes_count = EvidenciaDescargo.objects.filter(
-                expediente=expediente, socio=socio, es_vigente=True
-            ).count()
-            total_count = vigentes_count + len(files)
-            try:
-                EvidenceValidator.validate_quota(tipo_descargo, total_count)
-            except EvidenceValidationError as exc:
-                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
         created = []
         try:
             with transaction.atomic():
+                # Se serializan las cargas concurrentes del mismo socio bloqueando su fila,
+                # de modo que el conteo de vigentes no quede desactualizado.
+                Socio.objects.select_for_update().filter(pk=socio.pk).first()
+                vigentes_count = EvidenciaDescargo.objects.filter(
+                    expediente=expediente, socio=socio, es_vigente=True
+                ).count()
+                # La cuota rige siempre, aun sin modalidad de descargo informada.
+                EvidenceValidator.validate_quota(
+                    tipo_descargo or "",
+                    vigentes_count + len(files),
+                    max_count=SystemParameterService.attachment_limits().cantidad_maxima,
+                )
                 for file_obj in files:
                     evidencia = EvidenceService.save_evidence(
                         expediente=expediente,

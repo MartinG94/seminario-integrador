@@ -294,7 +294,7 @@ describe('CalendarioInstitucionalComponent', () => {
     const root: HTMLElement = fixture.nativeElement;
     const button = root.querySelector('[aria-haspopup="dialog"]') as HTMLButtonElement;
     const create = root.querySelector('[aria-controls="create-holiday-form"]');
-    expect(button.parentElement).toBe(create?.parentElement);
+    expect(button.parentElement).toBe(create?.parentElement ?? null);
     expect(root.querySelector('#simulation-start')).toBeNull();
     button.focus();
     button.click();
@@ -324,7 +324,7 @@ describe('CalendarioInstitucionalComponent', () => {
       if (closeMethod === 'X') {
         (container.querySelector('[aria-label="Cerrar simulador"]') as HTMLButtonElement).click();
       } else if (closeMethod === 'Escape') {
-        container.querySelector('[role="dialog"]').dispatchEvent(
+        container.querySelector('[role="dialog"]')!.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
       } else if (closeMethod === 'fondo') {
         (container.querySelector('.cdk-overlay-backdrop') as HTMLElement).click();

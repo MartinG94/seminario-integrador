@@ -232,7 +232,7 @@ def construir_timeline(expediente: Expediente) -> list[dict[str, Any]]:
                 "fecha_hora": expediente.plazo_inicio_at.isoformat(),
                 "tipo": "NOTIFICACION_PLAZO",
                 "tipo_display": "Notificación procesal de apertura",
-                "titulo": "Inicio de plazo de justificaciones (5 días hábiles)",
+                "titulo": "Inicio de plazo de justificaciones",
                 "descripcion": f"Plazo perentorio congelado hasta el {limite_str}.",
                 "actor": "Tribunal de Disciplina",
                 "icono": "schedule",

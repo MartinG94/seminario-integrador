@@ -5,6 +5,8 @@ import { map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { PaginatedResponse, PaginationParams } from '../models/paginated-response.model';
 import { AuthService } from './auth.service';
+import { ParametrosVigentesService } from './parametros-vigentes.service';
+import { nivelSaldo } from '../ranking-socios/ranking-thresholds';
 import type { AntecedenteT03DTO } from './expediente-api.service';
 
 export type EstadoExpediente = 
@@ -265,7 +267,8 @@ export class TribunalDataService {
 
   constructor(
     private auth: AuthService,
-    private http: HttpClient
+    private http: HttpClient,
+    private parametros: ParametrosVigentesService
   ) {
     const savedDark = localStorage.getItem('aveit_dark_mode') === 'true';
     if (savedDark) {
@@ -758,9 +761,10 @@ export class TribunalDataService {
       if (deltaPuntos > 0) socio.felicitaciones++;
       if (deltaPuntos < 0) socio.sanciones++;
 
-      if (socio.saldo <= -10.0) {
+      const nivel = nivelSaldo(socio.saldo, this.parametros.umbralesActuales);
+      if (nivel === 'critico') {
         socio.estado = 'CESE_ESTATUTARIO';
-      } else if (socio.saldo <= -7.0) {
+      } else if (nivel === 'preventivo') {
         socio.estado = 'ADVERTENCIA';
       } else {
         socio.estado = 'HABILITADO';

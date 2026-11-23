@@ -41,6 +41,16 @@ describe('MisExpedientesComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('aplica los límites de adjuntos configurados por el Administrador', () => {
+    http.match(`${environment.apiUrl}/parametros/adjuntos/`)
+      .forEach(req => req.flush({ tamano_maximo_mb: 8, cantidad_maxima: 4 }));
+    expect(component.MAX_BYTES).toBe(8 * 1024 * 1024);
+    component.tipoDescargo = 'T03_EXTRAORDINARIO';
+    expect(component.limiteActual).toBe(4);
+    component.tipoDescargo = 'T02_CERTIFICADO';
+    expect(component.limiteActual).toBe(3);
+  });
+
   it('notifica validaciones de justificativo sin enviar un descargo inválido', () => {
     const submit = spyOn(TestBed.inject(TribunalDataService), 'enviarDescargo');
     component.expedienteSeleccionado = { id: 'test' } as Expediente;
@@ -264,15 +274,29 @@ describe('MisExpedientesComponent', () => {
       expect(component.getHeaderClassPuntos(-5)).toBe('card-header-secondary');
     });
 
-    it('retorna clase amarillo para puntos < -7 y >= -9', () => {
-      expect(component.getColorClasePuntos(-7.5)).toBe('puntos-amarillo');
+    it('retorna clase amarillo desde el umbral preventivo vigente cuando está activo', () => {
+      component.umbrales = { critico: -10, preventivo: -7, preventivoActivo: true };
+      expect(component.getColorClasePuntos(-7)).toBe('puntos-amarillo');
       expect(component.getColorClasePuntos(-8)).toBe('puntos-amarillo');
-      expect(component.getColorClasePuntos(-9)).toBe('puntos-amarillo');
+      expect(component.getColorClasePuntos(-9.99)).toBe('puntos-amarillo');
       expect(component.getHeaderClassPuntos(-8)).toBe('card-header-warning');
     });
 
-    it('retorna clase rojo para puntos < -9', () => {
-      expect(component.getColorClasePuntos(-9.5)).toBe('puntos-rojo');
+    it('no resalta el umbral preventivo si la alerta preventiva está inactiva', () => {
+      component.umbrales = { critico: -10, preventivo: -2, preventivoActivo: false };
+      expect(component.getColorClasePuntos(-8)).toBe('puntos-gris');
+      expect(component.getHeaderClassPuntos(-8)).toBe('card-header-secondary');
+    });
+
+    it('usa un umbral preventivo configurado distinto de -7', () => {
+      component.umbrales = { critico: -10, preventivo: -2, preventivoActivo: true };
+      expect(component.getColorClasePuntos(-1)).toBe('puntos-gris');
+      expect(component.getColorClasePuntos(-2)).toBe('puntos-amarillo');
+    });
+
+    it('retorna clase rojo desde el umbral crítico (-10)', () => {
+      expect(component.getColorClasePuntos(-9.5)).not.toBe('puntos-rojo');
+      expect(component.getColorClasePuntos(-10)).toBe('puntos-rojo');
       expect(component.getColorClasePuntos(-15)).toBe('puntos-rojo');
       expect(component.getHeaderClassPuntos(-10)).toBe('card-header-danger');
     });

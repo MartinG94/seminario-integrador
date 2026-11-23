@@ -8,7 +8,7 @@
  */
 export interface RankingSocio {
   id: string;
-  numero_socio?: number;
+  numero_socio?: number | null;
   legajo: string;
   nombre: string;
   apellido: string;

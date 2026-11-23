@@ -9,7 +9,7 @@ from expedientes.services.deadline_service import DeadlineEnforcementService
 class Command(BaseCommand):
     help = (
         "Cierra de forma idempotente los expedientes en justificación "
-        "cuyo plazo perentorio de 5 días hábiles haya vencido sin descargo."
+        "cuyo plazo perentorio de descargo haya vencido sin descargo."
     )
 
     def handle(self, *args, **options) -> None:

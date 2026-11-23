@@ -29,6 +29,12 @@ import {
   ReglamentoCiteView
 } from '../utils/reglamento-format.util';
 import { ModalScrollLockService } from '../services/modal-scroll-lock.service';
+import { AdminApiService } from '../services/admin-api.service';
+import {
+  PLAZO_DESCARGO_INICIAL,
+  ParametrosVigentesService
+} from '../services/parametros-vigentes.service';
+import { UMBRALES_INICIALES, UmbralesVigentes, nivelSaldo } from '../ranking-socios/ranking-thresholds';
 import { TrackByUtils } from '../utils/track-by.util';
 
 @Component({
@@ -120,8 +126,13 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   archivosSeleccionados: File[] = [];
   evidenciasExistentes: any[] = [];
   subiendoArchivos = false;
-  readonly LIMITE_DOCUMENTOS = 5;
-  readonly MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  // Límites vigentes del panel de administración (Spec 010); 5 y 5 MB hasta que respondan.
+  LIMITE_DOCUMENTOS = 5;
+  MAX_MB = 5;
+  /** Parámetros vigentes (Spec 012): umbrales de saldo y plazo de descargo. */
+  umbrales: UmbralesVigentes = { ...UMBRALES_INICIALES };
+  plazoDescargoDias = PLAZO_DESCARGO_INICIAL;
+  get MAX_BYTES(): number { return this.MAX_MB * 1024 * 1024; }
   readonly MAX_CARACTERES_JUSTIFICACION = 5000; // Igual al límite del T01 (decisión del PO)
   relatoTexto = '';
   esEdicion = false;
@@ -147,11 +158,43 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     private notifications: NotificationService,
     private expedienteApi: ExpedienteApiService,
     private scrollLock: ModalScrollLockService,
+    private adminApi: AdminApiService,
+    private parametros: ParametrosVigentesService,
     private cdr: ChangeDetectorRef,
     @Optional() private ngZone?: NgZone
   ) {}
 
+  cargarParametrosVigentes(): void {
+    this.parametros
+      .umbrales()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(umbrales => {
+        this.umbrales = umbrales;
+        this.cdr?.markForCheck();
+      });
+    this.parametros
+      .plazoDescargoDiasHabiles()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(dias => {
+        this.plazoDescargoDias = dias;
+        this.cdr?.markForCheck();
+      });
+  }
+
+  cargarLimitesAdjuntos(): void {
+    this.adminApi.obtenerLimitesAdjuntos().pipe(takeUntil(this.destroy$)).subscribe({
+      next: limites => {
+        this.LIMITE_DOCUMENTOS = limites.cantidad_maxima;
+        this.MAX_MB = limites.tamano_maximo_mb;
+        this.cdr?.markForCheck();
+      },
+      error: () => { /* Rigen los valores iniciales; el servidor valida igual. */ }
+    });
+  }
+
   ngOnInit(): void {
+    this.cargarLimitesAdjuntos();
+    this.cargarParametrosVigentes();
     const subPerfil = this.auth.perfil$
       .pipe(
         distinctUntilChanged((a, b) =>
@@ -948,7 +991,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   get limiteActual(): number {
-    return this.tipoDescargo === 'T03_EXTRAORDINARIO' ? 5 : 3;
+    // El tope de 3 para descargos tipificados no cambia (Spec 010, decisión 3).
+    return this.tipoDescargo === 'T03_EXTRAORDINARIO'
+      ? this.LIMITE_DOCUMENTOS
+      : Math.min(3, this.LIMITE_DOCUMENTOS);
   }
 
   get puedeSubirMas(): boolean {
@@ -1003,7 +1049,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     for (const f of nuevos) {
       if (f.size > this.MAX_BYTES) {
-        this.notifications.error(`El archivo "${f.name}" supera el límite de 5 MB.`);
+        this.notifications.error(`El archivo "${f.name}" supera el límite de ${this.MAX_MB} MB.`);
         return;
       }
       const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
@@ -1095,8 +1141,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
 
     const totalComprobantes = this.evidenciasExistentes.length + this.archivosSeleccionados.length;
 
-    if (totalComprobantes > this.LIMITE_DOCUMENTOS) {
-      this.notifications.error(`Solo se permite un máximo de ${this.LIMITE_DOCUMENTOS} documentos.`);
+    if (totalComprobantes > this.limiteActual) {
+      this.notifications.error(`Solo se permite un máximo de ${this.limiteActual} documentos.`);
       return;
     }
 
@@ -1433,10 +1479,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getColorClasePuntos(puntos: number): string {
-    if (puntos < -9.0) {
+    const nivel = nivelSaldo(puntos, this.umbrales);
+    if (nivel === 'critico') {
       return 'puntos-rojo';
     }
-    if (puntos < -7.0) {
+    if (nivel === 'preventivo') {
       return 'puntos-amarillo';
     }
     if (puntos < 0) {
@@ -1446,10 +1493,11 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   }
 
   getHeaderClassPuntos(puntos: number): string {
-    if (puntos < -9.0) {
+    const nivel = nivelSaldo(puntos, this.umbrales);
+    if (nivel === 'critico') {
       return 'card-header-danger';
     }
-    if (puntos < -7.0) {
+    if (nivel === 'preventivo') {
       return 'card-header-warning';
     }
     if (puntos < 0) {

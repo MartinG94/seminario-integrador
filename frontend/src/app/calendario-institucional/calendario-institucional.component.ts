@@ -48,7 +48,7 @@ export class CalendarioInstitucionalComponent implements OnInit, OnDestroy {
   simulationDays = 5;
   simulationLoading = false;
   simulationResult: CalcularPlazoResponse | null = null;
-  @ViewChild('simulationTemplate', { static: true }) simulationTemplate: TemplateRef<unknown>;
+  @ViewChild('simulationTemplate', { static: true }) simulationTemplate!: TemplateRef<unknown>;
   private simulationDialog: MatDialogRef<unknown> | null = null;
 
   readonly months = [

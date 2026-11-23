@@ -169,7 +169,7 @@ class TestCasosCriticos:
 
 class TestAvisoAComisionDirectiva:
     def test_apertura_con_caso_critico_encola_un_aviso(self, tribunal_nomina, settings):
-        settings.COMISION_DIRECTIVA_EMAIL = "cd@aveit.org"
+        settings.CD_EMAIL = "cd@aveit.org"
         expediente = ExpedienteWorkflowService.open_expediente(
             motivo="Incidente en plenario",
             socio_ids=[tribunal_nomina["t4"].id, tribunal_nomina["s4"].id],
