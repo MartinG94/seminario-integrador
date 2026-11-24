@@ -184,6 +184,7 @@ def test_reset_regularidad_database_prepara_flujo_1_y_procesar_cierre_abre_exped
     assert all(a.expediente_generado_id is None for a in asistencias.values())
     assert asistencias["74907"].estado_asistencia == EstadoAsistenciaEventoEnum.AUSENTE
     assert asistencias["770013"].estado_asistencia == EstadoAsistenciaEventoEnum.TARDE_LEVE
+    assert asistencias["770013"].minutos_tardanza == 22
     assert asistencias["770005"].estado_asistencia == EstadoAsistenciaEventoEnum.PRESENTE
     assert asistencias["770008"].estado_asistencia == EstadoAsistenciaEventoEnum.PRESENTE
 

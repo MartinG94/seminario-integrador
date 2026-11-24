@@ -1486,4 +1486,51 @@ describe('MisExpedientesComponent', () => {
       });
     });
   });
+
+  describe('Optimizaciones de rendimiento en modales', () => {
+    it('getReglamentosCitas devuelve la misma referencia de array en llamadas consecutivas con los mismos datos', () => {
+      const exp = {
+        id: 'exp-99',
+        reglamentos_respaldantes: ['Estatuto - Art. 14 Inc. a: Deber de asistencia'],
+        reglamento_asociado: 'Estatuto - Art. 14 Inc. a'
+      } as unknown as Expediente;
+
+      const primera = component.getReglamentosCitas(exp);
+      const segunda = component.getReglamentosCitas(exp);
+      expect(primera.length).toBe(1);
+      expect(segunda).toBe(primera);
+
+      const otroExp = {
+        id: 'exp-100',
+        reglamentos_respaldantes: ['Reglamento Interno - Art. 5: Plazos']
+      } as unknown as Expediente;
+      const tercera = component.getReglamentosCitas(otroExp);
+      expect(tercera).not.toBe(primera);
+    });
+
+    it('no renderiza el modal de detalle debajo cuando modalAbierto es true', () => {
+      const exp = {
+        id: 'exp-detalle-1',
+        numero: 'EXP-0099/2026',
+        estado: 'justificando',
+        motivo: 'Prueba modal único'
+      } as unknown as Expediente;
+
+      component.expedienteDetalle = exp;
+      component.modalDetalleAbierto = true;
+      component.modalAbierto = false;
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.modal-detalle-card')).not.toBeNull();
+
+      component.abrirModalDescargo(exp);
+      fixture.detectChanges();
+      expect(component.modalAbierto).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.modal-detalle-card')).toBeNull();
+      expect(fixture.nativeElement.querySelector('#modal-descargo-titulo')).not.toBeNull();
+
+      component.cerrarModal();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.modal-detalle-card')).not.toBeNull();
+    });
+  });
 });
