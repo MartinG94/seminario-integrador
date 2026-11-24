@@ -28,7 +28,6 @@ from expedientes.models import (
     EvidenciaDescargo,
     Expediente,
 )
-from expedientes.services.warning_accumulation_service import WarningAccumulationService
 
 DECIDABLE_STATES = (
     EstadoExpedienteEnum.REVISION_RESOLUCION,
@@ -155,14 +154,6 @@ class CausalResolutionService:
         final_snapshot_val = None
         final_rank = None
 
-        ultima_decision = (
-            DecisionCausalDescargo.objects.filter(descargo=descargo).order_by("-version").first()
-        )
-        prev_snapshot_val = None
-        if ultima_decision and ultima_decision.descargo_snapshot:
-            prev_snapshot_val = ultima_decision.descargo_snapshot.get("puntaje_final")
-
-        especial_previo = parse_puntaje_especial(prev_snapshot_val)
         especial_nuevo = parse_puntaje_especial(puntaje_final)
 
         has_numeric_final = puntaje_final is not None and str(puntaje_final).strip() != ""
@@ -183,44 +174,6 @@ class CausalResolutionService:
                         "La fundamentación escrita es obligatoria (al menos 10 caracteres) cuando "
                         "el puntaje final desfavorece al socio respecto al pedido original."
                     )
-
-        if especial_nuevo != especial_previo:
-            actor_name = user.get_username() if user else "TRIBUNAL"
-            if especial_previo == PuntajeEspecial.LLAMADO_ATENCION:
-                WarningAccumulationService.revert_warning(
-                    socio_id=descargo.socio_id,
-                    actor=actor_name,
-                )
-            elif especial_previo == PuntajeEspecial.FELICITACION:
-                WarningAccumulationService.revert_felicitacion(
-                    socio_id=descargo.socio_id,
-                    actor=actor_name,
-                )
-
-            if especial_nuevo == PuntajeEspecial.LLAMADO_ATENCION:
-                motivo_llamado = (
-                    f"Llamado de atención en exp {expediente.numero}: {fundamento}"
-                    if fundamento
-                    else f"Llamado de atención en exp {expediente.numero} (Tribunal)"
-                )
-                WarningAccumulationService.register_warning(
-                    socio_id=descargo.socio_id,
-                    origen_tipo="EXPEDIENTE_TRIBUNAL",
-                    motivo=motivo_llamado,
-                    expediente_origen_id=expediente.id,
-                    actor=actor_name,
-                )
-            elif especial_nuevo == PuntajeEspecial.FELICITACION:
-                motivo_felic = (
-                    f"Felicitación en expediente {expediente.numero}: {fundamento}"
-                    if fundamento
-                    else f"Felicitación en expediente {expediente.numero} (Tribunal de Disciplina)"
-                )
-                WarningAccumulationService.register_felicitacion(
-                    socio_id=descargo.socio_id,
-                    motivo=motivo_felic,
-                    actor=actor_name,
-                )
 
         if not has_numeric_final:
             try:

@@ -30,7 +30,7 @@ from expedientes.models import (
     Expediente,
     Resolucion,
     ResultadoValoracionT03Enum,
-    SolicitudT01,
+    detectar_medida_expediente,
 )
 from ranking.domain.ledger import (
     GENESIS_HASH,
@@ -52,6 +52,8 @@ logger = logging.getLogger(__name__)
 
 TIPOS_CON_PUNTOS = (
     TipoAsiento.PUNTOS_DIRECTOS,
+    TipoAsiento.LLAMADO_ATENCION,
+    TipoAsiento.FELICITACION,
     TipoAsiento.CONSOLIDACION_LLAMADOS,
     TipoAsiento.CONSOLIDACION_FELICITACIONES,
     TipoAsiento.REVERSION,
@@ -94,14 +96,14 @@ def imputados_de(expediente: Expediente) -> list[Socio]:
 def impacto_solicitado(expediente: Expediente) -> ImpactoSocio:
     """Impacto pedido vigente: el puntaje del expediente (incluye adecuaciones del T01).
 
-    La medida especial del T01 sólo rige cuando el expediente no lleva puntos propios.
+    La medida especial del T01 o de un expediente con puntos en 0.00 se resuelve vía
+    `detectar_medida_expediente`.
     """
     puntos = Decimal(str(expediente.puntos)) if expediente.puntos is not None else Decimal("0")
     if puntos != Decimal("0"):
         return clasificar_impacto(puntos)
-    solicitud = SolicitudT01.objects.filter(expediente=expediente).first()
-    especial = getattr(solicitud, "puntaje_especial", "") if solicitud else ""
-    return clasificar_impacto(especial or 0)
+    medida = detectar_medida_expediente(expediente)
+    return clasificar_impacto(medida or 0)
 
 
 def _clasificar_o_none(valor: Any) -> ImpactoSocio | None:
@@ -185,24 +187,6 @@ def impactos_dictaminados(expediente: Expediente) -> dict[int, ImpactoSocio]:
     }
 
 
-def medida_contada_en_evaluacion(expediente: Expediente, socio: Socio) -> TipoImpacto | None:
-    """Medida especial que `CausalResolutionService.decide` ya sumó al contador 3:1.
-
-    La evaluación del descargo T02 registra la medida de su última decisión (y revierte la
-    anterior si cambia), por lo que el libro mayor no debe volver a contarla.
-    """
-    vigente = next((d for d in _descargos_de(expediente, socio) if d.es_vigente), None)
-    if vigente is None:
-        return None
-    decision = vigente.decisiones_causal.order_by("-version").first()
-    if decision is None:
-        return None
-    impacto = _clasificar_o_none((decision.descargo_snapshot or {}).get("puntaje_final"))
-    if impacto is not None and impacto.tipo in _TIPOS_MEDIDA:
-        return impacto.tipo
-    return None
-
-
 def resolver_nro_socio(socio: Socio) -> int | None:
     """N° de socio institucional (`Socio.numero_socio`, SCRUM-114): clave del libro mayor."""
     return int(socio.numero_socio) if socio.numero_socio is not None else None
@@ -239,10 +223,9 @@ class LedgerService:
         for imputado in imputados_de(expediente):
             socio = cls._bloquear_socio(imputado)
             impacto = resolver_impacto_socio(expediente, socio, solicitado)
-            medida_contada = medida_contada_en_evaluacion(expediente, socio)
             asientos.append(
                 cls._registrar_impacto(
-                    resolucion, socio, impacto, autor, ya_contada=medida_contada == impacto.tipo
+                    resolucion, socio, impacto, autor, ya_contada=False
                 )
             )
         return asientos
@@ -305,21 +288,52 @@ class LedgerService:
         ya_contada: bool,
     ) -> AsientoLibroMayor:
         contador = None
-        if impacto.tipo in _TIPOS_MEDIDA:
-            contador = cls._contar_medida(resolucion, socio, impacto.tipo, autor, ya_contada)
         puntaje_aplicado_id = None
         nro_socio = resolver_nro_socio(socio)
-        if impacta_libro_mayor(impacto):
+        puntos_asiento = Decimal("0.00")
+
+        if impacto.tipo in _TIPOS_MEDIDA:
+            es_llamado = impacto.tipo == TipoImpacto.LLAMADO_ATENCION
+            if not ya_contada:
+                from expedientes.services.warning_accumulation_service import (
+                    WarningAccumulationService,
+                )
+
+                atencion_actual, _ = AtencionFelicitacion.objects.get_or_create(socio=socio)
+                contador_actual = (
+                    atencion_actual.llamadosAtencion
+                    if es_llamado
+                    else atencion_actual.felicitaciones
+                )
+                if contador_actual + 1 >= WarningAccumulationService.CONSOLIDATION_THRESHOLD:
+                    nro_socio = _nro_socio_obligatorio(socio)
+                contador, puntaje_aplicado_id, puntos_asiento = (
+                    WarningAccumulationService.apply_confirmed_measure(
+                        socio=socio,
+                        es_llamado=es_llamado,
+                        expediente_id=resolucion.expediente_id,
+                        nro_socio=nro_socio,
+                        actor=getattr(autor, "username", None) or "TRIBUNAL",
+                    )
+                )
+            else:
+                registro, _ = AtencionFelicitacion.objects.get_or_create(socio=socio)
+                contador = registro.llamadosAtencion if es_llamado else registro.felicitaciones
+                puntaje_aplicado_id = None
+                puntos_asiento = Decimal("0.00")
+        elif impacta_libro_mayor(impacto):
             nro_socio = _nro_socio_obligatorio(socio)
             puntaje_aplicado_id = PuntajeAplicado.registrar_movimiento(
                 nro_socio=nro_socio, puntos=impacto.puntos, expediente_id=resolucion.expediente_id
             ).pk
+            puntos_asiento = impacto.puntos
+
         return cls._crear_asiento(
             resolucion=resolucion,
             socio=socio,
             nro_socio=nro_socio,
             tipo=tipo_asiento_para(impacto),
-            puntos=impacto.puntos if impacto.tipo == TipoImpacto.PUNTOS else Decimal("0.00"),
+            puntos=puntos_asiento,
             contador_resultante=contador,
             puntaje_aplicado_id=puntaje_aplicado_id,
             autor=autor,
@@ -337,7 +351,9 @@ class LedgerService:
     ) -> AsientoLibroMayor:
         contador = None
         if medida_previa and medida_previa != impacto.tipo:
-            contador = cls._revertir_medida(socio, medida_previa, autor)
+            contador = cls._revertir_medida(
+                socio, medida_previa, autor, restaurar_terna=(neto != Decimal("0.00"))
+            )
         puntaje_aplicado_id = None
         nro_socio = resolver_nro_socio(socio)
         if neto != Decimal("0.00"):
@@ -384,41 +400,13 @@ class LedgerService:
         return TipoImpacto(tipo) if tipo else None
 
     @staticmethod
-    def _contar_medida(
-        resolucion: Resolucion,
+    def _revertir_medida(
         socio: Socio,
         medida: TipoImpacto,
         autor: Any,
-        ya_contada: bool,
+        *,
+        restaurar_terna: bool = False,
     ) -> int:
-        """Suma la medida al motor 3:1 (salvo que ya se haya contado) y devuelve el contador."""
-        from expedientes.services.warning_accumulation_service import (
-            WarningAccumulationService,
-        )
-
-        es_llamado = medida == TipoImpacto.LLAMADO_ATENCION
-        if not ya_contada:
-            actor = getattr(autor, "username", None) or "TRIBUNAL"
-            numero = resolucion.expediente.numero
-            if es_llamado:
-                WarningAccumulationService.register_warning(
-                    socio_id=socio.pk,
-                    origen_tipo="RESOLUCION_TRIBUNAL",
-                    motivo=f"Llamado de atención dispuesto por resolución en {numero}.",
-                    expediente_origen_id=resolucion.expediente_id,
-                    actor=actor,
-                )
-            else:
-                WarningAccumulationService.register_felicitacion(
-                    socio_id=socio.pk,
-                    motivo=f"Felicitación dispuesta por resolución en el expediente {numero}.",
-                    actor=actor,
-                )
-        registro, _ = AtencionFelicitacion.objects.get_or_create(socio=socio)
-        return registro.llamadosAtencion if es_llamado else registro.felicitaciones
-
-    @staticmethod
-    def _revertir_medida(socio: Socio, medida: TipoImpacto, autor: Any) -> int:
         from expedientes.services.warning_accumulation_service import (
             WarningAccumulationService,
         )
@@ -426,10 +414,14 @@ class LedgerService:
         actor = getattr(autor, "username", None) or "TRIBUNAL"
         if medida == TipoImpacto.LLAMADO_ATENCION:
             return WarningAccumulationService.revert_warning(
-                socio_id=socio.pk, actor=actor
+                socio_id=socio.pk,
+                actor=actor,
+                restaurar_terna=restaurar_terna,
             ).llamadosAtencion
         return WarningAccumulationService.revert_felicitacion(
-            socio_id=socio.pk, actor=actor
+            socio_id=socio.pk,
+            actor=actor,
+            restaurar_terna=restaurar_terna,
         ).felicitaciones
 
     @staticmethod
@@ -562,11 +554,12 @@ class LedgerService:
         for clave, tipo, puntos in filas:
             previo = resultado.get(clave, ImpactoAplicado(Decimal("0.00"), None))
             medida = previo.medida
+            puntos_dec = Decimal(puntos)
             if tipo in _MEDIDAS:
-                medida = _MEDIDAS[tipo]
+                medida = _MEDIDAS[tipo] if puntos_dec == Decimal("0.00") else None
             elif tipo in (TipoAsiento.PUNTOS_DIRECTOS, TipoAsiento.SIN_IMPACTO):
                 medida = None
-            resultado[clave] = ImpactoAplicado(previo.puntos + Decimal(puntos), medida)
+            resultado[clave] = ImpactoAplicado(previo.puntos + puntos_dec, medida)
         return resultado
 
     @classmethod

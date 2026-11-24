@@ -12,7 +12,9 @@ from expedientes.domain.puntaje_especial import (
 )
 from expedientes.models import (
     AtencionFelicitacion,
+    EstadoExpedienteEnum,
     Expediente,
+    Resolucion,
     SolicitudT01,
 )
 from expedientes.serializers import (
@@ -21,6 +23,7 @@ from expedientes.serializers import (
     SolicitudT01Serializer,
 )
 from expedientes.services.causal_resolution_service import CausalResolutionService
+from expedientes.services.ledger_service import LedgerService
 
 
 @pytest.mark.django_db
@@ -85,8 +88,6 @@ class TestPuntajeEspecialDomainYModel:
         assert board_data.get("puntaje_solicitado") == "LLAMADO_ATENCION"
 
     def test_solicitud_t01_serializer_valida_expedientes_referenciados(self, make_socio):
-        from expedientes.models import EstadoExpedienteEnum
-
         socio = make_socio(legajo="79004")
         emitido = Expediente.objects.create(
             numero="EXP-0991/2026",
@@ -129,7 +130,7 @@ class TestPuntajeEspecialDomainYModel:
                 "expedientes_referenciados": [emitido.id],
             }
         )
-        assert s_valido.is_valid(), s_invalido.errors
+        assert s_valido.is_valid(), s_valido.errors
         instancia = s_valido.save(solicitante=socio)
         data = SolicitudT01Serializer(instancia).data
         assert data["expedientes_referenciados"] == [emitido.id]
@@ -139,14 +140,16 @@ class TestPuntajeEspecialDomainYModel:
 
 @pytest.mark.django_db
 class TestCausalResolutionIdempotencia:
-    def test_llamado_atencion_suma_una_sola_vez_aunque_se_guarde_repetido(
+    def test_decide_no_modifica_contadores_antes_de_emitir_y_aplica_ultima_decision(
         self, causal_descargo, causal_vocal
     ):
         socio = causal_descargo.socio
+        socio.numero_socio = 76123
+        socio.save(update_fields=["numero_socio"])
         atencion, _ = AtencionFelicitacion.objects.get_or_create(socio=socio)
         assert atencion.llamadosAtencion == 0
 
-        # Primera decisión con Llamado de Atención
+        # 1. Guardar Llamado de Atención (no mueve contador hasta emitir)
         CausalResolutionService.decide(
             expediente_id=causal_descargo.expediente_id,
             descargo_id=causal_descargo.id,
@@ -157,9 +160,9 @@ class TestCausalResolutionIdempotencia:
             puntaje_final="LLAMADO_ATENCION",
         )
         atencion.refresh_from_db()
-        assert atencion.llamadosAtencion == 1
+        assert atencion.llamadosAtencion == 0
 
-        # Segundo guardado (misma opción LLAMADO_ATENCION)
+        # 2. Segundo guardado con Llamado de Atención
         CausalResolutionService.decide(
             expediente_id=causal_descargo.expediente_id,
             descargo_id=causal_descargo.id,
@@ -170,63 +173,9 @@ class TestCausalResolutionIdempotencia:
             puntaje_final="LLAMADO_ATENCION",
         )
         atencion.refresh_from_db()
-        # Debe mantenerse en 1, NO duplicar a 2
-        assert atencion.llamadosAtencion == 1
-
-    def test_cambio_de_llamado_a_puntaje_numerico_revierte_contador(
-        self, causal_descargo, causal_vocal
-    ):
-        socio = causal_descargo.socio
-        atencion, _ = AtencionFelicitacion.objects.get_or_create(socio=socio)
-
-        # 1. Guardar Llamado de Atención
-        CausalResolutionService.decide(
-            expediente_id=causal_descargo.expediente_id,
-            descargo_id=causal_descargo.id,
-            decision=CausalDecision.ACCEPTED,
-            fundamento="Llamado inicial dictaminado por falta menor.",
-            evidencia_ids=None,
-            user=causal_vocal.user,
-            puntaje_final="LLAMADO_ATENCION",
-        )
-        atencion.refresh_from_db()
-        assert atencion.llamadosAtencion == 1
-
-        # 2. Tribunal cambia de opinión a -1.0 (sanción numérica)
-        CausalResolutionService.decide(
-            expediente_id=causal_descargo.expediente_id,
-            descargo_id=causal_descargo.id,
-            decision=CausalDecision.ACCEPTED,
-            fundamento="Cambio a sancion de un punto por reevaluacion de antecedentes.",
-            evidencia_ids=None,
-            user=causal_vocal.user,
-            puntaje_final="-1.0",
-        )
-        atencion.refresh_from_db()
-        # Debe haber compensado el llamado
         assert atencion.llamadosAtencion == 0
 
-    def test_cambio_de_llamado_a_felicitacion_compensa_e_incrementa(
-        self, causal_descargo, causal_vocal
-    ):
-        socio = causal_descargo.socio
-        atencion, _ = AtencionFelicitacion.objects.get_or_create(socio=socio)
-
-        # 1. Llamado
-        CausalResolutionService.decide(
-            expediente_id=causal_descargo.expediente_id,
-            descargo_id=causal_descargo.id,
-            decision=CausalDecision.ACCEPTED,
-            fundamento="Llamado inicial dictaminado por falta menor.",
-            evidencia_ids=None,
-            user=causal_vocal.user,
-            puntaje_final="LLAMADO_ATENCION",
-        )
-        atencion.refresh_from_db()
-        assert atencion.llamadosAtencion == 1
-        assert atencion.felicitaciones == 0
-
-        # 2. Felicitación
+        # 3. Cambio a Felicitación antes de emitir -> contador sigue en 0
         CausalResolutionService.decide(
             expediente_id=causal_descargo.expediente_id,
             descargo_id=causal_descargo.id,
@@ -236,6 +185,20 @@ class TestCausalResolutionIdempotencia:
             user=causal_vocal.user,
             puntaje_final="FELICITACION",
         )
+        atencion.refresh_from_db()
+        assert atencion.llamadosAtencion == 0
+        assert atencion.felicitaciones == 0
+
+        # 4. Al emitir, sólo aplica la última decisión (FELICITACION = 1, llamados = 0)
+        resolucion = Resolucion.objects.create(
+            expediente=causal_descargo.expediente,
+            numero_expediente_snapshot=causal_descargo.expediente.numero,
+            vistos="Vistos.",
+            considerandos="Considerandos.",
+            articulos_resolutivos="Artículo 1.",
+            created_by=causal_vocal.user,
+        )
+        LedgerService.registrar_resolucion(resolucion, causal_vocal.user)
         atencion.refresh_from_db()
         assert atencion.llamadosAtencion == 0
         assert atencion.felicitaciones == 1

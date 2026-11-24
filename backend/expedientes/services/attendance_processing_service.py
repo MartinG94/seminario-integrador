@@ -23,6 +23,7 @@ from expedientes.models import (
     CategoriaEventoEnum,
     EstadoAsistenciaEventoEnum,
     EstadoEventoEnum,
+    EstadoExpedienteEnum,
     EventoInstitucional,
     MetodoCapturaAsistenciaEnum,
     SubtipoReunionEnum,
@@ -31,6 +32,7 @@ from expedientes.services.meeting_compliance_service import MeetingComplianceSer
 from expedientes.services.meeting_notice_notification_service import (
     MeetingNoticeNotificationService,
 )
+from expedientes.services.opening_notification_service import OpeningNotificationService
 from expedientes.services.warning_accumulation_service import WarningAccumulationService
 from expedientes.services.workflow_service import ExpedienteWorkflowService
 
@@ -216,7 +218,7 @@ class AttendanceProcessingService:
                     else "REUNION_RETIRO_LEVE"
                 )
                 motivo_ap = dto.motivo or f"Impuntualidad leve ({minutos} min) en {evento.titulo}"
-                atencion, exp_consolidado = WarningAccumulationService.register_warning(
+                atencion, exp_llamado = WarningAccumulationService.register_warning(
                     socio_id=dto.socio_id,
                     origen_tipo=origen,
                     motivo=motivo_ap,
@@ -225,21 +227,26 @@ class AttendanceProcessingService:
                     asistencia_id=asistencia.id,
                     actor=actor,
                 )
-                asistencia.notificado = True
-                asistencia.fechaNotificacion = evento.fecha_programada.date()
-                if exp_consolidado:
-                    asistencia.expediente_generado = exp_consolidado
-                    expedientes_creados.append(
-                        {
-                            "socio_id": dto.socio_id,
-                            "numero": exp_consolidado.numero,
-                            "puntos": float(exp_consolidado.puntos),
-                            "tipo": "CONSOLIDACION_3_1",
-                        }
-                    )
+                notificado_ok = bool(
+                    exp_llamado and exp_llamado.estado == EstadoExpedienteEnum.JUSTIFICANDO
+                )
+                asistencia.expediente_generado = exp_llamado
+                asistencia.notificado = notificado_ok
+                asistencia.fechaNotificacion = (
+                    evento.fecha_programada.date() if notificado_ok else None
+                )
                 asistencia.save(
                     update_fields=["notificado", "fechaNotificacion", "expediente_generado"]
                 )
+                if exp_llamado:
+                    expedientes_creados.append(
+                        {
+                            "socio_id": dto.socio_id,
+                            "numero": exp_llamado.numero,
+                            "puntos": float(exp_llamado.puntos),
+                            "tipo": "LLAMADO_ATENCION",
+                        }
+                    )
                 apercibimientos_creados.append(
                     {
                         "socio_id": dto.socio_id,
@@ -268,8 +275,12 @@ class AttendanceProcessingService:
                     actor=actor,
                     points=puntos,
                 )
+                notificado_ok = OpeningNotificationService.notify_automatic_expediente(
+                    expediente, actor=actor
+                )
                 asistencia.expediente_generado = expediente
-                asistencia.save(update_fields=["expediente_generado"])
+                asistencia.notificado = notificado_ok
+                asistencia.save(update_fields=["expediente_generado", "notificado"])
                 expedientes_creados.append(
                     {
                         "socio_id": dto.socio_id,
@@ -292,8 +303,12 @@ class AttendanceProcessingService:
                     actor=actor,
                     points=puntos,
                 )
+                notificado_ok = OpeningNotificationService.notify_automatic_expediente(
+                    expediente, actor=actor
+                )
                 asistencia.expediente_generado = expediente
-                asistencia.save(update_fields=["expediente_generado"])
+                asistencia.notificado = notificado_ok
+                asistencia.save(update_fields=["expediente_generado", "notificado"])
                 expedientes_creados.append(
                     {
                         "socio_id": dto.socio_id,

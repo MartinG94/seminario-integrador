@@ -363,12 +363,16 @@ class TestAttendanceProcessingService:
         asist_2 = AsistenciaEvento.objects.get(evento=evento, socio=socio_dos)
         assert asist_2.expediente_generado is not None
         assert asist_2.expediente_generado.puntos == Decimal("-0.50")
+        assert asist_2.expediente_generado.estado == "justificando"
+        assert asist_2.notificado is True
         assert "Llegó 35 min tarde" in asist_2.motivo
 
         # Verificar socio_tres: expediente por inasistencia ordinaria por -1.00
         asist_3 = AsistenciaEvento.objects.get(evento=evento, socio=socio_tres)
         assert asist_3.expediente_generado is not None
         assert asist_3.expediente_generado.puntos == Decimal("-1.00")
+        assert asist_3.expediente_generado.estado == "justificando"
+        assert asist_3.notificado is True
         assert "Faltó sin aviso" in asist_3.motivo
 
     def test_reunion_extraordinaria_aplica_escala_1_5_puntos(

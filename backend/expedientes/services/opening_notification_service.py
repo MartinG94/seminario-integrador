@@ -18,7 +18,7 @@ from django.utils import timezone
 from core.services.system_parameters import SystemParameterService
 from expedientes.domain.opening_policy import OpeningNotificationTemplate
 from expedientes.models import EstadoExpedienteEnum, Expediente
-from notifications.models import EmailOutbox
+from notifications.models import EmailOutbox, EmailOutboxStatus
 from notifications.services import EmailDispatcherService
 
 logger = logging.getLogger(__name__)
@@ -162,6 +162,31 @@ class OpeningNotificationService:
                 )
 
         return expediente, outbox
+
+    @classmethod
+    def notify_automatic_expediente(cls, expediente: Expediente, actor: str = "SISTEMA") -> bool:
+        """Notifica automáticamente un expediente recién creado.
+
+        Si falla la validación o el envío SMTP (status != SENT), revierte el savepoint para
+        conservar el expediente en CREADO sin plazos congelados.
+        """
+        try:
+            with transaction.atomic():
+                _exp, outbox = cls.dispatch_opening(expediente_id=expediente.id, actor=actor)
+                outbox.refresh_from_db()
+                if outbox.status != EmailOutboxStatus.SENT:
+                    raise RuntimeError(outbox.last_error or "Correo no enviado.")
+        except Exception as exc:
+            logger.warning(
+                "Notificación automática fallida para expediente %s (%s). Se conserva en CREADO.",
+                expediente.id,
+                type(exc).__name__,
+            )
+            expediente.refresh_from_db()
+            return False
+
+        expediente.refresh_from_db()
+        return True
 
 
 class CaseNotificationQueryService:
