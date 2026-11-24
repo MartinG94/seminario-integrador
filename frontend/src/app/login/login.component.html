@@ -42,8 +42,10 @@
             type="button"
             class="btn-reset-demo"
             [disabled]="reiniciandoDb"
+            title="Restaura la base de datos al estado inicial del snapshot de Regularidad"
+            aria-label="Restaurar la base de datos al snapshot inicial de Regularidad"
             (click)="reiniciarBaseDatos()">
-            {{ reiniciandoDb ? 'Reiniciando…' : 'Reiniciar base de datos (Demo)' }}
+            {{ reiniciandoDb ? 'Restaurando…' : 'Restaurar base de datos (Snapshot Regularidad)' }}
           </button>
         </div>
       </div>

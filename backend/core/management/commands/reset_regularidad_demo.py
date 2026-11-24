@@ -8,13 +8,14 @@ from core.services.demo_reset_service import reset_regularidad_database
 
 
 class Command(BaseCommand):
-    help = "Reinicia las tablas transaccionales dejando únicamente 2 expedientes de demostración."
+    help = "Restaura la base de datos al snapshot SQL inicial de la rama Regularidad."
 
     def handle(self, *args: Any, **options: Any) -> None:
         result = reset_regularidad_database()
         expedientes = ", ".join(result["expedientes"])
         self.stdout.write(
             self.style.SUCCESS(
-                f"Base de datos reiniciada con éxito. Expedientes activos: {expedientes}."
+                f"Base de datos restaurada al snapshot de Regularidad. "
+                f"Expedientes activos: {expedientes}."
             )
         )

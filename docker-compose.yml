@@ -32,6 +32,7 @@ services:
     volumes:
       - ./backend:/app
       - ./docs:/docs:ro
+      - ./database:/database:ro
     ports:
       - "8000:8000"
     env_file:

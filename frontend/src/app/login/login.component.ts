@@ -63,7 +63,7 @@ export class LoginComponent implements OnInit {
       next: res => {
         this.reiniciandoDb = false;
         this.notifications.success(
-          res?.detail || 'Base de datos reiniciada con 2 expedientes de demostración.'
+          res?.detail || 'Base de datos restaurada al snapshot inicial de Regularidad.'
         );
       },
       error: (error: HttpErrorResponse) => {
@@ -72,7 +72,7 @@ export class LoginComponent implements OnInit {
         this.notifications.error(
           typeof detail === 'string' && detail.trim()
             ? detail
-            : 'No pudimos reiniciar la base de datos. Intentá nuevamente en unos instantes.'
+            : 'No pudimos restaurar la base de datos. Intentá nuevamente en unos instantes.'
         );
       }
     });

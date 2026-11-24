@@ -59,22 +59,23 @@ describe('LoginComponent feedback', () => {
     expect(auth.login).toHaveBeenCalledWith('74907');
   });
 
-  it('reinicia la base de datos demo desde el botón .btn-reset-demo y notifica éxito o error', () => {
+  it('restaura la base de datos al snapshot de Regularidad desde .btn-reset-demo y notifica éxito o error', () => {
     auth.resetDemoDatabase.and.returnValue(of({
-      detail: 'Base de datos reiniciada con 2 expedientes de demostración.',
+      detail: 'Base de datos restaurada al snapshot inicial de Regularidad.',
       expedientes: ['EXP-0001/2026', 'EXP-0002/2026']
     }));
 
     const resetBtn: HTMLButtonElement | null = fixture.nativeElement.querySelector('.btn-reset-demo');
     expect(resetBtn).toBeTruthy();
-    expect(resetBtn?.textContent).toContain('Reiniciar base de datos (Demo)');
+    expect(resetBtn?.textContent).toContain('Restaurar base de datos (Snapshot Regularidad)');
+    expect(resetBtn?.getAttribute('title')).toContain('snapshot de Regularidad');
 
     resetBtn?.click();
     fixture.detectChanges();
 
     expect(auth.resetDemoDatabase).toHaveBeenCalledTimes(1);
     expect(notifications.success).toHaveBeenCalledWith(
-      'Base de datos reiniciada con 2 expedientes de demostración.'
+      'Base de datos restaurada al snapshot inicial de Regularidad.'
     );
     expect(component.reiniciandoDb).toBeFalse();
 

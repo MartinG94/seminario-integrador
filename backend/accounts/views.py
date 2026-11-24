@@ -43,7 +43,7 @@ class MeView(APIView):
 
 
 class ResetDemoDatabaseView(APIView):
-    """POST /api/v1/auth/reset-demo-db/ — reinicia datos transaccionales en modo DEBUG."""
+    """POST /api/v1/auth/reset-demo-db/ — restaura la BD al snapshot de Regularidad en DEBUG."""
 
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -54,10 +54,20 @@ class ResetDemoDatabaseView(APIView):
                 {"detail": "Esta acción solo está disponible en modo desarrollo."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        result = reset_regularidad_database()
+        try:
+            result = reset_regularidad_database()
+        except (FileNotFoundError, RuntimeError):
+            return Response(
+                {
+                    "detail": (
+                        "No se pudo restaurar la base de datos al snapshot inicial de Regularidad."
+                    )
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(
             {
-                "detail": "Base de datos reiniciada con 2 expedientes de demostración.",
+                "detail": "Base de datos restaurada al snapshot inicial de Regularidad.",
                 "expedientes": result["expedientes"],
             },
             status=status.HTTP_200_OK,
