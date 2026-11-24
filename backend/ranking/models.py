@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from django.db import models
+from django.db import connection, models
 
 from padron.models import ReadOnlyModel, Socio
 
@@ -32,6 +32,34 @@ class PuntajeGeneral(ReadOnlyModel):
 
     def __str__(self) -> str:
         return f"Socio {self.socio_id}: {self.puntos} pts"
+
+
+def _ensure_legacy_tribunal_expediente(expediente_id: int) -> None:
+    """Garantiza una fila espejo en tribunal_expediente para satisfacer la FK legacy en MySQL."""
+    with connection.cursor() as cursor:
+        cursor.execute("SHOW TABLES LIKE 'tribunal_expediente'")
+        if cursor.fetchone() is None:
+            return
+        cursor.execute(
+            "SELECT 1 FROM tribunal_expediente WHERE idExpediente = %s LIMIT 1",
+            [expediente_id],
+        )
+        if cursor.fetchone() is not None:
+            return
+        cursor.execute(
+            "SELECT numero FROM expedientes_expediente WHERE id = %s LIMIT 1",
+            [expediente_id],
+        )
+        row = cursor.fetchone()
+        nro = str(row[0] if row and row[0] else f"EXP-{expediente_id}")[:9]
+        cursor.execute("SELECT MIN(idSancion) FROM tribunal_valorsancion")
+        sancion_row = cursor.fetchone()
+        puntos_id = sancion_row[0] if sancion_row and sancion_row[0] is not None else 1
+        cursor.execute(
+            "INSERT IGNORE INTO tribunal_expediente (idExpediente, nroExpediente, puntos_id) "
+            "VALUES (%s, %s, %s)",
+            [expediente_id, nro, puntos_id],
+        )
 
 
 class PuntajeAplicado(ReadOnlyModel):
@@ -76,7 +104,13 @@ class PuntajeAplicado(ReadOnlyModel):
         monto = Decimal(puntos).quantize(Decimal("0.01"))
         if monto == Decimal("0.00"):
             raise ValueError("El libro mayor no registra movimientos en cero.")
-        movimiento = cls(puntajeAplicado=monto, socio_id=nro_socio, expediente_id=expediente_id)
+        if expediente_id is not None and connection.vendor == "mysql":
+            _ensure_legacy_tribunal_expediente(expediente_id)
+        movimiento = cls(
+            puntajeAplicado=monto,
+            socio_id=nro_socio,
+            expediente_id=expediente_id,
+        )
         movimiento._allow_write = True
         movimiento.save(force_insert=True)
         movimiento._allow_write = False

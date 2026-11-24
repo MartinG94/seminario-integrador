@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -477,3 +478,58 @@ def test_proveedor_suma_el_impacto_individual_de_cada_socio(make_socio, causal_v
     decision = ExpedienteConsolidatedDecisionProvider().get_closed_decision(expediente.id)
     assert decision.puntos_finales == Decimal("-2.00")
     assert decision.resultado == "SANCTION"
+
+
+def test_registrar_movimiento_mysql_resuelve_expediente_id_segun_tribunal_expediente(
+    monkeypatch, causal_imputado
+):
+    from unittest.mock import call
+
+    def _fake_connection(fetchone_side_effect):
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = fetchone_side_effect
+        conn = MagicMock()
+        conn.vendor = "mysql"
+        conn.cursor.return_value.__enter__.return_value = cursor
+        conn.cursor.return_value.__exit__.return_value = False
+        return conn, cursor
+
+    # Caso 1: falta la fila en tribunal_expediente -> crea la fila espejo y conserva expediente_id
+    conn_missing, cursor_missing = _fake_connection(
+        [("tribunal_expediente",), None, ("7708/2026-EXT",), (4,)]
+    )
+    monkeypatch.setattr("ranking.models.connection", conn_missing)
+    mov_creado = PuntajeAplicado.registrar_movimiento(
+        nro_socio=76001,
+        puntos=Decimal("-1.00"),
+        expediente_id=999,
+    )
+    assert cursor_missing.execute.call_args_list == [
+        call("SHOW TABLES LIKE 'tribunal_expediente'"),
+        call("SELECT 1 FROM tribunal_expediente WHERE idExpediente = %s LIMIT 1", [999]),
+        call("SELECT numero FROM expedientes_expediente WHERE id = %s LIMIT 1", [999]),
+        call("SELECT MIN(idSancion) FROM tribunal_valorsancion"),
+        call(
+            "INSERT IGNORE INTO tribunal_expediente (idExpediente, nroExpediente, puntos_id) "
+            "VALUES (%s, %s, %s)",
+            [999, "7708/2026", 4],
+        ),
+    ]
+    assert mov_creado.expediente_id == 999
+    assert PuntajeAplicado.objects.get(pk=mov_creado.pk).expediente_id == 999
+
+    # Caso 2: la fila ya existe en tribunal_expediente -> no inserta y conserva expediente_id
+    conn_present, cursor_present = _fake_connection([("tribunal_expediente",), (1,)])
+    monkeypatch.setattr("ranking.models.connection", conn_present)
+    mov_existente = PuntajeAplicado.registrar_movimiento(
+        nro_socio=76001,
+        puntos=Decimal("-2.00"),
+        expediente_id=999,
+    )
+    assert cursor_present.execute.call_args_list == [
+        call("SHOW TABLES LIKE 'tribunal_expediente'"),
+        call("SELECT 1 FROM tribunal_expediente WHERE idExpediente = %s LIMIT 1", [999]),
+    ]
+    assert mov_existente.expediente_id == 999
+    assert PuntajeAplicado.objects.get(pk=mov_existente.pk).expediente_id == 999
+

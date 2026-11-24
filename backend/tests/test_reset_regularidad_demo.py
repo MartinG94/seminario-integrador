@@ -642,3 +642,4 @@ def test_flujo_presentacion_7708_firma_emision_enmienda_y_reversion(
     assert sum(movimientos_7708) == Decimal("0.00")
 
 
+
