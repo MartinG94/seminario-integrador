@@ -16,10 +16,10 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from expedientes.models import (
-    EstadoExpedienteEnum,
     Expediente,
 )
 from expedientes.services.warning_accumulation_service import WarningAccumulationService
+from ranking.models import PuntajeAplicado
 from socios.models import Role, Socio
 
 
@@ -80,18 +80,20 @@ class TestWarningAccumulationService:
             actor="CD_PRESIDENCIA",
         )
 
-        assert exp_generado is not None
-        assert isinstance(exp_generado, Expediente)
-        assert exp_generado.estado == EstadoExpedienteEnum.CREADO
-        assert exp_generado.puntos == Decimal("-1.00")
-        assert "Consolidación reglamentaria de tres (3) apercibimientos" in exp_generado.motivo
+        assert exp_generado is None
+        assert not Expediente.objects.filter(socio=socio_test).exists()
+
+        nro_socio = socio_test.numero_socio or int(socio_test.legajo)
+        mov = PuntajeAplicado.objects.get(socio_id=nro_socio)
+        assert mov.puntajeAplicado == Decimal("-1.00")
+        assert mov.expediente_id is None
 
         # Contador de llamados se descuenta en 3 (vuelve a 0)
         assert ap3.llamadosAtencion == 0
         assert WarningAccumulationService.get_pending_count(socio_test.id) == 0
 
     def test_cero_modificaciones_manuales_a_saldos_en_mysql(self, socio_test):
-        """Verifica que la consolidación 3:1 no altera saldo directo (Regla 3)."""
+        """Verifica que la consolidación 3:1 registra el movimiento sin crear expediente."""
         for i in range(3):
             WarningAccumulationService.register_warning(
                 socio_id=socio_test.id,
@@ -102,10 +104,11 @@ class TestWarningAccumulationService:
         # El socio conserva su estado inalterado en base de datos
         socio_db = Socio.objects.get(pk=socio_test.pk)
         assert socio_db.is_enabled is True
-        # Los expedientes quedan en CREADO a la espera de resolución del Tribunal
-        expediente = Expediente.objects.filter(socio=socio_test).first()
-        assert expediente is not None
-        assert expediente.estado == EstadoExpedienteEnum.CREADO
+        assert not Expediente.objects.filter(socio=socio_test).exists()
+        nro_socio = socio_test.numero_socio or int(socio_test.legajo)
+        movs = PuntajeAplicado.objects.filter(socio_id=nro_socio)
+        assert movs.count() == 1
+        assert movs.get().puntajeAplicado == Decimal("-1.00")
 
     def test_acumulacion_subsiguiente_segunda_terna(self, socio_test):
         """Verifica que un 4° llamado queda pendiente y el 6° consolida un segundo expediente."""
@@ -143,17 +146,19 @@ class TestWarningAccumulationService:
             origen_tipo="REUNION_TARDANZA_LEVE",
             motivo="Apercibimiento 6",
         )
-        assert exp6 is not None
-        assert exp6.puntos == Decimal("-1.00")
+        assert exp6 is None
         assert ap6.llamadosAtencion == 0
         assert WarningAccumulationService.get_pending_count(socio_test.id) == 0
 
-        # Se crearon exactamente 2 expedientes para el socio
-        total_expedientes = Expediente.objects.filter(socio=socio_test).count()
-        assert total_expedientes == 2
+        # No se crearon expedientes; se registraron 2 impactos directos de -1.00
+        assert Expediente.objects.filter(socio=socio_test).count() == 0
+        nro_socio = socio_test.numero_socio or int(socio_test.legajo)
+        movs = PuntajeAplicado.objects.filter(socio_id=nro_socio)
+        assert movs.count() == 2
+        assert all(m.puntajeAplicado == Decimal("-1.00") for m in movs)
 
     def test_consolidacion_felicitaciones_3_a_1(self, socio_test):
-        """Verifica que 3 felicitaciones consolidan en un mérito de +1.00 punto."""
+        """Verifica que 3 felicitaciones acreditan +1.00 punto directo sin crear expediente."""
         f1, e1 = WarningAccumulationService.register_felicitacion(
             socio_id=socio_test.id,
             motivo="Mérito por voluntariado en jornada de pintura.",
@@ -173,8 +178,11 @@ class TestWarningAccumulationService:
             motivo="Mérito por coordinación en plenario estudiantil.",
         )
         assert f3.felicitaciones == 0
-        assert exp_merito is not None
-        assert exp_merito.puntos == Decimal("1.00")
+        assert exp_merito is None
+        assert not Expediente.objects.filter(socio=socio_test).exists()
+        nro_socio = socio_test.numero_socio or int(socio_test.legajo)
+        mov = PuntajeAplicado.objects.get(socio_id=nro_socio)
+        assert mov.puntajeAplicado == Decimal("1.00")
 
     def test_rechazo_motivo_vacio(self, socio_test):
         """No permite registrar llamados sin motivo circunstanciado."""

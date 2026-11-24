@@ -66,7 +66,7 @@ class PuntajeAplicado(ReadOnlyModel):
 
     @classmethod
     def registrar_movimiento(
-        cls, *, nro_socio: int, puntos: Decimal, expediente_id: int
+        cls, *, nro_socio: int, puntos: Decimal, expediente_id: int | None = None
     ) -> "PuntajeAplicado":
         """Única vía productiva de escritura: inserta un movimiento nuevo (Spec 011, RF-03).
 

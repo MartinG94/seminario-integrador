@@ -282,14 +282,14 @@ class TestReglaTresAUno:
         assert asiento.tipo == "LLAMADO_ATENCION"
         assert asiento.contador_resultante == 0
         assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 0
-        # La consolidación abre un único expediente por -1,00 (circuito vigente de main).
+        # La consolidación 3:1 aplica -1.00 directamente sin abrir expediente nuevo.
         consolidaciones = Expediente.objects.filter(
             socio=causal_imputado, motivo__startswith="Consolidación reglamentaria"
         )
-        assert consolidaciones.count() == 1
-        assert consolidaciones.get().puntos == Decimal("-1.00")
-        # Ningún punto fraccionario ni doble consolidación en el libro mayor.
-        assert not PuntajeAplicado.objects.filter(socio_id=76001).exists()
+        assert consolidaciones.count() == 0
+        movs = PuntajeAplicado.objects.filter(socio_id=76001)
+        assert movs.count() == 1
+        assert movs.get().puntajeAplicado == Decimal("-1.00")
 
     def test_medida_evaluada_no_se_cuenta_dos_veces(
         self, causal_expediente, causal_descargo, causal_imputado, causal_vocal
@@ -337,7 +337,10 @@ class TestReglaTresAUno:
         acreditaciones = Expediente.objects.filter(
             socio=causal_imputado, motivo__startswith="Acreditación reglamentaria"
         )
-        assert acreditaciones.count() == 1
+        assert acreditaciones.count() == 0
+        movs = PuntajeAplicado.objects.filter(socio_id=76001)
+        assert movs.count() == 1
+        assert movs.get().puntajeAplicado == Decimal("1.00")
 
 
 class TestEnmiendaOpcionB:

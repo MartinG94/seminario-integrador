@@ -201,7 +201,7 @@ def test_reset_regularidad_database_prepara_flujo_1_y_procesar_cierre_abre_exped
     assert resp.status_code == 200, resp.data
     assert resp.data["estado_evento"] == EstadoEventoEnum.FINALIZADO
     assert resp.data["es_sancionable"] is True
-    assert resp.data["expedientes_generados"] == 2
+    assert resp.data["expedientes_generados"] == 1
     assert resp.data["apercibimientos_generados"] == 1
 
     evento.refresh_from_db()
@@ -221,11 +221,12 @@ def test_reset_regularidad_database_prepara_flujo_1_y_procesar_cierre_abre_exped
     assert asist_lucas.expediente_generado.estado == EstadoExpedienteEnum.CREADO
     assert asist_lucas.expediente_generado.puntos == Decimal("-1.00")
 
-    assert asist_malena.expediente_generado is not None
-    assert asist_malena.expediente_generado.estado == EstadoExpedienteEnum.CREADO
-    assert asist_malena.expediente_generado.puntos == Decimal("-1.00")
-    assert "3:1" in asist_malena.expediente_generado.motivo
+    assert asist_malena.expediente_generado is None
     assert AtencionFelicitacion.objects.get(socio__legajo="770013").llamadosAtencion == 0
+    malena = Socio.objects.get(legajo="770013")
+    assert PuntajeAplicado.objects.filter(
+        socio_id=malena.numero_socio, puntajeAplicado=Decimal("-1.00")
+    ).exists()
 
     assert asist_elena.expediente_generado is None
     assert asist_hector.expediente_generado is None

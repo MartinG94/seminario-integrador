@@ -22,7 +22,7 @@ from expedientes.models import (
     AtencionFelicitacion,
     Expediente,
 )
-from expedientes.services.workflow_service import ExpedienteWorkflowService
+from ranking.models import PuntajeAplicado
 from socios.models import Socio
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,29 @@ class WarningAccumulationService:
     CONSOLIDATION_THRESHOLD: int = 3
     PENALTY_POINTS: Decimal = Decimal("-1.00")
     MERIT_POINTS: Decimal = Decimal("1.00")
+
+    @staticmethod
+    def _resolve_nro_socio(socio: Socio) -> int:
+        if socio.numero_socio is not None:
+            return int(socio.numero_socio)
+        legajo = (socio.legajo or "").strip()
+        return int(legajo) if legajo.isdigit() else int(socio.pk)
+
+    @classmethod
+    def _apply_consolidation_points(cls, socio: Socio, puntos: Decimal, kind: str) -> None:
+        """Aplica el impacto directo en puntos (+1/-1) sin crear expediente."""
+        nro_socio = cls._resolve_nro_socio(socio)
+        PuntajeAplicado.registrar_movimiento(
+            nro_socio=nro_socio,
+            puntos=puntos,
+            expediente_id=None,
+        )
+        logger.info(
+            "Consolidadas 3 %s para socio %s: impacto directo %s pts (sin expediente).",
+            kind,
+            socio.legajo,
+            puntos,
+        )
 
     @classmethod
     @transaction.atomic
@@ -68,21 +91,7 @@ class WarningAccumulationService:
 
         if atencion.llamadosAtencion >= cls.CONSOLIDATION_THRESHOLD:
             atencion.llamadosAtencion -= cls.CONSOLIDATION_THRESHOLD
-            motivo_expediente = (
-                f"Consolidación reglamentaria de tres (3) apercibimientos conforme a regla 3:1 "
-                f"(Arts. 83 y 100 R.I.). Detalle de hechos: {motivo.strip()}"
-            )
-            expediente_generado = ExpedienteWorkflowService.open_expediente(
-                motivo=motivo_expediente,
-                socio_ids=[socio.id],
-                actor=actor,
-                points=cls.PENALTY_POINTS,
-            )
-            logger.info(
-                "Consolidados 3 llamados de atención para socio %s. Exp: %s",
-                socio.legajo,
-                expediente_generado.numero,
-            )
+            cls._apply_consolidation_points(socio, cls.PENALTY_POINTS, "llamados de atención")
 
         atencion.save(update_fields=["llamadosAtencion"])
         return atencion, expediente_generado
@@ -114,21 +123,7 @@ class WarningAccumulationService:
 
         if atencion.felicitaciones >= cls.CONSOLIDATION_THRESHOLD:
             atencion.felicitaciones -= cls.CONSOLIDATION_THRESHOLD
-            motivo_expediente = (
-                f"Acreditación reglamentaria por tres (3) felicitaciones conforme a regla 3:1. "
-                f"Detalle: {motivo.strip()}"
-            )
-            expediente_generado = ExpedienteWorkflowService.open_expediente(
-                motivo=motivo_expediente,
-                socio_ids=[socio.id],
-                actor=actor,
-                points=cls.MERIT_POINTS,
-            )
-            logger.info(
-                "Consolidadas 3 felicitaciones para socio %s. Exp: %s",
-                socio.legajo,
-                expediente_generado.numero,
-            )
+            cls._apply_consolidation_points(socio, cls.MERIT_POINTS, "felicitaciones")
 
         atencion.save(update_fields=["felicitaciones"])
         return atencion, expediente_generado

@@ -630,11 +630,10 @@ class TestQAE2EEventosAsistenciasSanciones:
         )
         assert res.status_code == status.HTTP_200_OK
         assert res.data["apercibimientos_generados"] == 1
-        assert res.data["expedientes_generados"] == 1
-        exp_info = res.data["expedientes_creados"][0]
-        assert exp_info["tipo"] == "CONSOLIDACION_3_1"
-        assert Decimal(str(exp_info["puntos"])) == Decimal("-1.00")
+        assert res.data["expedientes_generados"] == 0
         assert WarningAccumulationService.get_pending_count(socio.id) == 0
+        mov = PuntajeAplicado.objects.get(socio_id=socio.numero_socio or socio.pk)
+        assert mov.puntajeAplicado == Decimal("-1.00")
 
     def test_qa_e2e_07_auto_anulacion_evento_creado_sin_notificar_a_tiempo(self, qa_setup):
         """
