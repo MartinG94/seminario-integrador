@@ -416,11 +416,23 @@ export class TribunalDataService {
       );
   }
 
+  despacharNotificacionApertura(
+    expedienteId: number | string
+  ): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/expedientes/${expedienteId}/despachar-notificacion/`,
+      {}
+    );
+  }
+
   transicionarExpediente(
     expedienteId: number | string,
     toStatus: EstadoExpediente,
     justificacion: string = ''
   ): Observable<any> {
+    if (toStatus === 'justificando') {
+      return this.despacharNotificacionApertura(expedienteId);
+    }
     const payload = {
       to_status: toStatus,
       justificacion: justificacion || `Transición a ${toStatus}`

@@ -221,6 +221,12 @@ LOGGING = {
 }
 
 # --- Notificaciones & Servicio de Correo (Outbox Resiliente) ---
+_RUNNING_PYTEST = "pytest" in sys.modules or any("pytest" in arg for arg in sys.argv)
+AUTO_DISPATCH_OPENING_EMAIL = (
+    False
+    if _RUNNING_PYTEST
+    else os.getenv("AUTO_DISPATCH_OPENING_EMAIL", "False").lower() in ("true", "1", "t")
+)
 INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "aveit-internal-service-secret-2026")
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
