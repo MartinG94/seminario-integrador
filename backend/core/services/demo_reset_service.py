@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -10,22 +10,37 @@ from django.contrib.auth import get_user_model
 from django.db import connection, transaction
 from django.utils import timezone
 
+from expedientes.domain.calendar import compute_business_deadline
+from expedientes.domain.holiday_provider import DbHolidayProvider
+from expedientes.domain.ports import HolidayProviderPort
 from expedientes.models import (
+    AsistenciaEvento,
+    AtencionFelicitacion,
     CambioEstadoExpediente,
+    CategoriaEventoEnum,
     ConceptoExpedienteEnum,
     DecisionCausalDescargo,
     DecisionCausalEnum,
     DescargoExpediente,
     DescargoVersion,
+    EstadoAsistenciaEventoEnum,
+    EstadoEventoEnum,
     EstadoExpedienteEnum,
     EstadoResolucionEnum,
+    EventoConvocado,
+    EventoInstitucional,
     Expediente,
     ExpedienteNumberSequence,
+    MetodoCapturaAsistenciaEnum,
+    ModalidadEventoEnum,
+    ModoConvocatoriaEnum,
     OperacionDescargoEnum,
     Resolucion,
+    SubtipoReunionEnum,
     TipoDescargoEnum,
     UrgenciaExpedienteEnum,
 )
+from expedientes.services.meeting_compliance_service import MeetingComplianceService
 from expedientes.services.tribunal_composition_service import TribunalCompositionService
 from socios.models import Role, Socio, Subcomision
 
@@ -87,6 +102,33 @@ DEMO_SOCIOS_SPECS: tuple[dict[str, Any], ...] = (
         "role": Role.TD,
         "social_year": 4,
         "subcomision": "Tribunal de Disciplina",
+    },
+    {
+        "legajo": "770005",
+        "numero_socio": 770005,
+        "first_name": "Elena",
+        "last_name": "Ensayo Demo",
+        "role": Role.SOCIO,
+        "social_year": 2,
+        "subcomision": "Cómputos",
+    },
+    {
+        "legajo": "770008",
+        "numero_socio": 770008,
+        "first_name": "Héctor",
+        "last_name": "Horizonte Demo",
+        "role": Role.SOCIO,
+        "social_year": 2,
+        "subcomision": "Cómputos",
+    },
+    {
+        "legajo": "770013",
+        "numero_socio": 770013,
+        "first_name": "Malena",
+        "last_name": "Marea Demo",
+        "role": Role.SOCIO,
+        "social_year": 3,
+        "subcomision": "Cómputos",
     },
 )
 
@@ -243,11 +285,71 @@ def _build_firma_dict(
     }
 
 
+def _previous_business_day(
+    reference_date: date,
+    provider: HolidayProviderPort,
+    steps: int = 1,
+) -> date:
+    """Retrocede `steps` días hábiles (lunes a viernes, excluyendo feriados)."""
+    current = reference_date
+    remaining = steps
+    while remaining > 0:
+        current -= timedelta(days=1)
+        if current.weekday() < 5 and not provider.is_holiday(current):
+            remaining -= 1
+    return current
+
+
+def _compute_event_dates(
+    now: datetime | None = None,
+    holiday_provider: HolidayProviderPort | None = None,
+) -> tuple[datetime, datetime, datetime]:
+    """Calcula dinámicamente `(fecha_publicacion, fecha_programada, fecha_fin)`.
+
+    Garantiza:
+    - `fecha_fin < now` y dentro de la ventana de 72 horas hábiles
+      (`compute_business_deadline(fecha_fin, 3, provider) > now`).
+    - Preaviso mínimo de 2 días hábiles cumplido
+      (`compute_business_deadline(fecha_publicacion, 2, provider) <= fecha_programada`).
+    """
+    reference_now = now or timezone.now()
+    local_now = timezone.localtime(reference_now)
+    provider = holiday_provider or DbHolidayProvider()
+
+    candidate_date = _previous_business_day(local_now.date(), provider, steps=1)
+    fecha_programada = datetime.combine(candidate_date, time(19, 0), tzinfo=local_now.tzinfo)
+    fecha_fin = fecha_programada + timedelta(hours=1)
+
+    if not (
+        fecha_fin < local_now and compute_business_deadline(fecha_fin, 3, provider) > local_now
+    ):
+        today = local_now.date()
+        if today.weekday() < 5 and not provider.is_holiday(today) and local_now.hour >= 2:
+            alt_end = (local_now - timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+            alt_start = alt_end - timedelta(hours=1)
+            if compute_business_deadline(alt_end, 3, provider) > local_now:
+                candidate_date = today
+                fecha_programada = alt_start
+                fecha_fin = alt_end
+
+    pub_date = _previous_business_day(candidate_date, provider, steps=3)
+    fecha_publicacion = datetime.combine(pub_date, time(10, 0), tzinfo=local_now.tzinfo)
+    while compute_business_deadline(fecha_publicacion, 2, provider) > fecha_programada:
+        pub_date = _previous_business_day(pub_date, provider, steps=1)
+        fecha_publicacion = datetime.combine(pub_date, time(10, 0), tzinfo=local_now.tzinfo)
+
+    return fecha_publicacion, fecha_programada, fecha_fin
+
+
 @transaction.atomic
 def reset_regularidad_database() -> dict[str, Any]:
-    """Reinicia la base de datos transaccional dejando exactamente 2 expedientes demo."""
+    """Reinicia la base de datos transaccional dejando expedientes y evento demo."""
     socios = _ensure_demo_socios()
     lucas = socios["74907"]
+    elena = socios["770005"]
+    hector = socios["770008"]
+    malena = socios["770013"]
+    diego_cd = socios["87414"]
     td_nicolas = socios["408917"]
     td_esteban = socios["85421"]
 
@@ -419,6 +521,108 @@ def reset_regularidad_database() -> dict[str, Any]:
         created_by=td_esteban.user,
     )
 
+    # 3. Flujo 1 (Apertura): Evento institucional sancionable listo para procesar y cerrar
+    holiday_provider = DbHolidayProvider()
+    fecha_publicacion, fecha_programada, fecha_fin = _compute_event_dates(
+        now=ahora,
+        holiday_provider=holiday_provider,
+    )
+    es_sancionable, motivo_no_sancionable = MeetingComplianceService.validate_notice_period(
+        fecha_publicacion=fecha_publicacion,
+        fecha_programada=fecha_programada,
+        holiday_provider=holiday_provider,
+    )
+    subcomision_cd = (
+        diego_cd.subcomision or Subcomision.objects.get_or_create(name="Comisión Directiva")[0]
+    )
+
+    evento = EventoInstitucional.objects.create(
+        titulo="Reunión Ordinaria de Seguimiento - Cómputos y CD",
+        categoria=CategoriaEventoEnum.REUNION,
+        tipo=SubtipoReunionEnum.ORDINARIA,
+        modalidad=ModalidadEventoEnum.PRESENCIAL_SEDE,
+        lugar="Sede Central AVEIT",
+        ubicacion="Sede Central AVEIT",
+        modo_convocatoria=ModoConvocatoriaEnum.PERSONALIZADA,
+        convocante=diego_cd,
+        subcomision=subcomision_cd,
+        estado=EstadoEventoEnum.NOTIFICADO,
+        es_obligatoria=True,
+        es_sancionable=es_sancionable,
+        motivo_no_sancionable=motivo_no_sancionable or "",
+        fecha_publicacion=fecha_publicacion,
+        fecha_programada=fecha_programada,
+        fecha_fin=fecha_fin,
+        tieneHoraFin=True,
+    )
+
+    convocados = (lucas, malena, elena, hector)
+    EventoConvocado.objects.bulk_create(
+        [EventoConvocado(evento=evento, socio=socio) for socio in convocados]
+    )
+
+    AsistenciaEvento.objects.bulk_create(
+        [
+            AsistenciaEvento(
+                evento=evento,
+                socio=lucas,
+                estado_asistencia=EstadoAsistenciaEventoEnum.AUSENTE,
+                metodo_captura=MetodoCapturaAsistenciaEnum.MANUAL,
+                motivo="Inasistencia registrada en reunión.",
+                procesado_disciplinario=False,
+                expediente_generado=None,
+            ),
+            AsistenciaEvento(
+                evento=evento,
+                socio=malena,
+                estado_asistencia=EstadoAsistenciaEventoEnum.TARDE_LEVE,
+                hora_registro=fecha_programada + timedelta(minutes=10),
+                minutos_tardanza=10,
+                metodo_captura=MetodoCapturaAsistenciaEnum.MANUAL,
+                motivo="Llegada 10 minutos tarde.",
+                procesado_disciplinario=False,
+                expediente_generado=None,
+            ),
+            AsistenciaEvento(
+                evento=evento,
+                socio=elena,
+                estado_asistencia=EstadoAsistenciaEventoEnum.PRESENTE,
+                hora_registro=fecha_programada,
+                metodo_captura=MetodoCapturaAsistenciaEnum.MANUAL,
+                motivo="Asistencia registrada en horario.",
+                procesado_disciplinario=False,
+                expediente_generado=None,
+            ),
+            AsistenciaEvento(
+                evento=evento,
+                socio=hector,
+                estado_asistencia=EstadoAsistenciaEventoEnum.PRESENTE,
+                hora_registro=fecha_programada,
+                metodo_captura=MetodoCapturaAsistenciaEnum.MANUAL,
+                motivo="Asistencia registrada en horario.",
+                procesado_disciplinario=False,
+                expediente_generado=None,
+            ),
+        ]
+    )
+
+    AtencionFelicitacion.objects.bulk_create(
+        [
+            AtencionFelicitacion(
+                socio=malena,
+                llamadosAtencion=2,
+                felicitaciones=0,
+            ),
+            AtencionFelicitacion(
+                socio=lucas,
+                llamadosAtencion=0,
+                felicitaciones=0,
+            ),
+        ]
+    )
+
     return {
         "expedientes": [exp1.numero, exp2.numero],
+        "evento_id": evento.id,
+        "evento_titulo": evento.titulo,
     }

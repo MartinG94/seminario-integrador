@@ -665,9 +665,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.limpiarApelacion();
     if (exp.esT01) {
       this.cargarHistorialT01(exp.id);
-    } else {
-      this.cargarHistorialDescargo(exp.id);
     }
+    this.cargarHistorialDescargo(exp.id);
     this.expedienteApi.obtenerDetalleExpediente(exp.id, 'mis_expedientes')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
