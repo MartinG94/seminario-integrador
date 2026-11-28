@@ -33,6 +33,8 @@
 | **1.1.0** | 02/09/2026 | Equipo de Proyecto SGD-AVEIT | Formalización integral del **Sprint 0** conforme a la Guía de Documentación de la UTN FRC: calendario de sprints (14 días, finalización en diciembre 2026), ceremonias híbridas, acuerdos de trabajo (DoD y DoR), capacidad semanal del equipo (77 hs/sem), catálogo de herramientas, tecnologías y gobernanza de Inteligencia Artificial para pair programming, Product Backlog completo inicial (US-01 a US-19), User Story Map bidimensional, banco de consultas para la reunión de tutoría docente y estructura de seguimiento para Sprints 1 a N. |
 | **1.2.0** | 07/10/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación de la ejecución, métricas, incremento demostrable y retrospectiva del **Sprint 1** (Walking Skeleton e Integración Legada) y del **Sprint 2** (Apertura T01, Ciclo Procesal de 6 Estados, Notificaciones y Monitoreo SCRUM-75). Formalización del hito de revisión intermedia y feedback del Product Owner del 27/09/2026 (`notasPO.md`), documentando sus impactos de diseño y replanificación ágil. |
 | **1.3.0** | 22/10/2026 | Equipo de Proyecto SGD-AVEIT | Incorporación de la alineación técnica con Cómputos y el TD (07/10/2026), cierre definitivo del **Sprint 3** con el 100% del alcance completado (36/36 SP integrados en `main` — Descargos T02/T03, Custodia de Evidencias, Calendario de Días Hábiles, Clasificador de Urgencia, Eventos y Asistencias con acumulación 3:1 y Detalle Canónico de Causa en Sala TD) y apertura formal de la planificación del **Sprint 4** (19 SP comprometidos). |
+| **1.4.0** | 04/11/2026 | Equipo de Proyecto SGD-AVEIT | Cierre del **Sprint 4** (integración en `main` de `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70`) y consolidación del **Sprint 5** (Libro Mayor inmutable, Mis Expedientes, Publicación con censura médica, Exclusión, Enmienda, Reportes JSON/CSV, Panel de Administración, Optimización y Reglamentos). |
+| **1.5.0** | 27/11/2026 | Equipo de Proyecto SGD-AVEIT | Alineación con `auditoria/registro-canonico.md` y registro formal de funcionalidades parciales o no implementadas como **trasladadas al Sprint 6** ([`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)), incluyendo la vigencia de `FISCALIZADORA` en Sprint 5 (decisión D-02) y el traspaso de su partición en roles diferenciados. |
 
 ---
 
@@ -263,13 +265,13 @@ Conforme a la decisión de diseño acordada por el equipo, **los roles de Produc
 ##### Stack Tecnológico Homologado:
 * **Backend:** **Python 3.12** con framework **Django 4.2 LTS** y **Django REST Framework (DRF)**. Provee arquitectura desacoplada, alta seguridad contra inyecciones SQL/CSRF, ORM robusto y compatibilidad plena con el backend preexistente en la infraestructura central de AVEIT.
 * **Base de Datos:** **MySQL 8.0**, asegurando integridad referencial, transaccionalidad ACID y compatibilidad nativa con las tablas del padrón de socios del servidor de la Asociación.
-* **Frontend Web:** **HTML5 semántico, CSS3 modular (con tokens de diseño predefinidos en `tokens.css`) y Vanilla JavaScript**, estructurado en vistas modulares responsive (`view-cd.js`, `view-td.js`, `view-socio.js`). Garantiza un diseño Mobile-First ligero, compatible con cualquier navegador de smartphone o PC sin dependencias pesadas.
-* **Infraestructura y Staging:** Entorno de hosting independiente administrado por el equipo de desarrollo, aislando completamente las pruebas para garantizar **riesgo cero sobre el servidor de producción de AVEIT**.
+* **Frontend Web:** **SPA en Angular 14.2+ con TypeScript (`strict: true`), Angular Material y Material Dashboard PRO**, consumiendo los tokens de diseño definidos en [`DESIGN.md`](../../DESIGN.md). Garantiza un diseño Mobile-First responsive compatible con smartphone y escritorio.
+* **Infraestructura y Staging:** Orquestación local mediante `docker-compose.yml` y entorno de staging independiente (**despliegue en Staging `SCRUM-66` y Homologación `SCRUM-67` trasladados al Sprint 6**, ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ##### Política y Gobernanza de Inteligencia Artificial (IA) para el Desarrollo:
 En concordancia con los acuerdos del equipo, se formaliza la siguiente política:
 1. **Libertad de Herramientas como Pair Programming:** Cada desarrollador tiene la facultad de utilizar el agente de Inteligencia Artificial de su preferencia (**Google Antigravity, GitHub Copilot, Gemini CLI, Claude, ChatGPT**, etc.) actuando en calidad de asistente o copiloto de programación en parejas (*Pair Programming*).
-2. **Alineación Obligatoria con la Documentación Preexistente:** Todo código, función, modelo, clase, endpoint o arreglo (*fix/feature*) generado con asistencia de IA **debe ajustarse estricta e inexcusablemente a la documentación preexistente del proyecto** (`ERS-SGD-AVEIT.md`, `MODELO_DOMINIO_SGD_AVEIT.md`, `Procesos-BPMN-SGD-AVEIT.md`, `Estudio-Inicial-SGD-AVEIT.md` y normativas vigentes de AVEIT 2026). No se aceptarán implementaciones que se desvíen de los 6 estados del expediente, de los formularios T01/T02/T03 o de las escalas estatutarias.
+2. **Alineación Obligatoria con la Documentación Preexistente:** Todo código, función, modelo, clase, endpoint o arreglo (*fix/feature*) generado con asistencia de IA **debe ajustarse estricta e inexcusablemente a la documentación vigente del proyecto** (`ERS-SGD-AVEIT.md`, `MODELO_DOMINIO_SGD_AVEIT.md`, `BPMN_Proceso_Operativo_Tribunal.md`, `Estudio_Inicial.docx`, `notasPO.md` y normativas vigentes de AVEIT 2026). No se aceptarán implementaciones que se desvíen de los 6 estados canónicos del expediente, de los formularios T01/T02/T03 o de las escalas estatutarias.
 3. **Seguridad y Privacidad de Datos:** Queda **terminantemente prohibido** ingresar en prompts o contextos de IA datos sensibles, secretos institucionales, contraseñas, claves privadas de API o registros reales confidenciales del padrón societario de AVEIT. Solo se utilizarán datos ficticios (*mock data / fixtures*) para pruebas.
 4. **Responsabilidad y Autoría Humana:** El desarrollador humano es el único y absoluto responsable del código enviado a revisión. Ningún código generado por IA será admitido si el autor no comprende exhaustivamente su lógica, no acompaña las pruebas automatizadas correspondientes (`pytest`) o no puede defenderlo técnicamente en las instancias de evaluación de la Cátedra.
 
@@ -370,7 +372,7 @@ El **Sprint 1** se ejecutó como la fase de construcción del *Walking Skeleton*
 * **Sprint Goal Alcanzado:** **Sí (100%)**. Se completó de extremo a extremo la integración del *Walking Skeleton*, validando la arquitectura desacoplada entre Angular 14, Django REST Framework y MySQL 8, asegurando la lectura transparente del padrón institucional.
 * **Velocidad Real Lograda:** **20 Story Points** completados sobre **20 SP** comprometidos (100% de cumplimiento).
 * **Historias de Usuario Terminadas (cumpliendo 100% DoD):**
-  * `SCRUM-34` (S1-01): Spike formalizado y aprobado mediante [`docs/adr/ADR-001-consumo-padron-institucional.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/adr/ADR-001-consumo-padron-institucional.md).
+  * `SCRUM-34` (S1-01): Spike formalizado y aprobado mediante [`docs/adr/ADR-001-consumo-padron-institucional.md`](../adr/ADR-001-consumo-padron-institucional.md).
   * `SCRUM-35` (S1-02): Orquestación reproducible mediante `docker-compose.yml`, healthcheck y suite de integración continua en verde.
   * `SCRUM-36` (S1-03): Autenticación JWT con selector rápido de roles para pruebas de homologación y control RBAC en servidor.
   * `SCRUM-37` (S1-04): Consumo desacoplado del padrón institucional de ~515 socios con normalización de legajos y categorías Pasivo/Activo.
@@ -413,7 +415,7 @@ El **Sprint 1** se ejecutó como la fase de construcción del *Walking Skeleton*
 
 ### 2.3. Hito de Revisión Intermedia con el Product Owner y Refinamiento (27/09/2026)
 
-Conforme a la Acción de Mejora **A1** acordada en la Retrospectiva del Sprint 1, el día **27/09/2026** se llevó a cabo una sesión de inspección profunda de pantallas y diseño funcional entre el Product Owner (**Diego Gabriel Sánchez**) y el equipo de desarrollo. Las directivas emanadas fueron formalizadas en el documento de gobernanza [`docs/gestion-proyecto/notasPO.md`](file:///d:/Proyectos-mg/seminario-integrador/docs/gestion-proyecto/notasPO.md), estableciendo criterios de diseño vinculantes que impactaron de manera inmediata sobre la planificación y ejecución del **Sprint 2**.
+Conforme a la Acción de Mejora **A1** acordada en la Retrospectiva del Sprint 1, el día **27/09/2026** se llevó a cabo una sesión de inspección profunda de pantallas y diseño funcional entre el Product Owner (**Diego Gabriel Sánchez**) y el equipo de desarrollo. Las directivas emanadas fueron formalizadas en el documento de gobernanza [`docs/gestion-proyecto/notasPO.md`](notasPO.md), estableciendo criterios de diseño vinculantes que impactaron de manera inmediata sobre la planificación y ejecución del **Sprint 2**.
 
 ---
 
@@ -461,7 +463,7 @@ Para dar respuesta inmediata a estas decisiones antes y durante el Sprint 2:
   - Se refactorizó la entidad `Expediente` para reemplazar la relación unívoca con un único socio por una relación de muchos a muchos (`socios = models.ManyToManyField(Socio)`), acompañada de la lista de identificadores `destinatarios_socios_ids` y `SolicitudT01.socios_involucrados`.
   - Se incorporaron los campos `titulo`, `razon_apertura`, `tipo_accion` e inmutabilidad de numeración correlativa.
 * **Notificaciones Transaccionales:**
-  - Se diseñó el patrón **Transactional Outbox** (`EmailNotificationQueue`) en `backend/notifications/` para garantizar que la apertura de un expediente despache acuses de notificación individuales y seguros a cada uno de los socios imputados con enlace autenticado por objeto.
+  - Se diseñó el patrón **Transactional Outbox** (`EmailOutbox`) en `backend/notifications/` para garantizar que la apertura de un expediente despache acuses de notificación individuales y seguros a cada uno de los socios imputados con enlace autenticado por objeto.
 * **Componentes UI en Angular:**
   - Se rediseñó `MisExpedientesComponent` incorporando el modal `ExpedienteDetalleDialogComponent`, el badge dinámico con el cálculo regresivo de horas/días y la sumatoria reactiva de puntos.
   - Se implementó la vista genérica `EnDesarrolloComponent` para rutear temporalmente los módulos pausados (Reportes, Eventos).
@@ -473,7 +475,7 @@ Para dar respuesta inmediata a estas decisiones antes y durante el Sprint 2:
 El análisis de las notas del PO reveló una necesidad funcional insatisfecha: las autoridades institucionales que inician un expediente mediante el Formulario T01 (Comisión Directiva, Fiscalizadora o Subcomisiones) carecían de una vista para **monitorear el avance y estado de las solicitudes que habían promovido**, sin violar por ello el secreto de deliberación interna del Tribunal de Disciplina.
 
 Por este motivo, durante la ejecución del Sprint 2:
-1. Se dio de alta formalmente en Jira la Historia de Usuario **SCRUM-75 / PB-04: Monitorear solicitudes T01 iniciadas ("Mis Solicitudes T01")**, estimada en **5 Story Points** y respaldada por la [`specs/003-monitorear-solicitudes-t01/spec.md`](file:///d:/Proyectos-mg/seminario-integrador/specs/003-monitorear-solicitudes-t01/spec.md).
+1. Se dio de alta formalmente en Jira la Historia de Usuario **SCRUM-75 / PB-04: Monitorear solicitudes T01 iniciadas ("Mis Solicitudes T01")**, estimada en **5 Story Points** y respaldada por la [`specs/003-monitorear-solicitudes-t01/spec.md`](../../specs/003-monitorear-solicitudes-t01/spec.md).
 2. Se resolvió **adelantar técnicamente la lógica de cálculo de plazos de 5 días hábiles (S3-02)** en el backend y frontend para integrarla directamente en el badge de estado de *Mis Expedientes*, satisfaciendo el requerimiento prioritario del PO.
 3. Se adoptó la sugerencia de asignación de 5 frentes de trabajo en paralelo una vez estabilizado el modelo de expedientes.
 
@@ -502,7 +504,7 @@ El **Sprint 2** consolidó el núcleo procesal y disciplinario de la plataforma.
 | **SCRUM-40** | S2-01 | **Story:** Crear expediente con número único e historial de seis estados | 1. Implementar modelo `Expediente` con 6 estados del Art. 12.<br>2. Servicio `ExpedienteWorkflowService` con bloqueo pesimista.<br>3. Generación correlativa `<numero>/YYYY` concurrente.<br>4. Soporte multi-socio y auditoría de cambios de estado. | Lucas Gastiaburu<br>Diego Sánchez (PO) | 3 | To Do |
 | **SCRUM-41** | S2-02 | **Story:** Cargar y validar T01 con anexo opcional y selección múltiple | 1. Formulario T01 reordenado (Título, Relato, Adjuntos, Testigos).<br>2. Autocompletado multi-socio y acciones (Llamado, Felicitación, Expulsión).<br>3. Anexo opcional del Art. 16 bis.<br>4. Serializador y validaciones en DRF. | Diego Sánchez (PO)<br>Tomas Quiroz<br>Nicolás Rosales | 5 | To Do |
 | **SCRUM-42** | S2-03 | **Story:** Validar competencias de inicio de acción (Arts. 21-26) | 1. Implementar motor de políticas `OpeningPolicy`.<br>2. Validar competencias de solicitante según cargo y tipo de falta.<br>3. Manejo de excepciones y motivos fundados auditados.<br>4. Pruebas unitarias de casos límite y rechazo procesal. | Tomas Quiroz<br>Axel Villegas | 3 | To Do |
-| **SCRUM-43** | S2-04 | **Story:** Notificar apertura con entrega y reintentos auditables | 1. Diseñar sanitización de privacidad (cero datos médicos).<br>2. Servicio transaccional Outbox `OpeningNotificationService`.<br>3. Cola de correos `EmailNotificationQueue` con reintentos.<br>4. Enlace seguro con autorización RBAC por objeto (`IsImputadoOrTribunal`). | Lucas Martín Guillén (SM)<br>Axel Villegas | 5 | To Do |
+| **SCRUM-43** | S2-04 | **Story:** Notificar apertura con entrega y reintentos auditables | 1. Diseñar sanitización de privacidad (cero datos médicos).<br>2. Servicio transaccional Outbox `OpeningNotificationService`.<br>3. Cola de correos `EmailOutbox` con reintentos.<br>4. Enlace seguro con autorización RBAC por objeto (`IsImputadoOrTribunal`). | Lucas Martín Guillén (SM)<br>Axel Villegas | 5 | To Do |
 | **SCRUM-44** | S2-05 | **Story:** Visualizar tablero responsive de seis estados | 1. Tablero interactivo para el TD con 6 columnas oficiales.<br>2. Filtros por número de expediente, socio y rango de fechas.<br>3. Restricción de transiciones permitidas por reglamento.<br>4. Diseño mobile-first con tokens de diseño AVEIT. | Nicolás Rosales<br>Luis Urviola | 2 | To Do |
 | **SCRUM-75** | PB-04 | **Story:** Monitorear solicitudes T01 iniciadas ("Mis Solicitudes T01") | 1. Vinculación transaccional `SolicitudT01` ➔ `Expediente`.<br>2. Endpoint `/api/v1/expedientes/mis-solicitudes/` protegido.<br>3. Panel reactivo en `/solicitar-puntos` con buscador y estados.<br>4. Modal de detalle sanitizado (secreto del TD preservado). | Lucas Martín Guillén (SM)<br>Luis Urviola<br>Axel Villegas | 5 | To Do |
 | *(Técnica)* | S3-02 *(Adelanto)* | **Task:** Cómputo de 5 días hábiles y chip regresivo en estado | 1. Servicio determinista de calendario `compute_business_deadline()`.<br>2. Integrar badge con cuenta regresiva en `MisExpedientesComponent`.<br>3. Modal de detalle con fecha y hora exacta de vencimiento. | Lucas Martín Guillén (SM)<br>Nicolás Rosales | — | To Do |
@@ -578,7 +580,7 @@ Al cierre del **Sprint 2** y previo al inicio formal del **Sprint 3**, el Produc
 4. **Delimitación Operativa de Soporte:**
    - Formalización del rol `ACT-05 Admin (Cómputos)` para administración de copias de seguridad, visualización de logs de seguridad y variables de entorno, sin injerencia en juzgamiento ni modificación manual de saldos de puntos.
 5. **Estabilidad y Ampliación de Datos de Prueba:**
-   - Corroboración de la operatividad del contenedor de base de datos MySQL y ampliación del conjunto de datos de prueba (`seed_expedientes`) con datos representativos de socios, subcomisiones y antecedentes históricos.
+   - Corroboración de la operatividad del contenedor de base de datos MySQL y ampliación del conjunto de datos de prueba (`seed_demo` / `seed_reglamento`) con datos representativos de socios, subcomisiones y antecedentes históricos.
 
 ---
 
@@ -600,7 +602,7 @@ Al cierre del **Sprint 2** y previo al inicio formal del **Sprint 3**, el Produc
    - **Detalle de Causas:** Despliegue interactivo (modal/expansión) del historial de expedientes asociados a cada socio.
    - **Columnas Ordenables y Ordenamiento Compuesto:** Eliminación de los botones de filtro rápido ("Más reconocidos", "Mayor sanción"), ordenamiento directo por columna de Saldo y capacidad de ordenamiento múltiple anidado (Grupo Social ➔ Orden Alfabético).
 5. **Gobernanza Institucional y Terminología:**
-   - **Renombrar Fiscalizadora por Revisores (Revisores de Cuentas):** Adecuación terminológica estricta en todo el código y la documentación formal.
+   - **Renombrar/particionar `FISCALIZADORA` (`AUTORIDAD_SC` / `REVISORES`):** Por decisión D-02 (`27/11/2026`), en Sprint 5 se mantiene el rol `FISCALIZADORA` vigente en código; la partición en roles diferenciados y la vista 403 (`SCRUM-121`/`SCRUM-122`) quedan **trasladadas al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
    - **Inmutabilidad de Regla de Puntos 3:1:** Ratificación de que llamados de atención y felicitaciones no aplican fracciones directas; cada 3 acumulados consolidan 1 punto neto.
 
 ---
@@ -610,7 +612,7 @@ Al cierre del **Sprint 2** y previo al inicio formal del **Sprint 3**, el Produc
 Estas definiciones refinan el alcance de las Historias de Usuario para el **Sprint 3 (07/10 al 20/10)** y sprints posteriores:
 * **Sprint 3 (`SCRUM-45` a `SCRUM-50`):** Enfoque centrado en la recepción de descargos T02/T03, almacenamiento seguro de adjuntos probatorios, cierre automático de plazos de 5 días hábiles y visualización detallada del expediente según el formato oficial de la Imagen 2.
 * **Sprint 4 (`SCRUM-51` a `SCRUM-56`):** Reducción de complejidad técnica al descartar la votación nominal compleja en la sala virtual, concentrando el esfuerzo en el editor unificado de resoluciones, la asignación de puntajes por socio y la generación de la resolución con firmas colegiadas identificadas por grupo (Imagen 3).
-* **Mantenimiento y Calidad:** Tareas técnicas transversales para la actualización terminológica ("Revisores de Cuentas") y la siembra ampliada de datos de prueba (`seed_expedientes`).
+* **Mantenimiento y Calidad:** Tareas técnicas transversales para la siembra ampliada de datos de prueba (`seed_demo` / `seed_reglamento`); la partición del rol `FISCALIZADORA` queda **trasladada al Sprint 6** ([`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -739,9 +741,26 @@ El **Sprint 4** se centra en la etapa de **Sustanciación, Deliberación y Redac
 | **SCRUM-56** | S4-06 | **Story:** Redactar resolución oficial y fijar puntaje final aplicado sin votación nominal | 1. Editor unificado de resolución oficial conservando el número del expediente.<br>2. Plantilla versionada con estructura reglamentaria (`VISTO`, `CONSIDERANDO`, `SE RESUELVE`).<br>3. Fijación directa del puntaje final neto aplicado o medida individualizada por socio imputado.<br>4. Previsualización en formato oficial (Imagen 3) sin equivaler a emisión y sin adjuntos privados. | Nicolás Nazareno Rosales | 3 | To Do |
 | **SCRUM-70** | PB-02 | **Story:** Tramitar apelación y adecuación del T01 | 1. Recepción y registro de apelación de T01 por canal formal dentro del plazo parametrizado.<br>2. Flujo de debate y adecuación de puntos e involucrados conservando la versión original inmutable.<br>3. Notificación fundada de motivos al solicitante y a los socios solicitados.<br>4. Trazabilidad completa en el historial procesal conforme al Art. 14 del Reglamento Procesal 2026. | Tomas Augusto Quiroz | 5 | To Do |
 
+#### 2.7.2. Resultado Final del Sprint 4 (Verificado en `auditoria/registro-canonico.md`)
+
+* **Sprint Goal Alcanzado:** **Sí** — Las 5 historias comprometidas del Sprint 4 (**19/19 SP**) quedaron integradas en `main` con cobertura de tests automatizados.
+* **Historias de Usuario Terminadas:** `SCRUM-51` (visor autorizado con auditoría de consultas/descargas), `SCRUM-53` (valoración T03 con antecedentes), `SCRUM-54` (apartamiento y suplencias + `IsNotInvolvedInExpediente`), `SCRUM-56` (editor unificado de resolución oficial sin votación nominal) y `SCRUM-70` (apelación y adecuación del T01 con plazo parametrizable).
+
 ---
 
-### 2.8. Estructura de Seguimiento para Cierre de Sprint 4 y Sprints Subsiguientes (Sprints 5 y 6)
+### 2.8. Sprint 5 Consolidado y Traspaso al Sprint 6 (Estado al 27/11/2026)
+
+* **Funcionalidades Implementadas y Verificadas en Código (`auditoria/registro-canonico.md`):**
+  * **Libro Mayor Inmutable y Publicación (`SCRUM-57` / `SCRUM-58` / `SCRUM-59` / `SCRUM-60` / `SCRUM-105` / `SCRUM-106`):** Firma colegiada de 3 integrantes activos (`Resolucion.firmantes`), `AsientoLibroMayor` InsertOnly (incluyendo `REVERSION`), portal "Mis Expedientes" y publicación oficial con censura de datos médicos (`medical_redaction.py`).
+  * **Circuito Resolutivo, Exclusión y Enmiendas (`SCRUM-101` / `SCRUM-102` / `SCRUM-103`):** Puntaje ratificado T02, exclusión fundada de involucrados y enmiendas trazables de resoluciones.
+  * **Panel de Administración, Reglamentos, Eventos y Optimización (`SCRUM-91 / MACRO-03`, `SCRUM-86`, `SCRUM-87`, `SCRUM-93`, `SCRUM-129`):** Gestión de parámetros del sistema y miembros del TD (`/admin/parametros`), ABM de reglamentos con auditoría (`/reglamentos`), paginación y optimización ORM/`OnPush`/`trackBy`, y `NotificationCenter` centralizado.
+  * **Reportes y Balances (Parcial):** Endpoints y 4 pestañas UI en JSON/CSV implementados (`reportes_views.py`).
+* **Funcionalidades Parciales o No Implementadas — Trasladadas al Sprint 6:**
+  * Todas las funcionalidades incompletas del Sprint 5 (alertas automáticas `-7`/`-10` `SCRUM-62`, alerta preventiva 3:1 `SCRUM-61`, exportación PDF y cierre de brecha RBAC en 6 vistas de `reportes_views.py` `SCRUM-63`/`SCRUM-124`, conciliación bidireccional `SCRUM-64`, hardening RBAC / pruebas de carga 50 usuarios / 10 disparadores de correo `SCRUM-65`/`SCRUM-92`, partición de `FISCALIZADORA` en `AUTORIDAD_SC` + `REVISORES` + vista 403 `SCRUM-121`/`SCRUM-122`, repositorio dedicado de jurisprudencia `SCRUM-68`/`SCRUM-125`, causas internas a T01 `PB-01`/`SCRUM-128`, Staging `SCRUM-66` y Homologación `SCRUM-67`) se documentan formalmente como **trasladadas al Sprint 6** en [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md).
+
+---
+
+### 2.9. Plantillas de Seguimiento para Sprints Subsiguientes (Sprint 6)
 
 A continuación se mantiene la estructura estandarizada que el equipo completará al cierre del Sprint 4 y en las iteraciones 5 y 6:
 
