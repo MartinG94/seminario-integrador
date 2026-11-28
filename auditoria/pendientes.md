@@ -34,8 +34,7 @@
 ## 2026-11-27 — Pendientes de la ejecución de edición controlada (D-03)
 
 6. **Entregables binarios en Word (`docs/formales/Estudio_Inicial.docx` y `docs/formales/Plan_de_Proyecto.docx`):**
-   - **Estado:** Aprobados en 3A de `propuesta-destinos.md` para conservar y completar, pero no editados programáticamente para no corromper estilos, carátulas ni tablas nativas de Word y porque requieren integración manual con las versiones humanas más recientes (`v1.5.0` / `v2.0.0`).
-   - **Pendiente:** Actualizar manualmente en Microsoft Word/LibreOffice alineando los 6 estados canónicos, firma colegiada sin votación nominal, categorías `Pasivo` (1.º–3.º) / `Activo` (4.º–6.º), vigencia de `FISCALIZADORA` en Sprint 5 y funcionalidades trasladadas al Sprint 6, preservando inmutables las fechas de versiones ya presentadas (Regla 13).
+   - **Resolución (`2026-11-27`, D-04):** Unificados en `docs/formales/` tomando como base las versiones presentadas de `Documentación Actual Humana` (`v1.5.0` y `v2.0.0`), corregidos vía `python-docx`/XML preservando carátulas, estilos e imágenes, y versionados como `v1.6.0` y `v2.1.0` (`27/11/2026`) sin alterar fechas históricas.
 
 7. **Documentos no aprobados (`[ ]`) en `auditoria/propuesta-destinos.md` (sin modificar por respeto al alcance aprobado):**
    - `docs/manual-usuario/*` (10 archivos; `docs/manual-usuario/README.md` conserva rutas locales `G:\My Drive\...` y el manual menciona `REVISORES` en lugar de `FISCALIZADORA`).

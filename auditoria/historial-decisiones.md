@@ -25,3 +25,8 @@
   4. **Sincronización de specs SDD aprobadas (19 archivos):** Actualizar solo los archivos `specs/` aprobados en 7A/7C con discrepancias verificadas (commit `6cec57f`).
 - **Motivo:** Erradicar contradicciones con el código real, referencias rotas y promesas de funcionalidades incompletas antes de la presentación y del inicio del Sprint 6, respetando estrictamente la prohibición de borrar archivos y la inmutabilidad de fechas históricas.
 - **No modificado / pendiente:** No se modifican archivos sin casilla `[x]` en `propuesta-destinos.md` (`docs/manual-usuario/*`, `.github/ISSUE_TEMPLATE/tarea_sprint.md`, `specs/010-optimizacion-rendimiento/memory_audit_report.md`, ni los 15 `specs/*/tasks.md` de 7B) ni los `.docx` binarios (`Estudio_Inicial.docx`, `Plan_de_Proyecto.docx`), los cuales quedan registrados en [`auditoria/pendientes.md`](pendientes.md).
+
+### D-04: Unificación y actualización agéntica de `Estudio_Inicial.docx` y `Plan_de_Proyecto.docx` en `docs/formales/`
+- **Decisión:** Adoptar como base en `docs/formales/` las últimas versiones presentadas de `Documentación Actual Humana` (`Estudio_Inicial.docx` v1.5.0 y `Plan_de_Proyecto.docx` v2.0.0) —ya que las copias del repo estaban congeladas en `d3ab31f` del `06/09/2026`— y aplicarles mediante `python-docx`/XML las correcciones de alineación con el registro canónico, agregando `v1.6.0` y `v2.1.0` con fecha `27/11/2026` sin modificar ninguna fecha histórica previa.
+- **Motivo:** Dejar el repositorio como fuente única y limpia a partir de la cual se generará la documentación final, preservando carátulas, imágenes, tablas y estilos originales sin requerir edición manual en Word.
+- **Cierre:** Queda resuelto el pendiente #6 en [`auditoria/pendientes.md`](pendientes.md).
