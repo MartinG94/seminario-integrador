@@ -41,8 +41,8 @@ Implementar el **Visor Autorizado de Expedientes y Evidencias** en una **vista d
 
 ## Criterios de Aceptación (DoD)
 
-- [ ] **CA1 (Línea de tiempo y visor dedicado):** Pantalla completa con cabecera TD, 3 jueces con grupo `Gxx`, y timeline cronológico.
-- [ ] **CA2 (Confidencialidad médica estricta):** Ocultamiento de diagnósticos médicos a no autorizados (solo TD, CD y titular).
-- [ ] **CA3 (Auditoría inmutable de consulta):** Registro inmutable en `expedientes_auditoria_consulta` al consultar el visor.
-- [ ] **CA4 (Integridad SHA-256 y Plazo Vencido):** Flags de archivo dañado ante alteración de hash y rotulado visible de "Plazo vencido sin descargo".
-- [ ] **CA5 (Responsive, WCAG y Notificaciones):** UI adaptada a móvil (375px/320px) con tokens de `DESIGN.md` y notificaciones centrales de 10s.
+- [x] **CA1 (Línea de tiempo y visor dedicado):** Pantalla completa con cabecera TD, 3 jueces con grupo `Gxx`, y timeline cronológico.
+- [x] **CA2 (Confidencialidad médica estricta):** Ocultamiento de diagnósticos médicos a no autorizados (solo TD, CD y titular).
+- [x] **CA3 (Auditoría inmutable de consulta):** Registro inmutable en `expedientes_auditoria_consulta` al consultar el visor.
+- [x] **CA4 (Integridad SHA-256 y Plazo Vencido):** Flags de archivo dañado ante alteración de hash y rotulado visible de "Plazo vencido sin descargo".
+- [x] **CA5 (Responsive, WCAG y Notificaciones):** UI adaptada a móvil (375px/320px) con tokens de `DESIGN.md` y notificaciones centrales de 10s.

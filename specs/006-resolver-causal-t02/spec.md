@@ -4,7 +4,7 @@
 
 Permitir que un miembro del Tribunal de Disciplina (TD) acepte o rechace cada causal tipificada presentada mediante Formulario T02, dejando una decisión auditable, versionada y vinculada a la evidencia valorada, sin alterar el descargo presentado por el socio.
 
-- **Referencia Backlog:** S4-02 (EP4, Sprint 4, 3 SP, prioridad Highest) — `docs/gestion-proyecto/jira_backlog_import_v2.csv`.
+- **Referencia Backlog:** S4-02 (`SCRUM-52` / `SCRUM-101`, EP4, Sprint 4, 3 SP, prioridad Highest).
 - **Referencia Rectora:** [Notas del PO (27/09/2026 y 07/10/2026)](../../docs/gestion-proyecto/notasPO.md).
 - **Dependencias:** S3-03 (T02 tipificado) y [Spec 005](../005-evidencia-protegida/spec.md) (evidencia protegida).
 - **Sistema de Diseño:** [DESIGN.md](../../DESIGN.md).
@@ -49,8 +49,8 @@ Permitir que un miembro del Tribunal de Disciplina (TD) acepte o rechace cada ca
 
 ## Criterios de Aceptación (DoD)
 
-- [ ] **CA1 (Decisión por causal y evidencia):** Una decisión por descargo T02 y socio, vinculada a los comprobantes vigentes valorados con su hash.
-- [ ] **CA2 (Fundamento obligatorio):** Se exige fundamento al rechazar o al apartarse de la regla sugerida.
-- [ ] **CA3 (Autor, fecha y versión):** Cada decisión conserva autor, fecha y versión; las anteriores se preservan inmutables.
-- [ ] **CA4 (Descargo inalterado):** El descargo y sus comprobantes no se modifican; la decisión guarda una copia del descargo valorado.
-- [ ] **CA5 (Suites en verde):** `pytest` y `Karma` en verde sin regresiones.
+- [x] **CA1 (Decisión por causal y evidencia):** Una decisión por descargo T02 y socio, vinculada a los comprobantes vigentes valorados con su hash (incluyendo `puntaje_ratificado`, `SCRUM-101`).
+- [x] **CA2 (Fundamento obligatorio):** Se exige fundamento al rechazar o al apartarse de la regla sugerida.
+- [x] **CA3 (Autor, fecha y versión):** Cada decisión conserva autor, fecha y versión; las anteriores se preservan inmutables.
+- [x] **CA4 (Descargo inalterado):** El descargo y sus comprobantes no se modifican; la decisión guarda una copia del descargo valorado.
+- [x] **CA5 (Suites en verde):** `pytest` y `Karma` en verde sin regresiones.

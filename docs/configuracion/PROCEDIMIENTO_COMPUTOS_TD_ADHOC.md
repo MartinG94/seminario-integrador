@@ -32,26 +32,18 @@ SET idTipoSocio = 10
 WHERE nroSocio = <NRO_SOCIO>;
 ```
 
-### B. Aplicación SGD-AVEIT (`socios_socio`)
-Se actualiza el rol RBAC a `TD`:
-
-```sql
-UPDATE socios_socio
-SET role = 'TD'
-WHERE legajo = '<NRO_SOCIO>';
-```
-
-*(O vía Django shell: `s = Socio.objects.get(legajo="<NRO_SOCIO>"); s.role = Role.TD; s.save()`)*.
+### B. Aplicación SGD-AVEIT (Panel de Administración `/admin/parametros`)
+El alta del rol `TD` en la aplicación **no** se realiza mediante `UPDATE` manual en `socios_socio`, sino desde el Panel de Administración (`/admin/parametros`, `POST /api/v1/admin/usuarios-td/`), que ejecuta `TribunalMemberService` y registra auditoría inmutable en `core_cambio_rol_tribunal` (`TribunalRoleChange`).
 
 ---
 
 ## 3. Sustanciación y Emisión de la Causa
 
-1. El socio designado inicia sesión con sus credenciales institucionales habituales.
+1. El socio designado inicia sesión con su Número de Socio (`numero_socio`).
 2. Posee facultades para acceder a la causa, evaluar justificativos (T02/T03), transicionar el expediente y generar la resolución oficial.
-3. Al avanzar el expediente al estado `Pendiente de firma y envío` (`PENDIENTE_CORREOS`), el sistema **estampa inmutablemente** la composición en `expedientes_composicion_tribunal` y sus integrantes en `expedientes_integrante_composicion`, fijando su pie de firma canónico:  
+3. Al avanzar el expediente al estado `Pendiente de firma y envío` (`pendiente_correos`), el sistema **estampa inmutablemente** la composición en `expedientes_composicion_tribunal` y sus integrantes en `expedientes_integrante_composicion`, fijando su pie de firma canónico:  
    `[N° de Socio] - [Nombre y Apellido] - [Gxx]`
-4. La causa avanza a `Emitido` (`EMITIDO`).
+4. La causa avanza a `Expedientes ya emitidos` (`emitido`).
 
 ---
 
@@ -59,16 +51,14 @@ WHERE legajo = '<NRO_SOCIO>';
 
 Una vez que el expediente ha sido emitido, el Administrador de Cómputos restablece la condición ordinaria del socio:
 
+1. **En la aplicación SGD-AVEIT:** revoca el rol `TD` desde `/admin/parametros` (`DELETE /api/v1/admin/usuarios-td/<socio_id>/`), dejando registro auditable en `core_cambio_rol_tribunal`.
+2. **En el padrón legado externo (`socio_lista`):**
+
 ```sql
 -- Restablecer cargo a Socio Ordinario en padrón legado
 UPDATE socio_lista
 SET idTipoSocio = 12
 WHERE nroSocio = <NRO_SOCIO>;
-
--- Restablecer rol RBAC en la aplicación
-UPDATE socios_socio
-SET role = 'SOCIO'
-WHERE legajo = '<NRO_SOCIO>';
 ```
 
 > [!NOTE]

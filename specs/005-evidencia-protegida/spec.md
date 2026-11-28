@@ -6,7 +6,7 @@ Permitir que los socios imputados en un expediente disciplinario puedan adjuntar
 
 - **Referencia Jira:** [SCRUM-48](https://guillenmartin94.atlassian.net/browse/SCRUM-48) (S3-04).
 - **Referencia Rectoral:** [Notas del PO (07/10/2026 y 27/09/2026)](../../docs/gestion-proyecto/notasPO.md).
-- **Plan de Implementación Aprobado:** `plan_us_s3_04_evidencia_protegida.md`.
+- **Plan de Implementación Aprobado:** [`plan.md`](plan.md).
 - **Sistema de Diseño:** [DESIGN.md](../../DESIGN.md) (Material Dashboard PRO Angular 2 / WCAG 2.2 AA).
 - **Normativa Procesal:** Art. 12 Inc. 2 y Art. 102 del Reglamento Interno 2026.
 
@@ -40,7 +40,7 @@ Permitir que los socios imputados en un expediente disciplinario puedan adjuntar
 
 5. **Event-driven (Auditoría Inmutable de Descargas):**  
    CADA VEZ QUE un usuario consulte o descargue un comprobante probatorio,  
-   el sistema *debe* asentar una fila inmutable en la tabla de auditoría con la identificación del usuario, su legajo, su rol, la fecha y hora institucional, la dirección IP de origen y el identificador de la evidencia.
+   el sistema *debe* asentar una fila inmutable en la tabla de auditoría con la identificación del usuario, su `numero_socio`, su rol, la fecha y hora institucional, la dirección IP de origen y el identificador de la evidencia.
 
 6. **State-driven (Preservación Histórica ante Correcciones en Plazo):**  
    MIENTRAS el plazo perentorio de 5 días hábiles permanezca abierto y el socio modifique su descargo adjuntando nueva documentación,  
@@ -59,10 +59,10 @@ Permitir que los socios imputados en un expediente disciplinario puedan adjuntar
 
 ## Criterios de Aceptación (DoD)
 
-- [ ] **CA1 (Límites y Formatos):** PDF, JPG, JPEG, PNG <= 5 MB; T02: 1 a 3 comprobantes; T03: 0 a 5 comprobantes.
-- [ ] **CA2 (Validación Real y Metadatos):** Detección de magic bytes, hash SHA-256, sanitización de nombre y rechazo de spoofing.
-- [ ] **CA3 (Custodia en BD y RBAC por Objeto):** Almacenamiento en `BinaryField` MySQL, endpoint protegido con `IsImputadoOrTribunal`, rechazo 401 a anónimos y 403 a terceros.
-- [ ] **CA4 (Auditoría de Descarga):** Registro inmutable en `AuditoriaDescargaEvidencia` por cada acceso con streaming seguro (`nosniff`).
-- [ ] **CA5 (Advertencia Art. 102 e Interfaz Responsive):** Advertencia legal visible en modal de descargo, selector de archivos múltiples, previsualización, modal de detalle con descarga segura y notificaciones centrales de 10s.
-- [ ] **CA6 (Preservación Histórica):** Reenvíos en plazo conservan documentos previos con `es_vigente = False`.
-- [ ] **CA7 (Suites en Verde):** 100% de tests backend (`pytest`) y frontend (`Karma`) pasando en verde sin regresiones.
+- [x] **CA1 (Límites y Formatos):** PDF, JPG, JPEG, PNG <= 5 MB; T02: 1 a 3 comprobantes; T03: 0 a 5 comprobantes.
+- [x] **CA2 (Validación Real y Metadatos):** Detección de magic bytes, hash SHA-256, sanitización de nombre y rechazo de spoofing.
+- [x] **CA3 (Custodia en BD y RBAC por Objeto):** Almacenamiento en `BinaryField` MySQL, endpoint protegido con `IsImputadoOrTribunal`, rechazo 401 a anónimos y 403 a terceros.
+- [x] **CA4 (Auditoría de Descarga):** Registro inmutable en `AuditoriaDescargaEvidencia` por cada acceso con streaming seguro (`nosniff`).
+- [x] **CA5 (Advertencia Art. 102 e Interfaz Responsive):** Advertencia legal visible en modal de descargo, selector de archivos múltiples, previsualización, modal de detalle con descarga segura y notificaciones centrales de 10s.
+- [x] **CA6 (Preservación Histórica):** Reenvíos en plazo conservan documentos previos con `es_vigente = False`.
+- [x] **CA7 (Suites en Verde):** 100% de tests backend (`pytest`) y frontend (`Karma`) pasando en verde sin regresiones.

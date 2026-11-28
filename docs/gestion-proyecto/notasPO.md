@@ -79,7 +79,7 @@ Todas las columnas deben poder ordenarse.
 
 **"Pautas del Régimen Disciplinario" arriba de la tabla.** Eliminar ese bloque con los chips de HABILITADO / ADVERTENCIA / CESE ESTATUTARIO. El criterio de -10 y la política de -7 van a ser configurables, y por ahora no pertenecen a la pantalla de ranking.
 
-> **Actualizado (13/11/2026):** Implementado el ordenamiento por Saldo y compuesto (Grupo + Alfabético), el modal de detalle por socio y la lógica de alertas por umbrales reglamentarios (-10 crítico y -7 preventivo configurable/desactivable) con estricta privacidad.
+> **Actualizado (13/11/2026 · verificado 27/11/2026):** Implementado el ordenamiento por Saldo y compuesto (Grupo + Alfabético) y el modal de detalle por socio. El motor de dominio de alertas por umbrales (`-10` crítico y `-7` preventivo configurable) está implementado, pero su integración al flujo productivo de emisión/libro mayor y vista de alertas queda **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -87,7 +87,7 @@ Todas las columnas deben poder ordenarse.
 
 Están en pausa. Tengo que hablar con los usuarios del TD para definir qué necesitan ver. No arrancar nada acá todavía.
 
-> **Actualizado (13/11/2026):** Reportes salió de pausa e ingresó al sistema con vistas de T01, Reuniones, Subcomisiones, Histórico/Récords, Resumen y Exportación CSV (ver sección del 13/11/2026).
+> **Actualizado (13/11/2026 · verificado 27/11/2026):** Reportes salió de pausa e ingresó al sistema con vistas de T01, Reuniones, Subcomisiones, Histórico/Récords, Resumen y Exportación CSV. La exportación en **PDF** del Balance Cuatrimestral Art. 137 y el cierre RBAC en 6 vistas de `reportes_views.py` quedan **trasladados al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -113,7 +113,7 @@ Acuerden primero el modelo de datos compartido (Expediente, Socio, Estado, Movim
 | Dev 1 | Apertura T01 + validación de competencias (Arts. 21–26) |
 | Dev 2 | Tablero de estados + filtros + Kanban |
 | Dev 3 | Descargos T02/T03 + cálculo de plazos hábiles |
-| Dev 4 | Sala de Tribunal: votación, suplencias y resolución |
+| Dev 4 | Sala de Tribunal: suplencias y resolución con firma colegiada *(votación nominal descartada el 07/10/2026)* |
 | Dev 5 | Notificaciones, libro mayor de puntos y "Mis Expedientes" |
 
 Las US en Jira quedan atómicas (2–5 puntos). Cada dev mueve sus propias tarjetas a *Done* cuando cumple la DoD completa: tests, cobertura, responsive y revisión de par.
@@ -129,9 +129,9 @@ Dejo asentadas las definiciones y acuerdos alcanzados en las reuniones mantenida
 
 ## 1. Definiciones Institucionales y Gobernanza de Roles
 
-* **Renombrar Rol Fiscalizadora por Revisores (Revisores de Cuentas):**
-  - Se debe cambiar en todo el sistema (backend RBAC, frontend, nombres de rutas, selectores, tooltips) y en toda la documentación formal de ingeniería y cátedra el rol "Comisión Fiscalizadora" / "Fiscalizadora" por **"Revisores"** (o **"Revisores de Cuentas"** en contextos formales).
-  - La justificación es de estricta adecuación estatutaria e institucional de AVEIT.
+* **Renombrar / Particionar Rol Fiscalizadora (`FISCALIZADORA` → `AUTORIDAD_SC` y `REVISORES`):**
+  - El acuerdo institucional es adecuar el rol "Comisión Fiscalizadora" / "Fiscalizadora" hacia **"Revisores"** (`REVISORES`) y **"Autoridades de Subcomisión"** (`AUTORIDAD_SC`).
+  - > **Estado vigente (27/11/2026):** En el código actual el rol implementado sigue siendo `Role.FISCALIZADORA` (`backend/socios/models.py`, `frontend/src/app/services/auth.service.ts`). **No renombrar `FISCALIZADORA` en código en Sprint 5:** la partición en `AUTORIDAD_SC` y `REVISORES` (`SCRUM-121`/`SCRUM-122`) queda **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 * **Delimitación de Soporte Técnico (Cómputos):**
   - Cómputos mantiene el rol técnico administrativo (`ACT-05 Admin`) para gestión de infraestructura, monitoreo de logs, ejecución de copias de seguridad y parametrización de variables de entorno, sin facultades para juzgar expedientes ni alterar saldos de puntos.
@@ -251,16 +251,16 @@ Dejo asentado lo que ya quedó implementado y funcionando en el sistema durante 
 * **Expedientes referenciados y antecedentes:** Al cargar una solicitud (T01), presentar un descargo o redactar una resolución, se pueden vincular expedientes anteriores desde una tabla y un modal selector. El Tribunal valora los descargos viendo esos antecedentes al lado del expediente.
 * **Resolución oficial y "Pendiente de firma":** El modal de resolución es exclusivo del rol TD, no tiene votación nominal y el *Considerando* arranca completamente en blanco. Guarda la reglamentación de respaldo y el texto dispositivo, y deja el expediente en estado "Pendiente de firma" hasta completar las firmas.
 * **Apartamiento y suplencia en el TD:** Si un integrante del Tribunal se aparta de una causa con motivo fundado, entra su suplente sin frenar el trámite.
-* **Apelación y adecuación de T01:** Ya funciona el circuito de apelación sobre resoluciones y el ajuste del formulario T01 para las causales y revisiones vinculadas.
+* **Apelación y adecuación de T01:** Ya funciona el circuito de apelación y adecuación sobre el **Formulario T01** (`ApelacionT01`, `AdecuacionT01`, `T01AppealService`); las rectificaciones sobre resoluciones ya emitidas se tramitan mediante **Enmienda** (`EnmiendaResolucion`).
 
 ---
 
 ## 3. Reglamentos, reportes, eventos y ranking (implementado)
 
 * **Reglamentos (ABM):** Quedó andando la carga inicial de artículos, el historial de cambios y el control de permisos en el servidor. Todos los socios pueden leer; solo TD, CD y Admin cargan o editan.
-* **Reportes e informes (sale de pausa):** Ya está operativa la pantalla con vistas para solicitudes T01, reuniones, subcomisiones, histórico/récords, resumen general y exportación a CSV. También sumamos la clasificación por concepto en los expedientes para alimentar estos informes.
-* **Eventos, reuniones y sanciones por inasistencia:** Se implementó la apertura y cierre de reuniones, la toma de asistencia y la generación automática de solicitudes cuando alguien falta sin justificación.
-* **Ranking de socios y umbrales:** Se puede ordenar por Saldo o de forma compuesta (Grupo y después alfabético), y abrir el modal con los expedientes de cada socio. Las alertas por puntos quedaron en -10 para el umbral crítico (cruce descendente único) y -7 para el preventivo (configurable y desactivable hasta la Circular 001/2026), sin incluir ningún dato médico ni sensible.
+* **Reportes e informes (parcial — ver traspaso Sprint 6):** Ya está operativa la pantalla con vistas para solicitudes T01, reuniones, subcomisiones, histórico/récords, resumen general y exportación a CSV, junto con la clasificación por concepto. La exportación a **PDF** del Balance Cuatrimestral Art. 137 y la restricción RBAC en 6 vistas de `reportes_views.py` quedan **trasladadas al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
+* **Eventos, reuniones y sanciones por inasistencia:** Se implementó la apertura y cierre de reuniones, la toma de asistencia, el rediseño UI (`SCRUM-86`) y la consolidación 3:1; la alerta preventiva previa a autoridades (`SCRUM-61`) queda **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
+* **Ranking de socios y umbrales:** Se puede ordenar por Saldo o de forma compuesta (Grupo y después alfabético), y abrir el modal con los expedientes y legajo de cada socio. El motor de dominio de alertas (`-10` crítico y `-7` preventivo configurable) está implementado, pero su disparo automático desde el flujo productivo de emisión/libro mayor queda **trasladado al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 

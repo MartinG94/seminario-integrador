@@ -11,7 +11,7 @@ El esquema legacy (`tribunal_expediente`, `tribunal_puntajeaplicado`, `tribunal_
 | Dominio puro | `backend/expedientes/domain/causal_resolution.py` | Regla sugerida, exigencia de fundamento y validación. Sin dependencias de Django. |
 | Persistencia | `backend/expedientes/models.py` (`DecisionCausalDescargo`) | Registro inmutable y versionado. `save()` sólo inserta; `delete()` se rechaza. |
 | Aplicación | `backend/expedientes/services/causal_resolution_service.py` | Transacción con `select_for_update`, control de etapa, evidencia, versión y copia del descargo. |
-| API | `views.py` / `urls.py` / `serializers.py` | `GET`/`POST /api/v1/expedientes/{id}/descargos/{descargo_id}/decisiones/`. |
+| API | `views/` / `urls.py` / `serializers/` | `GET`/`POST /api/v1/expedientes/{id}/descargos/{descargo_id}/decisiones/` (incluye `puntaje_ratificado`, `SCRUM-101`). |
 | Frontend | `expediente-api.service.ts`, `gestionar-expedientes` | Panel "Causales T02" en el detalle del expediente para TD. |
 
 ## 3. DDL (tabla `expedientes_decision_causal`)

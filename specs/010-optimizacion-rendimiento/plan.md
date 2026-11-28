@@ -93,10 +93,10 @@ flowchart TD
 | **Frontend** | `frontend/src/app/gestionar-expedientes/gestionar-expedientes.component.ts/.html` | SCRUM-118 / 119 | Adopción de `OnPush`, `MatPaginator` en tabla, `trackBy` en 13 bucles, unificación de desuscripción en `destroy$`. | Cero memory leaks tras navegar en tablero/tabla. |
 | **Frontend** | `frontend/src/app/mis-expedientes/mis-expedientes.component.ts/.html` | SCRUM-118 / 119 | Adopción de `OnPush`, `MatPaginator`, `trackBy`, aislamiento de ticker `interval(1000)` con `markForCheck()`. | Evita despertar Zone.js de forma global cada segundo. |
 | **Frontend** | `frontend/src/app/solicitar-puntos/solicitar-puntos.component.ts` | SCRUM-119 | `OnPush`, `trackBy` y `takeUntil` en mutaciones de borrador. | Navegación y autocompletado Select2 fluido. |
-| **Frontend** | `frontend/src/app/asistencia-evento/asistencia-evento.component.ts` | SCRUM-119 | `OnPush`, `trackBy` en tabla de convocados (515 socios) y `takeUntil`. | Interacción inmediata en toma de asistencia. |
+| **Frontend** | `frontend/src/app/pages/eventos/asistencia-evento/asistencia-evento.component.ts` | SCRUM-119 | `OnPush`, `trackBy` en tabla de convocados (515 socios) y `takeUntil`. | Interacción inmediata en toma de asistencia. |
 | **Frontend** | `frontend/src/app/reportes/reportes.component.ts` | SCRUM-119 | `OnPush`, `trackBy` y eliminación de cálculos matemáticos en template. | Renderizado instantáneo de métricas. |
 | **Frontend** | `frontend/src/app/calendario-institucional/calendario-institucional.component.ts` | SCRUM-119 | `OnPush`, `trackBy` y `takeUntil` en simulación de plazos. | Respeta ciclo de vida en transiciones. |
-| **Frontend** | `frontend/src/app/visor-expediente/visor-expediente.component.ts` | SCRUM-119 | `OnPush` y `trackBy` en timeline y lista de evidencias. | Inspección de causas sin sobrecarga DOM. |
+| **Frontend** | `frontend/src/app/gestionar-expedientes/visor-expediente/visor-expediente.component.ts` | SCRUM-119 | `OnPush` y `trackBy` en timeline y lista de evidencias. | Inspección de causas sin sobrecarga DOM. |
 
 ---
 

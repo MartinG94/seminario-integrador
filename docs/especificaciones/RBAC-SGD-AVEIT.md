@@ -20,12 +20,12 @@ Control de acceso basado en roles del Walking Skeleton (Spec 001). Documenta los
 | Rol | Actor (catálogo de actores) | Alcance funcional |
 | :--- | :--- | :--- |
 | `SOCIO` | ACT-01 Socio Ordinario | Consulta de su propio legajo, saldo y expedientes; presentación de descargos T02/T03. |
-| `FISCALIZADORA` | ACT-04 Autoridad de Subcomisión / Líder de Equipo | Lo de `SOCIO`, más el inicio de solicitudes T01 sobre integrantes de su propia subcomisión o equipo (Arts. 25 y 26). |
-| `CD` | ACT-03 Comisión Directiva | Lo de `SOCIO`, más ranking consolidado del padrón, inicio de T01 general (Art. 21), alertas de 7 y 10 puntos y carga de cierres de asambleas. |
-| `TD` | ACT-02 Miembro del Tribunal de Disciplina | Lo de `SOCIO`, más tablero de los 6 estados, buscador integral de legajos, ranking, sustanciación de T02/T03, resoluciones y disposiciones firmadas. |
-| `ADMIN` | ACT-05 Admin de Cómputos | Gestión de cuentas y asignación de roles RBAC, auditoría de logs de seguridad y configuración. **Sin atribuciones funcionales** sobre expedientes ni saldos. |
+| `FISCALIZADORA` | ACT-04 Autoridad de Subcomisión / Líder de Equipo | Lo de `SOCIO`, más el inicio de solicitudes T01 sobre integrantes de su propia subcomisión o equipo (Arts. 25 y 26). Rol vigente en Sprint 5; su partición en `AUTORIDAD_SC` y `REVISORES` + página 403 (`SCRUM-121`/`SCRUM-122`) queda **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)). |
+| `CD` | ACT-03 Comisión Directiva | Lo de `SOCIO`, más ranking consolidado del padrón, inicio de T01 general (Art. 21) y carga de eventos/asistencias. El despacho automático de alertas de -7 y -10 puntos (`SCRUM-62`) queda **trasladado al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)). |
+| `TD` | ACT-02 Miembro del Tribunal de Disciplina | Lo de `SOCIO`, más tablero de los 6 estados, buscador integral de legajos, ranking, sustanciación de T02/T03, valoraciones, resoluciones, firmas colegiadas, enmiendas y exclusiones. |
+| `ADMIN` | ACT-05 Admin de Cómputos | Gestión de cuentas, miembros del TD y parámetros del sistema (`/admin/parametros`, `SCRUM-91 / MACRO-03`), auditoría de seguridad y configuración. **Sin atribuciones funcionales** sobre resolución de expedientes ni saldos. |
 
-> `FISCALIZADORA` está asignado a ACT-04 (autoridades de subcomisión y líderes de equipo). Los **Órganos de Fiscalización** del ERS (STK-06: Comisión Fiscalizadora y Comisión Revisora de Cuentas) no tienen rol propio en el enum de la spec; ver la sección 5.
+> `FISCALIZADORA` continúa vigente en Sprint 5 (decisión D-02). La separación en roles diferenciados (`AUTORIDAD_SC`, `REVISORES`) y la vista dedicada de acceso denegado (403) quedan **trasladadas al Sprint 6** ([`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -73,14 +73,20 @@ Rol con el que se da de alta cada cuenta migrada:
 | `POST` | `/api/v1/auth/refresh/` | Refresh token válido | `401` si el token es inválido o expiró |
 | `GET` | `/api/v1/auth/me/` | Cualquier rol autenticado y vigente | `401` sin token; `403` si la cuenta no está vigente |
 | `GET` | `/api/v1/socios/` | `TD`, `CD`, `ADMIN` (`IsTribunalOrDirectiva`) | `401` sin token; `403` con rol insuficiente |
+| `GET` | `/api/v1/socios/ranking/`, `/api/v1/socios/<id>/legajo/` | `TD`, `CD`, `ADMIN` (`IsTribunalOrDirectiva`) | `401` sin token; `403` con rol insuficiente |
+| `GET/POST/PATCH` | `/api/v1/expedientes/...` (solicitudes T01, gestión, descargos, visor, T02, T03, apelaciones, resoluciones, firmas, enmiendas, exclusiones) | Según acción: `IsAuthenticated`, `IsTribunal`, `IsTribunalOrDirectiva`, `opening_policy.py` y conflicto de interés `IsNotInvolvedInExpediente` (`backend/expedientes/permissions.py`) | `401` / `403` (incluye inhibición de juez involucrado en `SCRUM-54`) |
+| `GET/POST/PATCH` | `/api/v1/eventos/...` (eventos, asistencias, llamados de atención/felicitaciones) | `IsAuthenticated` / `IsTribunalOrDirectiva` según operación | `401` / `403` |
+| `GET/POST/PATCH` | `/api/v1/calendario/...`, `/api/v1/reglamentos/...` | Lectura autenticada; escritura `TD`/`ADMIN` según módulo | `401` / `403` |
+| `GET/POST/PATCH` | `/api/v1/admin/...` (parámetros del sistema y miembros del TD) | `ADMIN` (`IsAdminRole`) | `401` / `403` |
+| `GET` | `/api/v1/expedientes/reportes/...` (6 vistas en `reportes_views.py`) | Actualmente `IsAuthenticated` sin permiso de rol específico (**brecha RBAC trasladada al Sprint 6**, ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)) | `401` sin token |
 
-Los endpoints de ranking, búsqueda y legajo integral (RF-03-WS, RF-04-WS) se incorporan en las tareas T6 y T7 y reutilizan `IsTribunalOrDirectiva`.
+En el frontend, las rutas exclusivas del Tribunal de Disciplina y Administración se resguardan adicionalmente con `TribunalGuard` (`frontend/src/app/services/tribunal.guard.ts`).
 
 ---
 
-## 5. Cuestiones abiertas para el Product Owner
+## 5. Estado de cuestiones abiertas y elementos trasladados al Sprint 6
 
-1. **Cargos 13, 14 y 15 sin equivalencia unívoca.** Los 7 cargos de Comisión Directiva que enumera ACT-03 no incluyen un "Secretario" a secas, por lo que no puede deducirse si el cargo 13 es de CD o de subcomisión. Los Revisores de Cuentas (14 y 15) pertenecen a STK-06 "Órganos de Fiscalización", que no tiene rol propio en el enum de cinco roles de la spec. Hasta que se decida, esas cuentas se migran como `SOCIO` (privilegio mínimo) y requieren revisión manual.
-2. **Órganos de Fiscalización sin rol propio.** El ERS les asigna competencia para iniciar acciones disciplinarias (Arts. 22 y 23) y auditoría de legalidad sobre TD y CD. Si se confirma que necesitan acceso diferenciado, hace falta un sexto rol y su modificación en la spec.
-3. **Sesión de `tribunal_medio` sin módulo destino.** Las capacidades de gestión de eventos y asistencias del nivel medio legado no tienen módulo equivalente dentro del alcance de Spec 001; la equivalencia queda definida pero sin endpoints que la ejerzan todavía.
-4. **Auditoría sin persistencia.** Los eventos de autenticación y autorización se emiten al logger `security` (`backend/accounts/audit.py`), no a una tabla. Si el Balance Cuatrimestral (Art. 137) o ACT-05 requieren consultar la pista desde la aplicación, hace falta especificar un modelo persistente.
+1. **Cargos 13, 14 y 15 y partición de `FISCALIZADORA` (`SCRUM-121`/`SCRUM-122`):** Por decisión D-02, `FISCALIZADORA` permanece vigente en Sprint 5 y los cargos 13, 14 y 15 se migran con privilegio mínimo (`SOCIO`). La partición en roles diferenciados (`AUTORIDAD_SC`, `REVISORES`) y la pantalla dedicada 403 quedan **trasladadas al Sprint 6** ([`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
+2. **Brecha RBAC en reportes y hardening (`SCRUM-63`/`SCRUM-65`):** Seis vistas en `backend/expedientes/views/reportes_views.py` exigen únicamente `IsAuthenticated`; el cierre de esa brecha y el hardening RBAC quedan **trasladados al Sprint 6** ([`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
+3. **Módulo de `tribunal_medio` (Eventos y Asistencias):** Resuelto e implementado (`SCRUM-50 / SCRUM-86`, `backend/expedientes/urls_eventos.py`).
+4. **Persistencia de auditoría:** Los eventos de autenticación continúan en el logger `security` (`backend/accounts/audit.py`), mientras que la auditoría funcional cuenta con tablas persistentes implementadas (`AuditoriaConsultaExpediente`, `AuditoriaDescargaEvidencia`, `AuditoriaArticuloReglamento`, `SystemParameterChange`, `TribunalRoleChange` y `CambioEstadoExpediente`).

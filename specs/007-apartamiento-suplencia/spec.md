@@ -4,7 +4,7 @@
 
 Garantizar que la causa la juzguen sólo miembros habilitados del Tribunal de Disciplina (TD): ningún socio involucrado interviene, el suplente asume automáticamente y, cuando el Tribunal ordinario no puede integrarse, la causa se deriva a la Asamblea sin trámites manuales.
 
-- **Referencia Backlog:** S4-04 / SCRUM-54 (EP4, Sprint 4, 3 SP, prioridad Highest) — `docs/gestion-proyecto/jira_backlog_import_v2.csv`.
+- **Referencia Backlog:** S4-04 / SCRUM-54 (EP4, Sprint 4, 3 SP, prioridad Highest).
 - **Referencia Normativa:** Estatuto AVEIT Reforma 2026, arts. 92, 93, 95 y 96; Reglamento Procesal 2026, arts. 7, 12 y 24.
 - **Referencia Rectora:** [Notas del PO (27/09/2026 y 07/10/2026)](../../docs/gestion-proyecto/notasPO.md) — pie de firma `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]` al emitir resolución.
 - **Revisión del PO sobre el PR #63 (23/10/2026 y 25/10/2026):** simplificación KISS: remoción total del panel visual 'Responsables del Tribunal' en el detalle del expediente; inhibición estricta de involucrados (imputado o solicitante) en backend (403) y UI; suplencia automática transparente; aviso por correo a CD (`cd@aveit.org`) por mayoría de TD o ambos miembros del año involucrados; y formalización de la relación Promociones vs. Años Sociales mediante $\text{Año Social} = (\text{Año Actual} - 1962) - \text{Número de Grupo}$ (fundación 1965, en 2026 G58 es 6.º año social Seniors y en 2027 viaja a Europa como exviajero).
@@ -51,7 +51,7 @@ Garantizar que la causa la juzguen sólo miembros habilitados del Tribunal de Di
    MIENTRAS el titular de un año esté involucrado, el sistema *debe* asignar ese asiento a su suplente. La composición se calcula en tiempo real; no existe botón de constitución ni formulario de apartamiento.
 
 6. **Event-driven (Estampado inmutable — CA4):**
-   CUANDO el expediente pase de `En espera de resolución` a `Pendiente de firma y envío`, el sistema *debe* estampar de forma inmutable los integrantes efectivos (hasta tres) (año, condición Titular/Suplente, N° de socio, nombre, grupo y a quién reemplaza) y los integrantes apartados. El panel y la resolución muestran el pie de firma `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]`.
+   CUANDO el expediente pase de `En espera de resolución` a `Pendiente de firma y envío`, el sistema *debe* estampar de forma inmutable los integrantes efectivos (hasta tres) (año, condición Titular/Suplente, N° de socio, nombre, grupo y a quién reemplaza) y los integrantes apartados. La resolución (`Resolucion.firmantes`) muestra el pie de firma `[N° de Socio] - [Nombre y Apellido] - [Gxx] [(Sup.)]` (sin panel visual 'Responsables del Tribunal' en el detalle, removido por revisión PO del PR #63).
 
 7. **State-driven (Casos A y B del Art. 95 — CA5):**
    MIENTRAS el titular y el suplente de un mismo año estén involucrados (Caso A) o tres o más integrantes de la nómina lo estén (Caso B), el sistema *debe*:

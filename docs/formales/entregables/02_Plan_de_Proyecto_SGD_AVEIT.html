@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Plan de Proyecto — SGD-AVEIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    background: #ffffff;
+    color: #1e293b;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .a4-page {
+    width: 210mm;
+    height: 297mm;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16mm 18mm 14mm 18mm;
+  }
+  .a4-page:last-child { page-break-after: auto; }
+  .wave-top { position: absolute; top: 0; left: 0; width: 100%; height: 64px; z-index: 0; }
+  .wave-bottom { position: absolute; bottom: 0; left: 0; width: 100%; height: 48px; z-index: 0; }
+
+  /* Cover page styles (from Carátula General) */
+  .a4-page.cover-page {
+    padding: 23mm 20mm 22mm 20mm;
+    justify-content: flex-start;
+    gap: 18px;
+  }
+  .cover-wave-top { position: absolute; top: 0; left: 0; width: 100%; height: 82px; z-index: 0; }
+  .cover-wave-bottom { position: absolute; bottom: 0; left: 0; width: 100%; height: 68px; z-index: 0; }
+  .cover-content {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; gap: 18px; flex: 1;
+  }
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding-bottom: 14px; border-bottom: 1.5px solid #e2e8f0;
+  }
+  .logo-box {
+    width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .inst-text { text-align: center; flex: 1; }
+  .inst-uni {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 12.5pt; font-weight: 700; color: #10375c; letter-spacing: 0.04em;
+  }
+  .inst-fac { font-size: 9.8pt; font-weight: 600; color: #0369a1; margin-top: 2px; letter-spacing: 0.03em; }
+  .inst-career { font-size: 8.8pt; color: #475569; margin-top: 5px; }
+  .hero-wrap { display: flex; flex-direction: column; align-items: center; }
+  .hero {
+    width: 100%; padding: 22px 26px; border-radius: 16px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);
+    border: 1.5px solid #bae6fd; border-left: 5px solid #29a8df;
+  }
+  .pill {
+    display: inline-block; background: #e0f2fe; color: #0369a1;
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 8.2pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 14px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .doc-title {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 21pt; font-weight: 700; color: #10375c; line-height: 1.25; margin-bottom: 8px;
+  }
+  .doc-subtitle { font-size: 11.5pt; font-weight: 600; color: #334155; line-height: 1.4; }
+  .project-tag { margin-top: 5px; font-size: 9.3pt; font-weight: 500; color: #0369a1; }
+  .meta-compact {
+    margin-top: 12px; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 20px;
+    background: #f8fafc; border: 1.5px solid #bae6fd; border-left: 4px solid #0369a1;
+    border-radius: 10px; padding: 10px 20px;
+  }
+  .meta-item { text-align: left; }
+  .meta-label { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
+  .meta-value {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 10pt; font-weight: 700; color: #10375c; margin-top: 2px;
+  }
+  .cover-card {
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px 18px;
+  }
+  .cover-card-title {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 8.8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: #0369a1; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #f1f5f9;
+  }
+  .docentes-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    font-size: 9.3pt; line-height: 1.55; color: #334155;
+  }
+  .docentes-grid strong {
+    display: block; font-size: 7.8pt; text-transform: uppercase; letter-spacing: 0.05em;
+    color: #64748b; margin-bottom: 3px;
+  }
+  .members-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 7px 18px;
+    font-size: 9.2pt; color: #1e293b;
+  }
+  .member-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 10px; background: #f8fafc; border-radius: 8px;
+  }
+  .member-legajo {
+    font-size: 8.2pt; font-weight: 600; color: #0369a1;
+    background: #e0f2fe; padding: 2px 8px; border-radius: 999px;
+  }
+
+  /* Interior page header / body / footer */
+  .page-header {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid #e2e8f0;
+    margin-bottom: 12px;
+  }
+  .hdr-left {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 8.5pt; font-weight: 700; color: #10375c;
+  }
+  .hdr-dot { width: 8px; height: 8px; border-radius: 50%; background: #29a8df; display: inline-block; }
+  .hdr-right {
+    font-size: 8pt; font-weight: 600; color: #0369a1;
+    background: #e0f2fe; padding: 3px 10px; border-radius: 999px;
+  }
+  .page-body {
+    position: relative; z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .page-footer {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 8pt; color: #64748b;
+    margin-top: 10px;
+  }
+  .page-footer strong { color: #10375c; }
+
+  /* Typography & Blocks */
+  .sec-pill {
+    display: inline-block;
+    background: #e0f2fe; color: #0369a1;
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 7.2pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2.5px 10px; border-radius: 999px; margin-bottom: 4px;
+  }
+  h1.sec-title {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 13.5pt; font-weight: 800; color: #10375c;
+    line-height: 1.25; margin-bottom: 5px;
+  }
+  h2.sub-title {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 10pt; font-weight: 700; color: #0369a1;
+    line-height: 1.3; margin-bottom: 5px;
+  }
+  p.body-text {
+    font-size: 8.8pt; color: #334155; line-height: 1.5; margin-bottom: 5px;
+  }
+  p.body-text:last-child { margin-bottom: 0; }
+  ul.clean-list {
+    padding-left: 16px; font-size: 8.6pt; color: #334155; line-height: 1.48;
+  }
+  ul.clean-list li { margin-bottom: 3px; }
+  .card-block {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 11px 14px;
+  }
+  .card-soft {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 11px 14px;
+  }
+
+  /* Tables */
+  table.styled {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    font-size: 7.9pt; border-radius: 9px; overflow: hidden;
+    border: 1px solid #cbd5e1;
+  }
+  table.styled.compact { font-size: 7.4pt; }
+  table.styled thead th {
+    background: #10375c; color: #ffffff;
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-weight: 700; text-align: left;
+    padding: 6px 8px; font-size: 7.6pt; letter-spacing: 0.01em;
+  }
+  table.styled.compact thead th { padding: 5px 6px; font-size: 7.2pt; }
+  table.styled tbody td {
+    padding: 5.5px 8px; border-top: 1px solid #e2e8f0;
+    color: #334155; vertical-align: top; line-height: 1.38;
+  }
+  table.styled.compact tbody td { padding: 4.2px 6px; line-height: 1.32; }
+  table.styled tbody tr:nth-child(even) td { background: #f8fafc; }
+
+  /* Badges */
+  .badge {
+    display: inline-block; padding: 1.5px 6px; border-radius: 999px;
+    font-size: 7pt; font-weight: 700; white-space: nowrap;
+  }
+  .b-must { background: #fee2e2; color: #991b1b; }
+  .b-should { background: #e0f2fe; color: #0369a1; }
+  .b-could { background: #f1f5f9; color: #475569; }
+  .b-ok { background: #dcfce7; color: #166534; }
+  .b-warn { background: #fef3c7; color: #92400e; }
+
+  /* Media / Diagram block */
+  .media-box {
+    background: linear-gradient(180deg, #f8fafc 0%, #f0f9ff 100%);
+    border: 1.5px dashed #29a8df;
+    border-radius: 10px;
+    padding: 13px 14px;
+    text-align: center;
+  }
+  .media-badge {
+    display: inline-block; background: #29a8df; color: #ffffff;
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2.5px 9px; border-radius: 999px; margin-bottom: 5px;
+  }
+  .media-label { font-size: 8.8pt; font-weight: 700; color: #10375c; }
+  .media-caption { font-size: 7.8pt; color: #64748b; margin-top: 3px; }
+
+  /* Code / Spec box */
+  .code-box {
+    background: #0f172a; color: #e2e8f0;
+    border-radius: 9px; padding: 9px 12px;
+    border-left: 4px solid #29a8df;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 7.5pt; line-height: 1.48;
+  }
+  .code-hdr {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #38bdf8; margin-bottom: 4px;
+  }
+
+  /* Note callout */
+  .note-box {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 4px solid #0369a1;
+    border-radius: 9px;
+    padding: 8px 12px;
+    font-size: 8.1pt; color: #0c4a6e; line-height: 1.45;
+  }
+  .note-box strong { color: #0369a1; }
+
+  /* TOC list */
+  .toc-list { display: flex; flex-direction: column; gap: 4.5px; }
+  .toc-item {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 8.8pt; font-weight: 600; padding: 4.5px 10px; border-radius: 7px;
+    background: #f8fafc; color: #1e293b;
+  }
+  .toc-item.sub {
+    margin-left: 18px; background: #ffffff; border-left: 2px solid #bae6fd;
+    border-radius: 0 6px 6px 0; font-size: 8.2pt; font-weight: 400; color: #475569; padding: 3px 10px;
+  }
+  .toc-pg { font-weight: 700; color: #0369a1; font-size: 8.2pt; }
+
+  /* Grids */
+  .kv-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .kv-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kv-item {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 9px;
+  }
+  .kv-k { font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #64748b; }
+  .kv-v { font-size: 8.3pt; font-weight: 600; color: #10375c; margin-top: 2px; line-height: 1.35; }
+  .member-card {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3.5px solid #29a8df;
+    border-radius: 8px; padding: 7px 10px;
+  }
+  .member-card-hdr {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;
+  }
+  .member-name { font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif; font-size: 8.7pt; font-weight: 700; color: #10375c; }
+  .member-role { font-size: 7.4pt; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 1.5px 7px; border-radius: 999px; }
+  .member-desc { font-size: 7.9pt; color: #475569; line-height: 1.4; }
+  .text-center { text-align: center; }
+</style>
+</head>
+<body data-log="{&quot;N&quot;:18,&quot;log&quot;:[&quot;split&quot;],&quot;warn&quot;:[],&quot;map&quot;:{&quot;1&quot;:1,&quot;2&quot;:2,&quot;3&quot;:3,&quot;4&quot;:4,&quot;5&quot;:5,&quot;6&quot;:7,&quot;7&quot;:8,&quot;8&quot;:9,&quot;9&quot;:10,&quot;10&quot;:11,&quot;11&quot;:12,&quot;12&quot;:13,&quot;13&quot;:14,&quot;14&quot;:15,&quot;15&quot;:16,&quot;16&quot;:17,&quot;17&quot;:18}}">
+
+<!-- ==================== PÁGINA 1: CARÁTULA ==================== -->
+<div class="a4-page cover-page" data-old="1">
+  <svg class="cover-wave-top" viewBox="0 0 800 82" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,40 C580,82 260,18 0,60 Z" fill="#29a8df"></path>
+    <path d="M0,0 L800,0 L800,26 C560,64 250,6 0,42 Z" fill="#10375c"></path>
+  </svg>
+  <svg class="cover-wave-bottom" viewBox="0 0 800 68" preserveAspectRatio="none">
+    <path d="M0,68 L800,68 L800,18 C540,56 260,8 0,38 Z" fill="#29a8df"></path>
+    <path d="M0,68 L800,68 L800,34 C530,64 250,24 0,52 Z" fill="#10375c"></path>
+  </svg>
+
+  <div class="cover-content">
+    <div class="top-bar">
+      <div class="logo-box"><img src="data:image/png;base64,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" alt="Logo UTN"></div>
+      <div class="inst-text">
+        <div class="inst-uni">UNIVERSIDAD TECNOLÓGICA NACIONAL</div>
+        <div class="inst-fac">FACULTAD REGIONAL CÓRDOBA</div>
+        <div class="inst-career">Ingeniería en Sistemas de Información</div>
+      </div>
+      <div class="logo-box"><img src="data:image/png;base64,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" alt="Escudo AVEIT"></div>
+    </div>
+
+    <div class="hero-wrap">
+      <div class="hero">
+        <div class="pill">Seminario Integrador · Ciclo Lectivo 2026</div>
+        <div class="doc-title">Plan de Proyecto</div>
+        <div class="doc-subtitle">Proyecto: SGD-AVEIT</div>
+        <div class="project-tag">Sistema de Gestión del Tribunal de Disciplina y Premiaciones de A.V.E.I.T.</div>
+      </div>
+
+      <div class="meta-compact">
+        <div class="meta-item">
+          <div class="meta-label">Grupo</div>
+          <div class="meta-value">N° 13</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Curso</div>
+          <div class="meta-value">3K2</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">N.º de Entrega</div>
+          <div class="meta-value">Regularidad</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Versión</div>
+          <div class="meta-value">v2.1.0</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Fecha de Entrega</div>
+          <div class="meta-value">28/11/2026</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-card">
+      <div class="cover-card-title">Equipo Docente</div>
+      <div class="docentes-grid">
+        <div>
+          <strong>Docentes del Curso</strong>
+          Ing. María Irene Mac William<br>
+          Ing. Silvina Arenas
+        </div>
+        <div>
+          <strong>Docente Tutor</strong>
+          Ing. Fernando Sanabria
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-card">
+      <div class="cover-card-title">Integrantes del Equipo — Grupo 13 (Legajo UTN)</div>
+      <div class="members-grid">
+        <div class="member-row"><span>Guillén, Lucas Martín</span><span class="member-legajo">85194</span></div>
+        <div class="member-row"><span>Gastiaburu, Lucas Nicolás</span><span class="member-legajo">74907</span></div>
+        <div class="member-row"><span>Quiroz, Tomás Augusto</span><span class="member-legajo">415327</span></div>
+        <div class="member-row"><span>Rosales, Nicolás</span><span class="member-legajo">408917</span></div>
+        <div class="member-row"><span>Sánchez, Diego Gabriel</span><span class="member-legajo">87414</span></div>
+        <div class="member-row"><span>Urviola, Luis</span><span class="member-legajo">409953</span></div>
+        <div class="member-row"><span>Villegas, Axel René</span><span class="member-legajo">403655</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 2: ÍNDICE ==================== -->
+<div class="a4-page" data-old="2">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div>
+      <div class="sec-pill">Navegación</div>
+      <h1 class="sec-title">Tabla de Contenido</h1>
+    </div>
+    <div class="toc-list">
+      <div class="toc-item"><span>1. Propósito del documento</span><span class="toc-pg">Pág. 3</span></div>
+      <div class="toc-item"><span>2. Identificación, nombre y objetivo del producto</span><span class="toc-pg">Pág. 3</span></div>
+      <div class="toc-item"><span>3. Equipo de trabajo, roles y matriz de habilidades</span><span class="toc-pg">Pág. 3</span></div>
+      <div class="toc-item sub"><span>3.1 Ficha individual de integrantes y habilidades técnicas</span><span class="toc-pg">Pág. 4</span></div>
+      <div class="toc-item"><span>4. Taxonomía de Sistemas de Información (SI)</span><span class="toc-pg">Pág. 5</span></div>
+      <div class="toc-item"><span>5. Metodología adoptada: Scrumban en la práctica</span><span class="toc-pg">Pág. 6</span></div>
+      <div class="toc-item"><span>6. Definición de actores y Matriz de Permisos RBAC</span><span class="toc-pg">Pág. 7</span></div>
+      <div class="toc-item"><span>7. Alcances del producto y Requerimientos Funcionales (RF-01 a RF-26)</span><span class="toc-pg">Pág. 8</span></div>
+      <div class="toc-item sub"><span>7.1 Priorización MoSCoW y corte de entregas incrementales (MVP en Sprint 2)</span><span class="toc-pg">Pág. 8</span></div>
+      <div class="toc-item sub"><span>7.2 Exclusiones y límites de alcance</span><span class="toc-pg">Pág. 10</span></div>
+      <div class="toc-item"><span>8. Matriz de Trazabilidad Normativa Bidireccional</span><span class="toc-pg">Pág. 11</span></div>
+      <div class="toc-item"><span>9. Catálogo Formal de Reglas de Negocio (RN-01 a RN-14)</span><span class="toc-pg">Pág. 12</span></div>
+      <div class="toc-item"><span>10. Requerimientos No Funcionales (ISO/IEC 25010 y Planguage)</span><span class="toc-pg">Pág. 14</span></div>
+      <div class="toc-item"><span>11. Arquitectura, Integración con Sistema Legado y Restricciones</span><span class="toc-pg">Pág. 15</span></div>
+      <div class="toc-item sub"><span>11.1 Stack tecnológico, capa anticorrupción Read-Only y autenticación JWT</span><span class="toc-pg">Pág. 15</span></div>
+      <div class="toc-item sub"><span>11.2 Restricciones tecnológicas e institucionales (RES-01 a RES-06)</span><span class="toc-pg">Pág. 16</span></div>
+      <div class="toc-item sub"><span>11.3 Supuestos (SUP) y Dependencias externas (DEP)</span><span class="toc-pg">Pág. 16</span></div>
+      <div class="toc-item"><span>12. Estrategia de entregas incrementales, hitos y gestión de riesgos</span><span class="toc-pg">Pág. 17</span></div>
+      <div class="toc-item sub"><span>12.1 Matriz de gestión y mitigación de riesgos (R-01 a R-05)</span><span class="toc-pg">Pág. 17</span></div>
+      <div class="toc-item"><span>13. Historial de Cambios y Glosario de Términos</span><span class="toc-pg">Pág. 18</span></div>
+    </div>
+    <div class="note-box">
+      <strong>Alcance del entregable:</strong> Este Plan de Proyecto formaliza la propuesta de solución, arquitectura objetivo, alcance funcional, reglas de negocio y gobernanza metodológica de <strong>SGD-AVEIT</strong>. El seguimiento de sprints ejecutados y las especificaciones técnicas detalladas de implementación se documentan en los entregables complementarios de la cátedra.
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>2</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 3: §1, §2, §3 ==================== -->
+<div class="a4-page" data-old="3">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 1</div>
+      <h1 class="sec-title">1. Propósito del documento</h1>
+      <p class="body-text">
+        El presente Plan de Proyecto de Software establece la línea base formal de ingeniería, gobernanza metodológica y especificación de alcance para la construcción y transferencia del <strong>Sistema de Gestión del Tribunal de Disciplina y Premiaciones de A.V.E.I.T. (SGD-AVEIT)</strong>.
+      </p>
+      <p class="body-text">
+        Este plan responde a los lineamientos de la cátedra de Seminario Integrador de la UTN Facultad Regional Córdoba, definiendo con precisión normativa y técnica los requerimientos funcionales y no funcionales del producto, su integración no invasiva con el padrón institucional preexistente y el marco de trabajo ágil adaptativo que orienta las entregas incrementales de valor.
+      </p>
+    </div>
+
+    <div class="card-block">
+      <div class="sec-pill">Sección 2</div>
+      <h1 class="sec-title">2. Identificación, nombre y objetivo del producto</h1>
+      <div class="kv-row" style="margin-bottom:8px;">
+        <div class="kv-item">
+          <div class="kv-k">Nombre Oficial</div>
+          <div class="kv-v">Sistema de Gestión del Tribunal de Disciplina y Premiaciones de A.V.E.I.T.</div>
+        </div>
+        <div class="kv-item">
+          <div class="kv-k">Acrónimo Institucional</div>
+          <div class="kv-v">SGD-AVEIT</div>
+        </div>
+        <div class="kv-item">
+          <div class="kv-k">Organización Destinataria</div>
+          <div class="kv-v">A.V.E.I.T. — UTN Facultad Regional Córdoba</div>
+        </div>
+      </div>
+      <h2 class="sub-title">Objetivo y misión del producto</h2>
+      <p class="body-text">
+        Centralizar, sistematizar, auditar y transparentar la gestión integral de expedientes disciplinarios y propuestas de mérito conforme a la Circular Normativa 001/2026, el Reglamento Procesal Disciplinario 2026 y el Estatuto Social vigente de A.V.E.I.T. El sistema provee una plataforma web 100% responsiva (<em>mobile-first</em>) que erradica las planillas de cálculo desconectadas, controla plazos preclusivos en días hábiles, sustancía descargos tipificados y extraordinarios (Formularios T01, T02 y T03), registra resoluciones con firma electrónica colegiada del Tribunal de Disciplina, garantiza el <strong>cómputo transaccional e inmutable de puntajes mediante libro mayor</strong> y asiste en la emisión de los Balances Cuatrimestrales de Auditoría Interna (Art. 137 del Reglamento Interno).
+      </p>
+    </div>
+
+    <div class="card-block">
+      <div class="sec-pill">Sección 3</div>
+      <h1 class="sec-title">3. Equipo de trabajo, roles y matriz de habilidades</h1>
+      <p class="body-text">
+        El equipo de proyecto está conformado por siete (7) estudiantes de Ingeniería en Sistemas de Información (UTN FRC). Bajo un enfoque ágil, adopta un modelo de <strong>Desarrolladores Full-Stack Polivalentes</strong> con rotación de especialidades por sprint en backend, frontend responsive, bases de datos relacionales, aseguramiento de calidad (QA) e infraestructura de integración continua.
+      </p>
+      <table class="styled" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:30%;">Rol de Gestión / Ingeniería</th>
+            <th style="width:45%;">Integrantes Asignados</th>
+            <th style="width:25%;">Legajo UTN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Product Owner / Líder de Proyecto</strong></td>
+            <td>Sánchez, Diego Gabriel (Nexo Institucional A.V.E.I.T.)</td>
+            <td>87414</td>
+          </tr>
+          <tr>
+            <td><strong>Scrum Master / Coordinador Scrumban</strong></td>
+            <td>Guillén, Lucas Martín</td>
+            <td>85194</td>
+          </tr>
+          <tr>
+            <td><strong>Equipo de Desarrollo Full-Stack Polivalente (Rotativo)</strong></td>
+            <td>Gastiaburu, Lucas Nicolás · Quiroz, Tomás Augusto · Rosales, Nicolás · Urviola, Luis · Villegas, Axel René</td>
+            <td>74907 · 415327 · 408917 · 409953 · 403655</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>3</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 4: §3.1 FICHAS DE EQUIPO ==================== -->
+<div class="a4-page" data-old="4">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div>
+      <div class="sec-pill">Sección 3.1</div>
+      <h1 class="sec-title">3.1 Ficha individual de integrantes y habilidades técnicas</h1>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Sánchez, Diego Gabriel — Legajo 87414</span>
+        <span class="member-role">Product Owner &amp; Full-Stack</span>
+      </div>
+      <div class="member-desc">
+        <strong>Rol principal:</strong> Product Owner, Líder de Proyecto y Nexo Institucional (Ex-Secretario General de CD y actual Autoridad de la Subcomisión de Gestión Social y Ambiental - GSA).<br>
+        <strong>Habilidades:</strong> Dominio normativo de A.V.E.I.T., arquitectura de software, backend en Python/Django, modelado relacional MySQL y articulación con el Tribunal de Disciplina y la Subcomisión de Cómputos.
+      </div>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Guillén, Lucas Martín — Legajo 85194</span>
+        <span class="member-role">Scrum Master &amp; Full-Stack</span>
+      </div>
+      <div class="member-desc">
+        <strong>Rol principal:</strong> Scrum Master y Coordinador de Flujo Scrumban.<br>
+        <strong>Habilidades:</strong> Gestión de tablero ágil en Jira Software, facilitación de ceremonias (Planning, Dailies, Review y Retrospectiva), remoción de impedimentos, métricas de flujo (Lead Time, Cycle Time, CFD) y desarrollo de APIs RESTful en Python/Django.
+      </div>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Rosales, Nicolás — Legajo 408917</span>
+        <span class="member-role">Full-Stack Developer</span>
+      </div>
+      <div class="member-desc">
+        <strong>Especialidades rotativas:</strong> Desarrollo Frontend SPA en Angular 14.2+ con TypeScript estricto, diseño responsivo <em>mobile-first</em> con Angular Material y Material Dashboard PRO, consumo de servicios REST y experiencia de usuario accesible.
+      </div>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Gastiaburu, Lucas Nicolás — Legajo 74907</span>
+        <span class="member-role">Full-Stack Developer</span>
+      </div>
+      <div class="member-desc">
+        <strong>Especialidades rotativas:</strong> Lógica de negocio backend en Python/Django REST Framework, autenticación JWT, control de acceso basado en roles (RBAC), validación de reglas de dominio y transacciones de base de datos.
+      </div>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Villegas, Axel René — Legajo 403655</span>
+        <span class="member-role">Full-Stack Developer</span>
+      </div>
+      <div class="member-desc">
+        <strong>Especialidades rotativas:</strong> Administración y modelado relacional en MySQL 8.0, integración no invasiva con el padrón legado, diseño de libro mayor transaccional inmutable en capa de dominio (solo inserción y contra-asientos), migraciones y respaldos.
+      </div>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Urviola, Luis — Legajo 409953</span>
+        <span class="member-role">Full-Stack Developer</span>
+      </div>
+      <div class="member-desc">
+        <strong>Especialidades rotativas:</strong> Aseguramiento de Calidad (QA) y testing automatizado (pruebas unitarias y de integración en backend y frontend), diseño y verificación de criterios de aceptación y pruebas de usabilidad responsiva.
+      </div>
+    </div>
+
+    <div class="member-card">
+      <div class="member-card-hdr">
+        <span class="member-name">Quiroz, Tomás Augusto — Legajo 415327</span>
+        <span class="member-role">Full-Stack Developer</span>
+      </div>
+      <div class="member-desc">
+        <strong>Especialidades rotativas:</strong> Orquestación de entornos con Docker Compose, preparación de infraestructura aislada de pruebas y staging, pipelines de integración continua (CI) en GitHub, control de versiones Git y documentación técnica.
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>4</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 5: §4 TAXONOMÍA SI & §5 METODOLOGÍA ==================== -->
+<div class="a4-page" data-old="5">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 4</div>
+      <h1 class="sec-title">4. Taxonomía de Sistemas de Información (SI)</h1>
+      <p class="body-text">
+        Según su función operativa, nivel organizacional y grado de estructuración de decisiones, los módulos que integran SGD-AVEIT se clasifican de la siguiente manera:
+      </p>
+      <table class="styled compact" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:27%;">Módulo Funcional</th>
+            <th style="width:13%;">Clasificación</th>
+            <th style="width:14%;">Nivel Org.</th>
+            <th style="width:14%;">Estructuración</th>
+            <th style="width:32%;">Justificación Operativa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Expedientes, Formularios (T01/T02/T03) y Eventos</strong></td>
+            <td>TPS</td>
+            <td>Operativo</td>
+            <td>Estructurada</td>
+            <td>Procesa transacciones cotidianas de solicitudes, notificaciones, plazos hábiles, descargos, asistencias y adjuntos.</td>
+          </tr>
+          <tr>
+            <td><strong>Libro Mayor de Saldos y Auditoría Inmutable</strong></td>
+            <td>TPS / Ledger</td>
+            <td>Operativo</td>
+            <td>Estructurada</td>
+            <td>Registra asientos inmutables de solo inserción (+/- en fracciones de 0,5 pts), consolidación 3:1 y contra-asientos de enmienda.</td>
+          </tr>
+          <tr>
+            <td><strong>Balances Cuatrimestrales y Reportes (Art. 137)</strong></td>
+            <td>MIS</td>
+            <td>Táctico</td>
+            <td>Semiestructurada</td>
+            <td>Consolida periódicamente el desempeño disciplinario por subcomisión y categoría social (Pasivo/Activo).</td>
+          </tr>
+          <tr>
+            <td><strong>Tablero Procesal, Precedentes T03 y Alertas</strong></td>
+            <td>DSS</td>
+            <td>Táctico / Directivo</td>
+            <td>Semiestructurada</td>
+            <td>Asiste al TD y a CD mediante prioridades de urgencia, antecedentes jurisprudenciales y alertas ante umbrales críticos.</td>
+          </tr>
+          <tr>
+            <td><strong>Portal Societario y Publicación Oficial</strong></td>
+            <td>EIS / Portal</td>
+            <td>Estratégico</td>
+            <td>No Estructurada</td>
+            <td>Brinda transparencia societaria, consulta de legajo propio y publicación de resoluciones firmes con resguardo médico.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>5</strong> de <strong>18</strong></span>
+  </div>
+</div><div class="a4-page"><svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg><svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg><div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div><div class="page-body"><div class="card-block">
+      <div class="sec-pill">Sección 5</div>
+      <h1 class="sec-title">5. Metodología adoptada: Scrumban en la práctica</h1>
+      <p class="body-text">
+        Para combinar la cadencia predecible de entregas con el control visual del flujo de trabajo en un equipo universitario de dedicación parcial, se adopta <strong>Scrumban</strong>, integrando iteraciones Scrum de dos semanas con límites WIP y métricas continuas de Kanban.
+      </p>
+      <table class="styled compact" style="margin-top:6px; margin-bottom:8px;">
+        <thead>
+          <tr>
+            <th style="width:50%;">Cadencia de Iteraciones y Ceremonias</th>
+            <th style="width:50%;">Control de Calidad, Límites WIP y Métricas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>Sprints quincenales (2 semanas):</strong> orientados a entregas incrementales tempranas (corte de <strong>MVP en Sprint 2</strong> y releases sucesivos).<br>
+              <strong>Ceremonias:</strong> Sprint Planning quincenal; Daily Standup asíncrona (lunes, jueves y sábados antes de las 13:00 hs); Sprint Review con demostración al PO y Retrospectiva al cierre de cada iteración.
+            </td>
+            <td>
+              <strong>Calidad:</strong> Revisión de código obligatoria por pares mediante Pull Requests en GitHub y pruebas automatizadas antes de integrar a la rama principal.<br>
+              <strong>Límites WIP (Jira):</strong> <em>In Progress</em> ≤ 4 tareas; <em>Peer Code Review</em> ≤ 3; <em>Testing/QA</em> ≤ 2.<br>
+              <strong>Métricas:</strong> Lead Time, Cycle Time (meta ≤ 3,5 días hábiles) y Diagrama de Flujo Acumulado (CFD).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="media-box">
+        <div class="media-badge">Diagrama de referencia</div>
+        <div class="media-label"><div style="text-align:center;margin:8px 0;"><img src="assets/diagramas/pp_01_flujo_scrumban.svg" alt="Flujo de Trabajo Scrumban y Entregas Incrementales" style="max-width: 100%; height: auto; border: 1px solid rgb(203, 213, 225); border-radius: 8px; display: block; margin: 0px auto;"></div></div>
+        <div class="media-caption">Figura 1: Cadencia Scrumban, tablero con límites WIP y corte de entregas incrementales (MVP en Sprint 2 y Releases).</div>
+      </div>
+    </div></div><div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>6</strong> de <strong>18</strong></span>
+  </div></div>
+
+<!-- ==================== PÁGINA 6: §6 ACTORES Y MATRIZ RBAC ==================== -->
+<div class="a4-page" data-old="6">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 6</div>
+      <h1 class="sec-title">6. Definición de actores y Matriz de Permisos RBAC</h1>
+      <p class="body-text">
+        SGD-AVEIT implementa un modelo de <strong>Control de Acceso Basado en Roles (RBAC)</strong> con cinco (5) roles institucionales alineados al Estatuto Social y al Reglamento Procesal 2026: <strong>SOCIO</strong> (Socio Ordinario), <strong>FISCALIZADORA</strong> (Autoridad de Subcomisión / Líder de Equipo), <strong>CD</strong> (Comisión Directiva), <strong>TD</strong> (Miembro del Tribunal de Disciplina) y <strong>ADMIN</strong> (Administrador de Cómputos). Asimismo, la condición societaria se clasifica en dos categorías: <strong>Pasivo</strong> (1.º a 3.º año social) y <strong>Activo</strong> (4.º a 6.º año social).
+      </p>
+
+      <table class="styled compact" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:40%;">Funcionalidad / Módulo</th>
+            <th class="text-center" style="width:11%;">SOCIO</th>
+            <th class="text-center" style="width:13%;">FISCALIZ.</th>
+            <th class="text-center" style="width:11%;">CD</th>
+            <th class="text-center" style="width:14%;">TD</th>
+            <th class="text-center" style="width:11%;">ADMIN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Consultar saldo individual, legajo y expedientes propios</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+          </tr>
+          <tr>
+            <td>Presentar Descargo T02 / T03 (si es imputado en expediente propio)</td>
+            <td class="text-center">C / U</td>
+            <td class="text-center">C / U</td>
+            <td class="text-center">C / U</td>
+            <td class="text-center">C / U *</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Presentar Apelación sobre Formulario T01</td>
+            <td class="text-center">C / R</td>
+            <td class="text-center">C / R</td>
+            <td class="text-center">C / R</td>
+            <td class="text-center">C / R *</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Consultar Resoluciones Oficiales Publicadas (con censura médica)</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+          </tr>
+          <tr>
+            <td>Iniciar Solicitud T01 sobre socios de su ámbito / subcomisión</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / R</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Iniciar Solicitud T01 sobre cualquier socio (CD / TD de oficio)</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / R</td>
+            <td class="text-center">C / R</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Consultar Ranking General y Legajo Integral (filtros Pasivo / Activo)</td>
+            <td class="text-center">R (Ranking)</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+          </tr>
+          <tr>
+            <td>Visor Autorizado, Sustanciación T02 y Valoración T03 con precedentes</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / R / U *</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Gestionar composición del TD, apartamientos y suplencias</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / R / U</td>
+            <td class="text-center">R</td>
+          </tr>
+          <tr>
+            <td>Redactar Resolución unificada, Exclusión fundada y Enmienda</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / U *</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Firma Electrónica Colegiada (3 Activos: 4.º, 5.º y 6.º año)</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / U (Act.)*</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>Gestionar Eventos, Reuniones y Registro de Asistencia (Regla 3:1)</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / R / U</td>
+            <td class="text-center">C / R / U</td>
+            <td class="text-center">C / R / U</td>
+            <td class="text-center">R</td>
+          </tr>
+          <tr>
+            <td>Gestionar Calendario Institucional (feriados y excepciones)</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">C / R / U</td>
+            <td class="text-center">C / R / U</td>
+          </tr>
+          <tr>
+            <td>Reportes analíticos y Balances Cuatrimestrales (Art. 137)</td>
+            <td class="text-center">—</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R / E</td>
+            <td class="text-center">C / R / E</td>
+            <td class="text-center">R / E</td>
+          </tr>
+          <tr>
+            <td>Recibir Alertas Preventivas (-7 pts) y Críticas (-10 pts)</td>
+            <td class="text-center">R (Propia)</td>
+            <td class="text-center">—</td>
+            <td class="text-center">R (Global)</td>
+            <td class="text-center">R (Global)</td>
+            <td class="text-center">—</td>
+          </tr>
+          <tr>
+            <td>ABM de Reglamentos Institucionales con auditoría</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">R</td>
+            <td class="text-center">C / R / U</td>
+            <td class="text-center">C / R / U</td>
+          </tr>
+          <tr>
+            <td>Panel de Administración (parámetros del sistema y miembros TD)</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">—</td>
+            <td class="text-center">C / R / D (InsertOnly)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note-box" style="margin-top:8px;">
+        <strong>Referencias y salvaguarda procesal:</strong> <strong>C</strong> = Crear, <strong>R</strong> = Leer, <strong>U</strong> = Actualizar (transaccional auditado), <strong>D</strong> = Desactivar lógicamente, <strong>E</strong> = Exportar, <strong>—</strong> = Sin permiso.<br>
+        <strong>* Regla de apartamiento automático:</strong> Ningún miembro del TD que figure como denunciante o imputado en un expediente puede acceder a su visor de sustanciación, valorar descargos ni suscribir su resolución; en tal caso ejerce exclusivamente sus derechos como socio imputado y el sistema habilita el reemplazo por suplente.
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>7</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 7: §7 RF-01 a RF-09 ==================== -->
+<div class="a4-page" data-old="7">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 7</div>
+      <h1 class="sec-title">7. Alcances del producto y Requerimientos Funcionales</h1>
+      <p class="body-text">
+        El alcance funcional de SGD-AVEIT se organiza en <strong>26 Requerimientos Funcionales (RF-01 a RF-26)</strong> priorizados mediante <strong>MoSCoW</strong> (<em>Must Have</em>, <em>Should Have</em>, <em>Could Have</em>) y asignados a entregas incrementales tempranas para aportar valor verificable desde el <strong>MVP en Sprint 2</strong> y en releases posteriores.
+      </p>
+
+      <table class="styled compact" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:9%;">ID</th>
+            <th style="width:23%;">Requerimiento</th>
+            <th style="width:45%;">Descripción Funcional Detallada</th>
+            <th style="width:11%;">MoSCoW</th>
+            <th style="width:12%;">Entrega Obj.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RF-01</strong></td>
+            <td>Solicitudes de Sanción / Mérito (T01)</td>
+            <td>Permite a autoridades habilitadas (CD, TD o Autoridad de Subcomisión) crear borradores y emitir solicitudes mediante Formulario T01 y Anexo, con selección multi-socio reactiva, tipificación de hechos y validación de competencias.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>MVP (S2)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-02</strong></td>
+            <td>Apertura y Numeración Canónica de Expediente</td>
+            <td>Crea el expediente disciplinario con identificador unívoco secuencial y sellado de tiempo, vinculando a los socios involucrados e iniciando en el estado <em>Expediente Creado</em>.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>MVP (S2)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-03</strong></td>
+            <td>Notificaciones Transaccionales (Cola Outbox)</td>
+            <td>Encola y despacha correos electrónicos fehacientes (acuses de imputación, vencimientos, resoluciones) con adjuntos y reintentos controlados ante fallos SMTP.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>MVP (S2)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-04</strong></td>
+            <td>Control de Plazo Preclusivo de 5 Días Hábiles</td>
+            <td>Computa el término improrrogable de cinco (5) días hábiles excluyendo fines de semana y feriados institucionales; al vencer, cierra la carga de descargos y transiciona el expediente a <em>Justificaciones en revisión</em>.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 2 (S3)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-05</strong></td>
+            <td>Carga de Justificación Tipificada (T02)</td>
+            <td>Provee interfaz responsiva para presentar Formulario T02 por causales reglamentarias con adjuntos probatorios, versionado inmutable de presentaciones y retiro lógico dentro del plazo.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 2 (S3)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-06</strong></td>
+            <td>Carga de Descargo Extraordinario (T03)</td>
+            <td>Habilita la presentación de descargos atípicos no tipificados mediante Formulario T03 con exposición circunstanciada de hechos y evidencia documental sujeta a valoración del TD.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 2 (S3)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-07</strong></td>
+            <td>Tablero Procesal de 6 Estados y Urgencia</td>
+            <td>Ofrece al TD un tablero interactivo (vista tablero y tabla) clasificado en los 6 estados canónicos del Art. 12, con indicadores de urgencia, clasificación y concepto del expediente.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>MVP (S2)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-08</strong></td>
+            <td>Sustanciación T02 y Valoración T03 con Precedentes</td>
+            <td>Permite al TD resolver causales T02 con puntaje final ratificado y emitir valoración fundada en T03 (<em>Aprobada</em> / <em>Desaprobada</em>) vinculando expedientes precedentes análogos.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 3 (S4)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-09</strong></td>
+            <td>Composición del TD, Apartamiento y Suplencias</td>
+            <td>Gestiona la conformación titular del Tribunal por año social (4.º, 5.º y 6.º), impide automáticamente la intervención de miembros involucrados (conflicto de interés) y registra suplencias formales.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 3 (S4)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>8</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 8: §7 RF-10 a RF-18 ==================== -->
+<div class="a4-page" data-old="8">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 7 (Continuación)</div>
+      <h2 class="sub-title">Requerimientos Funcionales — RF-10 a RF-18</h2>
+      <table class="styled compact">
+        <thead>
+          <tr>
+            <th style="width:9%;">ID</th>
+            <th style="width:23%;">Requerimiento</th>
+            <th style="width:45%;">Descripción Funcional Detallada</th>
+            <th style="width:11%;">MoSCoW</th>
+            <th style="width:12%;">Entrega Obj.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RF-10</strong></td>
+            <td>Editor Unificado de Resolución y Preview PDF</td>
+            <td>Provee un editor estructurado (Vistos, Considerandos y Parte Resolutiva) para confeccionar el fallo colegiado sin votación nominal, consolidar los puntajes definitivos y previsualizar el documento PDF.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 3 (S4)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-11</strong></td>
+            <td>Firma Electrónica Colegiada (3 Activos)</td>
+            <td>Registra la suscripción colegiada de la resolución por los tres (3) representantes activos del TD (4.º, 5.º y 6.º año) en sesión autenticada, guardando autoría, fecha/hora y hash SHA-256 de integridad.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 4 (S5)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-12</strong></td>
+            <td>Libro Mayor Inmutable de Saldos de Puntos</td>
+            <td>Impacta las resoluciones emitidas mediante asientos transaccionales de solo inserción (múltiplos mínimos de 0,5 pts) en la capa de dominio, prohibiendo modificaciones o borrados directos sobre el saldo.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 4 (S5)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-13</strong></td>
+            <td>Alertas Escalonadas por Umbrales (-7 y -10 pts)</td>
+            <td>Evaluación del saldo acumulado tras cada asiento para generar alerta amarilla preventiva al alcanzar ≤ -7,0 pts y alerta roja de pérdida de condición de socio al alcanzar ≤ -10,0 pts (Art. 93). <em>Parcial: lógica de disparo automático trasladada al Sprint 6.</em></td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Trasladada al Sprint 6</td>
+          </tr>
+          <tr>
+            <td><strong>RF-14</strong></td>
+            <td>Balances Cuatrimestrales y Reportes (Art. 137)</td>
+            <td>Compila reportes analíticos y Balances Cuatrimestrales de Auditoría Interna desglosados por Subcomisión y categoría (Pasivo/Activo) con exportación CSV/JSON implementada; <em>exportación PDF institucional trasladada al Sprint 6</em>.</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>S5 (CSV/JSON) · PDF trasladada al Sprint 6</td>
+          </tr>
+          <tr>
+            <td><strong>RF-15</strong></td>
+            <td>Portal "Mis Expedientes" y Publicación con Censura Médica</td>
+            <td>Permite a cada socio consultar su saldo, expedientes y resoluciones oficiales firmes, aplicando censura automática sobre diagnósticos y datos médicos sensibles antes de su publicación general.</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Release 4</td>
+          </tr>
+          <tr>
+            <td><strong>RF-16</strong></td>
+            <td>Autenticación JWT por N.º de Socio y Padrón Read-Only</td>
+            <td>Autentica usuarios mediante N.º de Socio verificando elegibilidad institucional a través de una capa anticorrupción de solo lectura sobre el padrón legado MySQL, emitiendo tokens JWT y aplicando RBAC.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>MVP (S1–S2)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-17</strong></td>
+            <td>Ranking Oficial de Socios y Legajo Integral</td>
+            <td>Muestra el ranking paginado de socios con filtros por categoría (Pasivo/Activo) y subcomisión, junto con un buscador reactivo y ficha de legajo integral con historial de movimientos.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>MVP (S1–S2)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-18</strong></td>
+            <td>Calendario Institucional y Feriados</td>
+            <td>Administra versiones de calendario anual, feriados oficiales y excepciones institucionales que alimentan el motor de cálculo de plazos de 5 días hábiles.</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Release 2 (S3)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>9</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 9: §7 RF-19 a RF-26 y EXCLUSIONES ==================== -->
+<div class="a4-page" data-old="9">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 7 (Continuación)</div>
+      <h2 class="sub-title">Requerimientos Funcionales — RF-19 a RF-26</h2>
+      <table class="styled compact">
+        <thead>
+          <tr>
+            <th style="width:9%;">ID</th>
+            <th style="width:23%;">Requerimiento</th>
+            <th style="width:45%;">Descripción Funcional Detallada</th>
+            <th style="width:11%;">MoSCoW</th>
+            <th style="width:12%;">Entrega Obj.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RF-19</strong></td>
+            <td>Eventos, Reuniones, Asistencia y Regla 3:1</td>
+            <td>Registra convocatorias y asistencias a eventos/reuniones con reglas por tipo de actividad, aplicando automáticamente la consolidación 3:1 (tres llamados de atención consolidan -1,0 punto y tres felicitaciones consolidan +1,0 punto).</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Release 2 (S3)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-20</strong></td>
+            <td>Apelación y Adecuación del Formulario T01</td>
+            <td>Habilita al imputado a interponer apelación formal sobre un T01 dentro de un plazo parametrizable y permite al TD emitir una adecuación trazable de imputados o puntajes preservando historial.</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Release 3 (S4)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-21</strong></td>
+            <td>Visor Autorizado y Evidencia Protegida</td>
+            <td>Centraliza la consulta completa del expediente para el TD con registro inmutable de cada visualización y descarga de archivos probatorios protegidos en base de datos.</td>
+            <td><span class="badge b-must">Must Have</span></td>
+            <td>Release 3 (S4)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-22</strong></td>
+            <td>Exclusión Fundada y Enmienda con Contra-asientos</td>
+            <td>Permite excluir fundadamente a un socio de un expediente y enmendar resoluciones ya emitidas generando contra-asientos de reversión en el libro mayor sin alterar los registros originales.</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Release 4</td>
+          </tr>
+          <tr>
+            <td><strong>RF-23</strong></td>
+            <td>ABM de Reglamentos con Auditoría</td>
+            <td>Administra los artículos reglamentarios consultables desde la plataforma con historial inmutable de altas, modificaciones y vigencias normativas.</td>
+            <td><span class="badge b-could">Could Have</span></td>
+            <td>Release 3 (S4)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-24</strong></td>
+            <td>Panel de Administración y Miembros TD</td>
+            <td>Centraliza la configuración de parámetros operativos del sistema y la gestión auditada de designaciones y bajas de miembros del Tribunal de Disciplina.</td>
+            <td><span class="badge b-could">Could Have</span></td>
+            <td>Release 4</td>
+          </tr>
+          <tr>
+            <td><strong>RF-25</strong></td>
+            <td>Repositorio de Jurisprudencia Disciplinaria</td>
+            <td>Consulta libre planificada de precedentes y fallos anteriores por artículo normativo y período temporal para fortalecer la consistencia de criterios del TD. <em>Funcionalidad trasladada al Sprint 6.</em></td>
+            <td><span class="badge b-could">Could Have</span></td>
+            <td>Trasladada al Sprint 6</td>
+          </tr>
+          <tr>
+            <td><strong>RF-26</strong></td>
+            <td>Centro de Notificaciones UI Accesible</td>
+            <td>Unifica los avisos transitorios de éxito, error y advertencia en toda la interfaz (duración 10 s, cierre accesible y soporte de movimiento reducido), sin exponer detalles técnicos internos.</td>
+            <td><span class="badge b-should">Should Have</span></td>
+            <td>Transversal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-soft">
+      <h2 class="sub-title">7.2 Exclusiones y límites de alcance</h2>
+      <ul class="clean-list">
+        <li><strong>Sin firma digital legal (Ley 25.506):</strong> el sistema implementa aprobación electrónica interna colegiada autenticada con hash de integridad, sin emisión de certificados ante Autoridad Certificante externa.</li>
+        <li><strong>Sin votación nominal individual:</strong> por definición institucional del Product Owner, las decisiones del TD se formalizan mediante editor unificado y firma colegiada de los tres representantes activos (4.º, 5.º y 6.º año).</li>
+        <li><strong>Sin escritura sobre el padrón legado de socios:</strong> el alta, baja y modificación de datos personales del padrón institucional permanecen bajo gestión exclusiva del sistema legado administrado por la Subcomisión de Cómputos.</li>
+        <li><strong>Sin gestión contable o de cuotas sociales:</strong> el alcance se circunscribe estrictamente a la disciplina, premiaciones, asistencias vinculadas y auditoría de puntajes.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>10</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 10: §8 TRAZABILIDAD NORMATIVA ==================== -->
+<div class="a4-page" data-old="10">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 8</div>
+      <h1 class="sec-title">8. Matriz de Trazabilidad Normativa Bidireccional</h1>
+      <p class="body-text">
+        Cada requerimiento funcional está respaldado por las disposiciones del Estatuto Social, el Reglamento Procesal Disciplinario 2026, el Reglamento Interno de Disciplina y la Circular Normativa 001/2026 de A.V.E.I.T.:
+      </p>
+      <table class="styled compact" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:16%;">Requerimiento</th>
+            <th style="width:22%;">Artículo / Respaldo</th>
+            <th style="width:27%;">Cuerpo Normativo</th>
+            <th style="width:35%;">Regla de Negocio Asociada</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RF-01, RF-02</strong></td>
+            <td>Arts. 16, 16 BIS y 21 a 26</td>
+            <td>Reglamento Procesal Disciplinario 2026</td>
+            <td>RN-01 (Competencia para inicio de acciones T01)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-03, RF-04, RF-18</strong></td>
+            <td>Art. 12 inc. 2 y Art. 17</td>
+            <td>Reglamento Procesal Disciplinario 2026</td>
+            <td>RN-02 (Plazo preclusivo de 5 días hábiles y calendario)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-05</strong></td>
+            <td>Art. 17</td>
+            <td>Reglamento Procesal Disciplinario 2026</td>
+            <td>RN-03 (Causales tipificadas y validez probatoria T02)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-06, RF-08, RF-25</strong></td>
+            <td>Art. 18</td>
+            <td>Reglamento Procesal Disciplinario 2026</td>
+            <td>RN-04 (Descargo extraordinario T03 y precedentes)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-07, RF-21</strong></td>
+            <td>Art. 12 (Estados 1 al 6)</td>
+            <td>Reglamento Procesal Disciplinario 2026</td>
+            <td>RN-05 (Ciclo de vida canónico de 6 estados y auditoría)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-09</strong></td>
+            <td>Arts. 94 y 95</td>
+            <td>Estatuto Social de A.V.E.I.T. 2026</td>
+            <td>RN-06 (Composición colegiada, apartamiento y suplencias)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-10, RF-11</strong></td>
+            <td>Art. 12 inc. 5, Art. 13; Art. 96</td>
+            <td>Reg. Procesal 2026 / Estatuto Social 2026</td>
+            <td>RN-07 (Resolución unificada y 3 firmas activas 4.º/5.º/6.º)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-12, RF-17</strong></td>
+            <td>Arts. 20, 20 BIS; Circular 001/2026</td>
+            <td>Reg. Procesal 2026 / Circular TD 2026</td>
+            <td>RN-08 (Libro mayor inmutable y fracciones de 0,5 pts)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-13</strong></td>
+            <td>Art. 93</td>
+            <td>Reglamento Interno de Disciplina</td>
+            <td>RN-09 (Umbrales -7 preventivo y -10 pérdida de condición)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-14</strong></td>
+            <td>Art. 137</td>
+            <td>Reglamento Interno de Disciplina</td>
+            <td>RN-10 (Balances cuatrimestrales de auditoría interna)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-15</strong></td>
+            <td>Art. 96; Resguardo de datos sensibles</td>
+            <td>Estatuto Social 2026 / Ley 25.326 (ref.)</td>
+            <td>RN-13 (Publicación oficial con censura médica automática)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-16, RF-24, RF-26</strong></td>
+            <td>Arts. 11 a 15 (Categorías y padrón)</td>
+            <td>Estatuto Social 2026 / Política Cómputos</td>
+            <td>RN-01 / Gobierno RBAC y padrón de solo lectura</td>
+          </tr>
+          <tr>
+            <td><strong>RF-19</strong></td>
+            <td>Régimen de asistencias y apercibimientos</td>
+            <td>Reglamento Interno de Disciplina</td>
+            <td>RN-11 (Consolidación automática 3:1 de llamados)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-20</strong></td>
+            <td>Derecho de defensa y revisión T01</td>
+            <td>Reglamento Procesal Disciplinario 2026</td>
+            <td>RN-12 (Apelación y adecuación formal del T01)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-22</strong></td>
+            <td>Principio de verdad material y revisión</td>
+            <td>Reglamento Procesal 2026 / Circular 001</td>
+            <td>RN-14 (Exclusión fundada y enmienda con contra-asientos)</td>
+          </tr>
+          <tr>
+            <td><strong>RF-23</strong></td>
+            <td>Publicidad y vigencia normativa</td>
+            <td>Estatuto Social de A.V.E.I.T. 2026</td>
+            <td>RN-01 / RN-08 (Consulta y trazabilidad de artículos)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>11</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 11: §9 REGLAS DE NEGOCIO (RN-01 a RN-08) ==================== -->
+<div class="a4-page" data-old="11">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 9</div>
+      <h1 class="sec-title">9. Catálogo Formal de Reglas de Negocio (RN-01 a RN-14)</h1>
+      <p class="body-text">
+        En reemplazo de expresiones genéricas, se especifican de manera inequívoca las reglas jurídicas y matemáticas que gobiernan la lógica de dominio de SGD-AVEIT:
+      </p>
+      <table class="styled compact" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:9%;">Código</th>
+            <th style="width:24%;">Nombre de la Regla</th>
+            <th style="width:67%;">Especificación Funcional y Normativa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RN-01</strong></td>
+            <td>Competencia exclusiva para apertura T01</td>
+            <td>Una solicitud T01 solo puede ser originada por: 1) <strong>CD</strong> sobre cualquier socio (con restricción de auto-imputación); 2) <strong>TD</strong> de oficio; 3) <strong>FISCALIZADORA</strong> (Autoridad de Subcomisión / Líder de Equipo) exclusivamente sobre los socios pertenecientes a su ámbito o equipo (Arts. 21–26 Reg. Procesal 2026).</td>
+          </tr>
+          <tr>
+            <td><strong>RN-02</strong></td>
+            <td>Plazo preclusivo de 5 días hábiles</td>
+            <td>El plazo para presentar T02/T03 expira a las 23:59:59 del 5.º día hábil posterior a la notificación del acuse, excluyendo sábados, domingos y feriados/excepciones del Calendario Institucional. Vencido el término, se bloquea la carga (Art. 12 inc. 2).</td>
+          </tr>
+          <tr>
+            <td><strong>RN-03</strong></td>
+            <td>Validez probatoria de T02 y versionado</td>
+            <td>La justificación tipificada T02 es admisible bajo causales reglamentarias (enfermedad con certificado médico matriculado, exámenes UTN FRC o fuerza mayor acreditada). Toda modificación dentro del plazo genera una versión inmutable y el retiro es lógico.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-04</strong></td>
+            <td>Descargo extraordinario T03</td>
+            <td>El Formulario T03 habilita defensas por motivos atípicos sin aprobación automática; exige valoración fundada del TD (<em>Aprobada</em> o <em>Desaprobada</em>) con consulta y vinculación de precedentes institucionales (Art. 18).</td>
+          </tr>
+          <tr>
+            <td><strong>RN-05</strong></td>
+            <td>Ciclo de vida de los 6 estados canónicos</td>
+            <td>Todo expediente recorre los 6 estados oficiales: (1) <em>Expediente Creado</em> → (2) <em>En período de justificaciones</em> → (3) <em>Justificaciones en revisión</em> → (4) <em>En espera de resolución</em> → (5) <em>Pendiente de firma y envío</em> → (6) <em>Expedientes ya emitidos</em>. Se admiten además los flujos controlados de <strong>Apelación/Adecuación T01</strong> durante la sustanciación y de <strong>Enmienda con contra-asientos</strong> sobre expedientes emitidos, sin sobrescribir estados históricos.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-06</strong></td>
+            <td>Composición colegiada, apartamiento y suplencias</td>
+            <td>El TD delibera de forma colegiada sin votación nominal individual. Si un integrante figura como involucrado o denunciante (Art. 95 Estatuto), el sistema bloquea su intervención por conflicto de interés y habilita su reemplazo por un miembro suplente del mismo año social.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-07</strong></td>
+            <td>Firma electrónica colegiada (3 Activos)</td>
+            <td>Una resolución adquiere firmeza únicamente cuando reúne las <strong>tres (3) firmas electrónicas autenticadas</strong> de los representantes habilitados de categoría <strong>Activo</strong> (4.º, 5.º y 6.º año social), con registro de sellado temporal y hash SHA-256.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-08</strong></td>
+            <td>Fórmula de saldo y libro mayor inmutable</td>
+            <td>El saldo neto del socio surge de la suma algebraica de asientos inmutables de solo inserción en múltiplos mínimos de <strong>0,5 puntos</strong>. Sanciones de referencia: tardanza (-0,5), inasistencia a reunión (-1,0), inasistencia a asamblea (-2,0), omisión de limpieza o tareas (-2,0). Premios: leves (+0,5 a +1,0), medios (+1,0 a +2,0), sobresalientes (+2,0 a +4,0).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>12</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 12: §9 RN-09 a RN-14 ==================== -->
+<div class="a4-page" data-old="12">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 9 (Continuación)</div>
+      <h2 class="sub-title">Reglas de Negocio — RN-09 a RN-14</h2>
+      <table class="styled compact">
+        <thead>
+          <tr>
+            <th style="width:9%;">Código</th>
+            <th style="width:24%;">Nombre de la Regla</th>
+            <th style="width:67%;">Especificación Funcional y Normativa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RN-09</strong></td>
+            <td>Umbrales críticos (-7 y -10 puntos)</td>
+            <td>Al alcanzar un saldo neto ≤ <strong>-7,0 pts</strong>, corresponde emitir alerta amarilla preventiva al socio y a CD. Al alcanzar ≤ <strong>-10,0 pts</strong>, corresponde disparar alerta roja de pérdida de condición de socio hacia el imputado, CD y autoridades de contralor (Art. 93 Reg. Interno).</td>
+          </tr>
+          <tr>
+            <td><strong>RN-10</strong></td>
+            <td>Balances cuatrimestrales (Art. 137)</td>
+            <td>Deben emitirse dos (2) balances de auditoría por año social (1.º y 2.º cuatrimestre), consolidando sanciones y premiaciones por Subcomisión y categoría societaria (<strong>Pasivo</strong> 1.º–3.º año / <strong>Activo</strong> 4.º–6.º año).</td>
+          </tr>
+          <tr>
+            <td><strong>RN-11</strong></td>
+            <td>Consolidación 3:1 de llamados de atención y felicitaciones</td>
+            <td>La acumulación de tres (3) llamados de atención o apercibimientos firmes registrados sobre un mismo socio consolida automáticamente un descuento equivalente a <strong>-1,0 punto</strong>, y de forma simétrica tres (3) felicitaciones firmes consolidan <strong>+1,0 punto</strong> mediante asiento trazable en el Libro Mayor.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-12</strong></td>
+            <td>Apelación y adecuación de T01</td>
+            <td>El socio imputado puede apelar formalmente el Formulario T01 dentro del plazo parametrizable vigente. Si el TD hace lugar, emite una adecuación formal que ajusta imputados o puntajes preservando trazabilidad íntegra sobre descargos ya presentados.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-13</strong></td>
+            <td>Censura médica en publicación oficial</td>
+            <td>Al publicar una resolución firme para la comunidad societaria, el sistema aplica redacción/censura automática sobre patologías, certificados y datos médicos sensibles, conservando el detalle íntegro solo para el socio y el TD.</td>
+          </tr>
+          <tr>
+            <td><strong>RN-14</strong></td>
+            <td>Exclusión fundada y enmienda con contra-asientos</td>
+            <td>El TD puede excluir fundadamente a un socio involucrado dejando constancia del motivo. Para corregir un error material en una resolución ya emitida, se registra una <strong>Enmienda</strong> que genera contra-asientos de reversión en el libro mayor y, de corresponder, un nuevo asiento ajustado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note-box">
+      <strong>Nota de consistencia normativa:</strong> La equivalencia entre la denominación estatutaria tradicional (<em>Juniors / Seniors</em>) y la clasificación implementada en el padrón digital (<strong>Pasivo</strong>: años 1.º a 3.º; <strong>Activo</strong>: años 4.º a 6.º) se mantiene unificada en los filtros de Ranking, permisos de firma colegiada del TD y cortes de los Balances Art. 137.
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>13</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 13: §10 RNF ISO 25010 ==================== -->
+<div class="a4-page" data-old="13">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 10</div>
+      <h1 class="sec-title">10. Requerimientos No Funcionales (ISO/IEC 25010)</h1>
+      <p class="body-text">
+        Los atributos de calidad del software se especifican según ISO/IEC 25010 y notación cuantitativa Planguage, estrictamente separados de las restricciones tecnológicas (Sección 11). Las métricas de validación en entorno productivo o con usuarios finales se establecen como <strong>criterios objetivo pendientes de verificación</strong>.
+      </p>
+
+      <table class="styled compact" style="margin-top:6px;">
+        <thead>
+          <tr>
+            <th style="width:9%;">ID</th>
+            <th style="width:19%;">Dimensión ISO 25010</th>
+            <th style="width:31%;">Enunciado</th>
+            <th style="width:41%;">Criterio Objetivo Planguage (Scale / Meter / Target)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RNF-01</strong></td>
+            <td>Usabilidad / Adaptabilidad</td>
+            <td>Interfaz web 100% responsiva (<em>mobile-first</em>) operativa en dispositivos móviles y escritorio sin desbordamiento horizontal (360 px a 4K).</td>
+            <td><strong>Scale:</strong> Puntaje SUS y accesibilidad móvil.<br><strong>Meter:</strong> Auditoría Google Lighthouse Mobile y prueba con 10 socios en Android/iOS.<br><strong>Target:</strong> SUS ≥ 85; Lighthouse Accessibility ≥ 90/100. <em>(Criterio objetivo pendiente de verificación.)</em></td>
+          </tr>
+          <tr>
+            <td><strong>RNF-02</strong></td>
+            <td>Seguridad / Integridad e Inmutabilidad</td>
+            <td>El saldo de puntos no admite mutaciones directas ni sentencias <code>UPDATE</code>/<code>DELETE</code> manuales; toda variación se registra como asiento histórico auditable.</td>
+            <td><strong>Scale:</strong> % de variaciones de saldo con asiento de solo inserción, autoría, timestamp y vínculo a resolución.<br><strong>Meter:</strong> Libro mayor transaccional en capa de dominio (solo inserción + contra-asientos de reversión) y suite de pruebas unitarias.<br><strong>Target:</strong> 100% de trazabilidad; cero mutaciones directas no auditadas.</td>
+          </tr>
+          <tr>
+            <td><strong>RNF-03</strong></td>
+            <td>Seguridad / Autenticidad y No Repudio</td>
+            <td>Suscripción colegiada de resoluciones mediante firma electrónica interna autenticada con hash criptográfico (Arts. 94–96 Estatuto; sin alcance Ley 25.506).</td>
+            <td><strong>Scale:</strong> Registro unívoco de ID de firmante, año social activo, timestamp y hash SHA-256 del dictamen.<br><strong>Meter:</strong> Verificación de integridad del hash y control de 3 firmas activas en backend.<br><strong>Target:</strong> 100% de resoluciones emitidas asociadas a las <strong>3 firmas electrónicas válidas</strong> (4.º, 5.º y 6.º año).</td>
+          </tr>
+          <tr>
+            <td><strong>RNF-04</strong></td>
+            <td>Rendimiento / Comportamiento Temporal</td>
+            <td>Respuesta ágil ante consultas concurrentes de ranking, legajos y carga de descargos con adjuntos.</td>
+            <td><strong>Scale:</strong> Latencia HTTP P95 en segundos.<br><strong>Meter:</strong> Prueba de carga simulando 50 usuarios concurrentes en entorno de staging.<br><strong>Target:</strong> P95 ≤ 1,5 s en consultas generales; ≤ 3,0 s en subida de adjuntos (≤ 5 MB). <em>(Criterio objetivo pendiente de verificación.)</em></td>
+          </tr>
+          <tr>
+            <td><strong>RNF-05</strong></td>
+            <td>Seguridad / Confidencialidad y Control RBAC</td>
+            <td>El acceso a todos los módulos administrativos, expedientes, reportes y evidencias estará restringido según rol RBAC y reglas de apartamiento.</td>
+            <td><strong>Scale:</strong> % de endpoints protegidos por autenticación JWT y verificación de rol/pertenencia.<br><strong>Meter:</strong> Pruebas automatizadas de permisos y auditoría de seguridad OWASP Top 10.<br><strong>Target:</strong> 100% de endpoints cubiertos por RBAC; cero vulnerabilidades IDOR/BOLA. <em>(Criterio objetivo pendiente de verificación.)</em></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>14</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 14: §11 ARQUITECTURA E INTEGRACIÓN ==================== -->
+<div class="a4-page" data-old="14">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 11</div>
+      <h1 class="sec-title">11. Arquitectura, Integración con Sistema Legado y Restricciones</h1>
+      <h2 class="sub-title">11.1 Stack tecnológico e integración con el ecosistema de A.V.E.I.T.</h2>
+      <p class="body-text">
+        SGD-AVEIT se diseña como un <strong>monolito modular</strong> contenerizado que coexiste de forma segura con la base de datos relacional del padrón histórico de A.V.E.I.T., respetando su esquema preexistente y asegurando la portabilidad hacia la infraestructura de la Subcomisión de Cómputos.
+      </p>
+
+      <div class="kv-row-2" style="margin:8px 0;">
+        <div class="kv-item">
+          <div class="kv-k">Backend &amp; API REST</div>
+          <div class="kv-v">Python 3.12 · Django 4.2 LTS · Django REST Framework (DRF)</div>
+        </div>
+        <div class="kv-item">
+          <div class="kv-k">Frontend SPA Responsive</div>
+          <div class="kv-v">Angular 14.2+ · TypeScript (strict) · Angular Material / Material Dashboard PRO</div>
+        </div>
+        <div class="kv-item">
+          <div class="kv-k">Persistencia &amp; Padrón</div>
+          <div class="kv-v">MySQL 8.0 (tablas legadas en modo solo lectura + tablas propias de dominio)</div>
+        </div>
+        <div class="kv-item">
+          <div class="kv-k">Orquestación &amp; Monitoreo</div>
+          <div class="kv-v">Docker Compose · Endpoints de salud (aplicación y conexión al padrón)</div>
+        </div>
+      </div>
+
+      <ul class="clean-list" style="margin-bottom:8px;">
+        <li><strong>Capa Anticorrupción de Solo Lectura sobre Padrón Legado:</strong> toda lectura del padrón de socios (~515 registros), subcomisiones y puntajes históricos se encapsula detrás de modelos y adaptadores estrictamente <em>read-only</em>. Se prohíbe cualquier operación de escritura o alteración estructural sobre tablas legadas.</li>
+        <li><strong>Autenticación JWT por N.º de Socio y Elegibilidad:</strong> los usuarios inician sesión con su Número de Socio institucional; el backend valida su condición activa/pasiva en el padrón y emite tokens JWT (acceso y refresco) de duración controlada.</li>
+        <li><strong>Equivalencia de Permisos Legados:</strong> un adaptador de autorización traduce los niveles de permisos heredados del sistema institucional (<code>tribunal_bajo</code>, <code>tribunal_medio</code>, <code>tribunal_alto</code>) hacia los 5 roles RBAC canónicos de SGD-AVEIT sin duplicar credenciales.</li>
+        <li><strong>Resguardo de Evidencia y Correo Outbox:</strong> los adjuntos probatorios se almacenan protegidos en base de datos con auditoría de cada descarga, y las notificaciones salientes se gestionan mediante una cola transaccional Outbox desacoplada del servidor SMTP.</li>
+      </ul>
+
+      <div class="media-box">
+        <div class="media-badge">Diagrama de referencia</div>
+        <div class="media-label"><div style="text-align:center;margin:8px 0;"><img src="assets/diagramas/pp_02_arquitectura_integracion.svg" alt="Arquitectura de Integración y Capa Anticorrupción con Padrón Legado MySQL" style="max-width:100%;height:auto;border:1px solid #CBD5E1;border-radius:8px;display:block;margin:0 auto;"></div></div>
+        <div class="media-caption">Figura 2: Separación SPA Angular, API Django/DRF, Capa Anticorrupción Read-Only sobre MySQL legado y contenedores Docker Compose.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>15</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 15: §11.2 RESTRICCIONES, SUPUESTOS Y DEPENDENCIAS ==================== -->
+<div class="a4-page" data-old="15">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 11.2</div>
+      <h1 class="sec-title">11.2 Restricciones Tecnológicas e Institucionales (RES)</h1>
+      <table class="styled compact" style="margin-top:4px;">
+        <thead>
+          <tr>
+            <th style="width:11%;">Código</th>
+            <th style="width:27%;">Restricción</th>
+            <th style="width:62%;">Especificación y Justificación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RES-01</strong></td>
+            <td>Backend Institucional en Python</td>
+            <td>El backend debe desarrollarse en Python (Django 4.2 LTS + DRF) para asegurar compatibilidad técnica y futura absorción operativa por la Subcomisión de Cómputos de A.V.E.I.T.</td>
+          </tr>
+          <tr>
+            <td><strong>RES-02</strong></td>
+            <td>Motor de Base de Datos MySQL</td>
+            <td>La persistencia relacional debe ejecutarse sobre MySQL 8.0 respetando estrictamente la nomenclatura de tablas, columnas y claves del padrón legado preexistente.</td>
+          </tr>
+          <tr>
+            <td><strong>RES-03</strong></td>
+            <td>Presupuesto $0 (Open Source)</td>
+            <td>El proyecto cuenta con presupuesto asignado de $0. Todo el stack y las herramientas de operación base deben sustentarse en tecnologías Open Source sin licenciamiento pago obligatorio.</td>
+          </tr>
+          <tr>
+            <td><strong>RES-04</strong></td>
+            <td>Entorno Aislado y Staging Objetivo</td>
+            <td>El desarrollo y las pruebas se ejecutan en contenedores locales aislados (Docker Compose) sobre datos anonimizados o sintéticos, prohibiéndose pruebas en producción de A.V.E.I.T. La validación en entorno de staging dedicado con réplica anonimizada se define como <em>criterio objetivo pendiente de verificación</em>.</td>
+          </tr>
+          <tr>
+            <td><strong>RES-05</strong></td>
+            <td>Despliegue en Servidor Central</td>
+            <td>La puesta en producción en el servidor central de A.V.E.I.T. y la homologación operativa formal con la Subcomisión de Cómputos y autoridades de A.V.E.I.T. quedan trasladadas al Sprint 6.</td>
+          </tr>
+          <tr>
+            <td><strong>RES-06</strong></td>
+            <td>Formato y Tamaño de Adjuntos</td>
+            <td>Los comprobantes probatorios admitidos se restringen a formatos estándar (<code>.pdf</code>, <code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>) con límite máximo de 5 MB por archivo y descarga auditada.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-block">
+      <div class="sec-pill">Sección 11.3</div>
+      <h2 class="sub-title">11.3 Supuestos del Proyecto (SUP) y Dependencias Externas (DEP)</h2>
+      <div class="kv-row-2" style="margin-top:4px;">
+        <div class="card-soft" style="padding:9px 11px;">
+          <h2 class="sub-title" style="font-size:9pt;">Supuestos (SUP)</h2>
+          <ul class="clean-list">
+            <li><strong>SUP-01:</strong> La Subcomisión de Cómputos provee el esquema y copia anonimizada de respaldo del padrón MySQL para pruebas de integración.</li>
+            <li><strong>SUP-02:</strong> Los socios registrados mantienen casillas de correo electrónico válidas en el padrón para recepción de notificaciones.</li>
+            <li><strong>SUP-03:</strong> El Tribunal de Disciplina sostiene sus sesiones deliberativas quincenales bajo modalidad predominantemente virtual.</li>
+          </ul>
+        </div>
+        <div class="card-soft" style="padding:9px 11px;">
+          <h2 class="sub-title" style="font-size:9pt;">Dependencias Externas (DEP)</h2>
+          <ul class="clean-list">
+            <li><strong>DEP-01:</strong> Disponibilidad de servicio SMTP institucional o relay configurado para el despacho efectivo de la cola Outbox de correos.</li>
+            <li><strong>DEP-02:</strong> Conectividad, dominio/DNS y autorización de acceso en infraestructura UTN FRC / A.V.E.I.T. para el despliegue productivo final.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>16</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 16: §12 ENTREGAS Y RIESGOS ==================== -->
+<div class="a4-page" data-old="16">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 12</div>
+      <h1 class="sec-title">12. Estrategia de entregas incrementales, hitos y gestión de riesgos</h1>
+      <p class="body-text">
+        El cronograma macro del segundo cuatrimestre de 2026 se estructura como un <strong>roadmap inicial adaptable</strong> sujeto a velocidad real y retroalimentación del PO, priorizando entregas tempranas de valor: <strong>Sprint 0</strong> (acuerdos y backlog base consolidado en <strong>116 Story Points</strong> — ajustado desde la estimación preliminar de 111 SP tras la refinación inicial registrada en el Seguimiento de Proyecto), <strong>MVP en Sprint 2</strong> (autenticación JWT, padrón Read-Only, Ranking/Legajo, Solicitud T01, ciclo de 6 estados y cola Outbox), <strong>Release 2 en Sprint 3</strong> (descargos T02/T03, calendario de 5 días hábiles y eventos/asistencia 3:1), <strong>Release 3 en Sprint 4</strong> (visor auditado, sustanciación T02/T03, suplencias, apelación T01, editor de resolución y firma colegiada) y <strong>Release 4 / Evolución</strong> (libro mayor inmutable, publicación con censura médica, reportes/balances, alertas y consolidación).
+      </p>
+      <div class="media-box" style="margin-top:6px;">
+        <div class="media-badge">Diagrama de referencia</div>
+        <div class="media-label"><div style="text-align:center;margin:8px 0;"><img src="assets/diagramas/pp_03_cronograma_macro.svg" alt="Cronograma Macro e Hitos de Entregas Incrementales" style="max-width:100%;height:auto;border:1px solid #CBD5E1;border-radius:8px;display:block;margin:0 auto;"></div></div>
+        <div class="media-caption">Figura 3: Hoja de ruta adaptable por sprints, corte de MVP en Sprint 2 y releases sucesivos.</div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <h2 class="sub-title">12.1 Matriz de gestión y mitigación de riesgos (R-01 a R-05)</h2>
+      <table class="styled compact">
+        <thead>
+          <tr>
+            <th style="width:27%;">Riesgo Identificado</th>
+            <th style="width:9%;">Prob.</th>
+            <th style="width:10%;">Impacto</th>
+            <th style="width:54%;">Estrategia de Mitigación y Plan de Contingencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>R-01:</strong> Objeción institucional a la normativa 2026</td>
+            <td>Baja</td>
+            <td>Alto</td>
+            <td>Se formalizó el respaldo en la Circular Normativa 001/2026 y las facultades autónomas del Tribunal de Disciplina para regir su procedimiento interno.</td>
+          </tr>
+          <tr>
+            <td><strong>R-02:</strong> Demora en provisión del dump MySQL o staging</td>
+            <td>Media</td>
+            <td>Alto</td>
+            <td>Desarrollo sobre esquema DDL equivalente con datos sintéticos en contenedores Docker Compose; la validación en staging con réplica anonimizada se mantiene como criterio objetivo pendiente de verificación.</td>
+          </tr>
+          <tr>
+            <td><strong>R-03:</strong> Corrupción o ambigüedad en cálculo de saldos</td>
+            <td>Baja</td>
+            <td>Crítico</td>
+            <td>Erradicación de sentencias manuales mediante libro mayor transaccional de solo inserción en capa de dominio, contra-asientos de reversión ante enmiendas y pruebas automatizadas de integridad.</td>
+          </tr>
+          <tr>
+            <td><strong>R-04:</strong> Baja adopción del módulo responsive por socios</td>
+            <td>Media</td>
+            <td>Medio</td>
+            <td>Diseño <em>mobile-first</em> simplificado, autenticación directa por N.º de Socio mediante JWT y notificaciones por correo que dirigen al portal personal del socio.</td>
+          </tr>
+          <tr>
+            <td><strong>R-05:</strong> Confusión legal sobre la firma electrónica</td>
+            <td>Baja</td>
+            <td>Medio</td>
+            <td>Explicitación formal de que constituye aprobación interna colegiada autenticada de 3 representantes activos, sin alcance de firma digital bajo Ley 25.506.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>17</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+<!-- ==================== PÁGINA 17: §13 HISTORIAL Y GLOSARIO ==================== -->
+<div class="a4-page" data-old="17">
+  <svg class="wave-top" viewBox="0 0 800 64" preserveAspectRatio="none">
+    <path d="M0,0 L800,0 L800,26 C600,58 300,6 0,38 Z" fill="#29a8df" opacity="0.11"></path>
+  </svg>
+  <svg class="wave-bottom" viewBox="0 0 800 48" preserveAspectRatio="none">
+    <path d="M0,48 L800,48 L800,16 C560,44 280,8 0,30 Z" fill="#29a8df" opacity="0.10"></path>
+  </svg>
+  <div class="page-header">
+    <div class="hdr-left"><span class="hdr-dot"></span>SGD-AVEIT · Plan de Proyecto</div>
+    <div class="hdr-right">Grupo 13 · 3K2</div>
+  </div>
+  <div class="page-body">
+    <div class="card-block">
+      <div class="sec-pill">Sección 13</div>
+      <h1 class="sec-title">13. Historial de Cambios</h1>
+      <table class="styled compact" style="margin-top:4px;">
+        <thead>
+          <tr>
+            <th style="width:9%;">Versión</th>
+            <th style="width:13%;">Fecha</th>
+            <th style="width:20%;">Autor / Responsable</th>
+            <th style="width:58%;">Descripción de Modificaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1.0.0</strong></td>
+            <td>01/09/2026</td>
+            <td>Equipo de Proyecto SGD-AVEIT</td>
+            <td>Elaboración inicial del Plan de Proyecto según Guía de Documentación UTN FRC.</td>
+          </tr>
+          <tr>
+            <td><strong>1.0.1</strong></td>
+            <td>02/09/2026</td>
+            <td>-</td>
+            <td>Estructuración de formato y presentación según Guía Documentación UTN FRC.</td>
+          </tr>
+          <tr>
+            <td><strong>2.0.0</strong></td>
+            <td>03/09/2026</td>
+            <td>Equipo de Proyecto SGD-AVEIT</td>
+            <td>Reestructuración y adecuación integral ante observaciones de cátedra: incorporación de carátula formal, equipo y matriz de habilidades; taxonomía de sistemas de información (TPS, MIS, DSS, EIS); desglose de requerimientos funcionales (RF-01 a RF-15), reglas de negocio (RN-01 a RN-10) y trazabilidad normativa; separación de RNF (ISO 25010) y restricciones tecnológicas; aclaración de firma electrónica interna; inmutabilidad de saldos; detalle operativo de Scrumban y casos de uso preliminares.</td>
+          </tr>
+          <tr>
+            <td><strong>2.1.0</strong></td>
+            <td>28/11/2026</td>
+            <td>Equipo de Proyecto SGD-AVEIT</td>
+            <td>Consolidación para entrega de Regularidad: unificación de carátula y formato institucional; purga definitiva de votación nominal, triggers SQL, Tailwind CSS y expresiones ambiguas; ampliación del catálogo de requerimientos (RF-01 a RF-26), trazabilidad normativa y reglas de negocio (RN-01 a RN-14); repriorización MoSCoW con corte de MVP en Sprint 2 y releases tempranos; alineación de Matriz RBAC (5 roles, categorías Pasivo/Activo y apartamiento automático) y 6 estados canónicos; reformulación de RNF y staging como criterios objetivo pendientes de verificación; ampliación de arquitectura e integración Read-Only/JWT con padrón legado; retiro de secciones vacías o no exigidas para proyectos ágiles.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-block">
+      <h2 class="sub-title">Glosario de Términos</h2>
+      <table class="styled compact">
+        <thead>
+          <tr>
+            <th style="width:28%;">Término</th>
+            <th style="width:72%;">Definición Institucional y Técnica</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Capa Anticorrupción Read-Only</strong></td>
+            <td>Módulo adaptador que aísla la lógica de SGD-AVEIT del esquema legado de A.V.E.I.T., permitiendo únicamente consultas sobre el padrón MySQL sin modificar sus tablas.</td>
+          </tr>
+          <tr>
+            <td><strong>Firma Electrónica Colegiada</strong></td>
+            <td>Suscripción autenticada de una resolución por los tres (3) representantes activos del TD (4.º, 5.º y 6.º año) con registro temporal y hash SHA-256, sin alcance de Ley 25.506.</td>
+          </tr>
+          <tr>
+            <td><strong>Formularios T01, T02 y T03</strong></td>
+            <td>Instrumentos procesales: <strong>T01</strong> (solicitud de sanción o premiación y Anexo), <strong>T02</strong> (justificación por causal tipificada) y <strong>T03</strong> (descargo extraordinario sujeto a sana crítica).</td>
+          </tr>
+          <tr>
+            <td><strong>Libro Mayor Transaccional</strong></td>
+            <td>Registro contable de puntajes de solo inserción (sin <code>UPDATE</code>/<code>DELETE</code> manuales), donde las correcciones se formalizan mediante contra-asientos de reversión.</td>
+          </tr>
+          <tr>
+            <td><strong>Regla 3:1 de Apercibimientos y Felicitaciones</strong></td>
+            <td>Mecanismo normativo según el cual tres (3) llamados de atención firmes acumulados por un socio consolidan -1,0 punto y tres (3) felicitaciones firmes consolidan +1,0 punto.</td>
+          </tr>
+          <tr>
+            <td><strong>Socio Pasivo / Socio Activo</strong></td>
+            <td>Categorización societaria vigente en el padrón digital: <strong>Pasivo</strong> corresponde a 1.º–3.º año social y <strong>Activo</strong> a 4.º–6.º año social (habilitado para integrar y firmar en el TD).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span><strong>UTN-FRC</strong> · Seminario Integrador · A.V.E.I.T.</span>
+    <span>Página <strong>18</strong> de <strong>18</strong></span>
+  </div>
+</div>
+
+
+
+</body></html>

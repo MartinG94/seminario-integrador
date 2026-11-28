@@ -11,8 +11,8 @@
 | **Sistema** | SGD-AVEIT |
 | **Proceso Modelado** | Proceso Integral de Gestión Disciplinaria, Descargos, Cómputo de Puntos y Balances |
 | **Estándar** | OMG BPMN 2.0 / Ficha Institucional ASI - UTN FRC / Modelo Canónico BPMN-IR |
-| **Fecha de Emisión** | 03/09/2026 |
-| **Versión** | 1.1.0 (Consolidación de Estados Procesales en 5 Fases) |
+| **Fecha de Emisión** | 03/09/2026 (Actualización de alineación: 27/11/2026) |
+| **Versión** | 1.2.0 (Alineación a 6 Estados Canónicos y Firma Colegiada sin Votación Nominal) |
 
 ---
 
@@ -26,12 +26,12 @@
 | **Nombre del Proceso** | Gestión Integral del Régimen Disciplinario, Justificaciones y Premiaciones |
 | **Dueño del Proceso (Owner)** | Presidente del Tribunal de Disciplina |
 | **Tipo de Proceso** | Proceso de Soporte, Gobierno y Control Institucional (Core Disciplinario) |
-| **Objetivo** | Tramitar el ciclo completo de causas disciplinarias y de reconocimiento al mérito en sus cinco (5) estados consolidados (*Expediente Creado*, *En período de justificaciones*, *En revisión y resolución*, *Pendiente de firma y envío*, *Expedientes ya emitidos*), administrando los plazos preclusivos de 5 días hábiles, recepcionando justificaciones unificadas (con certificados o descargos extraordinarios), posibilitando la votación y firma colegiada de los jueces, computando de forma inmutable los saldos de puntos (+/-), disparando alertas preventivas (-7 pts) y críticas de cese (-10 pts), y generando los balances de auditoría interna. |
+| **Objetivo** | Tramitar el ciclo completo de causas disciplinarias y de reconocimiento al mérito en sus seis (6) estados canónicos (*Expediente Creado* `creado`, *En período de justificaciones* `justificando`, *Justificaciones en revisión* `revision_resolucion`, *En espera de resolución* `espera_resolucion`, *Pendiente de firma y envío* `pendiente_correos`, *Expedientes ya emitidos* `emitido`), administrando los plazos preclusivos de 5 días hábiles, recepcionando justificaciones unificadas (T02 con certificados o T03 extraordinarios), posibilitando la redacción unificada y firma colegiada de los 3 integrantes activos del TD (4.º, 5.º y 6.º año), computando de forma inmutable los saldos de puntos (+/-) y generando reportes en JSON/CSV (las alertas automáticas -7/-10 y la exportación PDF de balances quedan **trasladadas al Sprint 6**, ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)). |
 | **Disparador (Trigger)** | Cierre administrativo de un evento institucional obligatorio con inasistencias detectadas o recepción de Formulario T01 formal con Hoja de Anexo por autoridad habilitada. |
 | **Límite Inicial** | Detección de falta/mérito o registro formal de solicitud de puntos. |
-| **Límite Final** | Publicación de la resolución firmada, impacto inalterable en el saldo de puntos y emisión de balances cuatrimestrales de auditoría. |
+| **Límite Final** | Publicación de la resolución firmada e impacto inalterable en el saldo de puntos (`AsientoLibroMayor` / `PuntajeAplicado`). |
 | **Cliente(s) del Proceso** | Masa Societaria de AVEIT (Socios Pasivos y Activos), Comisión Directiva, Asamblea General. |
-| **Productos / Salidas** | 1. Expediente disciplinario tramitado y resuelto formalmente.<br>2. Resolución Oficial con estructura reglamentaria y firma digital de 3 jueces.<br>3. Saldo de puntos del socio actualizado de forma auditada e inmutable.<br>4. Alertas escalonadas (Amarilla a los -7 pts y Roja a los -10 pts) despachadas.<br>5. Balances Cuatrimestrales de Auditoría Interna consolidados en PDF/Excel. |
+| **Productos / Salidas** | 1. Expediente disciplinario tramitado y resuelto formalmente.<br>2. Resolución Oficial con estructura reglamentaria y firma electrónica colegiada de 3 integrantes activos del TD (`Resolucion.firmantes`).<br>3. Saldo de puntos del socio actualizado de forma auditada e inmutable (`AsientoLibroMayor` / `PuntajeAplicado`).<br>4. Alertas escalonadas (-7 pts y -10 pts): **trasladadas al Sprint 6** (`SCRUM-62`, [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).<br>5. Balances Cuatrimestrales de Auditoría Interna en JSON/CSV (exportación PDF **trasladada al Sprint 6**, `SCRUM-63`/`SCRUM-124`). |
 
 ---
 
@@ -41,7 +41,7 @@
 | `Módulo de Eventos & Asistencia` | Acta de cierre con inasistencias registradas ("pasar el dedo"). | Disparar causas automáticas por faltas a eventos obligatorios. |
 | `Autoridades Habilitadas (CD/Subcomisiones/Equipos)` | Formulario T01 + Hoja Anexo circunstanciada. | Iniciar formalmente causas de sanción o reconocimiento al mérito. |
 | `Socio Imputado / Postulado` | Formulario Unificado de Justificación con certificado o descargo libre. | Ejercer el derecho reglamentario a defensa dentro del plazo preclusivo. |
-| `Tribunal de Disciplina` | Votos nominales fundados, considerandos y firmas colegiadas. | Deliberar y emitir sentencia obligatoria e irrecurrible. |
+| `Tribunal de Disciplina` | Valoración de pruebas, redacción unificada de considerandos y firmas colegiadas (4.º, 5.º y 6.º año). | Deliberar y emitir resolución colegiada (sin votación nominal; descartada por el PO el 07/10/2026). |
 | `Servicio de Reloj del Sistema` | Temporizador de cinco (5) días hábiles (excluye fines de semana y feriados). | Controlar la preclusión temporal objetiva del período de descargo. |
 
 ---
@@ -50,34 +50,32 @@
 * **Recursos Humanos (Roles y Carriles)**:
   - `Socio`: Consulta causas personales y carga descargos en el formulario unificado.
   - `Autoridad Solicitante`: Carga solicitudes T01, administra eventos y realiza check-in digital.
-  - `Jueces del Tribunal de Disciplina (3)`: Revisan pruebas, deliberan, votan y firman colegiadamente.
+  - `Jueces del Tribunal de Disciplina (3)`: Revisan pruebas, redactan la resolución unificada y firman colegiadamente (un representante de 4.º, 5.º y 6.º año).
 * **Recursos Tecnológicos**:
-  - Plataforma Web Responsive Mobile SGD-AVEIT (Frontend HTML5/Tailwind con diseño Material Dashboard PRO).
-  - Backend en Python con endpoints REST y control transaccional.
-  - Motor de Base de Datos MySQL (tablas: expedientes, justificaciones, ledger de puntos, eventos).
-  - Servidor de correo SMTP institucional para acuses y cédulas.
+  - Plataforma Web Responsive Mobile SGD-AVEIT (SPA en Angular 14.2+ / TypeScript con Angular Material y Material Dashboard PRO).
+  - Backend en Python 3.12 / Django 4.2 LTS + DRF con endpoints REST y control transaccional.
+  - Motor de Base de Datos MySQL 8.0 (tablas legadas en lectura y tablas de expedientes, descargos, libro mayor `AsientoLibroMayor` y eventos).
+  - Servidor de correo SMTP institucional con patrón Outbox (`EmailOutbox`) para acuses y notificaciones.
 
 ---
 
 ### 1.4. Formularios y Documentos Estructurados
-* **Formulario T01 con Hoja Anexo:** Solicitud de puntos (+/-) con fundamentación fáctica, fechas y testigos.
-* **Descargo Unificado (Tipificado vs Otros):** Interfaz unificada de ejercicio del derecho de defensa que distingue entre *Descargo Tipificado* (motivos de salud, examen o laborales con comprobante obligatorio) y *Descargo Tipo "Otros"* (exposición libre y prueba respaldante).
-* **Cédula de Votación Nominal:** Registro individual de votos de los tres jueces intervinientes.
-* **Resolución Oficial:** Documento formal estructurado en VISTOS, CONSIDERANDOS y RESOLUCIÓN con firmas digitales.
-* **Balance Cuatrimestral de Disciplina:** Informe oficial consolidado con estadísticas y rankings.
+* **Formulario T01 con Hoja Anexo:** Solicitud de puntos (+/-) con fundamentación fáctica, fechas y testigos (admite apelación y adecuación con plazo parametrizable, `SCRUM-70`).
+* **Descargo Unificado (`T02_CERTIFICADO` vs `T03_EXTRAORDINARIO`):** Interfaz unificada de ejercicio del derecho de defensa que distingue entre *Descargo con Causal / Certificado* (`T02_CERTIFICADO`) y *Descargo - Otros* (`T03_EXTRAORDINARIO`).
+* **Resolución Oficial:** Documento formal estructurado en VISTOS, CONSIDERANDOS y RESOLUCIÓN con firma electrónica colegiada de 3 integrantes activos (`Resolucion.firmantes`, sin cédula de votación nominal).
+* **Balance Cuatrimestral de Disciplina:** Informe oficial consolidado con estadísticas y rankings (JSON/CSV implementado; exportación PDF **trasladada al Sprint 6**, [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 
 ### 1.5. Reglas de Negocio Clave (RN)
-* **RN-01:** Plazo preclusivo de 5 días hábiles a partir de la notificación de apertura de causa.
-* **RN-02:** Bloqueo automático irreversible del botón de justificación al expirar el temporizador y pase a *En revisión y resolución*.
-* **RN-03:** Ciclo secuencial de 5 estados oficiales consolidados.
-* **RN-05:** Carga obligatoria de al menos un comprobante digital al seleccionar causal tipificada en el formulario unificado.
-* **RN-08:** Inhibición automática del juez del TD que tenga conflicto de interés y convocatoria del juez suplente.
-* **RN-09:** Aprobación de resoluciones por mayoría calificada (mínimo 2 de 3 votos).
-* **RN-11:** Firma colegiada tripartita requerida para la validez y publicación del fallo.
-* **RN-12:** Prohibición absoluta de alterar saldos mediante sentencias directas (`UPDATE`); solo movimientos por ledger inmutable.
-* **RN-13 y RN-14:** Disparo automático de Alerta Preventiva a los -7 puntos y Alerta Crítica Roja de Cese a los -10 puntos.
+* **RN-01:** Plazo preclusivo de 5 días hábiles a partir de la notificación de apertura de causa (calculado con el Calendario Institucional).
+* **RN-02:** Bloqueo automático irreversible del botón de justificación al expirar el temporizador y pase a *Justificaciones en revisión* (`revision_resolucion`).
+* **RN-03:** Ciclo secuencial de 6 estados oficiales canónicos (`creado`, `justificando`, `revision_resolucion`, `espera_resolucion`, `pendiente_correos`, `emitido`).
+* **RN-05:** Carga obligatoria de al menos un comprobante digital al seleccionar causal tipificada (`T02_CERTIFICADO`) en el formulario unificado.
+* **RN-08:** Inhibición automática del integrante del TD que tenga conflicto de interés (`IsNotInvolvedInExpediente`) y convocatoria de suplente (`ComposicionTribunal`).
+* **RN-09 / RN-11:** Redacción unificada y firma colegiada tripartita (4.º, 5.º y 6.º año en `Resolucion.firmantes`) requerida para la validez y publicación del fallo (la votación nominal previa fue descartada por el PO el 07/10/2026).
+* **RN-12:** Prohibición absoluta de alterar saldos mediante sentencias directas (`UPDATE`); solo movimientos por libro mayor inmutable (`AsientoLibroMayor` / `PuntajeAplicado`).
+* **RN-13 y RN-14:** Disparo automático de Alerta Preventiva (-7 pts) y Alerta Crítica Roja (-10 pts): **trasladado al Sprint 6** (`SCRUM-62`, [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -220,32 +218,26 @@
     },
     {
       "type": "serviceTask",
-      "id": "task_estado_en_revision_resolucion",
-      "label": "Actualizar expediente a 'En revisión y resolución'",
+      "id": "task_estado_revision_resolucion",
+      "label": "Actualizar expediente a 'Justificaciones en revisión' (revision_resolucion)",
       "lane": "Lane_Sistema"
     },
     {
       "type": "userTask",
       "id": "task_examinar_pruebas",
-      "label": "Examinar pruebas y antecedentes jurisprudenciales",
+      "label": "Examinar pruebas, descargos T02/T03 y antecedentes",
       "lane": "Lane_Tribunal"
     },
     {
-      "type": "userTask",
-      "id": "task_votar_nominal",
-      "label": "Registrar votación nominal fundada de los 3 jueces",
-      "lane": "Lane_Tribunal"
-    },
-    {
-      "type": "businessRuleTask",
-      "id": "task_verificar_mayoria",
-      "label": "Verificar mayoría absoluta reglamentaria (>= 2/3)",
+      "type": "serviceTask",
+      "id": "task_estado_espera_resolucion",
+      "label": "Actualizar expediente a 'En espera de resolución' (espera_resolucion)",
       "lane": "Lane_Sistema"
     },
     {
       "type": "userTask",
       "id": "task_redactar_resolucion",
-      "label": "Redactar Vistos, Considerandos y Resolución final",
+      "label": "Redactar Vistos, Considerandos y Resolución unificada",
       "lane": "Lane_Tribunal"
     },
     {
@@ -396,12 +388,11 @@ flowchart TB
 
         %% CARRIL 3: TRIBUNAL DE DISCIPLINA
         subgraph Lane_Tribunal ["Lane: Miembros del Tribunal de Disciplina"]
-            Task_ExamPruebas["Examinar Pruebas, Descargos y Antecedentes"]
-            Task_VotoNominal["Registrar Votación Nominal Fundada (3 Jueces)"]
-            Task_RedactarRes["Redactar Vistos, Considerandos y Resolución"]
-            Task_FirmaJ1["Firmar Digitalmente (Juez 1)"]
-            Task_FirmaJ2["Firmar Digitalmente (Juez 2)"]
-            Task_FirmaJ3["Firmar Digitalmente (Juez 3)"]
+            Task_ExamPruebas["Examinar Pruebas, Descargos T02/T03 y Antecedentes"]
+            Task_RedactarRes["Redactar Vistos, Considerandos y Resolución Unificada"]
+            Task_FirmaJ1["Firmar Colegiadamente (4.º Año)"]
+            Task_FirmaJ2["Firmar Colegiadamente (5.º Año)"]
+            Task_FirmaJ3["Firmar Colegiadamente (6.º Año)"]
         end
 
         %% CARRIL 4: SERVICIOS Y AUTOMATIZACIONES BACKEND
@@ -409,26 +400,26 @@ flowchart TB
             Task_DetectAusentes["Detectar Ausentes y Crear Causas"]
             Task_ValFacultades["Validar Facultades de la Autoridad"]
             Gw_JoinOrigen{"(+) Convergencia Origen"}
-            Task_CrearExp["Crear Expediente y Enviar Notificación (Estado: Creado)"]
-            Task_StartTimer["Iniciar Temporizador 5 Días (Estado: En período de justificaciones)"]
-            Task_SaveJustif["Registrar Justificación con Sello Temporal"]
-            Task_SaveDescargo["Registrar Descargo con Sello Temporal"]
+            Task_CrearExp["Crear Expediente y Enviar Notificación (Estado: creado)"]
+            Task_StartTimer["Iniciar Temporizador 5 Días (Estado: justificando)"]
+            Task_SaveJustif["Registrar Justificación T02 con Sello Temporal"]
+            Task_SaveDescargo["Registrar Descargo T03 con Sello Temporal"]
             Timer_5d((("◎ Espera: Timer 5 Días Hábiles")))
             Task_Preclusion["Bloquear Formulario por Vencimiento de Plazo"]
             Gw_JoinDescargo{"(+) Convergencia Descargos"}
-            Task_SetReviewResol["Actualizar Estado a 'En revisión y resolución'"]
-            Task_ValMayoria["Verificar Mayoría Calificada (>= 2/3)"]
-            Task_SetFirma["Actualizar Estado a 'Pendiente de firma y envío'"]
+            Task_SetReviewResol["Actualizar Estado a 'Justificaciones en revisión' (revision_resolucion)"]
+            Task_SetEsperaResol["Actualizar Estado a 'En espera de resolución' (espera_resolucion)"]
+            Task_SetFirma["Actualizar Estado a 'Pendiente de firma y envío' (pendiente_correos)"]
             Gw_ForkFirmas{"(+) Fork Firmas Colegiadas"}
             Gw_JoinFirmas{"(+) Join Firmas Completas"}
-            Task_Ledger["Impactar Movimiento en Ledger Inmutable"]
-            Task_SetEmitido["Actualizar Estado a 'Expedientes ya emitidos'"]
-            Task_Publicar["Publicar Fallo y Notificar a Partes"]
-            Task_EvalUmbral["Evaluar Saldo contra Umbrales de Puntos"]
-            Gw_Threshold{"¿Umbral Crítico?"}
-            Task_AlertRed["Emitir Alerta Roja Crítica de Cese Estatutario"]
+            Task_Ledger["Impactar Movimiento en Ledger Inmutable (AsientoLibroMayor)"]
+            Task_SetEmitido["Actualizar Estado a 'Expedientes ya emitidos' (emitido)"]
+            Task_Publicar["Publicar Fallo y Notificar a Partes (EmailOutbox)"]
+            Task_EvalUmbral["Evaluar Saldo contra Umbrales (Trasladado a Sprint 6)"]
+            Gw_Threshold{"¿Umbral Crítico? (Sprint 6)"}
+            Task_AlertRed["Emitir Alerta Roja Crítica (Sprint 6)"]
             End_Red((("● Fin: Cese Disparado (10 pts)")))
-            Task_AlertYellow["Emitir Alerta Preventiva Amarilla al Socio"]
+            Task_AlertYellow["Emitir Alerta Preventiva Amarilla (Sprint 6)"]
             End_Yellow((("● Fin: Advertencia (7 pts)")))
             End_Ok((("● Fin: Causa Resuelta")))
         end
@@ -448,8 +439,8 @@ flowchart TB
     Gw_DescargoChoice -- "Descargo Extraordinario" --> Task_DescargoLibre --> Task_SaveDescargo --> Gw_JoinDescargo
     Gw_DescargoChoice -- "Sin Respuesta en Término" --> Timer_5d --> Task_Preclusion --> Gw_JoinDescargo
 
-    Gw_JoinDescargo --> Task_SetReviewResol --> Task_ExamPruebas --> Task_VotoNominal --> Task_ValMayoria
-    Task_ValMayoria --> Task_RedactarRes --> Task_SetFirma --> Gw_ForkFirmas
+    Gw_JoinDescargo --> Task_SetReviewResol --> Task_ExamPruebas --> Task_SetEsperaResol
+    Task_SetEsperaResol --> Task_RedactarRes --> Task_SetFirma --> Gw_ForkFirmas
 
     Gw_ForkFirmas --> Task_FirmaJ1 --> Gw_JoinFirmas
     Gw_ForkFirmas --> Task_FirmaJ2 --> Gw_JoinFirmas
@@ -472,11 +463,11 @@ flowchart TB
     classDef serviceTask fill:#F1F5F9,stroke:#64748B,color:#0F172A,stroke-width:1px;
 
     class Start_Discip startEvent;
-    End_Red,End_Yellow,End_Ok class:endEvent;
-    Timer_5d class:timerEvent;
-    Gw_Origen,Gw_JoinOrigen,Gw_DescargoChoice,Gw_JoinDescargo,Gw_ForkFirmas,Gw_JoinFirmas,Gw_Threshold class:gateway;
-    Task_CierreEvento,Task_CargaT01,Task_JustifCert,Task_DescargoLibre,Task_ExamPruebas,Task_VotoNominal,Task_RedactarRes,Task_FirmaJ1,Task_FirmaJ2,Task_FirmaJ3 class:userTask;
-    Task_DetectAusentes,Task_ValFacultades,Task_CrearExp,Task_StartTimer,Task_SaveJustif,Task_SaveDescargo,Task_Preclusion,Task_SetReviewResol,Task_ValMayoria,Task_SetFirma,Task_Ledger,Task_SetEmitido,Task_Publicar,Task_EvalUmbral,Task_AlertRed,Task_AlertYellow class:serviceTask;
+    class End_Red,End_Yellow,End_Ok endEvent;
+    class Timer_5d timerEvent;
+    class Gw_Origen,Gw_JoinOrigen,Gw_DescargoChoice,Gw_JoinDescargo,Gw_ForkFirmas,Gw_JoinFirmas,Gw_Threshold gateway;
+    class Task_CierreEvento,Task_CargaT01,Task_JustifCert,Task_DescargoLibre,Task_ExamPruebas,Task_RedactarRes,Task_FirmaJ1,Task_FirmaJ2,Task_FirmaJ3 userTask;
+    class Task_DetectAusentes,Task_ValFacultades,Task_CrearExp,Task_StartTimer,Task_SaveJustif,Task_SaveDescargo,Task_Preclusion,Task_SetReviewResol,Task_SetEsperaResol,Task_SetFirma,Task_Ledger,Task_SetEmitido,Task_Publicar,Task_EvalUmbral,Task_AlertRed,Task_AlertYellow serviceTask;
 ```
 
 ---

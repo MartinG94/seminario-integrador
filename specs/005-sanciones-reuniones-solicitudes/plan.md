@@ -157,10 +157,7 @@ Se define la interfaz desacoplada `AttendanceCaptureStrategy` en `backend/expedi
 - `AttendanceStrategyFactory`: Factoría para instanciar la estrategia según el parámetro `estrategia` del request.
 
 ### 3.2 Frontend (Angular 14 / TypeScript)
-Se implementa `IAttendanceCaptureStrategy` en `frontend/src/app/eventos-asistencia/strategies/`:
-- `ManualAttendanceStrategy`: Vinculada a los switches y dropdowns de la tabla de asistencia.
-- `BiometricAttendanceStrategy`: Simula la captura con feedback auditivo mediante Web Audio API (`AudioContext`) y animación de escaneo.
-- `AttendanceContextService`: Contexto inyectable que administra la estrategia seleccionada y notifica al componente principal.
+Se implementa la gestión de eventos y asistencia en `frontend/src/app/pages/eventos/` (estrategia de captura manual / biométrica y vista de asistencia).
 
 ---
 

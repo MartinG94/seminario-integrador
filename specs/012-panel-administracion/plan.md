@@ -76,7 +76,7 @@ La migración se llama `core/0001_parametros_sistema_y_rol_tribunal.py`: no reut
 
 - Ruta `/admin/parametros` protegida con `TribunalGuard` y `data.roles = ['ADMIN']`; entrada "Administración" en el menú solo para `ADMIN`.
 - Cuatro tarjetas temáticas (Plazos, Umbrales, Correos, Adjuntos) y una tarjeta "Miembros del Tribunal de Disciplina".
-- Alta de miembro en un diálogo con `mat-autocomplete` y búsqueda con espera de 300 ms sobre `/api/v1/socios/`.
+- Alta de miembro en un diálogo con `mat-autocomplete` y búsqueda con espera de 300 ms sobre `/api/v1/admin/usuarios-td/candidatos/?search=`.
 - Revocación con diálogo de confirmación.
 
 ## 6. Alternativas descartadas
