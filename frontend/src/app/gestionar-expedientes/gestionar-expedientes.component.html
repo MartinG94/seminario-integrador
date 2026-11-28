@@ -307,6 +307,15 @@
                           aria-label="Ver Involucrados">
                     <i class="material-icons">group</i>
                   </button>
+                  <button *ngIf="puedeVotarOFirmar && exp.estado === 'creado'"
+                          mat-button
+                          class="btn btn-primary btn-link btn-just-icon btn-abrir-justificaciones-tabla"
+                          [disabled]="transicionandoEstado"
+                          (click)="transicionarEstado(exp, 'justificando', $event)"
+                          title="Abrir Período de Justificaciones"
+                          aria-label="Abrir Período de Justificaciones">
+                    <i class="material-icons" aria-hidden="true">schedule</i>
+                  </button>
                   <button *ngIf="puedeVotarOFirmar && exp.estado === 'revision_resolucion'" 
                           mat-button 
                           class="btn btn-warning btn-link btn-just-icon" 
@@ -575,6 +584,16 @@
           <i class="material-icons" style="font-size: 16px;">menu_book</i> Sustanciar / Visor
         </button>
 
+        <button *ngIf="puedeAbrirJustificaciones && expedienteSeleccionado"
+                mat-raised-button
+                type="button"
+                class="btn btn-primary btn-abrir-justificaciones"
+                [disabled]="transicionandoEstado"
+                (click)="transicionarEstado(expedienteSeleccionado, 'justificando', $event)">
+          <i class="material-icons" style="font-size: 16px;" aria-hidden="true">schedule</i>
+          {{ transicionandoEstado ? 'Abriendo período...' : 'Abrir Período de Justificaciones' }}
+        </button>
+
         <button *ngIf="puedeGenerarResolucion"
                 mat-raised-button 
                 type="button"
@@ -746,7 +765,8 @@
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h5 id="seccion-considerando-titulo" class="font-weight-bold text-dark mb-0 d-flex align-items-center">
               <i class="material-icons text-info mr-1" style="font-size: 20px;">edit_note</i>
-              CONSIDERANDO:
+              CONSIDERANDO: <span class="text-danger">*</span>
+              <span class="small font-weight-normal text-muted ml-1">(obligatorio)</span>
             </h5>
           </div>
           <p class="small text-muted mb-2">
@@ -756,6 +776,8 @@
             <textarea id="resolucion-considerandos"
                       class="form-control font-monospace"
                       rows="5"
+                      aria-labelledby="seccion-considerando-titulo"
+                      [attr.aria-invalid]="considerandosInvalido && !(considerandosTexto || '').trim() ? 'true' : null"
                       [(ngModel)]="considerandosTexto"
                       placeholder="Redacte los fundamentos y evaluación de los descargos por parte del Tribunal de Disciplina..."></textarea>
           </div>
@@ -866,7 +888,7 @@
         <button mat-raised-button 
                 type="button" 
                 class="btn btn-warning btn-confirmar-resolucion d-inline-flex align-items-center" 
-                [disabled]="guardandoResolucion || reglamentosSeleccionadosResolucion.length === 0 || !considerandosTexto.trim()"
+                [disabled]="guardandoResolucion"
                 (click)="confirmarVotacion()">
           <i class="material-icons" style="font-size: 16px;">gavel</i>
           <span class="ml-1">{{guardandoResolucion ? 'Generando...' : 'Guardar y Continuar en Firma'}}</span>

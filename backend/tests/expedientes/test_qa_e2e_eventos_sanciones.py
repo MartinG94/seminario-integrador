@@ -268,20 +268,28 @@ class TestQAE2EEventosAsistenciasSanciones:
         )
         assert res_cierre.status_code == status.HTTP_200_OK
         assert res_cierre.data["estado_evento"] == EstadoEventoEnum.FINALIZADO
-        assert res_cierre.data["expedientes_generados"] == 1
+        assert res_cierre.data["expedientes_generados"] == 2
         assert res_cierre.data["apercibimientos_generados"] == 1
 
-        # Verificar expediente creado para s_g58_3 por -1.00 punto
-        exp_creado = res_cierre.data["expedientes_creados"][0]
-        assert exp_creado["socio_id"] == qa_setup["s_g58_3"].id
+        por_socio = {e["socio_id"]: e for e in res_cierre.data["expedientes_creados"]}
+        # Verificar expediente creado para s_g58_3 por -1.00 punto en JUSTIFICANDO
+        exp_creado = por_socio[qa_setup["s_g58_3"].id]
         assert Decimal(str(exp_creado["puntos"])) == Decimal("-1.00")
         exp_db = Expediente.objects.get(numero=exp_creado["numero"])
-        assert exp_db.estado == EstadoExpedienteEnum.CREADO
+        assert exp_db.estado == EstadoExpedienteEnum.JUSTIFICANDO
         assert "Ausencia sin aviso previo" in exp_db.motivo
 
-        # Verificar llamado de atención en atencionFelicitacion para s_g58_2
+        # Verificar expediente por llamado de atención para s_g58_2 (0.00 pts, JUSTIFICANDO)
+        exp_llamado_info = por_socio[qa_setup["s_g58_2"].id]
+        assert exp_llamado_info["tipo"] == "LLAMADO_ATENCION"
+        assert Decimal(str(exp_llamado_info["puntos"])) == Decimal("0.00")
+        exp_llamado_db = Expediente.objects.get(numero=exp_llamado_info["numero"])
+        assert exp_llamado_db.estado == EstadoExpedienteEnum.JUSTIFICANDO
+        assert exp_llamado_db.es_llamado is True
+
+        # El contador atencionFelicitacion no se incrementa hasta emitir la resolución
         atencion = AtencionFelicitacion.objects.get(socio=qa_setup["s_g58_2"])
-        assert atencion.llamadosAtencion == 1
+        assert atencion.llamadosAtencion == 0
 
         # Verificar que el socio JUSTIFICADO no tiene expediente ni llamado
         asist_just = AsistenciaEvento.objects.get(evento_id=evento_id, socio=qa_setup["s_g58_4"])
@@ -432,10 +440,10 @@ class TestQAE2EEventosAsistenciasSanciones:
         assert res_act.status_code == status.HTTP_201_CREATED
         act_id = res_act.data["id"]
 
-        # Simular que el evento ya comenzó hace 2 horas (pero se publicó 5 días antes)
+        # Simular que el evento ya comenzó hace 2 horas (pero se publicó 10 días antes)
         ahora = timezone.now()
         EventoInstitucional.objects.filter(pk=act_id).update(
-            fecha_publicacion=ahora - timedelta(days=5),
+            fecha_publicacion=ahora - timedelta(days=10),
             fecha_programada=ahora - timedelta(hours=2),
         )
 
@@ -586,17 +594,22 @@ class TestQAE2EEventosAsistenciasSanciones:
     def test_qa_e2e_06_consolidacion_3_a_1_en_cierre_de_evento(self, qa_setup):
         """
         QA-E2E-06:
-        Un socio que ya acumula 2 llamados de atención en atencionFelicitacion e incurre
-        en una TARDANZA_LEVE en un evento sancionable dispara automáticamente la consolidación
-        3:1, abriendo un expediente en estado CREADO por -1.00 punto y reiniciando su contador a 0.
+        Un socio que ya acumula 2 llamados de atención emitidos en atencionFelicitacion e incurre
+        en una TARDANZA_LEVE en un evento sancionable genera un 3° expediente de llamado (0.00)
+        en estado JUSTIFICANDO; recién al emitirse su resolución consolida 3:1 (-1.00 pt) y
+        reinicia el contador a 0.
         """
+        from expedientes.models import Resolucion
+        from expedientes.services.ledger_service import LedgerService
+
         client = APIClient()
         client.force_authenticate(user=qa_setup["cd_user"])
         socio = qa_setup["s_g58_4"]
+        socio.numero_socio = 5804
+        socio.save(update_fields=["numero_socio"])
 
-        # Pre-cargar 2 llamados de atención
-        WarningAccumulationService.register_warning(socio_id=socio.id, motivo="1° llamado previo")
-        WarningAccumulationService.register_warning(socio_id=socio.id, motivo="2° llamado previo")
+        # Pre-cargar 2 llamados de atención ya confirmados/emitidos
+        AtencionFelicitacion.objects.create(socio=socio, llamadosAtencion=2)
         assert WarningAccumulationService.get_pending_count(socio.id) == 2
 
         inicio = timezone.now() + timedelta(days=5)
@@ -622,7 +635,7 @@ class TestQAE2EEventosAsistenciasSanciones:
                         "socio_id": socio.id,
                         "estado_asistencia": "TARDANZA_LEVE",
                         "minutos_tardanza": 19,
-                        "motivo": "3° tardanza leve del trimestre (dispara 3:1)",
+                        "motivo": "3° tardanza leve del trimestre (dispara 3:1 al emitir)",
                     }
                 ],
             },
@@ -631,10 +644,29 @@ class TestQAE2EEventosAsistenciasSanciones:
         assert res.status_code == status.HTTP_200_OK
         assert res.data["apercibimientos_generados"] == 1
         assert res.data["expedientes_generados"] == 1
-        exp_info = res.data["expedientes_creados"][0]
-        assert exp_info["tipo"] == "CONSOLIDACION_3_1"
-        assert Decimal(str(exp_info["puntos"])) == Decimal("-1.00")
+        exp_3 = Expediente.objects.get(numero=res.data["expedientes_creados"][0]["numero"])
+        assert exp_3.estado == EstadoExpedienteEnum.JUSTIFICANDO
+        assert exp_3.puntos == Decimal("0.00")
+        assert exp_3.es_llamado is True
+        assert WarningAccumulationService.get_pending_count(socio.id) == 2
+        assert not PuntajeAplicado.objects.filter(socio_id=5804).exists()
+
+        # Al emitir la resolución del 3° llamado confirmado, consolida 3:1 (-1.00)
+        exp_3.estado = EstadoExpedienteEnum.EMITIDO
+        exp_3.save(update_fields=["estado"])
+        resolucion = Resolucion.objects.create(
+            expediente=exp_3,
+            numero_expediente_snapshot=exp_3.numero,
+            vistos="Vistos.",
+            considerandos="Considerandos.",
+            articulos_resolutivos="Artículo 1.",
+            created_by=qa_setup["td_user"],
+        )
+        LedgerService.registrar_resolucion(resolucion, qa_setup["td_user"])
         assert WarningAccumulationService.get_pending_count(socio.id) == 0
+        mov = PuntajeAplicado.objects.get(socio_id=5804)
+        assert mov.puntajeAplicado == Decimal("-1.00")
+        assert mov.expediente_id == exp_3.id
 
     def test_qa_e2e_07_auto_anulacion_evento_creado_sin_notificar_a_tiempo(self, qa_setup):
         """
@@ -674,7 +706,7 @@ class TestQAE2EEventosAsistenciasSanciones:
         client = APIClient()
         client.force_authenticate(user=qa_setup["cd_user"])
 
-        pub = timezone.now() - timedelta(days=5)
+        pub = timezone.now() - timedelta(days=10)
         inicio = timezone.now() - timedelta(hours=3)
         fin = inicio + timedelta(hours=2)
 
@@ -723,8 +755,12 @@ class TestQAE2EEventosAsistenciasSanciones:
         )
         assert res.status_code == status.HTTP_200_OK
         assert res.data["apercibimientos_generados"] == 1  # s_g58_2 (24 min)
-        assert res.data["expedientes_generados"] == 1  # s_g58_3 (45 min -> -0.50 pts)
-        assert Decimal(str(res.data["expedientes_creados"][0]["puntos"])) == Decimal("-0.50")
+        assert res.data["expedientes_generados"] == 2  # s_g58_2 (0.00) y s_g58_3 (-0.50)
+        por_socio = {
+            e["socio_id"]: Decimal(str(e["puntos"])) for e in res.data["expedientes_creados"]
+        }
+        assert por_socio[qa_setup["s_g58_2"].id] == Decimal("0.00")
+        assert por_socio[qa_setup["s_g58_3"].id] == Decimal("-0.50")
 
     def test_qa_e2e_11_12_integracion_tablero_td_portal_socio_e_inmutabilidad_saldo(self, qa_setup):
         """
@@ -752,7 +788,7 @@ class TestQAE2EEventosAsistenciasSanciones:
             categoria=CategoriaEventoEnum.REUNION,
             tipo=SubtipoReunionEnum.ORDINARIA,
             modalidad=ModalidadEventoEnum.PRESENCIAL_SEDE,
-            fecha_publicacion=timezone.now() - timedelta(days=5),
+            fecha_publicacion=timezone.now() - timedelta(days=10),
             fecha_programada=timezone.now() - timedelta(hours=2),
             estado=EstadoEventoEnum.EN_CURSO,
             convocante=qa_setup["cd_socio"],

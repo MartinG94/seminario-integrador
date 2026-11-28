@@ -2,12 +2,13 @@
 y felicitaciones (CA4).
 
 Implementa:
+- Apertura de expediente con 0.00 puntos y notificación automática al registrar un
+  llamado de atención o felicitación (sin alterar contadores hasta emitir resolución).
 - Control de contadores sobre la tabla legacy atencionFelicitacion (PK nroSocio).
 - Bloqueo pesimista con select_for_update() sobre el socio y su registro de atencionFelicitacion.
-- Regla 3:1 inmutable: cada 3 llamados de atención consolidan en un único expediente
-  formal por -1.00 punto neto (Art. 83 / Art. 100 R.I.) y descuentan 3 llamados.
-- Regla 3:1 de felicitaciones: cada 3 felicitaciones acreditan +1.00 punto neto y descuentan
-  3 felicitaciones.
+- Regla 3:1 inmutable al emitir resolución (`apply_confirmed_measure`): cada 3 llamados
+  confirmados aplican -1.00 punto neto en `PuntajeAplicado` y descuentan 3 llamados;
+  cada 3 felicitaciones confirmadas acreditan +1.00 punto neto y descuentan 3 felicitaciones.
 - Cero alteraciones directas sobre el saldo de puntos del socio (Regla Innegociable 3).
 """
 
@@ -22,7 +23,7 @@ from expedientes.models import (
     AtencionFelicitacion,
     Expediente,
 )
-from expedientes.services.workflow_service import ExpedienteWorkflowService
+from ranking.models import PuntajeAplicado
 from socios.models import Socio
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,13 @@ class WarningAccumulationService:
     CONSOLIDATION_THRESHOLD: int = 3
     PENALTY_POINTS: Decimal = Decimal("-1.00")
     MERIT_POINTS: Decimal = Decimal("1.00")
+
+    @staticmethod
+    def _resolve_nro_socio(socio: Socio) -> int:
+        if socio.numero_socio is not None:
+            return int(socio.numero_socio)
+        legajo = (socio.legajo or "").strip()
+        return int(legajo) if legajo.isdigit() else int(socio.pk)
 
     @classmethod
     @transaction.atomic
@@ -49,10 +57,8 @@ class WarningAccumulationService:
         solicitud_t01_id: str | None = None,
         expediente_origen_id: int | None = None,
         actor: str = "SISTEMA",
-    ) -> tuple[AtencionFelicitacion, Expediente | None]:
-        """
-        Registra un llamado de atención en atencionFelicitacion y evalúa la consolidación 3:1.
-        """
+    ) -> tuple[AtencionFelicitacion, Expediente]:
+        """Abre un expediente de llamado de atención (0.00 pts) y dispara su notificación."""
         if not motivo or not motivo.strip():
             raise ValidationError({"motivo": "El motivo del apercibimiento es obligatorio."})
 
@@ -62,29 +68,19 @@ class WarningAccumulationService:
             raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
 
         atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
-        atencion.llamadosAtencion += 1
 
-        expediente_generado: Expediente | None = None
+        from expedientes.services.opening_notification_service import OpeningNotificationService
+        from expedientes.services.workflow_service import ExpedienteWorkflowService
 
-        if atencion.llamadosAtencion >= cls.CONSOLIDATION_THRESHOLD:
-            atencion.llamadosAtencion -= cls.CONSOLIDATION_THRESHOLD
-            motivo_expediente = (
-                f"Consolidación reglamentaria de tres (3) apercibimientos conforme a regla 3:1 "
-                f"(Arts. 83 y 100 R.I.). Detalle de hechos: {motivo.strip()}"
-            )
-            expediente_generado = ExpedienteWorkflowService.open_expediente(
-                motivo=motivo_expediente,
-                socio_ids=[socio.id],
-                actor=actor,
-                points=cls.PENALTY_POINTS,
-            )
-            logger.info(
-                "Consolidados 3 llamados de atención para socio %s. Exp: %s",
-                socio.legajo,
-                expediente_generado.numero,
-            )
-
-        atencion.save(update_fields=["llamadosAtencion"])
+        motivo_limpio = motivo.strip()
+        expediente_generado = ExpedienteWorkflowService.open_expediente(
+            motivo=f"Llamado de atención ({articulo_reglamento}): {motivo_limpio}",
+            titulo=f"Llamado de atención: {motivo_limpio}"[:255],
+            socio_ids=[socio.id],
+            actor=actor,
+            points=Decimal("0.00"),
+        )
+        OpeningNotificationService.notify_automatic_expediente(expediente_generado, actor=actor)
         return atencion, expediente_generado
 
     @classmethod
@@ -95,10 +91,8 @@ class WarningAccumulationService:
         socio_id: int,
         motivo: str,
         actor: str = "SISTEMA",
-    ) -> tuple[AtencionFelicitacion, Expediente | None]:
-        """
-        Registra una felicitación y evalúa la regla 3:1 para acreditación de méritos.
-        """
+    ) -> tuple[AtencionFelicitacion, Expediente]:
+        """Abre un expediente de felicitación institucional (0.00 pts) y dispara su notificación."""
         if not motivo or not motivo.strip():
             raise ValidationError({"motivo": "El motivo de la felicitación es obligatorio."})
 
@@ -108,30 +102,103 @@ class WarningAccumulationService:
             raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
 
         atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
-        atencion.felicitaciones += 1
 
-        expediente_generado: Expediente | None = None
+        from expedientes.services.opening_notification_service import OpeningNotificationService
+        from expedientes.services.workflow_service import ExpedienteWorkflowService
 
-        if atencion.felicitaciones >= cls.CONSOLIDATION_THRESHOLD:
-            atencion.felicitaciones -= cls.CONSOLIDATION_THRESHOLD
-            motivo_expediente = (
-                f"Acreditación reglamentaria por tres (3) felicitaciones conforme a regla 3:1. "
-                f"Detalle: {motivo.strip()}"
-            )
-            expediente_generado = ExpedienteWorkflowService.open_expediente(
-                motivo=motivo_expediente,
-                socio_ids=[socio.id],
-                actor=actor,
-                points=cls.MERIT_POINTS,
+        motivo_limpio = motivo.strip()
+        expediente_generado = ExpedienteWorkflowService.open_expediente(
+            motivo=f"Felicitación institucional: {motivo_limpio}",
+            titulo=f"Felicitación: {motivo_limpio}"[:255],
+            socio_ids=[socio.id],
+            actor=actor,
+            points=Decimal("0.00"),
+        )
+        OpeningNotificationService.notify_automatic_expediente(expediente_generado, actor=actor)
+        return atencion, expediente_generado
+
+    @classmethod
+    @transaction.atomic
+    def apply_confirmed_measure(
+        cls,
+        *,
+        socio: Socio,
+        es_llamado: bool,
+        expediente_id: int | None = None,
+        nro_socio: int | None = None,
+        actor: str = "TRIBUNAL",
+    ) -> tuple[int, int | None, Decimal]:
+        """Aplica la medida confirmada al emitir resolución y consolida 3:1 si alcanza el umbral."""
+        atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
+        field_name = "llamadosAtencion" if es_llamado else "felicitaciones"
+        actual = int(getattr(atencion, field_name) or 0) + 1
+
+        if actual >= cls.CONSOLIDATION_THRESHOLD:
+            actual -= cls.CONSOLIDATION_THRESHOLD
+            setattr(atencion, field_name, actual)
+            atencion.save(update_fields=[field_name])
+
+            puntos_aplicados = cls.PENALTY_POINTS if es_llamado else cls.MERIT_POINTS
+            target_nro = nro_socio if nro_socio is not None else cls._resolve_nro_socio(socio)
+            mov = PuntajeAplicado.registrar_movimiento(
+                nro_socio=target_nro,
+                puntos=puntos_aplicados,
+                expediente_id=expediente_id,
             )
             logger.info(
-                "Consolidadas 3 felicitaciones para socio %s. Exp: %s",
+                "Consolidadas 3 %s para socio %s por %s: %s pts (expediente_id=%s).",
+                "llamados de atención" if es_llamado else "felicitaciones",
                 socio.legajo,
-                expediente_generado.numero,
+                actor,
+                puntos_aplicados,
+                expediente_id,
             )
+            return actual, mov.pk, puntos_aplicados
 
-        atencion.save(update_fields=["felicitaciones"])
-        return atencion, expediente_generado
+        setattr(atencion, field_name, actual)
+        atencion.save(update_fields=[field_name])
+        return actual, None, Decimal("0.00")
+
+    @classmethod
+    @transaction.atomic
+    def _revert_counter(
+        cls,
+        *,
+        socio_id: int,
+        field_name: str,
+        label: str,
+        actor: str,
+        restaurar_terna: bool,
+    ) -> AtencionFelicitacion:
+        try:
+            socio = Socio.objects.select_for_update().get(pk=socio_id)
+        except Socio.DoesNotExist:
+            raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
+
+        atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
+        valor = int(getattr(atencion, field_name) or 0)
+        if restaurar_terna:
+            nuevo_valor = valor + (cls.CONSOLIDATION_THRESHOLD - 1)
+            setattr(atencion, field_name, nuevo_valor)
+            atencion.save(update_fields=[field_name])
+            logger.info(
+                "Restaurada terna de %s a %s para socio %s por %s.",
+                label,
+                nuevo_valor,
+                socio.legajo,
+                actor,
+            )
+        elif valor > 0:
+            setattr(atencion, field_name, valor - 1)
+            atencion.save(update_fields=[field_name])
+            logger.info("Revertido %s para socio %s por %s.", label, socio.legajo, actor)
+        else:
+            logger.warning(
+                "No se pudo decrementar %s para socio %s (contador en 0).",
+                label,
+                socio.legajo,
+            )
+        return atencion
 
     @classmethod
     @transaction.atomic
@@ -140,24 +207,16 @@ class WarningAccumulationService:
         *,
         socio_id: int,
         actor: str = "SISTEMA",
+        restaurar_terna: bool = False,
     ) -> AtencionFelicitacion:
-        """Compensa un llamado de atención (decrementa 1 con piso 0)."""
-        try:
-            socio = Socio.objects.select_for_update().get(pk=socio_id)
-        except Socio.DoesNotExist:
-            raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
-
-        atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
-        if atencion.llamadosAtencion > 0:
-            atencion.llamadosAtencion -= 1
-            atencion.save(update_fields=["llamadosAtencion"])
-            logger.info("Revertido llamado de atención para %s por %s.", socio.legajo, actor)
-        else:
-            logger.warning(
-                "No se pudo decrementar llamado para socio %s (contador en 0).",
-                socio.legajo,
-            )
-        return atencion
+        """Compensa un llamado de atención (decrementa 1 o restaura terna a 2 por enmienda)."""
+        return cls._revert_counter(
+            socio_id=socio_id,
+            field_name="llamadosAtencion",
+            label="llamado de atención",
+            actor=actor,
+            restaurar_terna=restaurar_terna,
+        )
 
     @classmethod
     @transaction.atomic
@@ -166,24 +225,16 @@ class WarningAccumulationService:
         *,
         socio_id: int,
         actor: str = "SISTEMA",
+        restaurar_terna: bool = False,
     ) -> AtencionFelicitacion:
-        """Compensa una felicitación (decrementa 1 con piso 0) si el Tribunal cambia de opinión."""
-        try:
-            socio = Socio.objects.select_for_update().get(pk=socio_id)
-        except Socio.DoesNotExist:
-            raise ValidationError({"socio_id": f"El socio con ID {socio_id} no existe."})
-
-        atencion, _ = AtencionFelicitacion.objects.select_for_update().get_or_create(socio=socio)
-        if atencion.felicitaciones > 0:
-            atencion.felicitaciones -= 1
-            atencion.save(update_fields=["felicitaciones"])
-            logger.info("Revertida felicitación para socio %s por actor %s.", socio.legajo, actor)
-        else:
-            logger.warning(
-                "No se pudo decrementar felicitación para socio %s (contador en 0).",
-                socio.legajo,
-            )
-        return atencion
+        """Compensa una felicitación (decrementa 1 o restaura terna a 2 por enmienda)."""
+        return cls._revert_counter(
+            socio_id=socio_id,
+            field_name="felicitaciones",
+            label="felicitación",
+            actor=actor,
+            restaurar_terna=restaurar_terna,
+        )
 
     @classmethod
     def get_pending_count(cls, socio_id: int) -> int:

@@ -39,6 +39,7 @@ from expedientes.models import (
     UrgenciaExpedienteEnum,
     ValoracionT03,
     ValoracionT03Antecedente,
+    detectar_medida_expediente,
 )
 from expedientes.serializers.evento_serializers import (
     AsistenciaEventoBulkUpdateSerializer,
@@ -342,10 +343,9 @@ def _obtener_resolucion_reciente(obj: Expediente):
 
 def _obtener_puntaje_solicitado(obj: Expediente) -> str | None:
     """Devuelve el código de puntaje especial vigente sin disparar consultas adicionales."""
-    if obj.puntos == Decimal("-0.25"):
-        return PuntajeEspecial.LLAMADO_ATENCION.value
-    if obj.puntos == Decimal("0.25"):
-        return PuntajeEspecial.FELICITACION.value
+    medida = detectar_medida_expediente(obj)
+    if medida:
+        return medida
     try:
         solicitud = getattr(obj, "solicitud_t01", None)
         if solicitud and solicitud.puntaje_especial:
@@ -357,48 +357,14 @@ def _obtener_puntaje_solicitado(obj: Expediente) -> str | None:
     return None
 
 
-def _matches_puntaje_especial(
-    obj: Expediente,
-    *,
-    canonical_point: float,
-    historical_point: float,
-    especial_code: str,
-) -> bool:
-    """Evalúa si un expediente corresponde a un puntaje especial por puntos efectivos o T01."""
-    try:
-        if obj.puntos is not None:
-            puntos = float(obj.puntos)
-            if abs(puntos - canonical_point) < 0.01 or abs(puntos - historical_point) < 0.01:
-                return True
-            if abs(puntos - (-canonical_point)) < 0.01 or abs(puntos - (-historical_point)) < 0.01:
-                return False
-    except (TypeError, ValueError):
-        pass
-    try:
-        solicitud = getattr(obj, "solicitud_t01", None)
-        return bool(solicitud and solicitud.puntaje_especial == especial_code)
-    except ObjectDoesNotExist:
-        return False
-
-
 def _es_felicitacion(obj: Expediente) -> bool:
-    """Indica si el expediente corresponde a Felicitación (0.25, T01 o histórico 0.33)."""
-    return _matches_puntaje_especial(
-        obj,
-        canonical_point=0.25,
-        historical_point=0.33,
-        especial_code=PuntajeEspecial.FELICITACION.value,
-    )
+    """Indica si el expediente corresponde a Felicitación (0.25, T01, 0.00 o histórico 0.33)."""
+    return detectar_medida_expediente(obj) == PuntajeEspecial.FELICITACION.value
 
 
 def _es_llamado(obj: Expediente) -> bool:
-    """Indica si el expediente corresponde a Llamado de atención (-0.25, T01 o histórico -0.33)."""
-    return _matches_puntaje_especial(
-        obj,
-        canonical_point=-0.25,
-        historical_point=-0.33,
-        especial_code=PuntajeEspecial.LLAMADO_ATENCION.value,
-    )
+    """Indica si el expediente corresponde a Llamado (-0.25, T01, 0.00 o histórico -0.33)."""
+    return detectar_medida_expediente(obj) == PuntajeEspecial.LLAMADO_ATENCION.value
 
 
 class ExpedienteListSerializer(serializers.ModelSerializer):

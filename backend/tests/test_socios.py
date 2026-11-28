@@ -12,7 +12,7 @@ from socios.models import Role, SocialCategory, Socio
     [
         (1, SocialCategory.PASSIVE),
         (2, SocialCategory.PASSIVE),
-        (3, SocialCategory.PASSIVE),
+        (3, SocialCategory.ACTIVE),
         (4, SocialCategory.ACTIVE),
         (5, SocialCategory.ACTIVE),
         (6, SocialCategory.ACTIVE),

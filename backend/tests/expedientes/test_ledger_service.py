@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -185,6 +186,14 @@ class TestImpactoIndividual:
         impacto = resolver_impacto_socio(causal_expediente, causal_imputado)
         assert impacto.tipo == TipoImpacto.LLAMADO_ATENCION
 
+    def test_cero_puntos_con_titulo_llamado_es_llamado(self, causal_expediente, causal_imputado):
+        causal_expediente.puntos = Decimal("0.00")
+        causal_expediente.titulo = "Llamado de atención: Impuntualidad leve"
+        causal_expediente.motivo = "Llamado de atención (Art. 100.a): Llegó 22 min tarde."
+        causal_expediente.save()
+        impacto = resolver_impacto_socio(causal_expediente, causal_imputado)
+        assert impacto == ImpactoSocio(TipoImpacto.LLAMADO_ATENCION, Decimal("0.00"))
+
     def test_nro_socio_es_el_numero_institucional(self, causal_imputado, make_socio):
         assert resolver_nro_socio(causal_imputado) == 76001
         # Nunca se infiere del legajo ni del usuario.
@@ -277,24 +286,38 @@ class TestReglaTresAUno:
         assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 2
 
     def test_tercer_llamado_consolida_por_el_motor_unico(self, causal_imputado, causal_vocal):
+        exps = []
         for n in range(3):
-            (asiento,) = self._emitir_llamado(f"EXP-091{n}/2026", causal_imputado, causal_vocal)
+            expediente = _expediente(f"EXP-091{n}/2026", [causal_imputado], puntos=Decimal("0.00"))
+            expediente.titulo = "Llamado de atención: Impuntualidad leve"
+            expediente.motivo = "Llamado de atención (Art. 100.a): Demora."
+            expediente.save()
+            exps.append(expediente)
+            (asiento,) = LedgerService.registrar_resolucion(
+                _resolucion(expediente, causal_vocal), causal_vocal.user
+            )
         assert asiento.tipo == "LLAMADO_ATENCION"
+        assert asiento.puntos == Decimal("-1.00")
         assert asiento.contador_resultante == 0
         assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 0
-        # La consolidación abre un único expediente por -1,00 (circuito vigente de main).
-        consolidaciones = Expediente.objects.filter(
-            socio=causal_imputado, motivo__startswith="Consolidación reglamentaria"
-        )
-        assert consolidaciones.count() == 1
-        assert consolidaciones.get().puntos == Decimal("-1.00")
-        # Ningún punto fraccionario ni doble consolidación en el libro mayor.
-        assert not PuntajeAplicado.objects.filter(socio_id=76001).exists()
+        movs = PuntajeAplicado.objects.filter(socio_id=76001)
+        assert movs.count() == 1
+        mov = movs.get()
+        assert mov.puntajeAplicado == Decimal("-1.00")
+        assert mov.expediente_id == exps[2].id
 
-    def test_medida_evaluada_no_se_cuenta_dos_veces(
+        impactos = LedgerService.impactos_por_expediente(causal_imputado)
+        assert impactos[exps[0].id].medida == "LLAMADO_ATENCION"
+        assert impactos[exps[0].id].puntos == Decimal("0.00")
+        assert impactos[exps[1].id].medida == "LLAMADO_ATENCION"
+        assert impactos[exps[1].id].puntos == Decimal("0.00")
+        assert impactos[exps[2].id].medida is None
+        assert impactos[exps[2].id].puntos == Decimal("-1.00")
+
+    def test_medida_evaluada_en_descargo_se_aplica_recien_al_emitir(
         self, causal_expediente, causal_descargo, causal_imputado, causal_vocal
     ):
-        """B2: la decisión causal ya contó la felicitación; la emisión no la suma de nuevo."""
+        """La decisión causal no mueve contadores antes de emitir; se registra al emitir."""
         AtencionFelicitacion.objects.create(socio=causal_imputado, felicitaciones=1)
         CausalResolutionService.decide(
             expediente_id=causal_expediente.id,
@@ -305,13 +328,14 @@ class TestReglaTresAUno:
             user=causal_vocal.user,
             puntaje_final="FELICITACION",
         )
-        assert AtencionFelicitacion.objects.get(socio=causal_imputado).felicitaciones == 2
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).felicitaciones == 1
 
         (asiento,) = LedgerService.registrar_resolucion(
             _resolucion(causal_expediente, causal_vocal), causal_vocal.user
         )
 
         assert asiento.tipo == "FELICITACION"
+        assert asiento.puntos == Decimal("0.00")
         assert asiento.contador_resultante == 2
         assert AtencionFelicitacion.objects.get(socio=causal_imputado).felicitaciones == 2
         assert not PuntajeAplicado.objects.filter(socio_id=76001).exists()
@@ -329,15 +353,17 @@ class TestReglaTresAUno:
             user=causal_vocal.user,
             puntaje_final="FELICITACION",
         )
-        LedgerService.registrar_resolucion(
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).felicitaciones == 2
+        (asiento,) = LedgerService.registrar_resolucion(
             _resolucion(causal_expediente, causal_vocal), causal_vocal.user
         )
 
+        assert asiento.puntos == Decimal("1.00")
         assert AtencionFelicitacion.objects.get(socio=causal_imputado).felicitaciones == 0
-        acreditaciones = Expediente.objects.filter(
-            socio=causal_imputado, motivo__startswith="Acreditación reglamentaria"
-        )
-        assert acreditaciones.count() == 1
+        movs = PuntajeAplicado.objects.filter(socio_id=76001)
+        assert movs.count() == 1
+        assert movs.get().puntajeAplicado == Decimal("1.00")
+        assert movs.get().expediente_id == causal_expediente.id
 
 
 class TestEnmiendaOpcionB:
@@ -386,6 +412,43 @@ class TestEnmiendaOpcionB:
         assert tipos == ["REVERSION", "PUNTOS_DIRECTOS"]
         assert LedgerService.verificar_cadena(causal_expediente.socio).valida
 
+    def test_enmienda_revierte_consolidacion_terna_y_restaura_contador_a_2(
+        self, causal_imputado, causal_vocal
+    ):
+        AtencionFelicitacion.objects.create(socio=causal_imputado, llamadosAtencion=2)
+        exp = _expediente("EXP-0999/2026", [causal_imputado], puntos=Decimal("0.00"))
+        exp.titulo = "Llamado de atención: Tarde leve"
+        exp.motivo = "Llamado de atención (Art. 100.a)"
+        exp.estado = EstadoExpedienteEnum.EMITIDO
+        exp.save()
+
+        anterior = _resolucion(exp, causal_vocal)
+        LedgerService.registrar_resolucion(anterior, causal_vocal.user)
+        Resolucion.objects.filter(pk=anterior.pk).update(estado=EstadoResolucionEnum.ISSUED)
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 0
+        assert _saldo(76001) == Decimal("-1.00")
+
+        nueva = Resolucion.objects.create(
+            expediente=exp,
+            version=2,
+            numero_expediente_snapshot=exp.numero,
+            vistos="Vistos.",
+            considerandos="Considerando.",
+            articulos_resolutivos="Artículo 1.",
+            created_by=causal_vocal.user,
+        )
+        enmienda = EnmiendaResolucion.objects.create(
+            resolucion_anterior=anterior,
+            resolucion_nueva=nueva,
+            motivo_enmienda="Se deja sin efecto por error material.",
+            solicitado_por=causal_vocal.user,
+        )
+        _decision(exp, causal_imputado, causal_vocal, decision="ACCEPTED")
+
+        LedgerService.registrar_enmienda(enmienda, causal_vocal.user)
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 2
+        assert _saldo(76001) == Decimal("0.00")
+
 
 def test_proveedor_no_usa_puntos_fraccionarios_para_llamados(
     causal_expediente, causal_descargo, causal_vocal
@@ -415,3 +478,133 @@ def test_proveedor_suma_el_impacto_individual_de_cada_socio(make_socio, causal_v
     decision = ExpedienteConsolidatedDecisionProvider().get_closed_decision(expediente.id)
     assert decision.puntos_finales == Decimal("-2.00")
     assert decision.resultado == "SANCTION"
+
+
+def test_registrar_movimiento_mysql_resuelve_expediente_id_segun_tribunal_expediente(
+    monkeypatch, causal_imputado
+):
+    from unittest.mock import call
+
+    def _fake_connection(fetchone_side_effect):
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = fetchone_side_effect
+        conn = MagicMock()
+        conn.vendor = "mysql"
+        conn.cursor.return_value.__enter__.return_value = cursor
+        conn.cursor.return_value.__exit__.return_value = False
+        return conn, cursor
+
+    # Caso 1: falta la fila en tribunal_expediente -> crea la fila espejo y conserva expediente_id
+    conn_missing, cursor_missing = _fake_connection(
+        [("tribunal_expediente",), None, ("7708/2026-EXT",), (4,)]
+    )
+    monkeypatch.setattr("ranking.models.connection", conn_missing)
+    mov_creado = PuntajeAplicado.registrar_movimiento(
+        nro_socio=76001,
+        puntos=Decimal("-1.00"),
+        expediente_id=999,
+    )
+    assert cursor_missing.execute.call_args_list == [
+        call("SHOW TABLES LIKE 'tribunal_expediente'"),
+        call("SELECT 1 FROM tribunal_expediente WHERE idExpediente = %s LIMIT 1", [999]),
+        call("SELECT numero FROM expedientes_expediente WHERE id = %s LIMIT 1", [999]),
+        call("SELECT MIN(idSancion) FROM tribunal_valorsancion"),
+        call(
+            "INSERT IGNORE INTO tribunal_expediente (idExpediente, nroExpediente, puntos_id) "
+            "VALUES (%s, %s, %s)",
+            [999, "7708/2026", 4],
+        ),
+    ]
+    assert mov_creado.expediente_id == 999
+    assert PuntajeAplicado.objects.get(pk=mov_creado.pk).expediente_id == 999
+
+    # Caso 2: la fila ya existe en tribunal_expediente -> no inserta y conserva expediente_id
+    conn_present, cursor_present = _fake_connection([("tribunal_expediente",), (1,)])
+    monkeypatch.setattr("ranking.models.connection", conn_present)
+    mov_existente = PuntajeAplicado.registrar_movimiento(
+        nro_socio=76001,
+        puntos=Decimal("-2.00"),
+        expediente_id=999,
+    )
+    assert cursor_present.execute.call_args_list == [
+        call("SHOW TABLES LIKE 'tribunal_expediente'"),
+        call("SELECT 1 FROM tribunal_expediente WHERE idExpediente = %s LIMIT 1", [999]),
+    ]
+    assert mov_existente.expediente_id == 999
+    assert PuntajeAplicado.objects.get(pk=mov_existente.pk).expediente_id == 999
+
+
+class TestEnmiendaReglaTresAUno:
+    def _emitir_llamado(self, numero, socio, vocal):
+        expediente = _expediente(numero, [socio], puntos=Decimal("-0.25"))
+        expediente.estado = EstadoExpedienteEnum.EMITIDO
+        expediente.save()
+        resolucion = _resolucion(expediente, vocal)
+        LedgerService.registrar_resolucion(resolucion, vocal.user)
+        Resolucion.objects.filter(pk=resolucion.pk).update(estado=EstadoResolucionEnum.ISSUED)
+        return expediente, resolucion
+
+    def test_enmienda_que_conserva_llamado_consolidado_mantiene_punto_neto(
+        self, causal_imputado, causal_vocal
+    ):
+        self._emitir_llamado("EXP-0951/2026", causal_imputado, causal_vocal)
+        self._emitir_llamado("EXP-0952/2026", causal_imputado, causal_vocal)
+        exp3, anterior = self._emitir_llamado("EXP-0953/2026", causal_imputado, causal_vocal)
+        assert _saldo(76001) == Decimal("-1.00")
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 0
+
+        nueva = Resolucion.objects.create(
+            expediente=exp3,
+            version=2,
+            numero_expediente_snapshot=exp3.numero,
+            vistos="Vistos enmendados.",
+            considerandos="Considerando rectificado.",
+            articulos_resolutivos="Artículo 1.",
+            created_by=causal_vocal.user,
+        )
+        enmienda = EnmiendaResolucion.objects.create(
+            resolucion_anterior=anterior,
+            resolucion_nueva=nueva,
+            motivo_enmienda="Rectificación formal de redacción manteniendo el llamado.",
+            solicitado_por=causal_vocal.user,
+        )
+        LedgerService.registrar_enmienda(enmienda, causal_vocal.user)
+
+        assert _saldo(76001) == Decimal("-1.00")
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 0
+        assert not AsientoLibroMayor.objects.filter(resolucion=nueva, tipo="REVERSION").exists()
+
+    def test_enmienda_que_revierte_terna_con_cuarto_llamado_previo_conserva_acumulado(
+        self, causal_imputado, causal_vocal
+    ):
+        self._emitir_llamado("EXP-0961/2026", causal_imputado, causal_vocal)
+        self._emitir_llamado("EXP-0962/2026", causal_imputado, causal_vocal)
+        exp3, anterior = self._emitir_llamado("EXP-0963/2026", causal_imputado, causal_vocal)
+        self._emitir_llamado("EXP-0964/2026", causal_imputado, causal_vocal)
+        assert _saldo(76001) == Decimal("-1.00")
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 1
+
+        nueva = Resolucion.objects.create(
+            expediente=exp3,
+            version=2,
+            numero_expediente_snapshot=exp3.numero,
+            vistos="Vistos enmendados.",
+            considerandos="Considerando sin sanción.",
+            articulos_resolutivos="Artículo 1.",
+            created_by=causal_vocal.user,
+        )
+        enmienda = EnmiendaResolucion.objects.create(
+            resolucion_anterior=anterior,
+            resolucion_nueva=nueva,
+            motivo_enmienda="Se deja sin efecto el tercer llamado de atención.",
+            solicitado_por=causal_vocal.user,
+        )
+        exp3.puntos = Decimal("0.00")
+        exp3.titulo = "Archivo sin sanción"
+        exp3.motivo = "Se deja sin efecto."
+        exp3.save()
+
+        LedgerService.registrar_enmienda(enmienda, causal_vocal.user)
+
+        assert _saldo(76001) == Decimal("0.00")
+        assert AtencionFelicitacion.objects.get(socio=causal_imputado).llamadosAtencion == 3

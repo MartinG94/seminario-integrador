@@ -28,17 +28,17 @@ from padron.domain import (
 class TestClassifyCategory:
     """Pruebas para la regla CA3: categorización por año social."""
 
-    @pytest.mark.parametrize("ano_social", [1, 2, 3])
-    def test_passive_years_1_to_3(self, ano_social: int) -> None:
-        """Años sociales 1, 2 y 3 corresponden a categoría PASSIVE (Junior)."""
+    @pytest.mark.parametrize("ano_social", [1, 2])
+    def test_passive_years_1_to_2(self, ano_social: int) -> None:
+        """Años sociales 1 y 2 corresponden a categoría PASSIVE (Junior)."""
         from padron.services import classify_category
 
         result = classify_category(ano_social)
         assert result == SocioCategoryEnum.PASSIVE
 
-    @pytest.mark.parametrize("ano_social", [4, 5, 6])
-    def test_active_years_4_to_6(self, ano_social: int) -> None:
-        """Años sociales 4, 5 y 6 corresponden a categoría ACTIVE (Senior)."""
+    @pytest.mark.parametrize("ano_social", [3, 4, 5, 6])
+    def test_active_years_3_to_6(self, ano_social: int) -> None:
+        """Años sociales 3, 4, 5 y 6 corresponden a categoría ACTIVE (Senior)."""
         from padron.services import classify_category
 
         result = classify_category(ano_social)

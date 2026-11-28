@@ -519,6 +519,10 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.auth.tieneRol('TD');
   }
 
+  get puedeAbrirJustificaciones(): boolean {
+    return this.puedeVotarOFirmar && this.expedienteSeleccionado?.estado === 'creado';
+  }
+
   get puedeConsultarJustificaciones(): boolean {
     const estado = this.expedienteSeleccionado?.estado;
     return !!estado && ESTADOS_CONSULTA_CAUSAL.includes(estado) && this.auth.tieneRol('TD', 'CD', 'ADMIN');
@@ -1274,19 +1278,39 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     return this.ordenAscendente ? 'arrow_upward' : 'arrow_downward';
   }
 
+  transicionandoEstado = false;
+  considerandosInvalido = false;
+
   // Transición accesible mediante botón con teclado (CA3 y CA4)
   transicionarEstado(exp: Expediente, nuevoEstado: EstadoExpediente, event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
+    if (this.transicionandoEstado) {
+      return;
+    }
+    this.transicionandoEstado = true;
+    this.cdr?.markForCheck();
     const labelDestino = this.getEstadoLabel(nuevoEstado);
     this.dataService.transicionarExpediente(exp.id, nuevoEstado).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        this.mostrarNotificacion(`Expediente ${exp.numero} transicionado a "${labelDestino}".`);
+      next: (res) => {
+        this.transicionandoEstado = false;
+        const estadoFinal = (res?.estado as EstadoExpediente | undefined) || nuevoEstado;
+        if (estadoFinal !== nuevoEstado) {
+          this.notifications.warning(
+            `No se pudo completar la transición del expediente ${exp.numero}; permanece en "${this.getEstadoLabel(estadoFinal)}".`
+          );
+        } else {
+          this.mostrarNotificacion(`Expediente ${exp.numero} transicionado a "${labelDestino}".`);
+        }
+        if (this.modalDetalleAbierto && this.expedienteSeleccionado?.id === exp.id) {
+          this.cerrarModales();
+        }
         this.refrescarVistaActual();
         this.cdr?.markForCheck();
       },
       error: (err) => {
+        this.transicionandoEstado = false;
         this.notifications.error(httpErrorMessage(err, 'No se pudo realizar la transición.'));
         this.cdr?.markForCheck();
       }
@@ -2411,6 +2435,7 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
     this.filtroReglamentosResolucion = '';
     this.busquedaCatalogoResolucion = '';
     this.guardandoResolucion = false;
+    this.considerandosInvalido = false;
     this.firmando = false;
     this.limpiarJustificaciones();
     this.limpiarComposicion();
@@ -2486,9 +2511,11 @@ export class GestionarExpedientesComponent implements OnInit, OnDestroy {
 
     const considerandos = (this.considerandosTexto || '').trim();
     if (!considerandos) {
+      this.considerandosInvalido = true;
       this.notifications.warning('El campo CONSIDERANDO es obligatorio.');
       return;
     }
+    this.considerandosInvalido = false;
 
     // Generación automática y estructurada de VISTO
     const citas = this.reglamentosResolucionCitas

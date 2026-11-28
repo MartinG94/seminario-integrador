@@ -1,9 +1,11 @@
 """Servicios transaccionales para apertura y transiciones de expedientes."""
 
+import logging
 import re
 from datetime import datetime
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -20,6 +22,8 @@ from expedientes.models import (
 )
 from expedientes.services.tribunal_composition_service import TribunalCompositionService
 from socios.models import Socio
+
+logger = logging.getLogger(__name__)
 
 
 class ExpedienteWorkflowService:
@@ -93,7 +97,41 @@ class ExpedienteWorkflowService:
             motivo=motivo.strip(),
         )
         TribunalCompositionService.notify_if_ad_hoc(expediente)
+        if getattr(settings, "AUTO_DISPATCH_OPENING_EMAIL", False):
+            exp_id = expediente.id
+            transaction.on_commit(lambda: cls._auto_dispatch_opening(exp_id))
         return expediente
+
+    @classmethod
+    def _auto_dispatch_opening(cls, expediente_id: int) -> None:
+        """Transiciona automáticamente Creado -> Justificando y despacha la notificación formal.
+
+        Se ejecuta tras el commit de apertura para nunca abortar ni hacer rollback de la
+        creación del expediente ante falta de email o fallas de transporte SMTP.
+        """
+        from expedientes.services.opening_notification_service import (
+            InvalidCaseStatusError,
+            MissingSocioEmailError,
+            OpeningNotificationService,
+        )
+
+        try:
+            OpeningNotificationService.dispatch_opening(
+                expediente_id=expediente_id,
+                actor="SISTEMA",
+            )
+        except (InvalidCaseStatusError, MissingSocioEmailError) as exc:
+            logger.warning(
+                "Despacho automático omitido para expediente %s (%s).",
+                expediente_id,
+                type(exc).__name__,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Error inesperado en despacho automático de expediente %s (%s).",
+                expediente_id,
+                type(exc).__name__,
+            )
 
     @classmethod
     @transaction.atomic

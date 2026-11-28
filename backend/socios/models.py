@@ -36,7 +36,7 @@ class Role(models.TextChoices):
 class Socio(models.Model):
     """Socio con membresía vigente, vinculado 1:1 con sus credenciales."""
 
-    FIRST_ACTIVE_SOCIAL_YEAR = 4
+    FIRST_ACTIVE_SOCIAL_YEAR = 3
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -73,7 +73,7 @@ class Socio(models.Model):
 
     @classmethod
     def category_for_social_year(cls, social_year: int) -> str:
-        """Años 1-3 => Pasivo; años 4-6 => Activo (Constitución, ppio. 8)."""
+        """Años 1-2 => Pasivo; años 3-6 => Activo (Estatuto 2026, Constitución ppio. 8)."""
         if social_year >= cls.FIRST_ACTIVE_SOCIAL_YEAR:
             return SocialCategory.ACTIVE
         return SocialCategory.PASSIVE
