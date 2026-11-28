@@ -24,7 +24,7 @@ El incremento incorpora el atributo e indicador visual de urgencia a lo largo de
      │ GET /api/v1/expedientes/board/?urgencia=...
      │ PATCH /api/v1/expedientes/<id>/ { urgencia: '...' }
      ▼
-[ Backend REST API: expedientes/views.py ]
+[ Backend REST API: expedientes/views/ ]
      │ BoardExpedientesView (ExpedienteFilter)
      │ ExpedienteDetailView (PATCH con IsTribunalOrDirectiva)
      ▼
@@ -67,7 +67,7 @@ El incremento incorpora el atributo e indicador visual de urgencia a lo largo de
 ### 2.2. Migración Django
 - Generar y aplicar migración en `backend/expedientes/migrations/` agregando el campo `urgencia` con default `"normal"`.
 
-### 2.3. Serializadores (`backend/expedientes/serializers.py`)
+### 2.3. Serializadores (`backend/expedientes/serializers/`)
 - `ExpedienteListSerializer`:
   - Agregar campos `urgencia` y `urgencia_display`.
 - `BoardExpedienteSerializer`:
@@ -79,7 +79,7 @@ El incremento incorpora el atributo e indicador visual de urgencia a lo largo de
 - `ExpedienteFilter`:
   - Agregar `urgencia = django_filters.ChoiceFilter(choices=UrgenciaExpedienteEnum.choices)` para soportar `GET /api/v1/expedientes/board/?urgencia=urgente`.
 
-### 2.5. Vistas y Endpoints (`backend/expedientes/views.py`)
+### 2.5. Vistas y Endpoints (`backend/expedientes/views/`)
 - En `ExpedienteDetailView`:
   - Implementar método `patch(self, request: Request, pk: int) -> Response`.
   - Permisos: `IsAuthenticated` y `IsTribunalOrDirectiva` (para actualización de urgencia por autoridades procesales).

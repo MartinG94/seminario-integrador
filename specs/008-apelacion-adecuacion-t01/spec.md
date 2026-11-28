@@ -67,12 +67,12 @@ Permitir que cada socio involucrado en un expediente originado en un Formulario 
 
 ## Criterios de Aceptación (DoD)
 
-- [ ] **CA1 (Canal y plazo):** Apelación desde el sistema con constancia por mail, dentro del plazo parametrizado por socio.
-- [ ] **CA2 (Adecuación sin borrar el original):** Puntos e involucrados se adecúan en versiones inmutables; el T01 emitido no cambia.
-- [ ] **CA3 (Motivos notificados):** Mail con motivos a solicitante y solicitados.
-- [ ] **CA4 (Trazabilidad):** Historial completo consultable e inmutable hasta la resolución final.
-- [ ] **CA5 (Estados y defensa):** Nuevo período aprobado por el TD con retorno a `En período de justificaciones`.
-- [ ] **CA6 (Suites en verde):** `pytest` y `Karma` sin regresiones.
+- [x] **CA1 (Canal y plazo):** Apelación desde el sistema con constancia por mail, dentro del plazo parametrizado por socio.
+- [x] **CA2 (Adecuación sin borrar el original):** Puntos e involucrados se adecúan en versiones inmutables; el T01 emitido no cambia.
+- [x] **CA3 (Motivos notificados):** Mail con motivos a solicitante y solicitados.
+- [x] **CA4 (Trazabilidad):** Historial completo consultable e inmutable hasta la resolución final.
+- [x] **CA5 (Estados y defensa):** Nuevo período aprobado por el TD con retorno a `En período de justificaciones`.
+- [x] **CA6 (Suites en verde):** `pytest` y `Karma` sin regresiones.
 
 ---
 

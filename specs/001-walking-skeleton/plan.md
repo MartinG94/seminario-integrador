@@ -16,15 +16,16 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
                               │ REST API (JSON / Bearer JWT)
 +─────────────────────────────v─────────────────────────────+
 |               BACKEND (Django 4.2 LTS / DRF)               |
-|  - App `accounts`: Custom User, JWT login, RBAC roles     |
-|  - App `socios`: Modelos de Socio, Subcomisión, Categoría |
-|  - App `ranking`: Servicio de agregación de saldos        |
+|  - App `accounts`: JWT login, RBAC roles, audit           |
+|  - App `socios`: Modelos Socio, Subcomisión, Ranking      |
+|  - App `padron`: Capa anticorrupción Read-Only legacy     |
 +─────────────────────────────┬─────────────────────────────+
                               │ ORM (mysqlclient)
 +─────────────────────────────v─────────────────────────────+
 |                   BASE DE DATOS (MySQL 8.0)               |
 |  - Tablas: `socios_socio`, `socios_subcomision`,          |
-|    `ranking_transaccionpuntos`, `auth_user`               |
+|    `tribunal_puntajeaplicado`,                            |
+|    `expedientes_asiento_libro_mayor`, `auth_user`         |
 +───────────────────────────────────────────────────────────+
 ```
 
@@ -40,7 +41,7 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
 ### Tabla: `socios_socio`
 - `id` (INT, PK, Auto)
 - `user_id` (FK `auth_user`, Unique) — Vínculo con credenciales de autenticación
-- `legajo` (VARCHAR 20, Unique, Indexed) — Número de legajo UTN/AVEIT
+- `numero_socio` (VARCHAR 20, Unique, Indexed) — Identificador institucional del socio (`legajo` en el padrón legado `socio_lista`)
 - `first_name` (VARCHAR 100)
 - `last_name` (VARCHAR 100)
 - `email` (VARCHAR 150, Unique)
@@ -50,14 +51,8 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
 - `role` (VARCHAR 20) — 'SOCIO', 'TD', 'CD', 'FISCALIZADORA', 'ADMIN'
 - `is_enabled` (BOOLEAN, default True) — vigencia operativa de la cuenta; es independiente de `category`
 
-### Tabla: `ranking_transaccionpuntos` (Libro Mayor Inmutable)
-- `id` (BIGINT, PK, Auto)
-- `socio_id` (FK `socios_socio`, Indexed)
-- `points` (DECIMAL(4,1)) — Valor (+/-) en múltiplos de 0.5
-- `reason` (VARCHAR 255)
-- `reference_code` (VARCHAR 50, Nullable) — Identificador de expediente o evento
-- `created_at` (DATETIME, auto_now_add=True, Indexed)
-- `created_by_id` (FK `auth_user`)
+### Tablas de Libro Mayor Inmutable (Implementación real: `expedientes_asiento_libro_mayor` y `tribunal_puntajeaplicado`)
+> *Nota de alineación (27/11/2026):* El modelo `ranking_transaccionpuntos` previsto en el borrador inicial fue reemplazado en código por `AsientoLibroMayor` (`expedientes_asiento_libro_mayor`, InsertOnly, con soporte de `REVERSION`) y el esquema legado `PuntajeAplicado` (`tribunal_puntajeaplicado`) / `PuntajeGeneral`.
 
 ---
 
@@ -79,25 +74,24 @@ Plan de arquitectura e implementación para la primera iteración funcional de S
 
 ---
 
-## 4. Estrategia de Pruebas
+## 4. Estrategia de Pruebas (Verificada en código)
 
 - **Backend (Pytest):**
-  - `tests/test_auth.py`: Login exitoso, login con contraseña errónea, login de usuario inactivo, refresco de token JWT.
-  - `tests/test_socios.py`: Creación de socio con categoría automática (Pasivo/Activo según año social), unicidad de legajo.
-  - `tests/test_ranking.py`: Cálculo de saldo neto con transacciones mixtas (+/-), filtros por subcomisión, ordenamiento descendente, filtros RBAC.
+  - `backend/tests/test_auth.py`: Login exitoso, login con contraseña errónea, login de usuario inactivo, refresco de token JWT.
+  - `backend/tests/test_rbac.py`: Reglas RBAC y equivalencias con permisos legados.
+  - `backend/tests/test_ranking_socios.py` / `backend/tests/test_padron_adapter.py`: Ranking, filtros por subcomisión/categoría, legajo integral y capa Read-Only de padrón.
 - **Frontend (Karma/Jasmine):**
-  - `auth.service.spec.ts`: Almacenamiento seguro de tokens y decodificación de roles.
-  - `ranking-socios.component.spec.ts`: Renderizado de lista, aplicación de filtros de búsqueda y estados de carga/vacío.
+  - `frontend/src/app/services/auth.service.spec.ts` y `frontend/src/app/ranking-socios/ranking-socios.component.spec.ts`.
 
 ---
 
-## 5. Matriz de Trazabilidad Requisitos vs Componentes
+## 5. Matriz de Trazabilidad Requisitos vs Componentes (Estado real)
 
 | Requisito Funcional | Componente Backend | Componente Frontend | Test Automatizado |
 | :--- | :--- | :--- | :--- |
-| **RF-01-WS** (Login JWT) | `accounts.views.CustomTokenObtainPairView` | `AuthService.login()` | `test_auth.py::test_login_success` |
-| **RF-02-WS** (Error 401) | `accounts.serializers.CustomTokenObtainPairSerializer` | `LoginComponent` (alert) | `test_auth.py::test_login_invalid_credentials` |
-| **RF-03-WS** (Ranking & Filtros) | `ranking.views.RankingListView` | `RankingSociosComponent` | `test_ranking.py::test_ranking_filters` |
-| **RF-04-WS** (Buscador Legajo) | `socios.views.SocioViewSet` (`SearchFilter`) | `RankingSociosComponent` (input debounce) | `test_socios.py::test_search_socio` |
-| **RF-05-WS** (Seguridad RBAC) | `accounts.permissions.IsTribunalOrDirectiva` | `RoleGuard` (Angular Router) | `test_auth.py::test_unauthorized_access_forbidden` |
-| **RF-06-WS** (Cálculo Inmutable) | `ranking.services.get_member_balance` | `BadgePuntosComponent` | `test_ranking.py::test_points_aggregation` |
+| **RF-01-WS** (Login JWT) | `accounts.views.LoginView` | `AuthService.login()` | `backend/tests/test_auth.py` |
+| **RF-02-WS** (Error 401) | `accounts.serializers.LoginSerializer` | `LoginComponent` (`NotificationCenter`) | `backend/tests/test_auth.py` |
+| **RF-03-WS** (Ranking & Filtros) | `socios.views.RankingSociosView` | `RankingSociosComponent` | `backend/tests/test_ranking_socios.py` |
+| **RF-04-WS** (Buscador Legajo) | `socios.views.SocioListView` / `SocioLegajoView` | `RankingSociosComponent` | `backend/tests/test_ranking_socios.py` |
+| **RF-05-WS** (Seguridad RBAC) | `accounts.permissions.IsTribunalOrDirectiva` | `TribunalGuard` | `backend/tests/test_rbac.py` |
+| **RF-06-WS** (Cálculo Inmutable) | `expedientes.services.ledger.LedgerService` / `AsientoLibroMayor` | `RankingSociosComponent` | `backend/tests/test_ledger_service.py` |

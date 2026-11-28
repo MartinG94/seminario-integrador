@@ -5,7 +5,7 @@
 ### 1. Modelo de Datos y Persistencia Backend
 - **Modelo:** `AuditoriaConsultaExpediente` en `backend/expedientes/models.py`.
 - **Tabla:** `expedientes_auditoria_consulta`.
-- **Migración:** `backend/expedientes/migrations/0017_auditoria_consulta_expediente.py` dependiente de `0016_merge_20261021_0916`.
+- **Migración:** `backend/expedientes/migrations/0018_auditoria_consulta_expediente.py` dependiente de `0016_merge_20261021_0916`.
 
 ### 2. Serialización y Lógica de Dominio
 - **Módulo:** `backend/expedientes/serializers/visor_serializers.py`.

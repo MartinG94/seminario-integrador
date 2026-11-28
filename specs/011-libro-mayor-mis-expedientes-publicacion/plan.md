@@ -17,7 +17,7 @@ frontend/src/app/services/expediente-api.service.ts
 
 - **Fuente de verdad del saldo:** la suma de `tribunal_puntajeaplicado`, igual que el Ranking (`get_reconciled_ranking_queryset`). No se toca la caché `tribunal_puntajegeneral`.
 - **Contadores 3:1:** se reutiliza la tabla `atencionFelicitacion` que ya usa `WarningAccumulationService`, con bloqueo pesimista (`select_for_update`).
-- **Número de socio:** el `nroSocio` del libro mayor legado es el `legajo` numérico de `socios_socio` (mismo criterio que `seed_production_data`).
+- **Número de socio:** el `nroSocio` del libro mayor legado se vincula con el `numero_socio` (`legajo` en el padrón legado) de `socios_socio`.
 - **Impacto individual:** se resuelve por socio a partir de `DecisionCausalDescargo` / `ValoracionT03` y de la solicitud; el proveedor de decisión deja de usar ±0,25 como puntos finales.
 
 ## 2. Esquema
@@ -32,7 +32,7 @@ CREATE TABLE expedientes_asiento_libro_mayor (
   socio_id BIGINT NOT NULL,             -- FK socios_socio, PROTECT
   nro_socio INT NULL,                   -- socio_id del libro mayor legado
   tipo VARCHAR(30) NOT NULL,            -- PUNTOS_DIRECTOS | SIN_IMPACTO | LLAMADO_ATENCION | FELICITACION
-                                        -- | CONSOLIDACION_LLAMADOS | CONSOLIDACION_FELICITACIONES
+                                        -- | CONSOLIDACION_LLAMADOS | CONSOLIDACION_FELICITACIONES | REVERSION
   puntos DECIMAL(10,2) NOT NULL,
   contador_resultante INT NULL,
   puntaje_aplicado_id INT NULL,         -- idPuntajeAplicado legado (sin FK física)

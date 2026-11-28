@@ -1,6 +1,6 @@
 # Spec 012 — Panel de Administración: Parámetros del Sistema y Miembros con Rol TD (MACRO-03 / SCRUM-91)
 
-> **Origen:** Notas del PO del 13/11/2026, sección 4 ("Panel de Administración (solo Admin)") y `PLAN_SPRINT_5_CONSOLIDADO.md` (N-07).
+> **Origen:** Notas del PO del 13/11/2026, sección 4 ("Panel de Administración (solo Admin)") y `auditoria/archivados/docs/gestion-proyecto/PLAN_SPRINT_5_CONSOLIDADO.md` (N-07).
 > **Subtareas Jira:** `SCRUM-107` (S5-03.1), `SCRUM-108` (S5-03.2), `SCRUM-109` (S5-03.3).
 
 ## 1. Historia de usuario
@@ -35,7 +35,7 @@ Tabla de usuarios con rol TD, alta mediante búsqueda reactiva de socios y revoc
 - **RF-04 — Auditoría inmutable.** CUANDO se guarda un valor válido, EL SISTEMA inserta un registro nuevo con valor anterior, valor nuevo, autor y fecha. Los registros no se modifican ni se eliminan, y el historial de cada parámetro puede consultarse.
 - **RF-05 — Umbral crítico fijo.** EL SISTEMA muestra el umbral crítico de -10 como dato reglamentario de solo lectura y rechaza cualquier intento de modificarlo.
 - **RF-06 — Efecto hacia adelante.** CUANDO cambia un plazo, EL SISTEMA lo aplica a los plazos que se abran desde ese momento y conserva sin cambios los vencimientos ya registrados.
-- **RF-07 — Consumo real.** EL SISTEMA usa los valores vigentes al abrir el plazo de descargo, al evaluar el umbral preventivo, al dirigir avisos a Comisión Directiva y al Tribunal, y al validar el tamaño y la cantidad de comprobantes. SI un parámetro no fue modificado nunca, rige su valor inicial.
+- **RF-07 — Consumo real.** EL SISTEMA usa los valores vigentes al abrir el plazo de descargo, al dirigir avisos a Comisión Directiva y al Tribunal, y al validar el tamaño y la cantidad de comprobantes. SI un parámetro no fue modificado nunca, rige su valor inicial. *(Nota: la conexión del motor de alertas automáticas de umbrales `-7`/`-10` con `LedgerService`/`emitir_resolucion`, `SCRUM-62`, queda **trasladada al Sprint 6**; ver [`auditoria/traspaso-sprint6.md`](../../auditoria/traspaso-sprint6.md)).*
 - **RF-08 — Plazo de apelación único.** EL SISTEMA mantiene un solo valor vigente del plazo de apelación del T01, sea que se modifique desde este panel o desde Calendario Institucional.
 - **RF-09 — Límites de adjuntos visibles.** CUANDO un socio carga comprobantes, la interfaz informa y aplica los límites vigentes de tamaño y cantidad.
 - **RF-10 — Nómina del TD.** CUANDO un `ADMIN` abre la tarjeta de miembros, EL SISTEMA lista a los socios con rol TD con columnas atómicas: `N° de Socio` · `Apellido` · `Nombre` · `Año social` · `Email` · `Acciones`.
