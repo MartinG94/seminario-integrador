@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from core.services.padron_access_sync_service import (
+    default_csv_dir,
     load_authorized_padron,
     sync_padron_access,
 )
@@ -226,6 +227,10 @@ class TestSyncPadronAcceso:
         assert allowed.status_code == status.HTTP_200_OK
         assert allowed.data["user"]["category"] == SocialCategory.ACTIVE
 
+    @pytest.mark.skipif(
+        not (default_csv_dir() / "SeniorsActivos.csv").exists(),
+        reason="CSVs reales locales no versionados por privacidad de datos personales",
+    )
     def test_real_csvs_load_exact_450_authorized_socios(self) -> None:
         records, stats = load_authorized_padron(reference_year=2026)
         assert len(records) == 450
