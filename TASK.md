@@ -13,8 +13,8 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 | **Sprint 2** | 23/09 al 06/10 | **Expedientes, Notificaciones y Monitoreo:** Formulario T01 multi-socio, competencias (Arts. 21-26), Outbox email, Tablero 6 Estados y Mis Solicitudes T01. | `SCRUM-40` a `SCRUM-44`, `SCRUM-75` (23 SP) | **Completado (23 SP)** |
 | **Sprint 3** | 08/10 al 20/10 | **Descargos, Evidencias, Calendario y Asistencias:** Formularios T02 y T03 con adjuntos protegidos, calendario de días hábiles, urgencia, asistencias, detalle Sala TD y resolución T02. | `SCRUM-45` a `SCRUM-50`, `SCRUM-52`, `SCRUM-76` a `SCRUM-84` (36 SP) | **Completado (36 SP)** |
 | **Sprint 4** | 22/10 al 03/11 | **Sustanciación en Sala TD, Suplencias, Apelación T01 y Resolución Oficial:** Visor unificado, sana crítica T03, apartamiento/suplencia, apelación T01 y resolución oficial sin votación nominal. | `SCRUM-51`, `SCRUM-53`, `SCRUM-54`, `SCRUM-56`, `SCRUM-70` (19 SP) | **Completado (19 SP)** |
-| **Sprint 5** | 04/11 al 17/11 | **Sumatoria Inmutable de Puntos y Alertas:** Actualización transaccional auditada (cero UPDATE), portal 'Mis Expedientes' y motor de alertas automáticas (7 pts y 10 pts). | `SCRUM-57` a `SCRUM-62` (20 SP) | **Completado** |
-| **Sprint 6** | 18/11 al 01/12 | **Auditoría, Balances y Cierre:** Generador de Balances Cuatrimestrales (Art. 137), repositorio de jurisprudencia, homologación institucional y entrega final. | `SCRUM-63` a `SCRUM-68` (24 SP) | **En Curso (Activo)** |
+| **Sprint 5 Consolidado** | 04/11 al 23/11 | **Emisión Oficial, Libro Mayor, Administración, Optimización y Manual:** Firma colegiada (4.º/5.º/6.º), exclusión, enmiendas, libro mayor `AsientoLibroMayor`, portal 'Mis Expedientes' con censura médica, Panel Admin, rediseño Eventos, N.º de Socio, paginación/OnPush/ORM y Manual de Usuario. | `SCRUM-57` a `SCRUM-60`, `SCRUM-86`, `SCRUM-87`, `SCRUM-89`, `SCRUM-91`, `SCRUM-93`, `SCRUM-129` | **Parcial (pendientes trasladados al Sprint 6, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md))** |
+| **Sprint 6 (Traspaso)** | — | **Pendientes trasladados:** Integración alertas `-10`/`-7` y 3:1, Balance Art. 137 en PDF y RBAC en 6 vistas de reportes, partición rol `FISCALIZADORA`, reconciliación de divergencias, hardening/carga, jurisprudencia, casos internos, Staging y homologación. | `SCRUM-61` a `SCRUM-68`, `SCRUM-92`, `SCRUM-121`–`SCRUM-128` | **Trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)) |
 
 ---
 
@@ -28,10 +28,9 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
       *Hecho cuando:* `docs/especificaciones/ERS-SGD-AVEIT.md` completo con trazabilidad normativa.
 - [x] **T0.4 Modelo Conceptual de Dominio:** Elaboración del diagrama de clases de dominio en UML/Mermaid con multiplicidades exactas.  
       *Hecho cuando:* `docs/especificaciones/MODELO_DOMINIO_SGD_AVEIT.md` redactado con diccionario de datos.
-- [x] **T0.5 Catálogo de Actores y Matriz RBAC:** Caracterización de los 7 actores clave del sistema (5 humanos y 2 automatizados).  
-      *Hecho cuando:* `docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md` finalizado.
+- [x] **T0.5 Catálogo de Actores y Matriz RBAC:** Caracterización de los actores clave del sistema y matriz RBAC (`docs/especificaciones/RBAC-SGD-AVEIT.md`; catálogo previo archivado en `auditoria/archivados/`).
 - [x] **T0.6 Acuerdos de Trabajo y Gobernanza Ágil:** Definición de Sprints de 14 días, Definition of Ready (DoR), Definition of Done (DoD) y Product Backlog estimado en Story Points.  
-      *Hecho cuando:* `docs/gestion-proyecto/Seguimiento de Proyecto.md` y `docs/gestion-proyecto/PLAN_DE_PROYECTO_SGD_AVEIT.md` aprobados por Cátedra.
+      *Hecho cuando:* `docs/gestion-proyecto/Seguimiento de Proyecto.md` y `docs/formales/Plan_de_Proyecto.docx` aprobados por Cátedra.
 - [x] **T0.7 Prototipos y Sistema de Diseño:** Formalización de tokens de diseño AVEIT y maquetación de pantallas preliminares.  
       *Hecho cuando:* `DESIGN.md` creado y prototipos interactivos en `prototipos/` operativos.
 - [x] **T0.8 Gobernanza SDD y Dockerización:** Configuración del estándar Spec-Driven Development de MoureDev, `AGENTS.md`, `constitution.md` y `docker-compose.yml`.  
@@ -54,8 +53,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **T3. Modelo de Socios y Subcomisiones:** Implementar modelos `Subcomision` y `Socio` con validación de año social y categorización automática Pasivo/Activo.
       *(RF: RF-06-WS)* **Hecho cuando:** Tests unitarios de creación de socios, unicidad de legajo y cálculo de categoría social en verde.
 
-- [x] **T4. Libro Mayor de Puntos (Transacciones Inmutables):** Crear modelo `TransaccionPuntos` y servicio `calculate_socio_balance(socio_id)`.  
-      *(RF: RF-06-WS)* **Hecho cuando:** Tests con transacciones positivas (+2.0), negativas (-1.0) y sin transacciones (0.0) en verde.
+- [x] **T4. Libro Mayor de Puntos (Transacciones Inmutables):** Evolucionado en el código vigente mediante `AsientoLibroMayor` (`expedientes_asiento_libro_mayor`, InsertOnly) y `PuntajeAplicado.registrar_movimiento` (`tribunal_puntajeaplicado`), con tests en `backend/tests/test_ledger_domain.py` y `backend/tests/expedientes/test_ledger_service.py`.
 
 - [x] **T5. Autenticación JWT y Roles RBAC:** Configurar SimpleJWT con claims personalizados (`legajo`, `role`, `category`) y permisos DRF (`IsTribunalOrDirectiva`).  
       *(RF: RF-01-WS, RF-02-WS, RF-05-WS)* **Hecho cuando:** Tests de login exitoso (retorna access/refresh), login con credenciales inválidas (401) y acceso prohibido para socios ordinarios a rutas de gestión (403) en verde.
@@ -218,11 +216,11 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 - [x] **TS3-06.1 Modelos ORM para Eventos, Asistencias y Apercibimientos:** Implementar `EventoInstitucional` (alias `Reunion`), `AsistenciaEvento` (alias `AsistenciaReunion`) y `RegistroApercibimiento` en `backend/expedientes/models.py`. Campos obligatorios: `titulo`, `fecha_programada` (inicio), `categoria` (`REUNION` / `ACTIVIDAD`), `tipo` (subtipos condicionados) y `modalidad` (`PRESENCIAL_SEDE`, `PRESENCIAL_EXTERNA`, `VIRTUAL`). Campo opcional: `fecha_fin` (`null=True`). Campo `motivo` circunstanciado en `AsistenciaEvento`. Relaciones foráneas, constraints e índices (`idx_evento_fecha_prog_estado`, `idx_evento_cat_tipo_sancionable`, `idx_aperc_socio_est_created`). Soportar modos de convocatoria (Grupo completo, Subcomisión completa, o Listas personalizadas de gente).
 - [x] **TS3-06.2 Migración Django Segura (0012):** Generar y aplicar la migración `backend/expedientes/migrations/0012_reuniones_asistencias_y_apercibimientos.py` dependiente de `0011_merge_calendar_and_urgency`, verificando compatibilidad en MySQL 8.0.
 - [x] **TS3-06.3 Seed Data y Fixtures de Prueba (G57 a G60):** Incorporar en `docker/mysql/init/02-initial-data.sql` y `seed_production_data.py` los casos testigo con distribución real de socios para G57, G58, G59 y G60, reuniones ordinarias/extraordinarias, actividades y registros de apercibimientos previos.
-- [x] **TS3-06.4 Servicio de Validación de Plazos Procesales (CA1 / CA2 / CA8):** Implementar `MeetingComplianceService` en `backend/expedientes/services/meeting_compliance_service.py` con `validate_notice_period` (2 días hábiles) y `validate_reporting_deadline` (72 horas hábiles a partir de cierre efectivo, fecha fin o fecha inicio cuando fin es opcional) usando `compute_business_deadline`. Tests unitarios en `backend/tests/expedientes/test_meeting_compliance.py`.
+- [x] **TS3-06.4 Servicio de Validación de Plazos Procesales (CA1 / CA2 / CA8):** Implementar `MeetingComplianceService` en `backend/expedientes/services/meeting_compliance_service.py` con `validate_notice_period` (2 días hábiles) y `validate_reporting_deadline` (72 horas hábiles a partir de cierre efectivo, fecha fin o fecha inicio cuando fin es opcional) usando `compute_business_deadline`. Tests unitarios en `backend/tests/expedientes/test_evento_services.py`.
 - [x] **TS3-06.5 Patrón Strategy para Captura de Asistencia:** Implementar `AttendanceCaptureStrategy`, `ManualAttendanceStrategy`, `BiometricAttendanceStrategy` y `AttendanceStrategyFactory` en `backend/expedientes/domain/attendance_strategy.py`. Tests unitarios con fixtures de marcas horarias y tolerancias.
-- [x] **TS3-06.6 Motor de Acumulación Atómica 3:1 de Apercibimientos (CA4):** Implementar `WarningAccumulationService.register_warning` en `backend/expedientes/services/warning_service.py` con transacción atómica, bloqueo pesimista `select_for_update()` por socio, consolidación de terna mediante UUID de lote y apertura de expediente de oficio por -1.0 pt. Tests de concurrencia y no duplicación en `backend/tests/expedientes/test_warning_service.py`.
-- [x] **TS3-06.7 Servicio Orquestador de Asistencias y Sanciones (CA3 / CA5 / CA9):** Implementar `AttendanceProcessingService` en `backend/expedientes/services/attendance_processing_service.py` que coordina compliance, strategy, graduación de escala (0.5, 1.0, 1.5, 2.0 según categoría/tipo) y emisión de expedientes en estado `CREADO` sin tocar saldos manualmente.
-- [x] **TS3-06.8 Servicio de Notificación Automática de Convocatoria por Correo (CA7 / Art. 95):** Implementar `MeetingNoticeNotificationService` en `backend/expedientes/services/meeting_notice_service.py` que genera mensajes en `notifications_email_outbox` mediante `EmailDispatcherService` con clave de idempotencia por socio y evento, notificando modalidad y link/ubicación. Tests unitarios en `backend/tests/expedientes/test_meeting_notice_service.py`.
+- [x] **TS3-06.6 Motor de Acumulación Atómica 3:1 de Apercibimientos (CA4):** Implementar `WarningAccumulationService.register_warning` en `backend/expedientes/services/warning_accumulation_service.py` con transacción atómica, bloqueo pesimista `select_for_update()` por socio y apertura de expediente de oficio por -1.0 pt. Tests en `backend/tests/expedientes/test_apercibimientos_consolidation.py` (alerta preventiva previa a autoridades `SCRUM-61` trasladada al Sprint 6, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
+- [x] **TS3-06.7 Servicio Orquestador de Asistencias y Sanciones (CA3 / CA5 / CA9):** Implementar `AttendanceProcessingService` en `backend/expedientes/services/attendance_processing_service.py` que coordina compliance, strategy, graduación de escala (0.5, 1.0, 1.5, 2.0 según categoría/tipo) y emisión de expedientes en estado `creado` sin tocar saldos manualmente.
+- [x] **TS3-06.8 Servicio de Notificación Automática de Convocatoria por Correo (CA7 / Art. 95):** Implementar `MeetingNoticeNotificationService` en `backend/expedientes/services/meeting_notice_notification_service.py` que genera mensajes en `notifications_email_outbox` mediante `EmailDispatcherService` con clave de idempotencia por socio y evento, notificando modalidad y link/ubicación. Tests en `backend/tests/expedientes/test_evento_services.py`.
 - [x] **TS3-06.9 Serializadores y Permisos RBAC:** Implementar `EventoInstitucionalSerializer`, `AsistenciaEventoSerializer`, `ReportarAsistenciaSerializer` (validando `motivo` circunstanciado obligatorio por convocado) y permiso `IsComisionDirectivaOrAdmin` en `backend/expedientes/`.
 - [x] **TS3-06.10 Endpoints de Eventos y Cierre de Asistencia:** Implementar viewset `/api/v1/expedientes/eventos/` integrando notificación automática tras creación, y acción `POST /{id}/reportar-asistencia/`. Implementar endpoint `/api/v1/expedientes/socios/{id}/apercibimientos/`.
 - [x] **TS3-06.11 Suite Integral de Pruebas de API DRF:** Crear `backend/tests/expedientes/test_eventos_api.py` verificando casos válidos (201/200), despacho de correo outbox (CA7), casos extemporáneos sin sanción (CA2), escala de 1.5 pts (CA3), fecha fin opcional (CA8), categorías y modalidades (CA9/CA10) y verificación de saldo inalterado en MySQL (CA5).
@@ -254,8 +252,8 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 - [x] **TS3-04.1 Dominio y Validación Binaria (Magic Bytes, Hash, Sanitización) [TDD]:** Implementar `backend/expedientes/domain/evidence_validator.py` con validación de magic bytes (PDF, JPEG, PNG), límite de 5 MB, sanitización de nombre contra path traversal, cálculo SHA-256 y control de cupos (T02 máx 3, T03 máx 5).
 - [x] **TS3-04.2 Modelos ORM, Persistencia BLOB y Auditoría de Descargas [TDD]:** Implementar `EvidenciaDescargo` y `AuditoriaDescargaEvidencia` en `backend/expedientes/models.py`. Generar migración Django.
-- [x] **TS3-04.3 Servicio de Aplicación y Serializadores:** Implementar `EvidenceService` en `backend/expedientes/services/evidence_service.py` y serializadores `EvidenciaMetadataSerializer` en `backend/expedientes/serializers.py`. Adaptar `PresentarDescargoSerializer`.
-- [x] **TS3-04.4 Endpoints REST de Carga y Descarga Segura Auditada [TDD]:** Implementar `EvidenciaUploadView` y `EvidenciaDownloadView` en `backend/expedientes/views.py`, registrar rutas en `backend/expedientes/urls.py`, aplicar permiso por objeto `IsImputadoOrTribunal`, auditoría de descargas y headers `nosniff`.
+- [x] **TS3-04.3 Servicio de Aplicación y Serializadores:** Implementar `EvidenceService` en `backend/expedientes/services/evidence_service.py` y serializadores `EvidenciaMetadataSerializer` en `backend/expedientes/serializers/`. Adaptar `PresentarDescargoSerializer`.
+- [x] **TS3-04.4 Endpoints REST de Carga y Descarga Segura Auditada [TDD]:** Implementar `EvidenciaUploadView` y `EvidenciaDownloadView` en `backend/expedientes/views/`, registrar rutas en `backend/expedientes/urls.py`, aplicar permiso por objeto `IsImputadoOrTribunal`, auditoría de descargas y headers `nosniff`.
 - [x] **TS3-04.5 Servicio Frontend y DTOs (`ExpedienteApiService`) [TDD]:** Agregar métodos `subirEvidencias` y `descargarEvidencia` con DTOs en `frontend/src/app/services/expediente-api.service.ts`.
 - [x] **TS3-04.6 Componente Frontend `MisExpedientes` (Adjuntos Múltiples, Art. 102 y Descarga Segura):** Integrar en `mis-expedientes.component.html` y `.ts`: selector múltiple con límites de 3 (T02) y 5 (T03), advertencia estatutaria visible Art. 102, previsualización/eliminación de adjuntos, visualización en modal de detalle de causa con descarga directa y notificaciones globales de 10s.
 - [x] **TS3-04.7 Verificación Integral, Cobertura, Linters y Consistencia PO:** Ejecutar suite completa de backend (`pytest`) y frontend (`Karma`), linters (`ruff check/format`), verificar inmutabilidad de `notasPO.md` y consistencia con las directivas del PO.
@@ -324,7 +322,7 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 > **Plan Técnico:** [`specs/007-visor-expediente-evidencia/plan.md`](specs/007-visor-expediente-evidencia/plan.md)  
 > **Tareas:** [`specs/007-visor-expediente-evidencia/tasks.md`](specs/007-visor-expediente-evidencia/tasks.md)
 
-- [x] **TS4-01.1 Modelo y Migración de Auditoría de Consulta (Backend TDD):** Implementar modelo `AuditoriaConsultaExpediente` inmutable en `backend/expedientes/models.py` y migración `0017_auditoria_consulta_expediente.py` dependiente de `0016`.
+- [x] **TS4-01.1 Modelo y Migración de Auditoría de Consulta (Backend TDD):** Implementar modelo `AuditoriaConsultaExpediente` inmutable en `backend/expedientes/models.py` y migración `0018_auditoria_consulta_expediente.py` dependiente de `0017_apelacion_adecuacion_t01`.
 - [x] **TS4-01.2 Serializador Visor, Verificación SHA-256 y Protección Médica (Backend TDD):** Implementar `ExpedienteVisorSerializer` con cabecera TD, los 3 jueces con grupo Gxx, timeline cronológico, verificación de integridad SHA-256, enmascaramiento de datos médicos para terceros y rotulado de "Plazo vencido sin descargo".
 - [x] **TS4-01.3 Endpoint REST Visor con Auditoría Automática (Backend TDD):** Implementar `ExpedienteVisorView` en `backend/expedientes/views/visor_views.py` protegido con `IsImputadoOrTribunal` y registro inmutable en base de datos.
 - [x] **TS4-01.4 Suite de Tests Backend (`test_visor_expediente.py`):** Cobertura completa de CA1, CA2, CA3 y CA4.
@@ -412,16 +410,18 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 
 > **Tareas:** [`specs/009-reportes-e-informes/tasks.md`](specs/009-reportes-e-informes/tasks.md)
 
-- [x] **TS6-01.1 Modelo de Concepto y Regla de Emisión [TDD]:** `ConceptoExpedienteEnum` (`CD`, `TD`, `GSA`, `GVP`, `COMP`, `RRHH`, `RRII`, `PRENSA`, `MANT`, `EVENTOS`, `RIFAS`, `ASAMBLEA`, `OTROS`), campo `Expediente.concepto` (`null=True`), migración `0020_expediente_concepto.py` y validación obligatoria en `ExpedienteWorkflowService.transition` antes de pasar a `emitido`.
+- [x] **TS6-01.1 Modelo de Concepto y Regla de Emisión [TDD]:** `ConceptoExpedienteEnum` (`CD`, `TD`, `GSA`, `GVP`, `COMP`, `RRHH`, `RRII`, `PRENSA`, `MANT`, `EVENTOS`, `RIFAS`, `ASAMBLEA`, `OTROS`), campo `Expediente.concepto` (`null=True`), migración `0023_expediente_clasificacion_concepto.py` y validación obligatoria en `ExpedienteWorkflowService.transition` antes de pasar a `emitido`.
 - [x] **TS6-01.2 Motor Analítico `ReportesMetricsService` [TDD]:** Cálculo de los 7 KPIs (`KPI-01` tiempo de vida promedio en días corridos; `KPI-02` pedidos por autoridad; `KPI-03` pedidos por subcomisión intra vs. inter y agrupación por concepto; `KPI-04` backlog por urgencia; `KPI-05` descargos T02/T03 y apelaciones T01; `KPI-06` balance de puntos, regla 3:1 y socios en riesgo; `KPI-07` asistencia y validez de eventos).
-- [x] **TS6-01.3 Endpoints REST y RBAC `CanViewReportes` [TDD]:** `GET /api/v1/expedientes/reportes/resumen/` y `GET /api/v1/expedientes/reportes/exportar-csv/` restringidos a `TD`, `CD`, `FISCALIZADORA` y `ADMIN`.
+- [ ] **TS6-01.3 Endpoints REST y RBAC `CanViewReportes` [TDD]:** `GET /api/v1/expedientes/reportes/resumen/` y `GET /api/v1/expedientes/reportes/exportar-csv/` usan `CanViewReportes`, pero 6 vistas en `backend/expedientes/views/reportes_views.py` solo exigen `IsAuthenticated` — cierre RBAC **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
 - [x] **TS6-01.4 Clasificación de Concepto en `VisorExpedienteComponent` [TDD]:** Selector en la vista del TD con guardado vía `PATCH /api/v1/expedientes/<id>/` y aviso de 10 segundos en `NotificationService`.
-- [x] **TS6-01.5 Rediseño de `ReportesComponent` y Protección de Ruta [TDD]:** Barra de filtros, tarjetas KPI con `tabular-nums`, 3 pestañas, exportación CSV/PDF y ruta `/reportes` protegida con `TribunalGuard`.
+- [ ] **TS6-01.5 Rediseño de `ReportesComponent` y Protección de Ruta [TDD]:** Barra de filtros, tarjetas KPI con `tabular-nums`, 4 pestañas, exportación CSV y ruta `/reportes` protegida con `TribunalGuard` implementadas; exportación a **PDF** del Balance Cuatrimestral Art. 137 **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
 - [x] **TS6-01.6 Verificación Integral y Consistencia PO:** Suites `pytest`, `Karma`, `ruff`, `npm run build` y chequeo de inmutabilidad de `notasPO.md`.
 
 ---
 
-## 17. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable)
+## 17. Sprint 5 — Desglose Atómico: S5-06 (Alertar umbral crítico -10 y política preventiva configurable — **Parcial / trasladada al Sprint 6**)
+
+> **Estado real:** Dominio y tests unitarios implementados (`TS5-06.1`–`TS5-06.4`); la conexión al flujo productivo (`LedgerService` / `emitir_resolucion`) y vista/endpoint de alertas quedan **trasladadas al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
 
 > **Historia de Usuario:** S5-06: Como autoridad quiero recibir alertas de saldos críticos para actuar conforme al reglamento.  
 > **Criterios de Aceptación:** CA1 (Saldo negativo de 10 o más genera alerta crítica única por cruce descendente), CA2 (Destinatario y acción siguen acto aprobado / bloqueo normativo documentado), CA3 (Umbral -7 diferenciado, configurable y desactivable hasta validar Circular 001/2026), CA4 (Reversiones reevalúan sin borrar historial), CA5 (Cero información médica en notificaciones).
@@ -480,9 +480,9 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 > **Spec de Referencia:** [`specs/010-circuito-resolutivo-enmiendas/spec.md`](specs/010-circuito-resolutivo-enmiendas/spec.md)  
 > **Plan Técnico:** [`specs/010-circuito-resolutivo-enmiendas/plan.md`](specs/010-circuito-resolutivo-enmiendas/plan.md)  
 > **Tareas:** [`specs/010-circuito-resolutivo-enmiendas/tasks.md`](specs/010-circuito-resolutivo-enmiendas/tasks.md)  
-> **Estado:** **Plan Aprobado con PO (12/11/2026) — Listo para Inicio**
+> **Estado:** **Implementado e integrado (PR #77)**
 
-- [x] **T10.1 (SCRUM-101) Persistencia de `puntaje_ratificado` en Backend [TDD]:** Columna `puntaje_ratificado` en `DescargoExpediente`, migración `0026`, actualización de `CausalResolutionService.decide` y exposición en serializers.
+- [x] **T10.1 (SCRUM-101) Persistencia de `puntaje_ratificado` en Backend [TDD]:** Columna `puntaje_ratificado` en `DescargoExpediente`, migración `0027_descargo_puntaje_ratificado.py`, actualización de `CausalResolutionService.decide` y exposición en serializers.
 - [x] **T10.2 (SCRUM-101) Sincronización de Puntaje Ratificado en Frontend [TDD]:** Actualización de `getPuntajeFinalInvolucrado` y visualización de puntaje en `gestionar-expedientes.component.ts`.
 - [x] **T10.3 (SCRUM-102) Dominio y Servicio de Exclusión Fundada [TDD]:** Campos de exclusión, `ExclusionInvolucradoService`, validación de rol TD, motivo >= 10 chars, aviso por Outbox y cierre administrativo a `EMITIDO` sin triple firma si es el último involucrado.
 - [x] **T10.4 (SCRUM-102) Endpoint REST y UI de Exclusión en Angular [TDD]:** Endpoint `POST /involucrados/<socio_id>/excluir/`, botón "Excluir Socio", modal de motivo y estado tachado con badge `Excluido`.
@@ -512,10 +512,19 @@ Documento maestro de seguimiento y gobernanza de tareas bajo la metodología **S
 > **Plan Técnico:** [`specs/012-panel-administracion/plan.md`](specs/012-panel-administracion/plan.md)
 > **Tareas:** [`specs/012-panel-administracion/tasks.md`](specs/012-panel-administracion/tasks.md)
 
-- [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `ParametroSistema` de solo inserción, `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, alertas, correos y comprobantes.
+- [x] **TS5-03.1 Modelo y endpoints REST de parámetros del sistema [TDD]:** Catálogo de 9 parámetros (plazos, umbrales -10/-7, correos y adjuntos), `SystemParameterChange` de solo inserción (`core_parametro_sistema`), `GET/PUT /api/v1/admin/parametros/`, historial y consumo real en plazos, umbrales, correos y comprobantes.
 - [x] **TS5-03.2 Pantalla de administración exclusiva para ADMIN [TDD]:** Ruta `/admin/parametros` con `TribunalGuard`, entrada "Administración" en el menú y tarjetas temáticas Plazos, Umbrales, Correos y Adjuntos.
 - [x] **TS5-03.3 Miembros con rol TD [TDD]:** Tabla atómica, alta con búsqueda reactiva, revocación a Socio Ordinario y auditoría inmutable `TribunalRoleChange` vía `GET/POST/DELETE /api/v1/admin/usuarios-td/`.
 - [x] **TS5-03.4 Revisión PR #78 [TDD]:** Integración con `main`, migración `core` sin colisión, umbrales y plazos vigentes en Ranking, Mis Expedientes y textos, tope de comprobantes configurable, `N° de Socio` real, búsqueda de candidatos en servidor, corrección del autocompletado, modo oscuro tokenizado y `strict: true`.
+
+---
+
+## 21. Otros Bloques Implementados (Verificados en `auditoria/registro-canonico.md`)
+
+- [x] **ABM de Reglamentos con auditoría inmutable (PR #69):** `ArticuloReglamento`, `AuditoriaArticuloReglamento`, `backend/expedientes/views/reglamento_views.py`, `frontend/src/app/reglamentos/`, `backend/tests/expedientes/test_reglamentos_api.py`.
+- [x] **Rediseño UI de Eventos y Asistencia (`SCRUM-86` / `MACRO-04`):** `frontend/src/app/pages/eventos/asistencia-evento/`, `backend/expedientes/urls_eventos.py`, `pages/eventos/**/*.spec.ts`.
+- [x] **Estandarización de Número de Socio y Celdas Atómicas (`SCRUM-93` / `MACRO-05`, PRs #74 y #75):** `Socio.numero_socio`, `backfill_numero_socio`, `reconcile_expediente_numbers`, `test_canonical_number_migration.py`.
+- [x] **Manual de Usuario Modular (`SCRUM-129`, commit `6a60167`):** 9 capítulos en `docs/manual-usuario/src/01_*.html`..`09_*.html` y `docs/manual-usuario/pdfs/Manual_Usuario_SGD_AVEIT_Completo.pdf`.
 
 ---
 

@@ -6,7 +6,7 @@ Guía operativa obligatoria para agentes de Inteligencia Artificial (Antigravity
 
 ## 1. Proyecto
 
-Plataforma web 100% responsive (Mobile-First) para la gestión integral de expedientes disciplinarios, descargos tipificados (T02/T03), votación nominal colegiada del Tribunal de Disciplina y cómputo transaccional inmutable de saldos de puntos de la Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (**A.V.E.I.T.** - UTN FRC).
+Plataforma web 100% responsive (Mobile-First) para la gestión integral de expedientes disciplinarios, descargos tipificados (T02/T03), resolución oficial con firma colegiada del Tribunal de Disciplina y cómputo transaccional inmutable de saldos de puntos de la Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos (**A.V.E.I.T.** - UTN FRC).
 
 - **Backend:** Python 3.12 con framework Django 4.2 LTS y Django REST Framework (DRF).
 - **Frontend:** SPA en Angular 14.2+ con TypeScript y Material Dashboard PRO (Angular Material).
@@ -90,6 +90,16 @@ Plataforma web 100% responsive (Mobile-First) para la gestión integral de exped
    - No agregues dependencias pesadas a `requirements.txt` o `package.json` sin previa aprobación del Product Owner.
    - Respeta estrictamente los 6 estados del expediente (Art. 12 del Reglamento Procesal 2026).
 6. **Prioridad y respeto al esquema de Base de Datos legacy:** En cualquier solución o desarrollo que interactúe con la base de datos, la prioridad absoluta e ineludible es respetar los nombres de las tablas, columnas y relaciones del sistema legacy preexistente. Solo tras evaluar exhaustivamente y confirmar que un comportamiento requerido no se encuentra modelado en dicho esquema, se podrá considerar o proponer la aplicación de un `ALTER TABLE` o la creación de nuevas tablas.
+
+### Gobernanza de Documentación y Auditoría
+
+7. **Fuente práctica y orden de autoridad:** La fuente práctica de verdad son el código y los tests del repositorio. Ante cualquier conflicto, rige el siguiente orden de autoridad: `código y tests > auditoria/registro-canonico.md > resto de la documentación`.
+8. **Uso restringido de `auditoria/`:** De `auditoria/` solo se leen como fuente [`auditoria/registro-canonico.md`](auditoria/registro-canonico.md) y [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md). El resto de `auditoria/` y `auditoria/archivados/` es bitácora: no debe usarse para decidir cómo implementar ni documentar.
+9. **Prohibición de borrado de archivos:** Nunca borres archivos. Movelos a `auditoria/archivados/` y registrá su origen y motivo en [`auditoria/archivados/LEEME.md`](auditoria/archivados/LEEME.md).
+10. **Registro incremental de decisiones:** Toda decisión de documentación se agrega (solo agregar, con fecha) a [`auditoria/historial-decisiones.md`](auditoria/historial-decisiones.md).
+11. **Resolución de conflictos:** Si un conflicto no se resuelve con el orden de autoridad establecido, agregalo a [`auditoria/pendientes.md`](auditoria/pendientes.md) y no elijas.
+12. **Estado de funcionalidades incompletas:** Una funcionalidad incompleta se documenta como `"trasladada al Sprint 6"`, nunca como terminada.
+13. **Inmutabilidad de fechas históricas:** Las fechas de versiones ya presentadas no se modifican nunca. Los cambios nuevos llevan su fecha real.
 
 ---
 

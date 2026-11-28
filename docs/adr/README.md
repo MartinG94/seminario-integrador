@@ -12,6 +12,13 @@ Cada ADR documenta una decisión técnica crítica, sus motivaciones normativas 
 | :---: | :--- | :---: | :---: | :---: |
 | [**ADR-001**](ADR-001-consumo-padron-institucional.md) | Estrategia de Consumo del Padrón Institucional y Capa Anticorrupción de Sólo Lectura | 2026-09-19 | **Aceptado** | `SCRUM-37` (`S1-04`) |
 
+> **Nota de decisiones arquitectónicas implementadas posteriormente (sin archivo ADR individual; documentadas en sus `specs/*/plan.md`):**
+> - Patrón Transactional Outbox de notificaciones (`backend/notifications/models.py`: `EmailOutbox`, `EmailAttachment`).
+> - Patrón Strategy de asistencia y acumulación 3:1 (`specs/005-sanciones-reuniones-solicitudes/plan.md`).
+> - Eliminación de votación nominal y adopción de firma colegiada en `Resolucion.firmantes` (`specs/010-circuito-resolutivo-enmiendas/plan.md`).
+> - Libro mayor inmutable `InsertOnly` (`AsientoLibroMayor` + `PuntajeAplicado`) (`specs/011-libro-mayor-mis-expedientes-publicacion/plan.md`).
+> - Panel de Administración auditable de parámetros y miembros TD (`specs/012-panel-administracion/plan.md`).
+
 ---
 
 ## Estructura de un ADR

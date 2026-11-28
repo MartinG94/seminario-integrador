@@ -130,5 +130,5 @@ Antes de asignar revisores, la persona autora debe verificar que:
 - Todo PR requiere la aprobación de al menos una persona del equipo distinta de su autoría.
 - Los comentarios de revisión deben resolverse o acordarse antes de integrar.
 - No se permite integrar un PR con pruebas fallando.
-- No se permite hacer `push` directo a `main` ni a `develop`.
+- No se permite hacer `push` directo a `main`.
 - La persona autora es responsable de que el cambio cumpla la spec activa, la constitución del proyecto y los criterios de aceptación asociados.

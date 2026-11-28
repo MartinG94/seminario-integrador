@@ -262,10 +262,10 @@ El Modo Oscuro de SGD-AVEIT evita el negro absoluto (`#000000`), implementando t
 | Estado | Token Base | Gradiente Material Dashboard PRO | Aplicación Disciplinaria en SGD-AVEIT |
 | :--- | :--- | :--- | :--- |
 | **Éxito / Aprobado** | `success: #15803D` | `#16A34A` ➔ `#15803D` | Justificación aceptada, saldo positivo de mérito, evento cerrado en término. |
-| **Advertencia / Alerta**| `warning: #92400E` | `#D97706` ➔ `#B45309` | Alerta preventiva (-7 puntos), temporizador en últimas 24 horas. |
-| **Crítico / Cese** | `danger: #B91C1C` | `#DC2626` ➔ `#B91C1C` | Límite crítico (-10 puntos / pérdida de condición de socio), justificación vencida. |
+| **Advertencia / Alerta**| `warning: #92400E` | `#D97706` ➔ `#B45309` | Umbral preventivo (-7 puntos; integración de alertas automáticas trasladada al Sprint 6, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)), temporizador en últimas 24 horas. |
+| **Crítico / Cese** | `danger: #B91C1C` | `#DC2626` ➔ `#B91C1C` | Límite crítico (-10 puntos / pérdida de condición de socio; integración de alertas automáticas trasladada al Sprint 6, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)), justificación vencida. |
 | **Información / Trámite**| `info: #0369A1` | `#0284C7` ➔ `#0369A1` | Apertura de causa, convocatorias a asamblea, notificaciones de acuse. |
-| **Institucional AVEIT** | `primary: #151846` | `#151846` ➔ `#242A68` | Votación colegiada, dictamen de fallo, balance cuatrimestral. |
+| **Institucional AVEIT** | `primary: #151846` | `#151846` ➔ `#242A68` | Firma colegiada, dictamen de fallo, balance cuatrimestral (exportación PDF trasladada al Sprint 6, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)). |
 
 ---
 
@@ -303,9 +303,12 @@ Caja de icono cuadrada flotante en la esquina superior izquierda (48x48px o 56x5
 - Paginación compacta y selectores de densidad.
 
 ### 4.4. Tablero Kanban de Estados Procesales
-- 5 columnas claramente diferenciadas con contadores de expedientes.
+- 6 estados oficiales del expediente (`creado`, `justificando`, `revision_resolucion`, `espera_resolucion`, `pendiente_correos`/`pendiente_firma`, `emitido`) con contadores de expedientes.
 - Tarjetas con estado visual, temporizador regresivo de 5 días hábiles y badge de puntos comprometidos (+/-).
-- Acciones directas sobre la tarjeta (revisar, votar, dictaminar).
+- Acciones directas sobre la tarjeta (revisar, dictaminar, firmar).
+
+### 4.5. Centro de Notificaciones Transitorias (`NotificationCenter`)
+- Avisos transitorios de éxito, error, advertencia e información en esquina inferior derecha (`frontend/src/app/components/notification-center/`), con tokens semánticos institucionales, duración de 10 segundos, botón de cierre `X` accesible, persistencia al navegar, visibilidad sobre modales y soporte para `prefers-reduced-motion` (sin `$.notify`).
 
 ---
 

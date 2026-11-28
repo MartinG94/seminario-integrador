@@ -3,11 +3,11 @@
 <div align="center">
 
 [![UTN FRC](https://img.shields.io/badge/UTN%20FRC-Seminario%20Integrador%202026-blue.svg)](https://www.frc.utn.edu.ar/)
-[![Curso](https://img.shields.io/badge/Curso-3K2-orange.svg)](#contexto-académico)
-[![Metodología](https://img.shields.io/badge/Metodolog%C3%ADa-Scrum-brightgreen.svg)](#metodología-de-desarrollo)
-[![Arquitectura](https://img.shields.io/badge/Plataforma-100%25%20Web%20%7C%20Responsive%20Mobile-teal.svg)](#stack-tecnológico)
-[![Database](https://img.shields.io/badge/Database-MySQL-blue.svg)](#stack-tecnológico)
-[![Backend](https://img.shields.io/badge/Backend-Python-yellow.svg)](#stack-tecnológico)
+[![Curso](https://img.shields.io/badge/Curso-3K2-orange.svg)](#-contexto-institucional-aveit)
+[![Metodología](https://img.shields.io/badge/Metodolog%C3%ADa-Scrumban%20%2B%20SDD-brightgreen.svg)](#-metodología-de-trabajo)
+[![Arquitectura](https://img.shields.io/badge/Plataforma-100%25%20Web%20%7C%20Responsive%20Mobile-teal.svg)](#-arquitectura-y-stack-tecnológico)
+[![Database](https://img.shields.io/badge/Database-MySQL%208.0-blue.svg)](#-arquitectura-y-stack-tecnológico)
+[![Backend](https://img.shields.io/badge/Backend-Python%203.12-yellow.svg)](#-arquitectura-y-stack-tecnológico)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 **Trabajo Práctico Integrador — Cátedra de Seminario Integrador**  
@@ -43,10 +43,10 @@ El sistema reemplaza el uso fragmentado de planillas de cálculo y la manipulaci
 - La tramitación digital de expedientes según el **Reglamento Procesal Disciplinario 2026**.
 - La gestión de descargos y justificaciones tipificadas (**Formularios T01, T02 y T03**) con adjuntos digitales.
 - El control automático de plazos preclusivos (**5 días hábiles**).
-- La deliberación y votación remota con **firma colegiada** de Socios Activos.
-- El cómputo algorítmico y transaccional de saldos de puntos (+/-), prohibiendo modificaciones no auditadas.
-- La activación de alertas escalonadas (7 pts preventivo y 10 pts crítico por pérdida de condición de socio).
-- La emisión instantánea de **Balances Cuatrimestrales de Auditoría Interna** (Art. 137 del Reglamento Interno).
+- La redacción unificada de resoluciones con **firma colegiada** de 3 Socios Activos (4.º, 5.º y 6.º año social), sin votación nominal individual.
+- El cómputo transaccional inmutable de saldos de puntos (+/-) mediante libro mayor (`AsientoLibroMayor` y `PuntajeAplicado`), prohibiendo modificaciones no auditadas.
+- Las alertas escalonadas por umbrales (`-7` preventivo y `-10` crítico) y por acumulación 3:1: motor de dominio implementado, integración productiva **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
+- Los **Reportes y Balances Cuatrimestrales** (Art. 137): vistas analíticas y exportación CSV implementadas; exportación a PDF y cierre RBAC en 6 vistas **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -83,8 +83,8 @@ flowchart TD
 1. **Garantizar la Integridad y Transaccionalidad:** Eliminar sentencias `UPDATE` directas sobre la base de datos MySQL y la dispersión en Google Sheets, registrando pistas de auditoría inalterables en cada operación.
 2. **Promover la Transparencia Pública:** Proveer un portal web accesible desde smartphones y ordenadores para que los socios consulten su historial de puntos, sanciones y resoluciones fundamentadas.
 3. **Optimizar el Cumplimiento de Plazos:** Automatizar el cómputo de plazos procesales improrrogables (5 días hábiles) con sellado de tiempo y despacho automático de notificaciones por email.
-4. **Facilitar el Trabajo Remoto / Mobile del TD:** Dotar al Tribunal de herramientas para sustanciar sesiones virtuales, emitir votos nominales fundados y formalizar resoluciones con firma colegiada digital.
-5. **Cumplir con el Marco Estatutario:** Automatizar la generación de balances cuatrimestrales de auditoría (Art. 137) clasificados por socio, subcomisión y grupo social (Pasivos/Activos).
+4. **Facilitar el Trabajo Remoto / Mobile del TD:** Dotar al Tribunal de herramientas para sustanciar sesiones virtuales, valorar descargos T02/T03 y formalizar resoluciones con firma colegiada digital (sin votación nominal).
+5. **Cumplir con el Marco Estatutario:** Proveer reportes analíticos y bases del balance cuatrimestral de auditoría (Art. 137) por socio, subcomisión y grupo social (exportación PDF trasladada al Sprint 6, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)).
 
 ---
 
@@ -92,14 +92,16 @@ flowchart TD
 
 | Módulo / Función | Descripción |
 | :--- | :--- |
-| 📱 **Portal "Mis Expedientes" (Responsive)** | Consulta en tiempo real de saldos de puntos, expedientes en curso, historial de resoluciones y alertas tempranas. |
-| 📝 **Digitalización T01 / Anexo** | Inicio formal de solicitudes de sanción o premiación por autoridades competentes con validación de atribuciones. |
-| 📎 **Descargos Digitales (T02 / T03)** | Carga de justificaciones tipificadas (médicas, académicas, viajes) y descargos extraordinarios con adjuntos en PDF/imágenes. |
-| ⏱️ **Control de Plazos Preclusivos** | Cronómetro regresivo de 5 días hábiles desde la notificación del acuse de sanción. |
-| 🗳️ **Sesión Virtual y Firma Colegiada** | Votación nominal de los miembros del TD, redacción jurídica (Vistos, Considerandos, Resolución) y firma colegiada de Activos. |
-| 🧮 **Motor de Cómputo y Pistas de Auditoría** | Actualización algorítmica de saldos, registro de rectificaciones auditadas y prohibición de modificaciones arbitrarias. |
-| 🚨 **Sistema de Alertas Escalonadas** | Alerta preventiva amarilla (7 pts negativos) y alerta roja crítica de pérdida automática de condición de socio (10 pts negativos). |
-| 📊 **Generador de Balances Cuatrimestrales** | Emisión automática de informes de auditoría interna consolidados por períodos semestrales para Asambleas y CD. |
+| 📱 **Portal "Mis Expedientes" (`/mis-expedientes`)** | Consulta de saldo propio, expedientes en curso, presentación/edición/retiro de descargos T02/T03 con evidencia, apelación T01 y resoluciones publicadas con censura médica. |
+| 📝 **Crear Expediente T01 (`/solicitar-puntos`)** | Inicio formal de solicitudes multi-socio con Anexo, validación de competencias (`opening_policy.py`), número canónico y vista "Mis Solicitudes". |
+| 🏛️ **Gestionar Expedientes TD (`/gestionar-expedientes`)** | Tablero de 6 estados, Visor Autorizado Unificado con auditoría de consultas, resolución causal T02, valoración T03 con antecedentes, apartamiento/suplencias (`IsNotInvolvedInExpediente`), exclusión fundada, editor de resolución con preview PDF, firma colegiada (4.º/5.º/6.º) y enmiendas trazables. |
+| 🧮 **Libro Mayor Inmutable y Ranking (`/ranking-socios`)** | Asientos inmutables (`AsientoLibroMayor` + `PuntajeAplicado`), regla 3:1, ranking paginado y Legajo Integral del socio. |
+| 📅 **Calendario Institucional (`/calendario-institucional`)** | Feriados institucionales, cálculo de plazos de 5 días hábiles y parametrización del plazo de apelación T01. |
+| 🗓️ **Eventos y Asistencia (`/eventos-asistencia`)** | Gestión de reuniones y actividades, patrón Strategy de asistencia y consolidación 3:1 de apercibimientos (aviso preventivo trasladado al Sprint 6). |
+| 📚 **Reglamentos (`/reglamentos`)** | Consulta y ABM de artículos reglamentarios con auditoría inmutable. |
+| ⚙️ **Administración (`/admin/parametros`)** | Gestión auditada de parámetros del sistema y altas/bajas del rol `TD` (`ADMIN`). |
+| 📊 **Reportes & Balance (`/reportes`)** | Vistas T01, Reuniones, Subcomisiones e Histórico con CSV (exportación PDF Art. 137 y cierre RBAC en 6 vistas **trasladada al Sprint 6**, ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)). |
+| 🚨 **Alertas por Umbrales (`-7` / `-10`)** | Motor de dominio implementado; integración en flujo productivo **trasladada al Sprint 6** (ver [`auditoria/traspaso-sprint6.md`](auditoria/traspaso-sprint6.md)). |
 
 ---
 
@@ -112,10 +114,10 @@ stateDiagram-v2
     [*] --> ExpedienteCreado: 1. Cierre de evento o Solicitud T01
     ExpedienteCreado --> EnPeriodoJustificaciones: Notificación automática (Acuse de Sanción)
     EnPeriodoJustificaciones --> JustificacionesEnRevision: Carga de T02/T03 o Vencimiento plazo (5 días hábiles)
-    JustificacionesEnRevision --> EnEsperaResolucion: Evaluación probatoria y votación del TD
+    JustificacionesEnRevision --> EnEsperaResolucion: Revisión de causales T02 y valoración T03
     EnEsperaResolucion --> PendienteFirmaEnvio: Redacción de Resolución (Vistos/Considerandos)
-    PendienteFirmaEnvio --> ExpedientesEmitidos: Firma Colegiada de Socios Activos
-    ExpedientesEmitidos --> [*]: Impacto transaccional de puntos y publicación
+    PendienteFirmaEnvio --> ExpedientesEmitidos: Firma Colegiada de 3 Socios Activos (4.º, 5.º y 6.º)
+    ExpedientesEmitidos --> [*]: Impacto transaccional de puntos y publicación protegida
 ```
 
 ---
@@ -187,70 +189,44 @@ La solución se concibe como una extensión modular e integrada al ecosistema in
 
 ```text
 seminario-integrador/
-├── .github/                                     # Gobernanza y plantillas de issues para desarrollo y testing
-│   └── ISSUE_TEMPLATE/                         # Plantillas para tareas de sprint y reportes de incidencias
-├── backend/                                     # Servicios API REST en Python / Django (Spec 001 - En desarrollo)
-├── frontend/                                    # SPA de producción en Angular 14 + Material Dashboard PRO
-├── prototipos/                                 # Prototipos interactivos de alta fidelidad en HTML5/CSS/JS puro
-│   ├── t01-solicitud-puntos/                   # Maqueta del Formulario T01 y Anexo Circunstanciado
-│   ├── index.html                              # Portal del Tribunal de Disciplina y Premiaciones
-│   ├── app.js                                  # Lógica interactiva del prototipo (5 estados y votación)
-│   └── styles.css                              # Tokens visuales y estilos del prototipo
-├── docs/                                       # Documentación funcional, técnica, formal y normativa
-│   ├── analisis-proceso-actual/                # Análisis del sistema/proceso actual (AS-IS) y antecedentes
-│   │   ├── reglamentos-aveit/                  # Marco normativo y estatutario oficial de A.V.E.I.T.
-│   │   │   ├── NOR_Estatuto_AVEIT_Reforma_2026.pdf
-│   │   │   ├── NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf
-│   │   │   ├── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2026).pdf
-│   │   │   └── NOR_REGLAMENTO PROCESAL DISCIPLINARIO (version 2018).pdf
-│   │   ├── TPI_Estudio_Inicial_SGD_AVEIT.md    # Estudio Inicial y diagnóstico del sistema previo
-│   │   ├── BPMN_Proceso_Operativo_Tribunal.md  # Modelo BPMN 2.0 del proceso operativo actual
-│   │   ├── ACTORES_DEL_SISTEMA_SGD_AVEIT.md    # Catálogo de actores y competencias reglamentarias
-│   │   ├── modulo-tribunal-stack-y-modelos.md  # Referencia técnica del sistema legado a reemplazar
-│   │   └── extracted_requirements.json         # Requerimientos extraídos del relevamiento
-│   ├── especificaciones/                       # Especificaciones de ingeniería de software (TO-BE)
-│   │   ├── ERS-SGD-AVEIT.md                    # Especificación de Requerimientos de Software completa
-│   │   ├── ERS_Especificacion_Requerimientos_Tribunal.md  # Requerimientos del módulo Tribunal
-│   │   ├── Escenarios_Calidad_ISO25010_Tribunal.md        # Escenarios de calidad ISO/IEC 25010
-│   │   ├── MODELO_DOMINIO_SGD_AVEIT.md         # Diagrama de clases de dominio y diccionario de datos
-│   │   └── PLANTILLA_CASO_DE_USO.md            # Plantilla institucional para especificación de CU-XX
-│   ├── gestion-proyecto/                       # Gestión ágil, planificación y acuerdos metodológicos
-│   │   ├── PLAN_DE_PROYECTO_SGD_AVEIT.md       # Plan de proyecto institucional
-│   │   └── Seguimiento de Proyecto.md          # Acuerdos de trabajo ágil, DoD/DoR y Product Backlog
-│   ├── formales/                               # Entregables académicos oficiales para tutor/cátedra
-│   │   ├── Estudio_Inicial.docx / .odt / .pdf
-│   │   ├── Plan_de_Proyecto.docx / .odt / .pdf
-│   │   └── assets/                             # Logotipos institucionales y organigramas de A.V.E.I.T.
-│   └── constitution.md                         # Principios innegociables y constitución del proyecto
-├── specs/                                      # Especificaciones ejecutables bajo Spec-Driven Development (SDD)
-│   └── 001-walking-skeleton/                   # Spec, plan técnico y desglose atómico de tareas del Walking Skeleton
-├── AGENTS.md                                   # Guía operativa para agentes de IA y desarrolladores humanos
-├── DESIGN.md                                   # Sistema de diseño institucional, tokens de color y tipografía
-├── TASK.md                                     # Matriz de trazabilidad y seguimiento granular de tareas
-├── docker-compose.yml                          # Orquestación de contenedores (MySQL 8.0, Django, Angular)
-├── LICENSE                                     # Licencia de código abierto del proyecto (Apache 2.0)
-├── NOTICE                                      # Atribución y derechos de autor de los integrantes del grupo
-└── README.md                                   # Presentación y guía principal del repositorio
+├── .github/                                     # Gobernanza y plantillas de issues
+│   └── ISSUE_TEMPLATE/
+├── auditoria/                                   # Registro canónico, traspaso Sprint 6, decisiones y archivados
+├── backend/                                     # API REST en Python 3.12 / Django 4.2 LTS / DRF (114 archivos de tests)
+├── frontend/                                    # SPA en Angular 14.2+ + Material Dashboard PRO (55 archivos *.spec.ts)
+├── prototipos/                                  # Prototipos interactivos HTML5/CSS/JS iniciales
+├── docs/                                        # Documentación funcional, técnica, formal y normativa
+│   ├── adr/                                     # Decisiones de arquitectura (ADR-001)
+│   ├── analisis-proceso-actual/                 # Reglamentos oficiales AVEIT, BPMN y sistema legado
+│   │   ├── reglamentos-aveit/                   # Estatuto y Reglamentos oficiales de A.V.E.I.T.
+│   │   ├── sistema-actual/                      # descripcion-sistema-actual-legado.md y esquema SQL
+│   │   └── BPMN_Proceso_Operativo_Tribunal.md
+│   ├── configuracion/                           # Guías operativas (Gmail SMTP, TD Ad-Hoc)
+│   ├── especificaciones/                        # ERS-SGD-AVEIT.md, MODELO_DOMINIO_SGD_AVEIT.md, RBAC-SGD-AVEIT.md
+│   ├── formales/                                # Estudio_Inicial.docx y Plan_de_Proyecto.docx + assets/
+│   ├── gestion-proyecto/                        # Seguimiento de Proyecto.md, notasPO.md, GUIA_PULL_REQUESTS.md
+│   ├── manual-usuario/                          # Manual de Usuario modular (9 capítulos HTML + PDFs)
+│   └── constitution.md                          # Principios innegociables del proyecto
+├── specs/                                       # Especificaciones SDD (001 a 012)
+├── AGENTS.md                                    # Guía operativa para agentes de IA y desarrolladores
+├── DESIGN.md                                    # Sistema de diseño institucional
+├── TASK.md                                      # Seguimiento granular de tareas
+├── docker-compose.yml                           # Orquestación de contenedores (MySQL 8.0, Django, Angular)
+├── LICENSE                                      # Licencia Apache 2.0 (plantilla base frontend bajo MIT en frontend/LICENSE.md)
+├── NOTICE                                       # Atribución y derechos de autor del equipo
+└── README.md                                    # Presentación y guía principal del repositorio
 ```
 
-### 🗂️ Índice Detallado por Carpeta
-
-| Carpeta / Ruta | Descripción y Contenido |
-| :--- | :--- |
-| **`docs/analisis-proceso-actual/`** | **Análisis del Sistema y Proceso Actual (AS-IS).** Relevamiento diagnóstico de las planillas de cálculo, procesos operativos en BPMN 2.0, catálogo de actores, antecedentes del sistema legado a reemplazar y marco normativo oficial (`reglamentos-aveit/`). |
-| **`docs/especificaciones/`** | **Especificaciones de Ingeniería de Software (TO-BE).** Documentos técnicos del nuevo sistema: ERS consolidada y por módulo, atributos de calidad ISO/IEC 25010, modelo conceptual de dominio y plantillas de casos de uso. |
-| **`docs/gestion-proyecto/`** | **Gestión Ágil y Planificación del Proyecto.** Acuerdos de trabajo del equipo (Working Agreements, DoD, DoR), calendario maestro de sprints, estimaciones y Product Backlog priorizado. |
-| **`docs/formales/`** | **Documentos Entregables Institucionales y Académicos.** Versiones formales presentables del Estudio Inicial y Plan de Proyecto en formatos Word (`.docx`), OpenDocument (`.odt`) y PDF (`.pdf`), junto con recursos gráficos (`assets/`). |
-| **`frontend/`** | **SPA Web de Producción.** Aplicación cliente en Angular 14.2+ basada en Material Dashboard PRO, con componentes modulares, tipado TypeScript estricto y configuración Docker. |
-| **`prototipos/`** | **Prototipos de Interfaz y Experiencia de Usuario (UX/UI).** Maquetas interactivas navegables en HTML5, CSS y JavaScript puro para validación temprana de flujos (Formulario T01 y panel colegiado del Tribunal). |
-| **`specs/`** | **Especificaciones y Tareas SDD.** Módulos de desarrollo organizados bajo la metodología Spec-Driven Development (`spec.md`, `plan.md`, `tasks.md`). |
-| **`.github/`** | **Gobernanza y Automatización en GitHub.** Contiene plantillas estandarizadas para la creación de tareas de sprint (`tarea_sprint.md`) y reportes de incidencias (`reporte_incidencia.md`). |
+### ▶️ Ejecución Rápida
+- Levantar entorno completo: `docker compose up -d`
+- Tests backend: `docker compose exec backend pytest -q`
+- Tests frontend: `cd frontend && npm test -- --watch=false --browsers=ChromeHeadless`
 
 ### 📑 Guía de Documentos Clave
 
-* 📘 **Estudio Inicial SGD-AVEIT** ([Markdown](docs/analisis-proceso-actual/TPI_Estudio_Inicial_SGD_AVEIT.md) \| [PDF Formal](docs/formales/Estudio_Inicial.pdf) \| [DOCX](docs/formales/Estudio_Inicial.docx)): Diagnóstico de la situación actual, relevamiento institucional de A.V.E.I.T., análisis de problemas de las planillas de cálculo, objetivos, entrevistas a autoridades, modelo de procesos y arquitectura propuesta.
-* 👥 **Catálogo de Actores y Roles** ([Markdown](docs/analisis-proceso-actual/ACTORES_DEL_SISTEMA_SGD_AVEIT.md)): Definición formal de los 7 actores clave del sistema (5 humanos y 2 automatizados), delimitación competencial y matriz de control de acceso basada en roles (RBAC).
-* 📝 **Plantilla Estándar de Casos de Uso** ([Markdown](docs/especificaciones/PLANTILLA_CASO_DE_USO.md)): Estructura formal para especificación de Casos de Uso (CU-XX) con ficha técnica, precondiciones, disparador, flujos principal/alternativos/excepción, reglas de negocio (RN), contratos de interfaz/API y criterios de aceptación BDD (Gherkin).
+* 📘 **Estudio Inicial y Plan de Proyecto:** [`docs/formales/Estudio_Inicial.docx`](docs/formales/Estudio_Inicial.docx) · [`docs/formales/Plan_de_Proyecto.docx`](docs/formales/Plan_de_Proyecto.docx)
+* 📋 **Seguimiento y Manual de Usuario:** [`docs/gestion-proyecto/Seguimiento de Proyecto.md`](docs/gestion-proyecto/Seguimiento%20de%20Proyecto.md) · [`docs/manual-usuario/pdfs/Manual_Usuario_SGD_AVEIT_Completo.pdf`](docs/manual-usuario/pdfs/Manual_Usuario_SGD_AVEIT_Completo.pdf)
+* 📐 **Especificaciones y RBAC:** [`docs/especificaciones/ERS-SGD-AVEIT.md`](docs/especificaciones/ERS-SGD-AVEIT.md) · [`docs/especificaciones/MODELO_DOMINIO_SGD_AVEIT.md`](docs/especificaciones/MODELO_DOMINIO_SGD_AVEIT.md) · [`docs/especificaciones/RBAC-SGD-AVEIT.md`](docs/especificaciones/RBAC-SGD-AVEIT.md)
 * ⚖️ **[Reglamentos Oficiales de AVEIT](docs/analisis-proceso-actual/reglamentos-aveit/)** (`docs/analisis-proceso-actual/reglamentos-aveit/`):
   * `NOR_Estatuto_AVEIT_Reforma_2026.pdf`: Estatuto Social general y categorías estatutarias (Pasivos y Activos).
   * `NOR_Reglamento_Interno_Disciplina_AVEIT_2026.pdf`: Régimen disciplinario, tipificación de faltas y límite de 10 puntos negativos (Art. 93).
@@ -279,7 +255,7 @@ seminario-integrador/
 
 ## 🚀 Metodología de Trabajo
 
-El proyecto se desarrolla bajo el marco de **Metodologías Ágiles (Scrum)**:
+El proyecto se desarrolla bajo el marco **Scrumban** y **Spec-Driven Development (SDD)**:
 - **Sprints e Incrementos Iterativos:** Ciclos de desarrollo orientados a entregar módulos funcionales testeados.
 - **Gestión de Versiones:** Flujo de trabajo basado en Git y control de versiones semántico.
 - **Trazabilidad de Requerimientos:** Alineación continua con los requerimientos de la cátedra de Seminario Integrador y las autoridades del Tribunal de Disciplina de AVEIT.
@@ -288,5 +264,5 @@ El proyecto se desarrolla bajo el marco de **Metodologías Ágiles (Scrum)**:
 
 ## 📄 Licencia
 
-Este proyecto se distribuye bajo los términos de la licencia [Apache 2.0](LICENSE).  
+Este proyecto se distribuye bajo los términos de la licencia [Apache 2.0](LICENSE) (la plantilla base en `frontend/` conserva su aviso obligatorio MIT en [frontend/LICENSE.md](frontend/LICENSE.md)).  
 Copyright © 2026 Integrantes del Grupo de Desarrollo (Curso 3K2 — UTN FRC). Para más detalles y atribuciones, consultar el archivo [NOTICE](NOTICE).
