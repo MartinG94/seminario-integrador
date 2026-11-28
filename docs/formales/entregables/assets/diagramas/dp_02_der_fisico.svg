@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 316" width="888" height="316" role="img" aria-label="Diagrama Entidad-Relación (DER) Físico Consolidado — MySQL 8.0 (45 Tablas)">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#151846"/>
+    </marker>
+    <marker id="arr-sky" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#6E9DDC"/>
+    </marker>
+    <marker id="arr-amb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B45309"/>
+    </marker>
+  </defs>
+  <rect width="888" height="316" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+  <rect x="0" y="0" width="888" height="38" rx="10" fill="#151846"/>
+  <rect x="0" y="20" width="888" height="18" fill="#151846"/>
+  <text x="18" y="24" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="700">Diagrama Entidad-Relación (DER) Físico Consolidado — MySQL 8.0 (45 Tablas)</text>
+  <rect x="24" y="56" width="265" height="116" rx="8" fill="#FFFBEB" stroke="#B45309" stroke-width="1.4"/>
+  <rect x="24" y="56" width="265" height="24" rx="8" fill="#B45309"/>
+  <rect x="24" y="74" width="265" height="6" fill="#B45309"/>
+  <text x="156.5" y="72" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Padrón Legado (Read-Only · 10 tablas)</text>
+  <text x="156.5" y="95" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">socio_lista (PK nroSocio)</text>
+  <text x="156.5" y="109" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">socio_tiposubcomision, socio_estudio</text>
+  <text x="156.5" y="123" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">socio_email, socio_estado, estadoHistorial</text>
+  <text x="156.5" y="137" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">tribunal_puntajegeneral, socios_subcomision</text>
+  <rect x="314" y="56" width="265" height="116" rx="8" fill="#FFFFFF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="314" y="56" width="265" height="24" rx="8" fill="#151846"/>
+  <rect x="314" y="74" width="265" height="6" fill="#151846"/>
+  <text x="446.5" y="72" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Núcleo Expedientes y Descargos (16 tablas)</text>
+  <text x="446.5" y="95" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_expediente (PK id, FK socio)</text>
+  <text x="446.5" y="109" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_solicitudt01, cambio_estado</text>
+  <text x="446.5" y="123" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_descargo / version / evidencia</text>
+  <text x="446.5" y="137" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">decision_causal, valoracion_t03, apelacion</text>
+  <rect x="604" y="56" width="260" height="116" rx="8" fill="#F0FDFA" stroke="#0F766E" stroke-width="1.4"/>
+  <rect x="604" y="56" width="260" height="24" rx="8" fill="#0F766E"/>
+  <rect x="604" y="74" width="260" height="6" fill="#0F766E"/>
+  <text x="734.0" y="72" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Resolución y Ledger (RW · 8 tablas)</text>
+  <text x="734.0" y="95" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_resolucion (UK exp,ver)</text>
+  <text x="734.0" y="109" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_composicion_tribunal, enmienda</text>
+  <text x="734.0" y="123" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_asiento_libro_mayor (InsertOnly)</text>
+  <text x="734.0" y="137" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">tribunal_puntajeaplicado, atencionFelicitacion</text>
+  <line x1="289" y1="114" x2="314" y2="114" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="301" y="107" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="700">1..*</text>
+  <line x1="579" y1="114" x2="604" y2="114" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="591" y="107" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="700">1..*</text>
+  <rect x="24" y="200" width="410" height="96" rx="8" fill="#EFF6FF" stroke="#6E9DDC" stroke-width="1.4"/>
+  <rect x="24" y="200" width="410" height="24" rx="8" fill="#6E9DDC"/>
+  <rect x="24" y="218" width="410" height="6" fill="#6E9DDC"/>
+  <text x="229.0" y="216" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Eventos, Calendario y Reglamentos (6 tablas)</text>
+  <text x="229.0" y="239" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">tribunal_evento, tribunal_evento_convocado, tribunal_asistente</text>
+  <text x="229.0" y="253" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_holiday, calendario_version, feriado_excepcion</text>
+  <text x="229.0" y="267" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">tribunal_reglamento, expedientes_auditoria_reglamento</text>
+  <rect x="454" y="200" width="410" height="96" rx="8" fill="#FFFFFF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="454" y="200" width="410" height="24" rx="8" fill="#151846"/>
+  <rect x="454" y="218" width="410" height="6" fill="#151846"/>
+  <text x="659.0" y="216" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Notificaciones, Auditoría y Admin (5 tablas)</text>
+  <text x="659.0" y="239" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">notifications_email_outbox (UK idempotency_key), email_attachment</text>
+  <text x="659.0" y="253" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes_auditoria_consulta / expedientes_auditoria_descarga</text>
+  <text x="659.0" y="267" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">core_parametro_sistema, core_cambio_rol_tribunal</text>
+  <line x1="229" y1="200" x2="380" y2="172" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="659" y1="200" x2="734" y2="172" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+</svg>

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 298" width="884" height="298" role="img" aria-label="Flujo de Trabajo Scrumban y Entregas Incrementales">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#151846"/>
+    </marker>
+    <marker id="arr-sky" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#6E9DDC"/>
+    </marker>
+    <marker id="arr-amb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B45309"/>
+    </marker>
+  </defs>
+  <rect width="884" height="298" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+  <rect x="0" y="0" width="884" height="38" rx="10" fill="#151846"/>
+  <rect x="0" y="20" width="884" height="18" fill="#151846"/>
+  <text x="18" y="24" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="700">Flujo de Trabajo Scrumban y Entregas Incrementales</text>
+  <rect x="24" y="62" width="126" height="98" rx="8" fill="#FFFFFF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="24" y="62" width="126" height="24" rx="8" fill="#151846"/>
+  <rect x="24" y="80" width="126" height="6" fill="#151846"/>
+  <text x="87.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Product Backlog</text>
+  <text x="87.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Priorizado MoSCoW</text>
+  <text x="87.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Sin límite</text>
+  <line x1="150" y1="111" x2="166" y2="111" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="166" y="62" width="126" height="98" rx="8" fill="#FFFFFF" stroke="#6E9DDC" stroke-width="1.4"/>
+  <rect x="166" y="62" width="126" height="24" rx="8" fill="#6E9DDC"/>
+  <rect x="166" y="80" width="126" height="6" fill="#6E9DDC"/>
+  <text x="229.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Sprint Backlog</text>
+  <text x="229.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Comprometido 14d</text>
+  <text x="229.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Sin límite</text>
+  <line x1="292" y1="111" x2="308" y2="111" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="308" y="62" width="126" height="98" rx="8" fill="#FFFFFF" stroke="#B45309" stroke-width="1.4"/>
+  <rect x="308" y="62" width="126" height="24" rx="8" fill="#B45309"/>
+  <rect x="308" y="80" width="126" height="6" fill="#B45309"/>
+  <text x="371.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">En Progreso</text>
+  <text x="371.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Desarrollo TDD</text>
+  <text x="371.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">WIP: 4</text>
+  <line x1="434" y1="111" x2="450" y2="111" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="450" y="62" width="126" height="98" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="1.4"/>
+  <rect x="450" y="62" width="126" height="24" rx="8" fill="#0F766E"/>
+  <rect x="450" y="80" width="126" height="6" fill="#0F766E"/>
+  <text x="513.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Revisión PR</text>
+  <text x="513.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Peer Review + CI</text>
+  <text x="513.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">WIP: 3</text>
+  <line x1="576" y1="111" x2="592" y2="111" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="592" y="62" width="126" height="98" rx="8" fill="#FFFFFF" stroke="#B91C1C" stroke-width="1.4"/>
+  <rect x="592" y="62" width="126" height="24" rx="8" fill="#B91C1C"/>
+  <rect x="592" y="80" width="126" height="6" fill="#B91C1C"/>
+  <text x="655.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">QA / Testing</text>
+  <text x="655.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Suites + UAT</text>
+  <text x="655.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">WIP: 2</text>
+  <line x1="718" y1="111" x2="734" y2="111" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="734" y="62" width="126" height="98" rx="8" fill="#FFFFFF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="734" y="62" width="126" height="24" rx="8" fill="#151846"/>
+  <rect x="734" y="80" width="126" height="6" fill="#151846"/>
+  <text x="797.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Listo (Done)</text>
+  <text x="797.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Integrado en main</text>
+  <text x="797.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Release</text>
+  <rect x="24" y="186" width="836" height="92" rx="8" fill="#EFF6FF" stroke="#6E9DDC" stroke-width="1.4"/>
+  <rect x="24" y="186" width="836" height="24" rx="8" fill="#151846"/>
+  <rect x="24" y="204" width="836" height="6" fill="#151846"/>
+  <text x="442.0" y="202" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Entregas Incrementales y Cortes de Release</text>
+  <text x="442.0" y="225" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">R0 (S0): Definiciones y Backlog  →  R1 (S1): Walking Skeleton  →  R2 (S2 — CORTE MVP): T01 + 6 Estados + Outbox</text>
+  <text x="442.0" y="239" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">R3 (S3): Descargos T02/T03 + Evidencia + Eventos 3:1  →  R4 (S4): Sala TD + Suplencias + Apelación T01 + Editor Resolución</text>
+  <text x="442.0" y="253" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">R5 (S5): Libro Mayor + Firma Colegiada + Enmienda + Admin  →  R6 (S6): Alertas -7/-10 + Balance PDF + Carga + Staging/UAT</text>
+</svg>

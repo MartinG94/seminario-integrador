@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 256" width="888" height="256" role="img" aria-label="Diagrama de Despliegue — Contenedores Docker Compose y Staging (Sprint 6)">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#151846"/>
+    </marker>
+    <marker id="arr-sky" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#6E9DDC"/>
+    </marker>
+    <marker id="arr-amb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B45309"/>
+    </marker>
+  </defs>
+  <rect width="888" height="256" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+  <rect x="0" y="0" width="888" height="38" rx="10" fill="#151846"/>
+  <rect x="0" y="20" width="888" height="18" fill="#151846"/>
+  <text x="18" y="24" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="700">Diagrama de Despliegue — Contenedores Docker Compose y Staging (Sprint 6)</text>
+  <rect x="16" y="62" width="144" height="128" rx="8" fill="#EFF6FF" stroke="#6E9DDC" stroke-width="1.4"/>
+  <rect x="16" y="62" width="144" height="24" rx="8" fill="#6E9DDC"/>
+  <rect x="16" y="80" width="144" height="6" fill="#6E9DDC"/>
+  <text x="88.0" y="78" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="10.8" font-weight="700">Cliente Web / Mobile</text>
+  <text x="88.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.6">Navegador Desktop/Móvil</text>
+  <text x="88.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.6">HTTPS / Bearer JWT</text>
+  <text x="88.0" y="129" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.6">Acceso SPA (:4200)</text>
+  <text x="88.0" y="143" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.6">Épicas E1–E9</text>
+  <line x1="160" y1="126" x2="180" y2="126" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="180" y="52" width="510" height="184" rx="8" fill="#FFFFFF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="180" y="52" width="510" height="24" rx="8" fill="#151846"/>
+  <rect x="180" y="70" width="510" height="6" fill="#151846"/>
+  <text x="435.0" y="68" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Host Docker Compose Local (3 Contenedores Verificados)</text>
+  <rect x="192" y="86" width="150" height="134" rx="8" fill="#EFF6FF" stroke="#6E9DDC" stroke-width="1.4"/>
+  <rect x="192" y="86" width="150" height="24" rx="8" fill="#6E9DDC"/>
+  <rect x="192" y="104" width="150" height="6" fill="#6E9DDC"/>
+  <text x="267.0" y="102" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="10.4" font-weight="700">sgd_aveit_frontend</text>
+  <text x="267.0" y="125" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">Node 18 · Angular 14.2+</text>
+  <text x="267.0" y="139" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">SPA Dev Server (:4200)</text>
+  <text x="267.0" y="153" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">9 Módulos Responsive</text>
+  <text x="267.0" y="167" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">US: E1–E9 (UI)</text>
+  <line x1="342" y1="152" x2="358" y2="152" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="358" y="86" width="156" height="134" rx="8" fill="#F0FDFA" stroke="#0F766E" stroke-width="1.4"/>
+  <rect x="358" y="86" width="156" height="24" rx="8" fill="#0F766E"/>
+  <rect x="358" y="104" width="156" height="6" fill="#0F766E"/>
+  <text x="436.0" y="102" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="10.4" font-weight="700">sgd_aveit_backend</text>
+  <text x="436.0" y="125" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">Python 3.12 · Django 4.2</text>
+  <text x="436.0" y="139" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">DRF API (:8000)</text>
+  <text x="436.0" y="153" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">Outbox (cmd bajo demanda)</text>
+  <text x="436.0" y="167" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">US: E1–E9 (API/Servicios)</text>
+  <line x1="514" y1="152" x2="530" y2="152" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="530" y="86" width="148" height="134" rx="8" fill="#FFFBEB" stroke="#B45309" stroke-width="1.4"/>
+  <rect x="530" y="86" width="148" height="24" rx="8" fill="#B45309"/>
+  <rect x="530" y="104" width="148" height="6" fill="#B45309"/>
+  <text x="604.0" y="102" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="10.4" font-weight="700">sgd_aveit_mysql</text>
+  <text x="604.0" y="125" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">MySQL 8.0 (:3306)</text>
+  <text x="604.0" y="139" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">45 Tablas (Dominio +</text>
+  <text x="604.0" y="153" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">Padrón Legado RO)</text>
+  <text x="604.0" y="167" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">US: E1–E9 (Persistencia)</text>
+  <rect x="712" y="62" width="160" height="128" rx="8" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+  <rect x="712" y="62" width="160" height="24" rx="8" fill="#B91C1C"/>
+  <rect x="712" y="80" width="160" height="6" fill="#B91C1C"/>
+  <text x="792.0" y="78" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="10.6" font-weight="700">Staging / Prod AVEIT</text>
+  <text x="792.0" y="101" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">Trasladada al Sprint 6</text>
+  <text x="792.0" y="115" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">(SCRUM-66 / SCRUM-67)</text>
+  <text x="792.0" y="129" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">Servidor Central AVEIT</text>
+  <text x="792.0" y="143" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="9.5">+ SMTP Institucional</text>
+  <line x1="690" y1="126" x2="712" y2="126" stroke="#B91C1C" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+</svg>

@@ -30,3 +30,14 @@
 - **Decisión:** Adoptar como base en `docs/formales/` las últimas versiones presentadas de `Documentación Actual Humana` (`Estudio_Inicial.docx` v1.5.0 y `Plan_de_Proyecto.docx` v2.0.0) —ya que las copias del repo estaban congeladas en `d3ab31f` del `06/09/2026`— y aplicarles mediante `python-docx`/XML las correcciones de alineación con el registro canónico, agregando `v1.6.0` y `v2.1.0` con fecha `27/11/2026` sin modificar ninguna fecha histórica previa.
 - **Motivo:** Dejar el repositorio como fuente única y limpia a partir de la cual se generará la documentación final, preservando carátulas, imágenes, tablas y estilos originales sin requerir edición manual en Word.
 - **Cierre:** Queda resuelto el pendiente #6 en [`auditoria/pendientes.md`](pendientes.md).
+
+---
+
+### 28/11/2026 — Resolución de Discrepancias de Verificación Final (`VF-01` a `VF-25`)
+- **Alcance:** Corrección integral sobre los 4 entregables consolidados (`Documentación Actual Humana/Entregables/01..04*.html` + SVGs), `auditoria/traspaso-sprint6.md` y copias en `docs/` (`docs/gestion-proyecto/Seguimiento de Proyecto.md`, `docs/formales/Estudio_Inicial.docx`, `docs/formales/Plan_de_Proyecto.docx` y `docs/constitution.md`), manteniendo intacto `docs/gestion-proyecto/notasPO.md` por inmutabilidad (`AGENTS.md` Regla 5).
+- **Decisiones confirmadas por el usuario:**
+  1. **`VF-01` (Ranking):** Se corrige la documentación para reflejar el acceso de `SOCIO` al ranking (`/ranking-socios`), manteniendo restringido el padrón y legajos de terceros.
+  2. **`VF-04` (RBAC secundario) y `VF-05` (Esquema físico en SVGs):** Se corrigen los SVGs (`dp_02`, `pp_02`) al esquema real legacy inmutable (`AGENTS.md` Regla 6); para `VF-04` se mantiene la matriz de `02_Plan` salvo Reportes Art. 137 donde `FISCALIZADORA` conserva lectura (`R`), quedando el ajuste secundario de código registrado en `auditoria/traspaso-sprint6.md`.
+  3. **`VF-09` (Evidencia de pruebas):** Se retiran la mención no verificada de `76/76` y la nota obsoleta de capturas pendientes, dejando exclusivamente el inventario estático verificado (`114` archivos backend / `55` `.spec.ts` frontend) y la corrida integral viva trasladada al Sprint 6.
+  4. **`VF-17` (Entregables de proceso/calidad S6):** Se incorporan OpenAPI/Swagger, gráficos oficiales de Jira y corrida integral de regresión en la nueva sección §2.1 de `auditoria/traspaso-sprint6.md`.
+  5. **`VF-16`, `VF-19`, `VF-20`, `VF-21`, `VF-24`, `VF-25`:** Se restaura la fórmula obligatoria `"trasladada al Sprint 6"`, se restituyen las fechas e historiales inmutables (`v1.0.0`, `v1.4.0`, S0/S1/S2) y se eliminan menciones a artefactos internos (`auditoria/*`, `PR #xx`, `MACRO-xx`, `DESIGN`).

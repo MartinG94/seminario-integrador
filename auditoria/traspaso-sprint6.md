@@ -30,6 +30,19 @@
 
 ---
 
+## 2.1. Entregables de Proceso, Calidad y Documentación Técnica Trasladados al Sprint 6
+
+Alineado con el Seguimiento de Proyecto (`03_Seguimiento_de_Proyecto_S0_S5_SGD_AVEIT.html` §2.1.1 D, §2.1.4, §2.8.2 y §2.8.3) y la decisión de verificación del 28/11/2026:
+
+| Entregable de Proceso / Calidad | Estado al cierre S5 | Qué falta | Criterio de aceptación en Sprint 6 |
+|---|---|---|---|
+| **Documentación interactiva OpenAPI / Swagger de la API REST** | **Trasladada al Sprint 6** | Exponer esquema OpenAPI 3.0 actualizado de los endpoints productivos de DRF. | Esquema OpenAPI/Swagger navegable y verificado contra los endpoints de `accounts`, `socios`, `ranking`, `expedientes`, `notifications` y `core`. |
+| **Exportación formal de métricas ágiles desde Jira** | **Trasladada al Sprint 6** | Adjuntar gráficos oficiales de *Burndown*, *Diagrama de Flujo Acumulado (CFD)*, *Lead Time* y *Cycle Time* por sprint. | Reportes exportados desde la instancia oficial de Jira adjuntos al cierre final del Sprint 6. |
+| **Corrida integral viva de regresión (`pytest` y `Karma/Jasmine`)** | **Trasladada al Sprint 6** | Al cierre de S5 solo se certifica inventario estático (`114` suites backend y `55` `.spec.ts` frontend); falta log de ejecución integral en verde sobre entorno integrado. | Ejecución completa de `pytest` (backend) y `npm test -- --watch=false --browsers=ChromeHeadless` (frontend) con 0 errores y evidencia adjunta. |
+| **Alineación de permisos secundarios RBAC al Plan de Proyecto (`VF-04`)** | **Trasladada al Sprint 6** | Ajustar en código los permisos secundarios conforme a `02_Plan` §6 (manteniendo `FISCALIZADORA` con lectura en Reportes y `SOCIO` con acceso a Ranking). | Permisos de `CanManageCalendar`, `CanManageEventos` y flujo de descargo/apelación alineados a la matriz RBAC aprobada, con tests de regresión en verde. |
+
+---
+
 ## 3. Nota de Referencia: Ítems del Sprint 5 Consolidado SÍ Respaldados por el Código
 
 Para transparencia de auditoría, las siguientes historias del Sprint 5 Consolidado (`Seguimiento S4` §2.8.1 y `PLAN_SPRINT_5_CONSOLIDADO.md`) **sí cuentan con implementación y tests en el código actual** (integradas entre el 16/11 y el 23/11/2026 vía PRs #74–#79 y commit `6a60167`), por lo que **no** se trasladan al Sprint 6:

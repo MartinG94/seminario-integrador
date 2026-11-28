@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 294" width="880" height="294" role="img" aria-label="Arquitectura de Integración y Capa Anticorrupción con Padrón Legado MySQL">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#151846"/>
+    </marker>
+    <marker id="arr-sky" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#6E9DDC"/>
+    </marker>
+    <marker id="arr-amb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B45309"/>
+    </marker>
+  </defs>
+  <rect width="880" height="294" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+  <rect x="0" y="0" width="880" height="38" rx="10" fill="#151846"/>
+  <rect x="0" y="20" width="880" height="18" fill="#151846"/>
+  <text x="18" y="24" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="700">Arquitectura de Integración y Capa Anticorrupción con Padrón Legado MySQL</text>
+  <rect x="28" y="66" width="210" height="126" rx="8" fill="#EFF6FF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="28" y="66" width="210" height="24" rx="8" fill="#151846"/>
+  <rect x="28" y="84" width="210" height="6" fill="#151846"/>
+  <text x="133.0" y="82" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Frontend SPA</text>
+  <text x="133.0" y="105" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Angular 14.2+ / TypeScript</text>
+  <text x="133.0" y="119" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Angular Material + Sistema de Diseño</text>
+  <text x="133.0" y="133" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">9 Módulos Responsive</text>
+  <text x="133.0" y="147" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">JWT Bearer + TribunalGuard</text>
+  <line x1="238" y1="129" x2="286" y2="129" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="262" y="120" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="600">REST/JSON</text>
+  <rect x="286" y="66" width="260" height="126" rx="8" fill="#FFFFFF" stroke="#151846" stroke-width="1.4"/>
+  <rect x="286" y="66" width="260" height="24" rx="8" fill="#151846"/>
+  <rect x="286" y="84" width="260" height="6" fill="#151846"/>
+  <text x="416.0" y="82" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Backend Monolito Modular</text>
+  <text x="416.0" y="105" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Python 3.12 · Django 4.2 + DRF</text>
+  <text x="416.0" y="119" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">accounts · socios · ranking</text>
+  <text x="416.0" y="133" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">expedientes · notifications · core</text>
+  <text x="416.0" y="147" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Capa Anticorrupción Read-Only</text>
+  <line x1="546" y1="102" x2="604" y2="102" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="546" y1="158" x2="604" y2="158" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+  <rect x="604" y="56" width="248" height="86" rx="8" fill="#F0FDFA" stroke="#0F766E" stroke-width="1.4"/>
+  <rect x="604" y="56" width="248" height="24" rx="8" fill="#0F766E"/>
+  <rect x="604" y="74" width="248" height="6" fill="#0F766E"/>
+  <text x="728.0" y="72" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">MySQL 8.0 — Dominio y Escritura</text>
+  <text x="728.0" y="95" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Expedientes, Descargos, Evidencias,</text>
+  <text x="728.0" y="109" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Libro Mayor + tribunal_puntajeaplicado,</text>
+  <text x="728.0" y="123" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">atencionFelicitacion, Outbox, Admin</text>
+  <rect x="604" y="154" width="248" height="82" rx="8" fill="#FFFBEB" stroke="#B45309" stroke-width="1.4"/>
+  <rect x="604" y="154" width="248" height="24" rx="8" fill="#B45309"/>
+  <rect x="604" y="172" width="248" height="6" fill="#B45309"/>
+  <text x="728.0" y="170" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">MySQL 8.0 — Padrón Legado</text>
+  <text x="728.0" y="193" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">SOLO LECTURA (managed=False)</text>
+  <text x="728.0" y="207" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">socio_lista, socio_tiposubcomision,</text>
+  <text x="728.0" y="221" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">socio_estado, socio_email, socio_estudio</text>
+  <rect x="286" y="212" width="260" height="62" rx="8" fill="#FFFFFF" stroke="#6E9DDC" stroke-width="1.4"/>
+  <rect x="286" y="212" width="260" height="24" rx="8" fill="#6E9DDC"/>
+  <rect x="286" y="230" width="260" height="6" fill="#6E9DDC"/>
+  <text x="416.0" y="228" text-anchor="middle" fill="#151846" font-family="Segoe UI, Arial, sans-serif" font-size="11.2" font-weight="700">Servicios Externos</text>
+  <text x="416.0" y="251" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">Servidor SMTP Institucional</text>
+  <text x="416.0" y="265" text-anchor="middle" fill="#1E293B" font-family="Segoe UI, Arial, sans-serif" font-size="10.2">(Despacho Outbox idempotente)</text>
+  <line x1="416" y1="192" x2="416" y2="212" stroke="#151846" stroke-width="1.6" marker-end="url(#arr)"/>
+</svg>
