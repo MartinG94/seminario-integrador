@@ -127,6 +127,29 @@ def _read_csv_rows(csv_path: Path) -> list[dict[str, str]]:
     return [row for row in csv.DictReader(lines[2:]) if (row.get("Número Socio") or "").strip()]
 
 
+def _parse_group_value(raw: str | None) -> int | None:
+    cleaned = (raw or "").strip().upper()
+    if cleaned.startswith("G"):
+        cleaned = cleaned[1:].strip()
+    return int(cleaned) if cleaned.isdigit() else None
+
+
+def load_real_groups_map(csv_dir: Path) -> dict[int, int]:
+    """Carga el mapeo autoritativo Número Socio -> Grupo desde grupos_reales_panel.csv."""
+    groups_path = csv_dir / "grupos_reales_panel.csv"
+    if not groups_path.exists():
+        return {}
+
+    mapping: dict[int, int] = {}
+    with groups_path.open("r", encoding="utf-8-sig", newline="") as fh:
+        for row in csv.DictReader(fh):
+            raw_nro = (row.get("Número Socio") or "").strip()
+            grp = _parse_group_value(row.get("Grupo"))
+            if raw_nro.isdigit() and grp is not None:
+                mapping[int(raw_nro)] = grp
+    return mapping
+
+
 def load_authorized_padron(
     *,
     csv_dir: Path | None = None,
@@ -142,12 +165,14 @@ def load_authorized_padron(
         raise FileNotFoundError(f"No se encontró {juniors_path}")
 
     year = reference_year if reference_year is not None else date.today().year
+    real_groups_map = load_real_groups_map(base_dir)
     records: list[AuthorizedSocioRecord] = []
     seen_nros: set[int] = set()
     stats = {
         "excluded_test": 0,
         "excluded_historical": 0,
         "excluded_out_of_cycle": 0,
+        "resolved_from_real_groups": 0,
     }
 
     for is_senior, path in ((True, seniors_path), (False, juniors_path)):
@@ -167,12 +192,20 @@ def load_authorized_padron(
                 continue
 
             ingresante = (row.get("Ingresante") or "").strip().lower() == "si"
-            group_number = infer_group_number(
-                nro_socio=nro_socio,
-                ingresante=ingresante,
-                is_senior=is_senior,
-                reference_year=year,
+            direct_group = _parse_group_value(row.get("Grupo"))
+            real_group = (
+                direct_group if direct_group is not None else real_groups_map.get(nro_socio)
             )
+            if real_group is not None:
+                group_number = real_group
+                stats["resolved_from_real_groups"] += 1
+            else:
+                group_number = infer_group_number(
+                    nro_socio=nro_socio,
+                    ingresante=ingresante,
+                    is_senior=is_senior,
+                    reference_year=year,
+                )
             social_year = social_year_for_group(group_number, year)
             if not (1 <= social_year <= 6):
                 stats["excluded_out_of_cycle"] += 1

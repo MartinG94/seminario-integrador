@@ -227,14 +227,56 @@ class TestSyncPadronAcceso:
         assert allowed.status_code == status.HTTP_200_OK
         assert allowed.data["user"]["category"] == SocialCategory.ACTIVE
 
+    def test_real_groups_map_overrides_nro_socio_heuristic(self, tmp_path: Path) -> None:
+        seniors = HEADER + "\n".join(
+            [
+                "1,12310,no,Paste Kvapil,Ignacio,1,Relaciones Institucionales,"
+                "p@example.test,351,ig,Sistemas,95802",
+                "2,11988,no,Ejemplo,G61,2,Cómputos,e@example.test,351,ig,Sistemas,400001",
+            ]
+        )
+        juniors = HEADER + "\n".join(
+            [
+                "1,12789,si,Podversich,Uriel,3,Sin Subcomisión,"
+                "u@example.test,351,ig,Sistemas,401056",
+            ]
+        )
+        (tmp_path / "SeniorsActivos.csv").write_text(seniors, encoding="utf-8")
+        (tmp_path / "JuniorsPasivos.csv").write_text(juniors, encoding="utf-8")
+        (tmp_path / "grupos_reales_panel.csv").write_text(
+            "Número Socio,Grupo,Estado\n12310,59,Activo\n11988,61,Activo\n12789,62,Pasivo\n",
+            encoding="utf-8",
+        )
+
+        records, stats = load_authorized_padron(csv_dir=tmp_path, reference_year=2026)
+        by_nro = {r.numero_socio: r for r in records}
+
+        assert stats["resolved_from_real_groups"] == 3
+        assert (by_nro[12310].group_number, by_nro[12310].social_year) == (59, 5)
+        assert (by_nro[11988].group_number, by_nro[11988].social_year) == (61, 3)
+        assert (by_nro[12789].group_number, by_nro[12789].social_year) == (62, 2)
+
     @pytest.mark.skipif(
         not (default_csv_dir() / "SeniorsActivos.csv").exists(),
         reason="CSVs reales locales no versionados por privacidad de datos personales",
     )
     def test_real_csvs_load_exact_450_authorized_socios(self) -> None:
+        from collections import Counter
+
         records, stats = load_authorized_padron(reference_year=2026)
         assert len(records) == 450
         assert sum(1 for r in records if r.is_senior) == 219
         assert sum(1 for r in records if not r.is_senior) == 231
         assert stats["excluded_test"] == 1
         assert stats["excluded_historical"] == 31
+        if (default_csv_dir() / "grupos_reales_panel.csv").exists():
+            assert stats["resolved_from_real_groups"] == 450
+            by_group = Counter(r.group_number for r in records)
+            assert dict(sorted(by_group.items())) == {
+                58: 41,
+                59: 46,
+                60: 47,
+                61: 86,
+                62: 78,
+                63: 152,
+            }
