@@ -20,6 +20,7 @@ from padron.domain import (
     MembershipStatusEnum,
     SocioCategoryEnum,
     SubcomisionDTO,
+    social_year_for_group,
 )
 
 # Constante del centinela de subcomisión en el esquema legado.
@@ -29,15 +30,20 @@ _SENTINEL_SUBCOMISION_CODE = 99
 def classify_category(ano_social: int) -> SocioCategoryEnum:
     """Clasifica la categoría estatutaria según el año social (CA3).
 
-    - 1 a 3 → PASSIVE (Pasivo / alias Junior, Arts. 3 y 6 Estatuto 2026).
-    - 4 a 6 → ACTIVE  (Activo / alias Senior).
-    - Fuera de rango → UNKNOWN (registro anómalo, sin categoría asumida).
+    - 1 a 2 → PASSIVE (Pasivo / alias Junior, Arts. 3 y 6 Estatuto 2026).
+    - 3 a 6 → ACTIVE  (Activo / alias Senior).
+    - Fuera de rango → UNKNOWN (registro anómalo o Ex Viajero, sin categoría asumida).
     """
     if ano_social in PASSIVE_SOCIAL_YEARS:
         return SocioCategoryEnum.PASSIVE
     if ano_social in ACTIVE_SOCIAL_YEARS:
         return SocioCategoryEnum.ACTIVE
     return SocioCategoryEnum.UNKNOWN
+
+
+def classify_group(group_number: int, reference_year: int | None = None) -> SocioCategoryEnum:
+    """Clasifica una cohorte (Gxx) en categoría estatutaria según el año calendario."""
+    return classify_category(social_year_for_group(group_number, reference_year))
 
 
 def normalize_legajo(nro_legajo: Optional[int]) -> Optional[str]:

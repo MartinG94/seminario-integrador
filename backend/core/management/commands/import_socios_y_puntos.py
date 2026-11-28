@@ -31,6 +31,7 @@ from expedientes.models import (
     Expediente,
     UrgenciaExpedienteEnum,
 )
+from padron.domain import group_number_for_social_year
 from socios.models import Role
 from socios.models import Socio as DjangoSocio
 from socios.models import Subcomision as DjangoSubcomision
@@ -521,17 +522,7 @@ class Command(BaseCommand):
                     if cod_sub == 11 or ano_social == 0:
                         cod_estado = 2  # En receso / Exviajero
                     grupo_id = (
-                        58
-                        if ano_social == 6
-                        else (
-                            59
-                            if ano_social == 5
-                            else (
-                                60
-                                if ano_social == 4
-                                else (62 if ano_social == 2 else (63 if ano_social == 1 else 57))
-                            )
-                        )
+                        group_number_for_social_year(ano_social) if 1 <= ano_social <= 6 else 57
                     )
                     cursor.execute(
                         """

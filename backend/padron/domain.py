@@ -10,6 +10,7 @@ Referencia normativa:
 """
 
 from dataclasses import dataclass
+from datetime import date
 from enum import Enum
 from typing import Optional
 
@@ -17,9 +18,9 @@ from typing import Optional
 class SocioCategoryEnum(str, Enum):
     """Categoría estatutaria según año social (Arts. 3 y 6 Estatuto 2026).
 
-    - PASSIVE: 1.º a 3.º año social (alias histórico: Junior).
-    - ACTIVE:  4.º a 6.º año social (alias histórico: Senior).
-    - UNKNOWN: Año social no parametrizado, nulo o fuera del rango 1–6.
+    - PASSIVE: 1.º y 2.º año social (alias histórico: Junior; en 2026: G63–G62).
+    - ACTIVE:  3.º a 6.º año social (alias histórico: Senior; en 2026: G61–G58).
+    - UNKNOWN: Año social no parametrizado, nulo o fuera del rango 1–6 (ej. Ex Viajero >= 7).
     """
 
     PASSIVE = "PASSIVE"
@@ -29,8 +30,21 @@ class SocioCategoryEnum(str, Enum):
 
 # Rangos estatutarios canónicos de año social (Arts. 3 y 6 Estatuto AVEIT 2026).
 # Fuente Única de Verdad (SSOT) para la capa de dominio puro y consultas de infraestructura.
-PASSIVE_SOCIAL_YEARS: tuple[int, ...] = (1, 2, 3)
-ACTIVE_SOCIAL_YEARS: tuple[int, ...] = (4, 5, 6)
+PASSIVE_SOCIAL_YEARS: tuple[int, ...] = (1, 2)
+ACTIVE_SOCIAL_YEARS: tuple[int, ...] = (3, 4, 5, 6)
+AVEIT_GROUP_BASE_YEAR: int = 1962
+
+
+def social_year_for_group(group_number: int, reference_year: int | None = None) -> int:
+    """Calcula el año social de una cohorte a partir del número de grupo (año - 1962 - grupo)."""
+    year = reference_year if reference_year is not None else date.today().year
+    return (year - AVEIT_GROUP_BASE_YEAR) - int(group_number)
+
+
+def group_number_for_social_year(social_year: int, reference_year: int | None = None) -> int:
+    """Calcula el número de grupo correspondiente a un año social en el año calendario dado."""
+    year = reference_year if reference_year is not None else date.today().year
+    return (year - AVEIT_GROUP_BASE_YEAR) - int(social_year)
 
 
 class MembershipStatusEnum(str, Enum):
