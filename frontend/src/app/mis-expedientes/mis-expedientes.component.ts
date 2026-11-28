@@ -41,6 +41,17 @@ import {
 import { UMBRALES_INICIALES, UmbralesVigentes, nivelSaldo } from '../ranking-socios/ranking-thresholds';
 import { TrackByUtils } from '../utils/track-by.util';
 
+const DEADLINE_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  weekday: 'long',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false
+});
+
 @Component({
   selector: 'app-mis-expedientes',
   templateUrl: './mis-expedientes.component.html',
@@ -167,6 +178,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
   ahoraMs: number = Date.now();
 
   private subs: Subscription[] = [];
+  private _reglamentosCitasKey = '';
+  private _reglamentosCitasCache: ReglamentoCiteView[] = [];
+  private scrollBloqueadoLocal = false;
 
   constructor(
     public dataService: TribunalDataService,
@@ -233,6 +247,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     // Actualizador dinámico del reloj fuera de NgZone para evitar detección global cada 1s sin plazos activos
     const startTicker = () => {
       this.tickerSub = interval(1000).pipe(takeUntil(this.destroy$)).subscribe(() => {
+        if (this.modalAbierto || this.modalResolucionAbierto) {
+          return;
+        }
         const hayPlazoActivo =
           this.modalDetalleAbierto ||
           this.misExpedientes.some(
@@ -570,6 +587,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
       this.tickerSub = null;
     }
     this.subs.forEach(s => s.unsubscribe());
+    this.scrollBloqueadoLocal = false;
     this.scrollLock.reset();
     this.removerScrollBloqueo();
   }
@@ -596,17 +614,7 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     if (isNaN(d.getTime())) {
       return 'Fecha inválida';
     }
-    const formatter = new Intl.DateTimeFormat('es-AR', {
-      timeZone: 'America/Argentina/Buenos_Aires',
-      weekday: 'long',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    const parts = formatter.formatToParts(d);
+    const parts = DEADLINE_DATE_FORMATTER.formatToParts(d);
     const map: { [key: string]: string } = {};
     parts.forEach(p => (map[p.type] = p.value));
     const rawWeekday = map['weekday'] || '';
@@ -645,7 +653,12 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         ? exp.reglamentos_respaldantes
         : exp.reglamentosRespaldantes;
     const single = exp.reglamento_asociado || exp.reglamentoAsociado;
-    return parseReglamentosList(list, single);
+    const key = `${exp.id ?? ''}|${(list || []).join('||')}|${single ?? ''}`;
+    if (key !== this._reglamentosCitasKey) {
+      this._reglamentosCitasKey = key;
+      this._reglamentosCitasCache = parseReglamentosList(list, single);
+    }
+    return this._reglamentosCitasCache;
   }
 
   toggleReglamentoExpandido(raw: string): void {
@@ -665,9 +678,8 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.limpiarApelacion();
     if (exp.esT01) {
       this.cargarHistorialT01(exp.id);
-    } else {
-      this.cargarHistorialDescargo(exp.id);
     }
+    this.cargarHistorialDescargo(exp.id);
     this.expedienteApi.obtenerDetalleExpediente(exp.id, 'mis_expedientes')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -943,6 +955,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.relatoTexto = '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    this.scheduleTimer(() => {
+      (document.querySelector('.modal-dialog-descargo') as HTMLElement | null)?.focus({ preventScroll: true });
+    }, 50);
   }
 
   abrirModalEditarDescargo(exp: Expediente): void {
@@ -961,6 +977,10 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.relatoTexto = exp.descargo.texto || '';
     this.modalAbierto = true;
     this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    this.scheduleTimer(() => {
+      (document.querySelector('.modal-dialog-descargo') as HTMLElement | null)?.focus({ preventScroll: true });
+    }, 50);
   }
 
   eliminarDescargo(exp: Expediente): void {
@@ -1003,16 +1023,26 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
     this.archivosSeleccionados = [];
     this.evidenciasExistentes = [];
     this.actualizarScrollBloqueo();
+    this.cdr?.markForCheck();
+    if (this.modalDetalleAbierto) {
+      this.scheduleTimer(() => {
+        const detalleBody = (document.querySelector('.modal-dialog-tribunal .modal-detalle-body') ||
+                             document.querySelector('.modal-dialog-tribunal')) as HTMLElement | null;
+        detalleBody?.focus({ preventScroll: true });
+      }, 50);
+    }
   }
 
   private actualizarScrollBloqueo(): void {
     const estaAbierto = this.modalDetalleAbierto || this.modalAbierto || this.modalConfirmacionAbierto
       || this.modalResolucionAbierto;
-    const body = document.body;
-    const docElem = document.documentElement;
-    const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
 
-    if (estaAbierto) {
+    if (estaAbierto && !this.scrollBloqueadoLocal) {
+      this.scrollBloqueadoLocal = true;
+      const body = document.body;
+      const docElem = document.documentElement;
+      const mainPanel = document.querySelector('.main-panel') as HTMLElement | null;
+
       this.renderer.addClass(body, 'modal-open');
       this.renderer.setStyle(body, 'overflow', 'hidden');
       this.renderer.setStyle(docElem, 'overflow', 'hidden');
@@ -1020,8 +1050,9 @@ export class MisExpedientesComponent implements OnInit, OnDestroy {
         this.renderer.setStyle(mainPanel, 'overflow', 'hidden');
       }
       this.scrollLock.lock();
-    } else {
-      this.scrollLock.reset();
+    } else if (!estaAbierto && this.scrollBloqueadoLocal) {
+      this.scrollBloqueadoLocal = false;
+      this.scrollLock.unlock();
       this.removerScrollBloqueo();
     }
   }

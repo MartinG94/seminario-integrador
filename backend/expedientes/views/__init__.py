@@ -432,14 +432,6 @@ class PresentarDescargoView(APIView):
         if not socio:
             raise PermissionDenied("El usuario autenticado no posee un perfil de socio vinculado.")
 
-        # En los T01 la apelación reemplaza al descargo T02/T03 (PB-02).
-        es_involucrado = Expediente.objects.filter(Q(socio=socio) | Q(socios=socio), pk=pk).exists()
-        if es_involucrado and SolicitudT01.objects.filter(expediente_id=pk).exists():
-            return Response(
-                {"detail": "Este expediente se originó en un T01: presentá tu apelación."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer = PresentarDescargoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

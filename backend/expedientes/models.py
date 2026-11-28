@@ -13,7 +13,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, connection, models, transaction
 from django.db.utils import OperationalError
 from django.utils import timezone
@@ -267,6 +267,48 @@ class ExpedienteNumberSequence(models.Model):
                     raise
 
 
+def detectar_medida_expediente(expediente: "Expediente") -> str | None:
+    """Identifica si el expediente corresponde a Llamado de Atención o Felicitación."""
+    pts: Decimal | None = None
+    if expediente.puntos is not None:
+        pts = Decimal(str(expediente.puntos)).quantize(Decimal("0.01"))
+        if pts in (Decimal("-0.25"), Decimal("-0.33")):
+            return "LLAMADO_ATENCION"
+        if pts in (Decimal("0.25"), Decimal("0.33")):
+            return "FELICITACION"
+
+    try:
+        solicitud = getattr(expediente, "solicitud_t01", None)
+    except ObjectDoesNotExist:
+        solicitud = None
+
+    if solicitud and getattr(solicitud, "puntaje_especial", None) in (
+        "LLAMADO_ATENCION",
+        "FELICITACION",
+    ):
+        return solicitud.puntaje_especial
+
+    if pts == Decimal("0.00"):
+        texto = f"{expediente.titulo or ''} {expediente.motivo or ''}".upper()
+        if any(
+            token in texto
+            for token in (
+                "LLAMADO DE ATENCIÓN",
+                "LLAMADO DE ATENCION",
+                "LLAMADO_ATENCION",
+                "APERCIBIMIENTO",
+                "IMPUNTUALIDAD LEVE",
+                "TARDANZA LEVE",
+                "RETIRO ANTICIPADO LEVE",
+            )
+        ):
+            return "LLAMADO_ATENCION"
+        if any(token in texto for token in ("FELICITACIÓN", "FELICITACION", "RECONOCIMIENTO")):
+            return "FELICITACION"
+
+    return None
+
+
 class Expediente(models.Model):
     """Expediente disciplinario o mérito institucional."""
 
@@ -388,7 +430,7 @@ class Expediente(models.Model):
         Usa el calendario único y conserva la fecha/hora límite persistida (CA3).
         Transiciona al estado JUSTIFICANDO registrando trazabilidad y auditoría.
         """
-        if self.plazo_limite_at is not None:
+        if self.plazo_limite_at is not None and self.estado != EstadoExpedienteEnum.CREADO:
             return self.plazo_limite_at
         provider = holiday_provider if holiday_provider is not None else DbHolidayProvider()
 
@@ -433,6 +475,18 @@ class Expediente(models.Model):
             return False
         momento = ahora or timezone.now()
         return momento <= self.plazo_limite_at
+
+    @property
+    def tipo_medida(self) -> str | None:
+        return detectar_medida_expediente(self)
+
+    @property
+    def es_llamado(self) -> bool:
+        return self.tipo_medida == "LLAMADO_ATENCION"
+
+    @property
+    def es_felicitacion(self) -> bool:
+        return self.tipo_medida == "FELICITACION"
 
 
 class CambioEstadoExpediente(models.Model):

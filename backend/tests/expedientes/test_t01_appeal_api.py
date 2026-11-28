@@ -1,6 +1,7 @@
 """API de apelación y adecuación del T01 (PB-02): permisos y códigos HTTP."""
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 
 from expedientes.models import EstadoExpedienteEnum, Expediente, ParametroPlazoApelacion
@@ -90,15 +91,43 @@ class TestApelacion:
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_t02_rechazado_en_expediente_de_t01(self, api_client, en_apelacion, t01_involucrados):
+    def test_socio_puede_subir_evidencia_presentar_descargo_y_apelar_en_t01(
+        self, api_client, en_apelacion, t01_involucrados
+    ):
         api_client.force_authenticate(t01_involucrados[0].user)
-        response = api_client.post(
+
+        archivo = SimpleUploadedFile(
+            "certificado_t01.pdf",
+            b"%PDF-1.4 comprobante t01",
+            content_type="application/pdf",
+        )
+        ev_response = api_client.post(
+            f"/api/v1/expedientes/{en_apelacion.pk}/evidencia/",
+            {"archivos": [archivo], "tipo_descargo": "T02_CERTIFICADO"},
+            format="multipart",
+        )
+        assert ev_response.status_code == status.HTTP_201_CREATED
+        evidencia_id = ev_response.data[0]["id"]
+
+        descargo_response = api_client.post(
             f"/api/v1/expedientes/{en_apelacion.pk}/descargo/",
-            {"tipo": "T02_CERTIFICADO", "causal": "Enfermedad", "texto": "Certificado"},
+            {
+                "tipo": "T02_CERTIFICADO",
+                "causal": "Enfermedad",
+                "texto": "Adjunto certificado médico correspondiente.",
+                "evidencia_ids": [evidencia_id],
+            },
             format="json",
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "apelación" in response.data["detail"]
+        assert descargo_response.status_code == status.HTTP_201_CREATED
+
+        apelacion_response = api_client.post(
+            f"/api/v1/expedientes/{en_apelacion.pk}/apelacion/",
+            {"texto": APELACION},
+            format="json",
+        )
+        assert apelacion_response.status_code == status.HTTP_201_CREATED
+        assert apelacion_response.data["apelaciones"][0]["texto"] == APELACION
 
     def test_expediente_inexistente(self, api_client, t01_involucrados):
         api_client.force_authenticate(t01_involucrados[0].user)

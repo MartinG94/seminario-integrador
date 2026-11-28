@@ -527,7 +527,7 @@ class TestAsistenciasYSancionesAPI:
                     "socio_id": socio_user_1.socio.id,
                     "estado_asistencia": EstadoAsistenciaEventoEnum.AUSENTE,
                     "motivo": (
-                        "Falta injustificada sin preaviso ni causa médica acreditada (Art. 85.b)."
+                        "Falta injustificada sin preaviso ni justificación acreditada (Art. 85.b)."
                     ),
                 }
             ],
@@ -548,11 +548,13 @@ class TestAsistenciasYSancionesAPI:
         assert exp_info["socio_id"] == socio_user_1.socio.id
         assert Decimal(str(exp_info["puntos"])) == Decimal("-1.50")
 
-        # Comprobar que en la base de datos el expediente se encuentra en estado CREADO
+        # Comprobar que el expediente transicionó a JUSTIFICANDO tras notificación automática
         from expedientes.models import Expediente
 
         expediente = Expediente.objects.get(numero=exp_info["numero"])
-        assert expediente.estado == EstadoExpedienteEnum.CREADO
+        assert expediente.estado == EstadoExpedienteEnum.JUSTIFICANDO
+        assert expediente.plazo_inicio_at is not None
+        assert expediente.plazo_limite_at is not None
         assert expediente.puntos == Decimal("-1.50")
 
         # Regla 3 / CA5: Comprobar que el saldo del socio permanece inalterado

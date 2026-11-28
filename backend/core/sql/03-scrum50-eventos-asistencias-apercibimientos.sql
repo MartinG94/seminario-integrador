@@ -97,8 +97,7 @@ CREATE TABLE IF NOT EXISTS `tribunal_evento_convocado` (
   UNIQUE KEY `unique_convocado_evento_socio` (`evento_id`, `socio_id`),
   KEY `fk_convocado_evento` (`evento_id`),
   KEY `fk_convocado_socio` (`socio_id`),
-  CONSTRAINT `fk_convocado_evento` FOREIGN KEY (`evento_id`) REFERENCES `tribunal_evento` (`idEvento`) ON DELETE CASCADE,
-  CONSTRAINT `fk_convocado_socio` FOREIGN KEY (`socio_id`) REFERENCES `socio_lista` (`nroSocio`) ON DELETE CASCADE
+  CONSTRAINT `fk_convocado_evento` FOREIGN KEY (`evento_id`) REFERENCES `tribunal_evento` (`idEvento`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------------------------
@@ -128,8 +127,7 @@ CREATE TABLE IF NOT EXISTS `tribunal_asistente` (
   KEY `fk_asistente_evento` (`evento_id`),
   KEY `fk_asistente_socio` (`socio_id`),
   KEY `fk_asistente_expediente` (`expediente_generado_id`),
-  CONSTRAINT `fk_asistente_evento` FOREIGN KEY (`evento_id`) REFERENCES `tribunal_evento` (`idEvento`) ON DELETE CASCADE,
-  CONSTRAINT `fk_asistente_socio` FOREIGN KEY (`socio_id`) REFERENCES `socio_lista` (`nroSocio`)
+  CONSTRAINT `fk_asistente_evento` FOREIGN KEY (`evento_id`) REFERENCES `tribunal_evento` (`idEvento`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------------------------
@@ -140,8 +138,7 @@ CREATE TABLE IF NOT EXISTS `atencionFelicitacion` (
   `nroSocio` int(11) NOT NULL,
   `felicitaciones` int(11) NOT NULL DEFAULT 0,
   `llamadosAtencion` int(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`nroSocio`),
-  CONSTRAINT `fk_atencionfel_socio` FOREIGN KEY (`nroSocio`) REFERENCES `socio_lista` (`nroSocio`) ON DELETE CASCADE
+  PRIMARY KEY (`nroSocio`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------------------------

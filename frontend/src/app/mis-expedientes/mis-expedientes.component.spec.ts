@@ -1231,6 +1231,7 @@ describe('MisExpedientesComponent', () => {
     function abrir(h = historial()): void {
       component.abrirModalDetalle(expT01);
       http.expectOne(`${apiUrl}/7/t01/historial/`).flush(h);
+      http.match(`${apiUrl}/7/descargo/versiones/`).forEach(r => r.flush([]));
       http.match(`${apiUrl}/7/`).forEach(r => r.flush({ id: 7, numero: 'EXP-0701/2026', estado: 'justificando', es_t01: true, plazo_limite_at: futuro }));
       fixture.detectChanges();
     }
@@ -1240,14 +1241,17 @@ describe('MisExpedientesComponent', () => {
       expect((component as any).mapearExpedienteApi({ id: 2 }).esT01).toBeFalse();
     });
 
-    it('muestra la apelación en lugar del justificativo T02/T03 y no consulta versiones de descargo', () => {
-      abrir();
-      http.expectNone(`${apiUrl}/7/descargo/versiones/`);
+    it('muestra únicamente el descargo unificado (sin sección ni botón de apelar) también en expedientes T01', () => {
+      component.abrirModalDetalle(expT01);
+      http.expectOne(`${apiUrl}/7/t01/historial/`).flush(historial());
+      http.expectOne(`${apiUrl}/7/descargo/versiones/`).flush([]);
+      http.match(`${apiUrl}/7/`).forEach(r => r.flush({ id: 7, numero: 'EXP-0701/2026', estado: 'justificando', es_t01: true, plazo_limite_at: futuro }));
+      fixture.detectChanges();
+
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.seccion-apelacion')).toBeTruthy();
-      expect(compiled.textContent).not.toContain('Añadir Justificativo');
-      expect(compiled.querySelector('.btn-apelar')?.textContent).toContain('Apelar');
-      expect(compiled.querySelector('.adecuacion-t01')?.textContent).toContain('-2.00 → -1.50');
+      expect(compiled.querySelector('.seccion-apelacion')).toBeNull();
+      expect(compiled.querySelector('.btn-apelar')).toBeNull();
+      expect(compiled.querySelector('.btn-descargo')?.textContent).toContain('Descargo');
     });
 
     it('exige un texto mínimo antes de enviar', () => {
@@ -1273,7 +1277,6 @@ describe('MisExpedientesComponent', () => {
       expect(component.apelacionAbierta).toBeFalse();
       expect(component.ultimaApelacion?.numero).toBe(1);
       expect(notifications.success).toHaveBeenCalledWith('Apelación registrada. Te enviamos la constancia por mail.');
-      expect(fixture.nativeElement.querySelector('.btn-apelar').textContent).toContain('Editar apelación');
     });
 
     it('con el plazo vencido no permite apelar', () => {
@@ -1481,6 +1484,53 @@ describe('MisExpedientesComponent', () => {
         expect(modalText).not.toContain('0.25');
         expect(modalText).not.toContain('0.33');
       });
+    });
+  });
+
+  describe('Optimizaciones de rendimiento en modales', () => {
+    it('getReglamentosCitas devuelve la misma referencia de array en llamadas consecutivas con los mismos datos', () => {
+      const exp = {
+        id: 'exp-99',
+        reglamentos_respaldantes: ['Estatuto - Art. 14 Inc. a: Deber de asistencia'],
+        reglamento_asociado: 'Estatuto - Art. 14 Inc. a'
+      } as unknown as Expediente;
+
+      const primera = component.getReglamentosCitas(exp);
+      const segunda = component.getReglamentosCitas(exp);
+      expect(primera.length).toBe(1);
+      expect(segunda).toBe(primera);
+
+      const otroExp = {
+        id: 'exp-100',
+        reglamentos_respaldantes: ['Reglamento Interno - Art. 5: Plazos']
+      } as unknown as Expediente;
+      const tercera = component.getReglamentosCitas(otroExp);
+      expect(tercera).not.toBe(primera);
+    });
+
+    it('no renderiza el modal de detalle debajo cuando modalAbierto es true', () => {
+      const exp = {
+        id: 'exp-detalle-1',
+        numero: 'EXP-0099/2026',
+        estado: 'justificando',
+        motivo: 'Prueba modal único'
+      } as unknown as Expediente;
+
+      component.expedienteDetalle = exp;
+      component.modalDetalleAbierto = true;
+      component.modalAbierto = false;
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.modal-detalle-card')).not.toBeNull();
+
+      component.abrirModalDescargo(exp);
+      fixture.detectChanges();
+      expect(component.modalAbierto).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.modal-detalle-card')).toBeNull();
+      expect(fixture.nativeElement.querySelector('#modal-descargo-titulo')).not.toBeNull();
+
+      component.cerrarModal();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.modal-detalle-card')).not.toBeNull();
     });
   });
 });

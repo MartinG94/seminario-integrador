@@ -18,7 +18,7 @@ from django.utils import timezone
 from core.services.system_parameters import SystemParameterService
 from expedientes.domain.opening_policy import OpeningNotificationTemplate
 from expedientes.models import EstadoExpedienteEnum, Expediente
-from notifications.models import EmailOutbox
+from notifications.models import EmailOutbox, EmailOutboxStatus
 from notifications.services import EmailDispatcherService
 
 logger = logging.getLogger(__name__)
@@ -104,46 +104,89 @@ class OpeningNotificationService:
 
             # Componer plantilla institucional (valida ausencia de datos médicos)
             base_url = frontend_url or getattr(settings, "FRONTEND_URL", "http://localhost:4200")
-            socio_nombre = (
-                f"{expediente.socio.first_name} {expediente.socio.last_name}".strip()
-                or str(socio_identificador)
-            )
-            payload = OpeningNotificationTemplate.render(
-                expediente_numero=expediente.numero,
-                socio_nombre=socio_nombre,
-                motivo_caratula=expediente.motivo,
-                plazo_inicio_at=expediente.plazo_inicio_at,
-                plazo_limite_at=expediente.plazo_limite_at,
-                frontend_url=base_url,
-                expediente_id=expediente.id,
-                socio_id=expediente.socio_id,
-                dias_habiles=SystemParameterService.descargo_business_days(),
-            )
+            dias_habiles = SystemParameterService.descargo_business_days()
 
-            # Encolar en Outbox
-            outbox_payload: dict[str, Any] = {
-                "to": [socio_email],
-                "subject": payload.subject,
-                "body_text": payload.body_text,
-                "body_html": payload.body_html,
-                "idempotency_key": payload.idempotency_key,
-                "metadata": payload.metadata,
-            }
-            outbox, _ = EmailDispatcherService.create_or_get_outbox(outbox_payload)
+            def _enqueue_for_socio(target_socio: Any, target_email: str) -> EmailOutbox:
+                target_identificador = target_socio.numero_socio or target_socio.legajo
+                target_nombre = (
+                    f"{target_socio.first_name} {target_socio.last_name}".strip()
+                    or str(target_identificador)
+                )
+                payload = OpeningNotificationTemplate.render(
+                    expediente_numero=expediente.numero,
+                    socio_nombre=target_nombre,
+                    motivo_caratula=expediente.motivo,
+                    plazo_inicio_at=expediente.plazo_inicio_at,
+                    plazo_limite_at=expediente.plazo_limite_at,
+                    frontend_url=base_url,
+                    expediente_id=expediente.id,
+                    socio_id=target_socio.id,
+                    dias_habiles=dias_habiles,
+                )
+                outbox_payload: dict[str, Any] = {
+                    "to": [target_email],
+                    "subject": payload.subject,
+                    "body_text": payload.body_text,
+                    "body_html": payload.body_html,
+                    "idempotency_key": payload.idempotency_key,
+                    "metadata": payload.metadata,
+                }
+                created_outbox, _ = EmailDispatcherService.create_or_get_outbox(outbox_payload)
+                return created_outbox
+
+            outbox = _enqueue_for_socio(expediente.socio, socio_email)
+            outboxes_to_dispatch: list[EmailOutbox] = [outbox]
+
+            for co_socio in expediente.socios.exclude(pk=expediente.socio_id):
+                co_email = (co_socio.email or "").strip()
+                if not co_email:
+                    logger.warning(
+                        "Co-imputado %s sin email válido en expediente %s; se omite notificación.",
+                        co_socio.pk,
+                        expediente.id,
+                    )
+                    continue
+                outboxes_to_dispatch.append(_enqueue_for_socio(co_socio, co_email))
 
         # --- FASE 2: Despacho SMTP fuera del lock de BD ---
-        try:
-            EmailDispatcherService.dispatch(outbox)
-        except Exception as exc:
-            # Principio 7: Auditoría sin fuga de asunto ni cuerpo del correo
-            logger.warning(
-                "Fallo al despachar notificación inmediata para expediente %s (outbox_id=%s): %s",
-                expediente.id,
-                outbox.id,
-                type(exc).__name__,
-            )
+        for item in outboxes_to_dispatch:
+            try:
+                EmailDispatcherService.dispatch(item)
+            except Exception as exc:
+                # Principio 7: Auditoría sin fuga de asunto ni cuerpo del correo
+                logger.warning(
+                    "Fallo al despachar notificación para expediente %s (outbox_id=%s): %s",
+                    expediente.id,
+                    item.id,
+                    type(exc).__name__,
+                )
 
         return expediente, outbox
+
+    @classmethod
+    def notify_automatic_expediente(cls, expediente: Expediente, actor: str = "SISTEMA") -> bool:
+        """Notifica automáticamente un expediente recién creado.
+
+        Si falla la validación o el envío SMTP (status != SENT), revierte el savepoint para
+        conservar el expediente en CREADO sin plazos congelados.
+        """
+        try:
+            with transaction.atomic():
+                _exp, outbox = cls.dispatch_opening(expediente_id=expediente.id, actor=actor)
+                outbox.refresh_from_db()
+                if outbox.status != EmailOutboxStatus.SENT:
+                    raise RuntimeError(outbox.last_error or "Correo no enviado.")
+        except Exception as exc:
+            logger.warning(
+                "Notificación automática fallida para expediente %s (%s). Se conserva en CREADO.",
+                expediente.id,
+                type(exc).__name__,
+            )
+            expediente.refresh_from_db()
+            return False
+
+        expediente.refresh_from_db()
+        return True
 
 
 class CaseNotificationQueryService:

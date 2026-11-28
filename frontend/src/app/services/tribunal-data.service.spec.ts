@@ -152,4 +152,28 @@ describe('TribunalDataService (T-87.13 / SCRUM-118)', () => {
     );
     reqOverride.flush({ columns: [] });
   });
+
+  it('debería despachar notificación formal por email cuando transiciona a justificando', () => {
+    service.transicionarExpediente(42, 'justificando').subscribe();
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/expedientes/42/despachar-notificacion/`
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({ expediente_id: 42, estado: 'justificando' });
+  });
+
+  it('debería usar el endpoint genérico de transición para estados distintos de justificando', () => {
+    service.transicionarExpediente(42, 'revision_resolucion', 'Plazo vencido').subscribe();
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/expedientes/42/transicionar/`
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      to_status: 'revision_resolucion',
+      justificacion: 'Plazo vencido',
+    });
+    req.flush({ expediente_id: 42, estado_nuevo: 'revision_resolucion' });
+  });
 });
