@@ -41,3 +41,7 @@
   3. **`VF-09` (Evidencia de pruebas):** Se retiran la mención no verificada de `76/76` y la nota obsoleta de capturas pendientes, dejando exclusivamente el inventario estático verificado (`114` archivos backend / `55` `.spec.ts` frontend) y la corrida integral viva trasladada al Sprint 6.
   4. **`VF-17` (Entregables de proceso/calidad S6):** Se incorporan OpenAPI/Swagger, gráficos oficiales de Jira y corrida integral de regresión en la nueva sección §2.1 de `auditoria/traspaso-sprint6.md`.
   5. **`VF-16`, `VF-19`, `VF-20`, `VF-21`, `VF-24`, `VF-25`:** Se restaura la fórmula obligatoria `"trasladada al Sprint 6"`, se restituyen las fechas e historiales inmutables (`v1.0.0`, `v1.4.0`, S0/S1/S2) y se eliminan menciones a artefactos internos (`auditoria/*`, `PR #xx`, `MACRO-xx`, `DESIGN`).
+
+### 28/11/2026 — Paginación y nomenclatura de PDF entregables
+- Se corrigió el desborde de contenido (capturas y diagramas cortados al pie de página) repartiendo el contenido sobrante en páginas de continuación; se actualizaron numeración de pies de página e índices (Estudio Inicial 17 págs., Plan de Proyecto 18, Seguimiento 20, Definición del Producto 31).
+- Los PDF entregables adoptan la nomenclatura de la cátedra «Producto-Archivo-versión»: `SGD-AVEIT-Estudio_Inicial-v1.6.0.pdf`, `SGD-AVEIT-Plan_de_Proyecto-v2.1.0.pdf`, `SGD-AVEIT-Seguimiento_de_Proyecto-v1.5.0.pdf` y `SGD-AVEIT-Definicion_del_Producto-v2.0.0.pdf`. Los PDF previos se renombraron con `git mv` (sin borrado).
